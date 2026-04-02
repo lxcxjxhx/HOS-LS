@@ -23,6 +23,68 @@ from scanners.semantic_graph import semantic_graph_builder
 logger = logging.getLogger(__name__)
 
 
+def is_valid_python_code(source_code: str) -> bool:
+    """检查代码是否是有效的 Python 代码
+    
+    Args:
+        source_code: 源代码
+        
+    Returns:
+        bool: 是否是有效的 Python 代码
+    """
+    # 检查是否为空
+    if not source_code or not source_code.strip():
+        return False
+    
+    # 检查是否包含明显的非 Python 代码特征
+    stripped = source_code.strip()
+    
+    # 跳过 HTML/XML
+    if stripped.startswith('<') and not stripped.startswith('<' * 10):
+        return False
+    
+    # 跳过 JSON
+    if stripped.startswith('{') and '"' in stripped[:100]:
+        try:
+            import json
+            json.loads(stripped)
+            return False
+        except:
+            pass
+    
+    # 跳过 JavaScript/TypeScript 文件内容（简单启发式）
+    js_patterns = [
+        'function ',
+        'const ',
+        'let ',
+        'var ',
+        '=> {',
+        'export default',
+        'import {',
+        'require(',
+    ]
+    first_lines = '\n'.join(stripped.split('\n')[:10])
+    if any(pattern in first_lines for pattern in js_patterns):
+        return False
+    
+    return True
+
+
+def safe_parse(source_code: str) -> Optional[ast.AST]:
+    """安全解析 Python 代码
+    
+    Args:
+        source_code: 源代码
+        
+    Returns:
+        Optional[ast.AST]: 解析后的 AST，如果失败返回 None
+    """
+    try:
+        return ast.parse(source_code)
+    except SyntaxError:
+        return None
+
+
 class TaintAnalyzer:
     """污点分析器"""
     
@@ -60,14 +122,43 @@ class TaintAnalyzer:
             'format': '格式化',
             'join': '字符串连接',
         }
+        
+        # 统计信息
+        self.stats = {
+            'files_analyzed': 0,
+            'files_skipped': 0,
+            'parse_errors': 0,
+            'issues_found': 0
+        }
     
     def analyze_file(self, file_path: str, source_code: str) -> List[Dict[str, Any]]:
         """分析单个文件的数据流"""
-        try:
-            tree = ast.parse(source_code)
-        except SyntaxError as e:
-            logger.debug(f"AST 解析失败 {file_path}: {e}")
+        # 检查文件类型，只分析 Python 文件
+        if not file_path.endswith('.py'):
+            logger.debug(f"跳过非 Python 文件: {file_path}")
+            self.stats['files_skipped'] += 1
             return []
+        
+        # 检查文件内容是否为空
+        if not source_code.strip():
+            logger.debug(f"文件内容为空: {file_path}")
+            self.stats['files_skipped'] += 1
+            return []
+        
+        # 预检查代码内容
+        if not is_valid_python_code(source_code):
+            logger.debug(f"跳过非 Python 代码内容: {file_path}")
+            self.stats['files_skipped'] += 1
+            return []
+        
+        # 安全解析 AST
+        tree = safe_parse(source_code)
+        if tree is None:
+            logger.warning(f"AST 解析失败 {file_path}: 语法错误")
+            self.stats['parse_errors'] += 1
+            return []
+        
+        self.stats['files_analyzed'] += 1
         
         issues = []
         
@@ -81,6 +172,8 @@ class TaintAnalyzer:
         sink_issues = self._detect_sinks(tree, propagation_chain, file_path, source_code)
         
         issues.extend(sink_issues)
+        
+        self.stats['issues_found'] += len(issues)
         
         return issues
     
@@ -243,6 +336,10 @@ class TaintAnalyzer:
         import os
         
         if os.path.isfile(target):
+            # 检查文件类型，只解析 Python 文件
+            if not target.endswith('.py'):
+                logger.debug(f"跳过非 Python 文件: {target}")
+                return []
             with open(target, 'r', encoding='utf-8', errors='ignore') as f:
                 source = f.read()
             return self.analyze_file(target, source)
@@ -286,11 +383,32 @@ class TaintAnalyzer:
     
     def analyze_file(self, file_path: str, source_code: str, semantic_graph=None) -> List[Dict[str, Any]]:
         """分析单个文件的数据流"""
-        try:
-            tree = ast.parse(source_code)
-        except SyntaxError as e:
-            logger.debug(f"AST 解析失败 {file_path}: {e}")
+        # 检查文件类型，只分析 Python 文件
+        if not file_path.endswith('.py'):
+            logger.debug(f"跳过非 Python 文件: {file_path}")
+            self.stats['files_skipped'] += 1
             return []
+        
+        # 检查文件内容是否为空
+        if not source_code.strip():
+            logger.debug(f"文件内容为空: {file_path}")
+            self.stats['files_skipped'] += 1
+            return []
+        
+        # 预检查代码内容
+        if not is_valid_python_code(source_code):
+            logger.debug(f"跳过非 Python 代码内容: {file_path}")
+            self.stats['files_skipped'] += 1
+            return []
+        
+        # 安全解析 AST
+        tree = safe_parse(source_code)
+        if tree is None:
+            logger.warning(f"AST 解析失败 {file_path}: 语法错误")
+            self.stats['parse_errors'] += 1
+            return []
+        
+        self.stats['files_analyzed'] += 1
         
         issues = []
         

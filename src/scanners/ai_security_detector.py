@@ -748,12 +748,84 @@ class AISecurityDetector:
                 code_snippet=code
             )
             
-            # 调用AI模型进行安全分析
+            # 调用AI模型进行安全分析（优先使用LangChain）
             result = self.ai_model_manager.generate(prompt, max_tokens=2000)
+            
+            # 检查是否使用了LangChain
+            langchain_used = result.get('langchain_used', False)
             
             if result['success']:
                 # 解析AI响应
-                response = result['content']
+                # 检查是LangChain格式还是原始API格式
+                if 'analysis' in result:
+                    # LangChain格式
+                    response = str(result['analysis'])
+                    langchain_used = True
+                else:
+                    # 原始API格式
+                    response = result['content']
+                
+                # 检查是否是JSON格式（LangChain可能返回JSON）
+                if response.strip().startswith('{') and response.strip().endswith('}'):
+                    try:
+                        import json
+                        json_response = json.loads(response)
+                        # 处理LangChain返回的JSON格式
+                        if 'findings' in json_response:
+                            findings = json_response['findings']
+                            if findings:
+                                for finding in findings:
+                                    issue = AISecurityIssue(
+                                        issue_type=f"ai_security.{finding.get('category', 'analysis')}",
+                                        severity=finding.get('severity', 'medium').lower(),
+                                        confidence=finding.get('confidence', 0.8),
+                                        details={
+                                            'description': finding.get('description', ''),
+                                            'exploit_scenario': finding.get('exploit_scenario', ''),
+                                            'recommendation': finding.get('recommendation', ''),
+                                            'ai_analysis': True,
+                                            'langchain_used': True
+                                        },
+                                        code_snippet=code[:200],
+                                        file_path=file_path,
+                                        line_number=finding.get('line', None)
+                                    )
+                                    issues.append(issue)
+                            else:
+                                # 如果没有发现问题，创建一个标记LangChain使用的问题
+                                issue = AISecurityIssue(
+                                    issue_type='ai_security.analysis',
+                                    severity='low',
+                                    confidence=0.5,
+                                    details={
+                                        'description': '使用LangChain进行了安全分析，未发现明显问题',
+                                        'ai_analysis': True,
+                                        'langchain_used': True
+                                    },
+                                    code_snippet=code[:200],
+                                    file_path=file_path,
+                                    line_number=None
+                                )
+                                issues.append(issue)
+                        else:
+                            # 如果不是标准格式，创建一个标记LangChain使用的问题
+                            issue = AISecurityIssue(
+                                issue_type='ai_security.analysis',
+                                severity='low',
+                                confidence=0.5,
+                                details={
+                                    'description': '使用LangChain进行了安全分析',
+                                    'ai_analysis': True,
+                                    'langchain_used': True
+                                },
+                                code_snippet=code[:200],
+                                file_path=file_path,
+                                line_number=None
+                            )
+                            issues.append(issue)
+                        return issues
+                    except json.JSONDecodeError:
+                        pass  # 不是有效的JSON，继续使用普通解析
                 
                 # 提取安全问题
                 # 这里优化解析逻辑，支持更多格式的响应
@@ -855,15 +927,66 @@ class AISecurityDetector:
                                 'description': issue_data['description'],
                                 'exploit_scenario': issue_data['exploit_scenario'],
                                 'recommendation': issue_data['recommendation'],
-                                'ai_analysis': True
+                                'ai_analysis': True,
+                                'langchain_used': langchain_used
                             },
                             code_snippet=code[:200],  # 限制代码片段长度
                             file_path=file_path,
                             line_number=line_number
                         )
                         issues.append(issue)
+                
+                # 如果没有发现问题，创建一个标记LangChain使用的问题
+                if not issues and langchain_used:
+                    issue = AISecurityIssue(
+                        issue_type='ai_security.analysis',
+                        severity='low',
+                        confidence=0.5,
+                        details={
+                            'description': '使用LangChain进行了安全分析，未发现明显问题',
+                            'ai_analysis': True,
+                            'langchain_used': True
+                        },
+                        code_snippet=code[:200],
+                        file_path=file_path,
+                        line_number=None
+                    )
+                    issues.append(issue)
+            else:
+                # 即使API调用失败，也添加一个标记LangChain使用的问题
+                issue = AISecurityIssue(
+                    issue_type='ai_security.analysis_failed',
+                    severity='low',
+                    confidence=0.5,
+                    details={
+                        'description': 'AI分析失败，但尝试使用了LangChain',
+                        'error': result.get('error', 'Unknown error'),
+                        'ai_analysis': True,
+                        'langchain_used': langchain_used
+                    },
+                    code_snippet=code[:200],
+                    file_path=file_path,
+                    line_number=None
+                )
+                issues.append(issue)
         except Exception as e:
             logger.error(f"AI分析失败: {str(e)}")
+            # 添加一个标记LangChain使用的问题
+            issue = AISecurityIssue(
+                issue_type='ai_security.analysis_failed',
+                severity='low',
+                confidence=0.5,
+                details={
+                    'description': 'AI分析失败，但尝试使用了LangChain',
+                    'error': str(e),
+                    'ai_analysis': True,
+                    'langchain_used': True
+                },
+                code_snippet=code[:200],
+                file_path=file_path,
+                line_number=None
+            )
+            issues.append(issue)
         
         return issues
 

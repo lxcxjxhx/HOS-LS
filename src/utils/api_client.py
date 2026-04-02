@@ -90,7 +90,7 @@ class ApiClient(ABC):
         pass
     
     @abstractmethod
-    def post(self, endpoint: str, data: Optional[Dict[str, Any]] = None, json: Optional[Dict[str, Any]] = None, headers: Optional[Dict[str, str]] = None) -> ApiResponse:
+    def post(self, endpoint: str, data: Optional[Dict[str, Any]] = None, json: Optional[Dict[str, Any]] = None, headers: Optional[Dict[str, str]] = None, timeout: Optional[int] = None) -> ApiResponse:
         """发送 POST 请求
         
         Args:
@@ -98,6 +98,7 @@ class ApiClient(ABC):
             data: 表单数据
             json: JSON 数据
             headers: 请求头
+            timeout: 超时时间（秒）
             
         Returns:
             ApiResponse: API 响应
@@ -184,10 +185,12 @@ class HttpClient(ApiClient):
         
         while retries <= self.max_retries:
             try:
+                # Use timeout from kwargs if provided, otherwise use default
+                request_timeout = kwargs.pop('timeout', self.timeout)
                 response = self.session.request(
                     method=method,
                     url=url,
-                    timeout=self.timeout,
+                    timeout=request_timeout,
                     **kwargs
                 )
                 return ApiResponse(response)
@@ -214,7 +217,7 @@ class HttpClient(ApiClient):
         """
         return self._request('GET', endpoint, params=params, headers=headers)
     
-    def post(self, endpoint: str, data: Optional[Dict[str, Any]] = None, json: Optional[Dict[str, Any]] = None, headers: Optional[Dict[str, str]] = None) -> ApiResponse:
+    def post(self, endpoint: str, data: Optional[Dict[str, Any]] = None, json: Optional[Dict[str, Any]] = None, headers: Optional[Dict[str, str]] = None, timeout: Optional[int] = None) -> ApiResponse:
         """发送 POST 请求
         
         Args:
@@ -222,11 +225,13 @@ class HttpClient(ApiClient):
             data: 表单数据
             json: JSON 数据
             headers: 请求头
+            timeout: 超时时间（秒），默认使用实例超时设置
             
         Returns:
             ApiResponse: API 响应
         """
-        return self._request('POST', endpoint, data=data, json=json, headers=headers)
+        request_timeout = timeout if timeout is not None else self.timeout
+        return self._request('POST', endpoint, data=data, json=json, headers=headers, timeout=request_timeout)
     
     def put(self, endpoint: str, data: Optional[Dict[str, Any]] = None, json: Optional[Dict[str, Any]] = None, headers: Optional[Dict[str, str]] = None) -> ApiResponse:
         """发送 PUT 请求
