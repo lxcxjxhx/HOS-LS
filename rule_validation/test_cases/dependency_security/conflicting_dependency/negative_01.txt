@@ -1,0 +1,23 @@
+# Test Case ID: CF-N01
+# Rule: dependency_security.conflicting_dependency
+# Test Type: negative
+# Description: 依赖版本兼容
+# Expected Detection: false
+# Expected Severity: N/A
+# Code Type: safe
+
+# requirements.txt
+# 兼容的依赖版本
+requests==2.31.0
+urllib3==1.26.16    # 与 requests 兼容
+django==4.2.0
+psycopg2==2.9.6     # 与 django 兼容
+
+# package.json
+{
+  "dependencies": {
+    "react": "18.2.0",
+    "react-dom": "18.2.0",  # 版本匹配
+    "react-router-dom": "6.14.0"  # 与 react 18 兼容
+  }
+}

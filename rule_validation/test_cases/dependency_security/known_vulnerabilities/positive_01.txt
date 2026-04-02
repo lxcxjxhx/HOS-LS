@@ -1,0 +1,12 @@
+# Test Case ID: KV-P01
+# Rule: dependency_security.known_vulnerabilities
+# Test Type: positive
+# Description: 使用已知漏洞的依赖包版本
+# Expected Detection: true
+# Expected Severity: HIGH
+# Code Type: vulnerable
+
+# requirements.txt
+requests==2.19.1  # 已知漏洞 CVE-2018-18074
+Django==2.0.1     # 已知漏洞 CVE-2018-7536
+flask==0.12.2     # 已知漏洞

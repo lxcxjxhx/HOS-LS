@@ -1,0 +1,9 @@
+{
+  "name": "test-case-dv-p02",
+  "version": "1.0.0",
+  "description": "Test Case ID: DV-P02 - 使用有漏洞的 npm 包",
+  "dependencies": {
+    "lodash": "4.17.4",
+    "express": "4.16.0"
+  }
+}

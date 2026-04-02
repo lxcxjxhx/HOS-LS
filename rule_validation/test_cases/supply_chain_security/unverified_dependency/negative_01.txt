@@ -1,0 +1,13 @@
+# Test Case ID: UD-N01
+# Rule: supply_chain_security.unverified_dependency
+# Test Type: negative
+# Description: 使用官方源验证过的依赖包
+# Expected Detection: false
+# Expected Severity: N/A
+# Code Type: safe
+
+# requirements.txt
+# PyPI 官方源验证包
+requests==2.31.0
+django==4.2.0
+flask==2.3.0

@@ -1,0 +1,12 @@
+# Test Case ID: TS-B01
+# Rule: supply_chain_security.typosquatting
+# Test Type: boundary
+# Description: 包名称相似但有合理理由（fork 版本）
+# Expected Detection: false
+# Expected Severity: N/A
+# Code Type: safe
+
+# requirements.txt
+# 社区维护的 fork 版本（有明确说明）
+django-extended==4.2.0  # 社区扩展版本
+requests-toolbelt==1.0.0  # 官方扩展库

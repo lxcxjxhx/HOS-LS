@@ -1,0 +1,332 @@
+{
+  "version": "1.0",
+  "description": "AI 工具特定安全规则集 - 针对 openclaw 等复杂 AI 工具优化",
+  "rules": {
+    "ai_security": {
+      "agent_framework_security": {
+        "id": "ai_security.agent_framework_security",
+        "name": "Agent 框架安全风险",
+        "description": "检测 AI Agent 框架中的权限边界问题",
+        "severity": "HIGH",
+        "confidence": 0.90,
+        "weight": 1.5,
+        "cwe": "CWE-269",
+        "owasp": "LLM02:2023",
+        "patterns": [
+          "(?i)class\\s+\\w+Agent\\s*[:\\(]",
+          "(?i)agent\\.execute\\s*\\(",
+          "(?i)agent\\.run\\s*\\(",
+          "(?i)self\\.tools\\s*=\\s*\\[",
+          "(?i)register_tool\\s*\\(",
+          "(?i)@tool\\s*\\(",
+          "(?i)@agent\\s*\\("
+        ],
+        "exclude_patterns": [
+          "test_agent",
+          "mock_agent",
+          "BaseAgent"
+        ],
+        "fix": "确保 Agent 有明确的权限边界，限制工具访问范围",
+        "references": [
+          "https://owasp.org/www-project-top-10-for-large-language-model-applications/"
+        ]
+      },
+      "tool_chain_analysis": {
+        "id": "ai_security.tool_chain_analysis",
+        "name": "工具调用链风险",
+        "description": "检测危险工具组合调用",
+        "severity": "HIGH",
+        "confidence": 0.85,
+        "weight": 1.5,
+        "cwe": "CWE-78",
+        "owasp": "LLM03:2023",
+        "patterns": [
+          "(?i)shell\\s*=\\s*True",
+          "(?i)subprocess\\..*shell",
+          "(?i)os\\.system\\s*\\(",
+          "(?i)exec\\s*\\(",
+          "(?i)eval\\s*\\(",
+          "(?i)\\.__import__\\s*\\(",
+          "(?i)compile\\s*\\(",
+          "(?i)tool.*command.*execute",
+          "(?i)run_command\\s*\\("
+        ],
+        "exclude_patterns": [
+          "test_",
+          "mock_",
+          "safe_"
+        ],
+        "fix": "审查工具调用链，避免组合使用危险工具",
+        "references": []
+      },
+      "prompt_injection_detection": {
+        "id": "ai_security.prompt_injection_detection",
+        "name": "提示词注入风险",
+        "description": "检测潜在的提示词注入漏洞",
+        "severity": "CRITICAL",
+        "confidence": 0.88,
+        "weight": 2.0,
+        "cwe": "CWE-1333",
+        "owasp": "LLM01:2023",
+        "patterns": [
+          "(?i)system\\s*=\\s*[\"']",
+          "(?i)system_prompt\\s*[:=]",
+          "(?i)prompt\\s*\\+\\s*",
+          "(?i)f[\"'].*\\{.*\\}.*[\"'].*prompt",
+          "(?i)user_input.*prompt",
+          "(?i)format.*prompt",
+          "(?i)template.*render",
+          "(?i)\\.format\\s*\\(.*prompt"
+        ],
+        "exclude_patterns": [
+          "sanitize",
+          "escape",
+          "validate"
+        ],
+        "fix": "对用户输入进行严格过滤和转义，避免直接拼接到 prompt",
+        "references": [
+          "https://owasp.org/www-project-top-10-for-large-language-model-applications/"
+        ]
+      },
+      "skill_sandbox_security": {
+        "id": "ai_security.skill_sandbox_security",
+        "name": "技能沙箱逃逸风险",
+        "description": "检测技能执行沙箱的潜在逃逸",
+        "severity": "CRITICAL",
+        "confidence": 0.92,
+        "weight": 2.0,
+        "cwe": "CWE-59",
+        "owasp": "LLM04:2023",
+        "patterns": [
+          "(?i)class\\s+\\w+Skill\\s*[:\\(]",
+          "(?i)@skill\\s*\\(",
+          "(?i)register_skill\\s*\\(",
+          "(?i)skills\\s*=\\s*\\[",
+          "(?i)import.*skill",
+          "(?i)load_skill\\s*\\(",
+          "(?i)execute_skill\\s*\\("
+        ],
+        "exclude_patterns": [
+          "BaseSkill",
+          "test_skill"
+        ],
+        "fix": "确保技能在受限沙箱环境中执行，限制文件系统访问",
+        "references": []
+      },
+      "llm_api_key_exposure": {
+        "id": "ai_security.llm_api_key_exposure",
+        "name": "LLM API 密钥暴露",
+        "description": "检测 LLM API 密钥硬编码或暴露",
+        "severity": "CRITICAL",
+        "confidence": 0.95,
+        "weight": 2.0,
+        "cwe": "CWE-798",
+        "owasp": "A07:2021",
+        "patterns": [
+          "(?i)(openai[_\\s-]?api[_\\s-]?key|openai_key)\\s*[:=]\\s*[\"']sk-[^\"']{20,}[\"']",
+          "(?i)(anthropic[_\\s-]?api[_\\s-]?key|anthropic_key)\\s*[:=]\\s*[\"'][^\"']{20,}[\"']",
+          "(?i)(gemini[_\\s-]?api[_\\s-]?key|gemini_key)\\s*[:=]\\s*[\"'][^\"']{20,}[\"']",
+          "(?i)LLM_API_KEY\\s*[:=]\\s*[\"'][^\"']{8,}[\"']",
+          "(?i)OPENAI_API_KEY\\s*[:=]\\s*[\"'][^\"']{8,}[\"']",
+          "(?i)ChatCompletion\\.create"
+        ],
+        "exclude_patterns": [
+          "os\\.environ\\.get",
+          "getenv\\(",
+          "load_dotenv"
+        ],
+        "fix": "使用环境变量或密钥管理服务存储 API 密钥",
+        "references": []
+      },
+      "context_window_overflow": {
+        "id": "ai_security.context_window_overflow",
+        "name": "上下文窗口溢出",
+        "description": "检测可能导致上下文窗口溢出的代码",
+        "severity": "MEDIUM",
+        "confidence": 0.75,
+        "weight": 1.0,
+        "cwe": "CWE-770",
+        "owasp": "LLM05:2023",
+        "patterns": [
+          "(?i)max_tokens\\s*=\\s*\\d{5,}",
+          "(?i)max_context\\s*=\\s*\\d{5,}",
+          "(?i)context.*length.*\\d{5,}",
+          "(?i)truncate.*False",
+          "(?i)append.*history.*without.*limit"
+        ],
+        "exclude_patterns": [
+          "test_",
+          "validate"
+        ],
+        "fix": "设置合理的上下文长度限制，实现截断机制",
+        "references": []
+      },
+      "training_data_poisoning": {
+        "id": "ai_security.training_data_poisoning",
+        "name": "训练数据投毒风险",
+        "description": "检测训练数据来源和验证问题",
+        "severity": "HIGH",
+        "confidence": 0.80,
+        "weight": 1.5,
+        "cwe": "CWE-1336",
+        "owasp": "LLM03:2023",
+        "patterns": [
+          "(?i)load_training_data\\s*\\(",
+          "(?i)train_from_file\\s*\\(",
+          "(?i)dataset.*load",
+          "(?i)fine.tune\\s*\\(",
+          "(?i)embeddings\\.from_data"
+        ],
+        "exclude_patterns": [
+          "validate",
+          "verify",
+          "sanitize"
+        ],
+        "fix": "验证训练数据来源，实施数据清洗和验证",
+        "references": []
+      },
+      "model_output_injection": {
+        "id": "ai_security.model_output_injection",
+        "name": "模型输出注入",
+        "description": "检测 LLM 输出直接执行的风险",
+        "severity": "CRITICAL",
+        "confidence": 0.90,
+        "weight": 2.0,
+        "cwe": "CWE-94",
+        "owasp": "LLM01:2023",
+        "patterns": [
+          "(?i)llm.*response.*exec",
+          "(?i)model.*output.*eval",
+          "(?i)completion.*text.*exec",
+          "(?i)generated.*code.*run",
+          "(?i)ai.*response.*system"
+        ],
+        "exclude_patterns": [
+          "sandbox",
+          "restricted",
+          "validate"
+        ],
+        "fix": "对 LLM 输出进行严格验证，避免直接执行",
+        "references": []
+      }
+    },
+    "code_security": {
+      "dynamic_import_risk": {
+        "id": "code_security.dynamic_import_risk",
+        "name": "动态导入风险",
+        "description": "检测动态导入模块的安全风险",
+        "severity": "HIGH",
+        "confidence": 0.88,
+        "weight": 1.5,
+        "cwe": "CWE-95",
+        "owasp": "A03:2021",
+        "patterns": [
+          "(?i)importlib\\.import_module\\s*\\(",
+          "(?i)__import__\\s*\\(",
+          "(?i)import\\s*\\(",
+          "(?i)globals\\(\\)\\[.*\\]",
+          "(?i)getattr.*import"
+        ],
+        "exclude_patterns": [
+          "test_",
+          "mock_"
+        ],
+        "fix": "限制动态导入的来源，使用白名单验证模块名",
+        "references": []
+      },
+      "unsafe_deserialization": {
+        "id": "code_security.unsafe_deserialization",
+        "name": "不安全反序列化",
+        "description": "检测不安全的反序列化操作",
+        "severity": "CRITICAL",
+        "confidence": 0.92,
+        "weight": 2.0,
+        "cwe": "CWE-502",
+        "owasp": "A08:2021",
+        "patterns": [
+          "(?i)pickle\\.loads?\\s*\\(",
+          "(?i)yaml\\.load\\s*\\([^)]*\\)",
+          "(?i)marshal\\.loads?\\s*\\(",
+          "(?i)shelve\\.open\\s*\\(",
+          "(?i)exec\\s*\\(.*json"
+        ],
+        "exclude_patterns": [
+          "yaml\\.safe_load",
+          "test_"
+        ],
+        "fix": "使用安全的反序列化方法，如 yaml.safe_load()",
+        "references": [
+          "https://owasp.org/Top10/A08_2021-Software_and_Data_Integrity_Failures/"
+        ]
+      }
+    },
+    "config_security": {
+      "insecure_default_config": {
+        "id": "config_security.insecure_default_config",
+        "name": "不安全默认配置",
+        "description": "检测不安全的默认配置",
+        "severity": "MEDIUM",
+        "confidence": 0.80,
+        "weight": 1.0,
+        "cwe": "CWE-1188",
+        "owasp": "A05:2021",
+        "patterns": [
+          "(?i)debug\\s*=\\s*True",
+          "(?i)verify\\s*=\\s*False",
+          "(?i)ssl_verify\\s*=\\s*False",
+          "(?i)insecure\\s*=\\s*True",
+          "(?i)allow_unsafe\\s*=\\s*True"
+        ],
+        "exclude_patterns": [
+          "test_",
+          "development"
+        ],
+        "fix": "使用安全的默认配置，生产环境强制验证",
+        "references": []
+      }
+    },
+    "dependency_security": {
+      "unsafe_dependency_loading": {
+        "id": "dependency_security.unsafe_dependency_loading",
+        "name": "不安全依赖加载",
+        "description": "检测从不安全来源加载依赖",
+        "severity": "HIGH",
+        "confidence": 0.85,
+        "weight": 1.5,
+        "cwe": "CWE-1395",
+        "owasp": "A06:2021",
+        "patterns": [
+          "(?i)http://.*\\.py",
+          "(?i)urllib.*download",
+          "(?i)wget.*http",
+          "(?i)curl.*http.*\\.py",
+          "(?i)requirements.*http"
+        ],
+        "exclude_patterns": [
+          "https://",
+          "test_"
+        ],
+        "fix": "使用 HTTPS 和官方包管理器安装依赖",
+        "references": []
+      }
+    }
+  },
+  "false_positive_filters": {
+    "path_patterns": [
+      "test_",
+      "_test.py",
+      "tests/",
+      "mock_",
+      "fixtures/",
+      "examples/",
+      "demos/"
+    ],
+    "code_patterns": [
+      "example_",
+      "placeholder",
+      "your_.*_here",
+      "xxx",
+      "mock\\.mock"
+    ]
+  }
+}

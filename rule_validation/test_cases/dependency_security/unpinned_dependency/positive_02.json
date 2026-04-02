@@ -1,0 +1,9 @@
+{
+  "name": "test-case-ud-p02",
+  "version": "1.0.0",
+  "description": "Test Case ID: UD-P02 - 使用模糊版本范围",
+  "dependencies": {
+    "lodash": "^4.0.0",
+    "express": ">=4.0.0"
+  }
+}

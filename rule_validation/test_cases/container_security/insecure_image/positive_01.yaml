@@ -1,0 +1,18 @@
+# Test Case ID: II-P01
+# Rule: container_security.insecure_image
+# Test Type: positive
+# Description: 使用不安全的容器镜像
+# Expected Detection: true
+# Expected Severity: HIGH
+# Code Type: vulnerable
+
+# Dockerfile - 不安全的镜像使用示例
+dockerfile_content: |
+  FROM ubuntu:latest
+  FROM python:3.8
+  
+  # 使用过时基础镜像
+  FROM ubuntu:14.04
+  
+  # 没有指定镜像哈希
+  # FROM python@sha256:...

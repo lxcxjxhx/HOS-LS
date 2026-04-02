@@ -1,0 +1,18 @@
+# Test Case ID: UD-B01
+# Rule: cloud_security.unencrypted_data
+# Test Type: boundary
+# Description: 临时/缓存数据（可接受）
+# Expected Detection: false
+# Expected Severity: N/A
+# Code Type: safe
+
+# AWS ElastiCache - 缓存数据
+ReplicationGroupId: my-cache
+AtRestEncryptionEnabled: false
+TransitEncryptionEnabled: true
+
+# 缓存数据，仅启用传输加密
+# 静态数据为临时性质
+
+# 或临时存储桶（生命周期短）
+# S3 Lifecycle Policy 自动删除

@@ -1,0 +1,28 @@
+# Test Case ID: OS-P01
+# Rule: cloud_security.open_security_group
+# Test Type: positive
+# Description: 安全组开放端口
+# Expected Detection: true
+# Expected Severity: CRITICAL
+# Code Type: vulnerable
+
+# AWS Security Group - 开放所有端口
+GroupName: open-sg
+IpPermissions:
+  - IpProtocol: "-1"
+    IpRanges:
+      - CidrIp: "0.0.0.0/0"
+
+# 或开放敏感端口
+SensitivePortsExample:
+  IpPermissions:
+    - IpProtocol: tcp
+      FromPort: 22
+      ToPort: 22
+      IpRanges:
+        - CidrIp: "0.0.0.0/0"  # SSH 公开
+    - IpProtocol: tcp
+      FromPort: 3389
+      ToPort: 3389
+      IpRanges:
+        - CidrIp: "0.0.0.0/0"  # RDP 公开

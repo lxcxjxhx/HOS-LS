@@ -1,0 +1,440 @@
+{
+  "version": "2.0",
+  "rule_sets": {
+    "default": {
+      "name": "默认规则集",
+      "description": "适用于一般 AI 项目的默认安全规则",
+      "enabled_rules": [
+        "code_security.hardcoded_secrets",
+        "code_security.backdoor_code",
+        "code_security.network_access",
+        "code_security.ai_model_loading",
+        "code_security.ai_input_validation",
+        "permission_security.root_user",
+        "permission_security.executable_files",
+        "permission_security.model_file_permissions",
+        "network_security.public_ports",
+        "network_security.firewall_disabled",
+        "dependency_security.unpinned_versions",
+        "config_security.sensitive_config",
+        "config_security.ai_config",
+        "config_security.debug_enabled"
+      ]
+    },
+    "openclaw": {
+      "name": "OpenClaw 项目规则集",
+      "description": "专门针对 OpenClaw 项目的安全规则",
+      "enabled_rules": [
+        "code_security.hardcoded_secrets",
+        "code_security.backdoor_code",
+        "code_security.network_access",
+        "code_security.ai_model_loading",
+        "permission_security.root_user",
+        "permission_security.executable_files",
+        "permission_security.model_file_permissions",
+        "network_security.public_ports",
+        "network_security.firewall_disabled",
+        "dependency_security.unpinned_versions",
+        "config_security.sensitive_config",
+        "config_security.ai_config",
+        "config_security.debug_enabled"
+      ]
+    },
+    "cursor": {
+      "name": "Cursor 生成项目规则集",
+      "description": "针对 Cursor 生成的项目的安全规则",
+      "enabled_rules": [
+        "code_security.hardcoded_secrets",
+        "code_security.backdoor_code",
+        "code_security.network_access",
+        "code_security.ai_model_loading",
+        "code_security.ai_input_validation",
+        "permission_security.executable_files",
+        "permission_security.model_file_permissions",
+        "network_security.public_ports",
+        "dependency_security.unpinned_versions",
+        "config_security.sensitive_config",
+        "config_security.ai_config",
+        "config_security.debug_enabled"
+      ]
+    },
+    "trae": {
+      "name": "Trae 生成项目规则集",
+      "description": "针对 Trae 生成的项目的安全规则",
+      "enabled_rules": [
+        "code_security.hardcoded_secrets",
+        "code_security.backdoor_code",
+        "code_security.network_access",
+        "code_security.ai_model_loading",
+        "permission_security.executable_files",
+        "permission_security.model_file_permissions",
+        "network_security.public_ports",
+        "dependency_security.unpinned_versions",
+        "config_security.sensitive_config",
+        "config_security.ai_config"
+      ]
+    },
+    "kiro": {
+      "name": "Kiro 生成项目规则集",
+      "description": "针对 Kiro 生成的项目的安全规则",
+      "enabled_rules": [
+        "code_security.hardcoded_secrets",
+        "code_security.backdoor_code",
+        "code_security.network_access",
+        "code_security.ai_model_loading",
+        "permission_security.executable_files",
+        "permission_security.model_file_permissions",
+        "network_security.public_ports",
+        "dependency_security.unpinned_versions",
+        "config_security.sensitive_config"
+      ]
+    },
+    "high_security": {
+      "name": "高安全要求规则集",
+      "description": "适用于对安全要求较高的项目",
+      "enabled_rules": [
+        "code_security.hardcoded_secrets",
+        "code_security.hardcoded_secrets_encoded",
+        "code_security.hardcoded_secrets_env_fallback",
+        "code_security.hardcoded_secrets_cloud",
+        "code_security.hardcoded_secrets_private_key",
+        "code_security.backdoor_code",
+        "code_security.command_injection_ai_generated",
+        "code_security.command_injection_shell_true_enhanced",
+        "code_security.command_injection_user_input",
+        "code_security.network_access",
+        "code_security.ai_model_loading",
+        "code_security.ai_input_validation",
+        "injection_security.command_injection",
+        "injection_security.sql_injection",
+        "injection_security.xss",
+        "injection_security.path_traversal",
+        "injection_security.deserialization",
+        "ai_security.prompt_injection",
+        "ai_security.prompt_injection_enhanced",
+        "ai_security.prompt_injection_multi_turn",
+        "ai_security.jailbreak_keyword",
+        "ai_security.jailbreak_developer_mode",
+        "ai_security.prompt_leakage_output",
+        "ai_security.tool_call_auto_execute",
+        "ai_security.tool_call_shell",
+        "ai_security.rag_data_leak",
+        "ai_security.model_poisoning",
+        "ai_security.training_data_leakage",
+        "permission_security.root_user",
+        "permission_security.executable_files",
+        "permission_security.model_file_permissions",
+        "permission_security.ssh_key_permissions",
+        "network_security.public_ports",
+        "network_security.firewall_disabled",
+        "network_security.ssh_root_login",
+        "network_security.reverse_shell",
+        "network_security.hardcoded_ip",
+        "dependency_security.unpinned_versions",
+        "dependency_security.ai_dependencies",
+        "dependency_security.known_vulnerabilities",
+        "config_security.sensitive_config",
+        "config_security.ai_config",
+        "config_security.debug_enabled",
+        "privacy_security.insecure_logging"
+      ]
+    },
+    "minimal": {
+      "name": "最小规则集",
+      "description": "适用于快速扫描的最小规则集",
+      "enabled_rules": [
+        "code_security.hardcoded_secrets",
+        "code_security.backdoor_code",
+        "network_security.public_ports",
+        "config_security.sensitive_config"
+      ]
+    },
+    "owasp_top10": {
+      "name": "OWASP Top 10 规则集",
+      "description": "基于 OWASP Top 10 2021 的安全规则",
+      "enabled_rules": [
+        "injection_security.command_injection",
+        "injection_security.sql_injection",
+        "injection_security.xss",
+        "injection_security.path_traversal",
+        "injection_security.deserialization",
+        "code_security.hardcoded_secrets",
+        "code_security.backdoor_code",
+        "permission_security.ssh_key_permissions",
+        "permission_security.model_file_permissions",
+        "network_security.public_ports",
+        "network_security.firewall_disabled",
+        "config_security.sensitive_config",
+        "config_security.debug_enabled",
+        "dependency_security.known_vulnerabilities",
+        "privacy_security.insecure_logging",
+        "privacy_security.pii_exposure"
+      ]
+    },
+    "container_security": {
+      "name": "容器安全规则集",
+      "description": "针对 Docker 和 Kubernetes 容器的安全规则",
+      "enabled_rules": [
+        "container_security.privileged_container",
+        "container_security.root_in_container",
+        "container_security.sensitive_mounts",
+        "container_security.latest_tag",
+        "code_security.hardcoded_secrets",
+        "code_security.backdoor_code",
+        "network_security.public_ports",
+        "permission_security.root_user",
+        "config_security.debug_enabled"
+      ]
+    },
+    "cloud_security": {
+      "name": "云安全规则集",
+      "description": "针对 AWS、Azure、GCP 等云平台的安全规则",
+      "enabled_rules": [
+        "cloud_security.hardcoded_cloud_credentials",
+        "cloud_security.overly_permissive_iam",
+        "cloud_security.public_access",
+        "cloud_security.unencrypted_storage",
+        "code_security.hardcoded_secrets",
+        "code_security.backdoor_code",
+        "network_security.public_ports",
+        "network_security.hardcoded_ip",
+        "permission_security.ssh_key_permissions",
+        "config_security.sensitive_config",
+        "dependency_security.unpinned_versions"
+      ]
+    },
+    "ai_security": {
+      "name": "AI 安全规则集",
+      "description": "针对 AI/ML 项目的专项安全规则",
+      "enabled_rules": [
+        "ai_security.prompt_injection",
+        "ai_security.prompt_injection_enhanced",
+        "ai_security.prompt_injection_multi_turn",
+        "ai_security.jailbreak_keyword",
+        "ai_security.jailbreak_developer_mode",
+        "ai_security.prompt_leakage_output",
+        "ai_security.tool_call_auto_execute",
+        "ai_security.tool_call_shell",
+        "ai_security.rag_data_leak",
+        "ai_security.model_poisoning",
+        "ai_security.training_data_leakage",
+        "ai_security.adversarial_examples",
+        "code_security.hardcoded_secrets",
+        "code_security.hardcoded_secrets_encoded",
+        "code_security.hardcoded_secrets_cloud",
+        "code_security.ai_model_loading",
+        "code_security.ai_input_validation",
+        "code_security.backdoor_code",
+        "code_security.command_injection_ai_generated",
+        "code_security.command_injection_shell_true_enhanced",
+        "injection_security.command_injection",
+        "injection_security.sql_injection",
+        "permission_security.model_file_permissions",
+        "permission_security.ssh_key_permissions",
+        "network_security.public_ports",
+        "dependency_security.ai_dependencies",
+        "dependency_security.known_vulnerabilities",
+        "config_security.ai_config",
+        "config_security.sensitive_config",
+        "privacy_security.pii_exposure",
+        "privacy_security.insecure_logging"
+      ]
+    },
+    "privacy_protection": {
+      "name": "隐私保护规则集",
+      "description": "针对 GDPR 和个人信息保护的安全规则",
+      "enabled_rules": [
+        "privacy_security.pii_exposure",
+        "privacy_security.gdpr_violation",
+        "privacy_security.insecure_logging",
+        "code_security.hardcoded_secrets",
+        "code_security.ai_input_validation",
+        "injection_security.sql_injection",
+        "injection_security.path_traversal",
+        "network_security.public_ports",
+        "config_security.sensitive_config",
+        "permission_security.ssh_key_permissions"
+      ]
+    },
+    "web_security": {
+      "name": "Web 应用安全规则集",
+      "description": "针对 Web 应用的安全规则",
+      "enabled_rules": [
+        "injection_security.sql_injection",
+        "injection_security.xss",
+        "injection_security.path_traversal",
+        "injection_security.deserialization",
+        "code_security.hardcoded_secrets",
+        "code_security.backdoor_code",
+        "code_security.network_access",
+        "network_security.public_ports",
+        "network_security.hardcoded_ip",
+        "config_security.debug_enabled",
+        "config_security.sensitive_config",
+        "dependency_security.known_vulnerabilities",
+        "permission_security.ssh_key_permissions"
+      ]
+    },
+    "devsecops": {
+      "name": "DevSecOps 规则集",
+      "description": "适用于 CI/CD 流水线的安全规则",
+      "enabled_rules": [
+        "code_security.hardcoded_secrets",
+        "code_security.backdoor_code",
+        "injection_security.command_injection",
+        "injection_security.sql_injection",
+        "dependency_security.unpinned_versions",
+        "dependency_security.known_vulnerabilities",
+        "container_security.privileged_container",
+        "container_security.latest_tag",
+        "config_security.debug_enabled",
+        "privacy_security.insecure_logging",
+        "network_security.public_ports"
+      ]
+    }
+  },
+  "project_types": {
+    "openclaw": {
+      "name": "OpenClaw 项目",
+      "rule_set": "openclaw",
+      "detect_patterns": [
+        "openclaw",
+        "skill",
+        "gateway"
+      ]
+    },
+    "cursor": {
+      "name": "Cursor 生成项目",
+      "rule_set": "cursor",
+      "detect_patterns": [
+        "\\.cursor/",
+        "cursor",
+        "\\.cursorrules"
+      ]
+    },
+    "trae": {
+      "name": "Trae 生成项目",
+      "rule_set": "trae",
+      "detect_patterns": [
+        "\\.trae/",
+        "trae",
+        "\\.trae_rules"
+      ]
+    },
+    "kiro": {
+      "name": "Kiro 生成项目",
+      "rule_set": "kiro",
+      "detect_patterns": [
+        "\\.kiro/",
+        "kiro",
+        "\\.kiro_rules"
+      ]
+    },
+    "container": {
+      "name": "容器项目",
+      "rule_set": "container_security",
+      "detect_patterns": [
+        "Dockerfile",
+        "docker-compose\\.yml",
+        "\\.dockerignore",
+        "kubernetes",
+        "\\.yaml",
+        "\\.yml"
+      ]
+    },
+    "cloud": {
+      "name": "云项目",
+      "rule_set": "cloud_security",
+      "detect_patterns": [
+        "terraform",
+        "\\.tf$",
+        "cloudformation",
+        "template\\.yaml",
+        "aws_",
+        "azure_",
+        "gcp_"
+      ]
+    },
+    "ai_model": {
+      "name": "AI 模型项目",
+      "rule_set": "ai_security",
+      "detect_patterns": [
+        "\\.pt$",
+        "\\.pth$",
+        "\\.onnx$",
+        "\\.h5$",
+        "\\.pb$",
+        "model",
+        "tensorflow",
+        "pytorch",
+        "transformers",
+        "huggingface"
+      ]
+    },
+    "ai_web": {
+      "name": "AI Web 应用",
+      "rule_set": "high_security",
+      "detect_patterns": [
+        "flask",
+        "fastapi",
+        "django",
+        "streamlit",
+        "gradio"
+      ]
+    },
+    "web_app": {
+      "name": "Web 应用项目",
+      "rule_set": "web_security",
+      "detect_patterns": [
+        "flask",
+        "django",
+        "express",
+        "react",
+        "vue",
+        "angular"
+      ]
+    },
+    "privacy_sensitive": {
+      "name": "隐私敏感项目",
+      "rule_set": "privacy_protection",
+      "detect_patterns": [
+        "gdpr",
+        "privacy",
+        "pii",
+        "personal_data",
+        "user_data"
+      ]
+    },
+    "devsecops": {
+      "name": "DevSecOps 项目",
+      "rule_set": "devsecops",
+      "detect_patterns": [
+        "\\.github/workflows",
+        "\\.gitlab-ci\\.yml",
+        "Jenkinsfile",
+        "ci/",
+        "cd/"
+      ]
+    }
+  },
+  "detection_config": {
+    "max_file_size": 10485760,
+    "timeout_per_file": 30,
+    "parallel_files": 10,
+    "confidence_threshold": 0.5,
+    "severity_weights": {
+      "HIGH": 3,
+      "MEDIUM": 2,
+      "LOW": 1
+    },
+    "file_extensions": {
+      "python": [".py", ".pyw"],
+      "javascript": [".js", ".jsx", ".ts", ".tsx"],
+      "config": [".json", ".yaml", ".yml", ".toml", ".ini", ".env"],
+      "shell": [".sh", ".bash", ".zsh"],
+      "docker": ["Dockerfile", ".dockerfile"],
+      "kubernetes": [".yaml", ".yml"],
+      "terraform": [".tf", ".tfvars"]
+    }
+  }
+}

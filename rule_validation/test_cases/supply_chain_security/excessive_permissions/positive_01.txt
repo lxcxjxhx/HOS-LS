@@ -1,0 +1,20 @@
+# Test Case ID: EP-P01
+# Rule: supply_chain_security.excessive_permissions
+# Test Type: positive
+# Description: 依赖包请求过高权限
+# Expected Detection: true
+# Expected Severity: HIGH
+# Code Type: vulnerable
+
+# setup.py
+from setuptools import setup
+
+setup(
+    name='my-package',
+    version='1.0.0',
+    # 依赖包需要系统级权限
+    install_requires=[
+        'package-needs-sudo==1.0.0',  # 需要 sudo 权限
+        'system-modifier==2.0.0',     # 修改系统配置
+    ],
+)

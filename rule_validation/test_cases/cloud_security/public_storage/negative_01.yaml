@@ -1,0 +1,26 @@
+# Test Case ID: PS-N01
+# Rule: cloud_security.public_storage
+# Test Type: negative
+# Description: 存储桶私有访问
+# Expected Detection: false
+# Expected Severity: N/A
+# Code Type: safe
+
+# AWS S3 Bucket Policy - 仅允许特定 IAM 角色
+Version: "2012-10-17"
+Statement:
+  - Sid: AllowSpecificIAM
+    Effect: Allow
+    Principal:
+      AWS: "arn:aws:iam::123456789012:role/AppRole"
+    Action:
+      - "s3:GetObject"
+      - "s3:PutObject"
+    Resource: "arn:aws:s3:::my-bucket/*"
+
+# 启用所有公共访问阻止
+PublicAccessBlock:
+  BlockPublicAcls: true
+  IgnorePublicAcls: true
+  BlockPublicPolicy: true
+  RestrictPublicBuckets: true

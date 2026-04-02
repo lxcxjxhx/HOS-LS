@@ -1,0 +1,14 @@
+# Test Case ID: TS-P01
+# Rule: supply_chain_security.typosquatting
+# Test Type: positive
+# Description: 依赖包名称与知名包相似，疑似 typo 攻击
+# Expected Detection: true
+# Expected Severity: HIGH
+# Code Type: vulnerable
+
+# requirements.txt
+# 疑似 typo 攻击包
+requets==2.28.0      # 应该是 requests
+djnago==4.2.0        # 应该是 django
+flaskk==2.3.0        # 应该是 flask
+numppy==1.24.0       # 应该是 numpy

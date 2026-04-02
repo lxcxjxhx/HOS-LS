@@ -1,0 +1,14 @@
+# Test Case ID: OD-N01
+# Rule: supply_chain_security.outdated_dependency
+# Test Type: negative
+# Description: 使用最新或接近最新的依赖包版本
+# Expected Detection: false
+# Expected Severity: N/A
+# Code Type: safe
+
+# requirements.txt
+# 最新版本的包
+requests==2.31.0
+django==4.2.0
+flask==2.3.0
+numpy==1.24.0

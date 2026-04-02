@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HOS-LS 安全检测报告</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            border-bottom: 2px solid #333;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #555;
+            margin-top: 30px;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 5px;
+        }
+        .summary {
+            background-color: #f9f9f9;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .summary-item {
+            display: inline-block;
+            margin-right: 20px;
+        }
+        .high-risk {
+            color: #d32f2f;
+            font-weight: bold;
+        }
+        .medium-risk {
+            color: #f57c00;
+            font-weight: bold;
+        }
+        .low-risk {
+            color: #388e3c;
+            font-weight: bold;
+        }
+        .risk-level {
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-weight: bold;
+        }
+        .risk-high {
+            background-color: #ffebee;
+            color: #c62828;
+        }
+        .risk-medium {
+            background-color: #fff3e0;
+            color: #ef6c00;
+        }
+        .risk-low {
+            background-color: #e8f5e8;
+            color: #2e7d32;
+        }
+        .project-info {
+            background-color: #e3f2fd;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .security-assessment {
+            background-color: #f3e5f5;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .recommendations {
+            background-color: #fff8e1;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .recommendation-item {
+            margin-bottom: 10px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+            font-weight: bold;
+        }
+        tr:hover {
+            background-color: #f5f5f5;
+        }
+        .footer {
+            margin-top: 40px;
+            text-align: center;
+            color: #666;
+            font-size: 14px;
+        }
+        /* 选项卡样式 */
+        .tab-button {
+            background-color: #f1f1f1;
+            border: 1px solid #ddd;
+            padding: 10px 15px;
+            cursor: pointer;
+            margin-right: 5px;
+            border-radius: 4px 4px 0 0;
+            transition: background-color 0.3s;
+        }
+        .tab-button:hover {
+            background-color: #ddd;
+        }
+        .tab-button.active {
+            background-color: #f0f0f0;
+            font-weight: bold;
+        }
+        .tab-content {
+            border: 1px solid #ddd;
+            border-top: none;
+            border-radius: 0 0 4px 4px;
+        }
+        /* 复制按钮样式 */
+        .copy-button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 14px;
+            margin: 4px 2px;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: background-color 0.3s;
+        }
+        .copy-button:hover {
+            background-color: #45a049;
+        }
+        .copy-button:active {
+            background-color: #3e8e41;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>HOS-LS 安全检测报告</h1>
+        
+        <div class="project-info">
+            <h2>项目信息</h2>
+            <div class="summary-item">检测目标: {{ target }}</div>
+            <div class="summary-item">检测时间: {{ timestamp }}</div>
+            <div class="summary-item">项目类型: {{ project_type }}</div>
+            <div class="summary-item">使用规则集: {{ rule_set }}</div>
+        </div>
+        
+        <div class="summary">
+            <h2>检测摘要</h2>
+            <div class="summary-item high-risk">高风险: {{ high_risk }}</div>
+            <div class="summary-item medium-risk">中风险: {{ medium_risk }}</div>
+            <div class="summary-item low-risk">低风险: {{ low_risk }}</div>
+            <div class="summary-item">总体风险等级: <span class="risk-level risk-{{ overall_risk }}">{{ overall_risk_text }}</span></div>
+        </div>
+        
+        <div class="security-assessment">
+            <h2>安全评估</h2>
+            <p>{{ security_assessment }}</p>
+        </div>
+        
+        <div class="recommendations">
+            <h2>安全建议</h2>
+            {% for recommendation in recommendations %}
+            <div class="recommendation-item">
+                <strong>{{ recommendation.severity }}风险:</strong> {{ recommendation.text }}
+            </div>
+            {% endfor %}
+        </div>
+        
+        {% if code_security %}
+        <h2>代码安全</h2>
+        <table>
+            <tr>
+                <th>文件</th>
+                <th>行号</th>
+                <th>问题</th>
+                <th>严重程度</th>
+                <th>详情</th>
+            </tr>
+            {% for item in code_security %}
+            <tr>
+                <td>{{ item.file }}</td>
+                <td>{{ item.line_number }}</td>
+                <td>{{ item.issue }}</td>
+                <td class="{{ item.severity }}-risk">{{ item.severity }}</td>
+                <td>{{ item.details }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+        {% endif %}
+        
+        {% if permission_security %}
+        <h2>权限安全</h2>
+        <table>
+            <tr>
+                <th>文件</th>
+                <th>行号</th>
+                <th>问题</th>
+                <th>严重程度</th>
+                <th>详情</th>
+            </tr>
+            {% for item in permission_security %}
+            <tr>
+                <td>{{ item.file }}</td>
+                <td>{{ item.line_number }}</td>
+                <td>{{ item.issue }}</td>
+                <td class="{{ item.severity }}-risk">{{ item.severity }}</td>
+                <td>{{ item.details }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+        {% endif %}
+        
+        {% if network_security %}
+        <h2>网络安全</h2>
+        <table>
+            <tr>
+                <th>文件</th>
+                <th>行号</th>
+                <th>问题</th>
+                <th>严重程度</th>
+                <th>详情</th>
+            </tr>
+            {% for item in network_security %}
+            <tr>
+                <td>{{ item.file }}</td>
+                <td>{{ item.line_number }}</td>
+                <td>{{ item.issue }}</td>
+                <td class="{{ item.severity }}-risk">{{ item.severity }}</td>
+                <td>{{ item.details }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+        {% endif %}
+        
+        {% if dependency_security %}
+        <h2>依赖安全</h2>
+        <table>
+            <tr>
+                <th>文件</th>
+                <th>行号</th>
+                <th>问题</th>
+                <th>严重程度</th>
+                <th>详情</th>
+            </tr>
+            {% for item in dependency_security %}
+            <tr>
+                <td>{{ item.file }}</td>
+                <td>{{ item.line_number }}</td>
+                <td>{{ item.issue }}</td>
+                <td class="{{ item.severity }}-risk">{{ item.severity }}</td>
+                <td>{{ item.details }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+        {% endif %}
+        
+        {% if config_security %}
+        <h2>配置安全</h2>
+        <table>
+            <tr>
+                <th>文件</th>
+                <th>行号</th>
+                <th>问题</th>
+                <th>严重程度</th>
+                <th>详情</th>
+            </tr>
+            {% for item in config_security %}
+            <tr>
+                <td>{{ item.file }}</td>
+                <td>{{ item.line_number }}</td>
+                <td>{{ item.issue }}</td>
+                <td class="{{ item.severity }}-risk">{{ item.severity }}</td>
+                <td>{{ item.details }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+        {% endif %}
+        
+        <div class="recommendations">
+            <h2>AI安全建议</h2>
+            {% if ai_suggestions %}
+            <div class="recommendation-item">
+                <strong>风险评估:</strong> {{ ai_suggestions.risk_assessment }}
+            </div>
+            <h3>针对性建议</h3>
+            {% for suggestion in ai_suggestions.specific_suggestions %}
+            <div class="recommendation-item">
+                {{ suggestion }}
+            </div>
+            {% endfor %}
+            <h3>安全最佳实践</h3>
+            {% for practice in ai_suggestions.best_practices %}
+            <div class="recommendation-item">
+                {{ practice }}
+            </div>
+            {% endfor %}
+            {% else %}
+            <div class="recommendation-item">
+                <strong>风险评估:</strong> 本次扫描发现{{ high_risk }}个高风险问题，{{ medium_risk }}个中风险问题，{{ low_risk }}个低风险问题。
+                {% if high_risk > 0 %}
+                系统存在严重安全隐患，建议立即处理高风险问题。
+                {% elif medium_risk > 0 %}
+                系统存在一定安全风险，建议尽快处理中风险问题。
+                {% else %}
+                系统安全状态良好，建议定期进行安全检查。
+                {% endif %}
+            </div>
+            <h3>针对性建议</h3>
+            <div class="recommendation-item">
+                避免硬编码敏感信息，使用环境变量存储
+            </div>
+            <div class="recommendation-item">
+                谨慎使用exec()、eval()等函数，防止代码注入攻击
+            </div>
+            <div class="recommendation-item">
+                确保网络访问代码有适当的错误处理和安全验证
+            </div>
+            <h3>安全最佳实践</h3>
+            <div class="recommendation-item">
+                使用环境变量存储所有敏感信息，避免硬编码
+            </div>
+            <div class="recommendation-item">
+                定期更新依赖库，修复已知安全漏洞
+            </div>
+            <div class="recommendation-item">
+                使用HTTPS进行所有网络通信，确保数据传输安全
+            </div>
+            <div class="recommendation-item">
+                实施输入验证，防止注入攻击
+            </div>
+            <div class="recommendation-item">
+                使用最小权限原则，限制代码和进程的权限
+            </div>
+            {% endif %}
+            <h3>AI 工具提示词（由 AI 生成）</h3>
+            
+            <!-- 选项卡 -->
+            <div style="margin-bottom: 10px;">
+                <button class="tab-button active" onclick="switchTab('cursor')">Cursor</button>
+                <button class="tab-button" onclick="switchTab('trae')">Trae</button>
+                <button class="tab-button" onclick="switchTab('kiro')">Kiro</button>
+            </div>
+            
+            <!-- 提示词内容 - 使用 AI 生成的内容 -->
+            <div id="cursor-tab" class="tab-content active" style="background-color: #f0f0f0; padding: 15px; border-radius: 5px; white-space: pre-wrap; font-family: monospace;">
+                {% if ai_suggestions and ai_suggestions.cursor_prompt %}
+{{ ai_suggestions.cursor_prompt }}
+                {% else %}
+# Cursor 安全提示词
+正在生成 AI 安全提示词...
+                {% endif %}
+            </div>
+            <div id="trae-tab" class="tab-content" style="background-color: #f0f0f0; padding: 15px; border-radius: 5px; white-space: pre-wrap; font-family: monospace; display: none;">
+                {% if ai_suggestions and ai_suggestions.trae_prompt %}
+{{ ai_suggestions.trae_prompt }}
+                {% else %}
+# Trae 安全提示词
+正在生成 AI 安全提示词...
+                {% endif %}
+            </div>
+            <div id="kiro-tab" class="tab-content" style="background-color: #f0f0f0; padding: 15px; border-radius: 5px; white-space: pre-wrap; font-family: monospace; display: none;">
+                {% if ai_suggestions and ai_suggestions.kiro_prompt %}
+{{ ai_suggestions.kiro_prompt }}
+                {% else %}
+# Kiro 安全提示词
+正在生成 AI 安全提示词...
+                {% endif %}
+            </div>
+            
+            <div id="trae-tab" class="tab-content" style="display: none; background-color: #f0f0f0; padding: 15px; border-radius: 5px; white-space: pre-wrap; font-family: monospace;">
+                # trae 安全提示词
+                AI工具安全提示词
+
+                ## 针对 trae 的安全建议
+
+                ### 风险评估
+                本次扫描发现{{ high_risk }}个高风险问题，{{ medium_risk }}个中风险问题，{{ low_risk }}个低风险问题。
+                {% if high_risk > 0 %}
+                系统存在严重安全隐患，建议立即处理高风险问题。
+                {% elif medium_risk > 0 %}
+                系统存在一定安全风险，建议尽快处理中风险问题。
+                {% else %}
+                系统安全状态良好，建议定期进行安全检查。
+                {% endif %}
+
+                ### 针对性建议
+                {% if ai_suggestions.specific_suggestions %}
+                {% for suggestion in ai_suggestions.specific_suggestions %}
+                - [安全提示] {{ suggestion }}
+                {% endfor %}
+                {% else %}
+                - [安全提示] 避免硬编码敏感信息，使用环境变量存储
+                - [安全提示] 谨慎使用exec()、eval()等函数，防止代码注入攻击
+                - [安全提示] 确保网络访问代码有适当的错误处理和安全验证
+                {% endif %}
+
+                ### 上下文感知建议
+                - [安全提示] 使用虚拟环境管理Python依赖，避免依赖冲突和安全漏洞
+
+                ### 安全最佳实践
+                {% if ai_suggestions.best_practices %}
+                {% for practice in ai_suggestions.best_practices %}
+                - [安全提示] {{ practice }}
+                {% endfor %}
+                {% else %}
+                - [安全提示] 使用环境变量存储所有敏感信息，避免硬编码
+                - [安全提示] 定期更新依赖库，修复已知安全漏洞
+                - [安全提示] 使用HTTPS进行所有网络通信，确保数据传输安全
+                - [安全提示] 实施输入验证，防止注入攻击
+                - [安全提示] 使用最小权限原则，限制代码和进程的权限
+                {% endif %}
+
+                ### 通用安全规则
+                [安全规则] 请遵循以下安全要求：
+                检测硬编码的敏感信息 - 移除硬编码的敏感信息，使用环境变量或配置文件存储
+                检测潜在的后门代码 - 审查代码，确保这些函数的使用是安全的
+                检测网络访问代码 - 确保网络访问代码有适当的错误处理和安全验证
+                检测AI模型加载代码 - 确保模型加载路径安全，避免加载恶意模型
+                检测AI输入处理代码，可能缺少输入验证 - 添加输入验证和sanitization代码
+                检测使用root用户运行 - 创建专用用户运行AI工具，遵循最小权限原则
+                检测可执行文件 - 仅对必要的脚本设置执行权限
+                检测AI模型文件权限过于宽松 - 执行 'chmod 640 <file>' 限制模型文件访问
+                检测SSH私钥权限不安全 - 执行 'chmod 600 <key>' 限制私钥访问
+                检测端口暴露到公网 - 修改配置，将监听地址改为 127.0.0.1 或配置防火墙限制访问
+                检测防火墙未启用 - 安装并启用防火墙，如 ufw、firewalld 或 iptables
+                检测SSH允许root登录 - 修改 /etc/ssh/sshd_config，设置 'PermitRootLogin no'
+                检测反向Shell - 立即检查进程详情并终止可疑进程
+                检测依赖库版本未固定 - 固定依赖库版本，避免自动更新引入安全问题
+                检测AI相关依赖库 - 确保依赖库版本安全，定期更新
+                检测配置文件中包含敏感信息 - 移除敏感信息，使用环境变量存储
+                检测AI特定配置 - 确保配置安全，避免硬编码敏感信息
+                检测OpenClaw版本过旧 - 立即执行 'openclaw update' 升级到最新版本
+                检测OpenClaw安装来源非官方 - 建议从官方渠道安装：https://openclaw.ai 或 https://github.com/openclaw/openclaw
+                检测OpenClaw端口暴露到公网 - 修改 ~/.openclaw/config.json 中的 'host' 配置，将 '0.0.0.0' 改为 '127.0.0.1'，或在防火墙中限制访问
+                检测OpenClaw技能包可能包含恶意代码 - 审查技能包代码，确保不包含恶意代码
+                检测Cursor生成的代码中硬编码的API密钥 - 使用环境变量存储API密钥
+                检测不安全的AI提示模板 - 确保提示模板不包含敏感信息，并且经过安全审查
+
+                确保代码符合安全最佳实践。
+            </div>
+            
+            <div id="kiro-tab" class="tab-content" style="display: none; background-color: #f0f0f0; padding: 15px; border-radius: 5px; white-space: pre-wrap; font-family: monospace;">
+                # kiro 安全提示词
+                AI工具安全提示词
+
+                ## 针对 kiro 的安全建议
+
+                ### 风险评估
+                本次扫描发现{{ high_risk }}个高风险问题，{{ medium_risk }}个中风险问题，{{ low_risk }}个低风险问题。
+                {% if high_risk > 0 %}
+                系统存在严重安全隐患，建议立即处理高风险问题。
+                {% elif medium_risk > 0 %}
+                系统存在一定安全风险，建议尽快处理中风险问题。
+                {% else %}
+                系统安全状态良好，建议定期进行安全检查。
+                {% endif %}
+
+                ### 针对性建议
+                {% if ai_suggestions.specific_suggestions %}
+                {% for suggestion in ai_suggestions.specific_suggestions %}
+                - 安全提醒：{{ suggestion }}
+                {% endfor %}
+                {% else %}
+                - 安全提醒：避免硬编码敏感信息，使用环境变量存储
+                - 安全提醒：谨慎使用exec()、eval()等函数，防止代码注入攻击
+                - 安全提醒：确保网络访问代码有适当的错误处理和安全验证
+                {% endif %}
+
+                ### 上下文感知建议
+                - 安全提醒：使用虚拟环境管理Python依赖，避免依赖冲突和安全漏洞
+
+                ### 安全最佳实践
+                {% if ai_suggestions.best_practices %}
+                {% for practice in ai_suggestions.best_practices %}
+                - 安全提醒：{{ practice }}
+                {% endfor %}
+                {% else %}
+                - 安全提醒：使用环境变量存储所有敏感信息，避免硬编码
+                - 安全提醒：定期更新依赖库，修复已知安全漏洞
+                - 安全提醒：使用HTTPS进行所有网络通信，确保数据传输安全
+                - 安全提醒：实施输入验证，防止注入攻击
+                - 安全提醒：使用最小权限原则，限制代码和进程的权限
+                {% endif %}
+
+                ### 通用安全规则
+                • 避免硬编码敏感信息，使用环境变量存储
+                • 谨慎使用exec()、eval()等函数，防止代码注入攻击
+                • 确保网络访问代码有适当的错误处理和安全验证
+            </div>
+            
+            <!-- 复制按钮 -->
+            <div style="margin-top: 10px;">
+                <button onclick="copyContent('cursor-tab')" class="copy-button">复制Cursor提示词</button>
+                <button onclick="copyContent('trae-tab')" class="copy-button">复制Trae提示词</button>
+                <button onclick="copyContent('kiro-tab')" class="copy-button">复制Kiro提示词</button>
+            </div>
+            <p style="margin-top: 10px; font-size: 12px; color: #666;">提示：点击上方按钮复制对应IDE的提示词</p>
+        </div>
+        
+        <div class="footer">
+            <p>报告生成时间: {{ timestamp }}</p>
+            <p>HOS-LS 安全检测工具 v1.0.0</p>
+        </div>
+    </div>
+    <script>
+        // 选项卡切换功能
+        function switchTab(tabName) {
+            // 隐藏所有选项卡内容
+            const tabContents = document.querySelectorAll('.tab-content');
+            tabContents.forEach(content => {
+                content.style.display = 'none';
+            });
+            
+            // 移除所有选项卡按钮的活动状态
+            const tabButtons = document.querySelectorAll('.tab-button');
+            tabButtons.forEach(button => {
+                button.classList.remove('active');
+            });
+            
+            // 显示选中的选项卡内容
+            document.getElementById(tabName + '-tab').style.display = 'block';
+            
+            // 激活选中的选项卡按钮
+            event.currentTarget.classList.add('active');
+        }
+        
+        // 复制内容到剪贴板
+        function copyContent(tabId) {
+            const content = document.getElementById(tabId).innerText;
+            navigator.clipboard.writeText(content)
+                .then(() => {
+                    // 显示复制成功提示
+                    const button = event.currentTarget;
+                    const originalText = button.innerText;
+                    button.innerText = '已复制!';
+                    button.style.backgroundColor = '#4CAF50';
+                    
+                    // 2秒后恢复按钮状态
+                    setTimeout(() => {
+                        button.innerText = originalText;
+                        button.style.backgroundColor = '';
+                    }, 2000);
+                })
+                .catch(err => {
+                    console.error('复制失败:', err);
+                });
+        }
+    </script>
+</body>
+</html>

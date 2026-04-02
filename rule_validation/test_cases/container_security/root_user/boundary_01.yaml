@@ -1,0 +1,18 @@
+# Test Case ID: RU-B01
+# Rule: container_security.root_user
+# Test Type: boundary
+# Description: 需要 root 权限的特殊场景（可接受）
+# Expected Detection: false
+# Expected Severity: N/A
+# Code Type: safe
+
+# Dockerfile
+# 系统级服务需要 root 权限（如 nginx 绑定 80 端口）
+FROM nginx:1.24
+
+# 主进程需要 root 权限
+# nginx master process 需要 root
+# worker processes 会自动降权
+
+# 这是官方镜像的推荐用法
+# 仅用于特定的系统服务场景

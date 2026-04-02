@@ -1,0 +1,26 @@
+# 核心依赖
+pyyaml==6.0.1
+markdown==3.5.2
+python-docx==0.8.11
+jinja2==3.1.3
+requests==2.31.0
+colorama==0.4.6
+
+# AI核心依赖
+langchain
+openai
+networkx
+libcst
+faiss-cpu
+httpx
+
+# 性能优化 (可选)
+diskcache==5.6.1  # 磁盘缓存支持
+
+# AST 分析 (可选，用于增强代码分析)
+# esprima-python==4.0.1  # JavaScript/TypeScript AST 分析
+# tree-sitter==0.21.0     # 多语言 AST 分析
+
+# 开发依赖 (可选)
+pytest==7.4.0          # 测试框架
+pytest-benchmark==4.0.0 # 性能基准测试

@@ -1,0 +1,13 @@
+# Test Case ID: LV-P01
+# Rule: supply_chain_security.license_violation
+# Test Type: positive
+# Description: 使用与项目许可证不兼容的依赖包
+# Expected Detection: true
+# Expected Severity: HIGH
+# Code Type: vulnerable
+
+# requirements.txt
+# GPL 许可证包用于商业闭源项目
+gpl-library==1.0.0      # GPL-3.0 许可证
+agpl-package==2.0.0     # AGPL-3.0 许可证
+# 项目为 MIT 许可证，使用 GPL 包会导致许可证冲突

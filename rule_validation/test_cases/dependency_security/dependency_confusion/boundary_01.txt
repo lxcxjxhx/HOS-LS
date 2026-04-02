@@ -1,0 +1,19 @@
+# Test Case ID: DC-B01
+# Rule: dependency_security.dependency_confusion
+# Test Type: boundary
+# Description: 使用私有仓库源（可接受）
+# Expected Detection: false
+# Expected Severity: N/A
+# Code Type: safe
+
+# package.json
+{
+  "name": "my-app",
+  "version": "1.0.0",
+  "dependencies": {
+    "internal-utils": "git+https://git.company.com/internal/utils.git#v1.0.0",
+    "company-core": "git+https://git.company.com/internal/core.git#v2.0.0"
+  }
+}
+
+# 使用 Git 仓库直接引用，不从公共源安装

@@ -1,0 +1,15 @@
+# Test Case ID: TS-N01
+# Rule: supply_chain_security.typosquatting
+# Test Type: negative
+# Description: 使用正确拼写的官方依赖包
+# Expected Detection: false
+# Expected Severity: N/A
+# Code Type: safe
+
+# requirements.txt
+# 官方正版包
+requests==2.31.0
+django==4.2.0
+flask==2.3.0
+numpy==1.24.0
+pytest==7.4.0

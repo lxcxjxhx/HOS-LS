@@ -1,0 +1,28 @@
+# Test Case ID: SI-N01
+# Rule: container_security.secret_in_image
+# Test Type: negative
+# Description: 安全的密钥管理
+# Expected Detection: false
+# Expected Severity: N/A
+# Code Type: safe
+
+# Dockerfile - 安全的密钥管理
+dockerfile_content: |
+  FROM python:3.11
+  
+  # 使用运行时环境变量（不硬编码）
+  # ENV 仅用于非敏感配置
+  ENV APP_ENV=production
+  ENV LOG_LEVEL=info
+  
+  # 使用 Docker secrets 或外部密钥管理
+  # 运行时通过 --env-file 或 secrets 管理
+  
+  # 不复制敏感文件
+  COPY requirements.txt /app/
+  COPY src/ /app/src/
+  
+  # .dockerignore 排除敏感文件
+  # .env
+  # credentials.json
+  # *.pem

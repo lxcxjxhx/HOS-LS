@@ -1,0 +1,13 @@
+{
+  "timestamp": 1775110624.9170558,
+  "result": {
+    "issues": [
+      {
+        "type": "sql_injection",
+        "severity": "high",
+        "details": "检测到 SQL 注入漏洞"
+      }
+    ]
+  },
+  "key": "1558e04eadc29d20f9e05e3e91cf046dfae3e421e01d291d1269484e087162f6"
+}

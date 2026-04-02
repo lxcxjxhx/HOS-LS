@@ -1,0 +1,12 @@
+# Test Case ID: UD-B01
+# Rule: supply_chain_security.unverified_dependency
+# Test Type: boundary
+# Description: 使用可信 Git 源（官方组织）
+# Expected Detection: false
+# Expected Severity: N/A
+# Code Type: safe
+
+# requirements.txt
+# 官方 Git 源
+git+https://github.com/django/django.git@stable#egg=django
+git+https://github.com/psf/requests.git#egg=requests

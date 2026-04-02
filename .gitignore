@@ -1,0 +1,14 @@
+# 缓存目录
+.hos_ls_cache
+.pytest_cache
+
+# 本地配置和临时文件
+.trae
+__pycache__/
+*.pyc
+
+# 测试输出
+tests/test-output/
+
+# 报告文件
+reports/

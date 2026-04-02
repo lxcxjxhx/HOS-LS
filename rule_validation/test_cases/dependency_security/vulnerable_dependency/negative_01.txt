@@ -1,0 +1,12 @@
+# Test Case ID: DV-N01
+# Rule: dependency_security.vulnerable_dependency
+# Test Type: negative
+# Description: 使用安全版本的依赖
+# Expected Detection: false
+# Expected Severity: N/A
+# Code Type: safe
+
+# requirements.txt
+requests>=2.28.0
+Django>=4.0.0
+lodash>=4.17.21

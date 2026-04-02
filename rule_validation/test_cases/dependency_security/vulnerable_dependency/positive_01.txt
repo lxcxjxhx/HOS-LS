@@ -1,0 +1,11 @@
+# Test Case ID: DV-P01
+# Rule: dependency_security.vulnerable_dependency
+# Test Type: positive
+# Description: 使用已知漏洞的依赖包
+# Expected Detection: true
+# Expected Severity: HIGH
+# Code Type: vulnerable
+
+# requirements.txt
+requests==2.19.1  # CVE-2018-18074
+Django==2.0.1     # CVE-2018-7536

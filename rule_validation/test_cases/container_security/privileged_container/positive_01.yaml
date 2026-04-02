@@ -1,0 +1,15 @@
+# Test Case ID: PC-P01
+# Rule: container_security.privileged_container
+# Test Type: positive
+# Description: 特权容器配置
+# Expected Detection: true
+# Expected Severity: CRITICAL
+# Code Type: vulnerable
+
+version: '3'
+services:
+  app:
+    image: myapp:latest
+    privileged: true
+    volumes:
+      - /:/host

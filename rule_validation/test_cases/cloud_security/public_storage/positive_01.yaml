@@ -1,0 +1,23 @@
+# Test Case ID: PS-P01
+# Rule: cloud_security.public_storage
+# Test Type: positive
+# Description: 存储桶公开访问
+# Expected Detection: true
+# Expected Severity: CRITICAL
+# Code Type: vulnerable
+
+# AWS S3 Bucket Policy - 公开访问
+Version: "2012-10-17"
+Statement:
+  - Sid: PublicReadGetObject
+    Effect: Allow
+    Principal: "*"
+    Action: "s3:GetObject"
+    Resource: "arn:aws:s3:::my-bucket/*"
+
+# S3 公共访问设置
+PublicAccessBlockConfiguration:
+  BlockPublicAcls: false
+  IgnorePublicAcls: false
+  BlockPublicPolicy: false
+  RestrictPublicBuckets: false

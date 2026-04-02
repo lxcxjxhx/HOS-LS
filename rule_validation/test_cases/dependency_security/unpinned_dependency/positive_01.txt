@@ -1,0 +1,22 @@
+# Test Case ID: UD-P01
+# Rule: dependency_security.unpinned_dependency
+# Test Type: positive
+# Description: 依赖版本未锁定
+# Expected Detection: true
+# Expected Severity: MEDIUM
+# Code Type: vulnerable
+
+# requirements.txt
+requests          # 没有版本号
+django>=3.0       # 只有最小版本
+flask~=2.0        # 兼容版本，可能更新
+numpy             # 没有版本号
+
+# package.json
+{
+  "dependencies": {
+    "lodash": "*",
+    "react": "^18.0.0",
+    "axios": "~0.27.0"
+  }
+}

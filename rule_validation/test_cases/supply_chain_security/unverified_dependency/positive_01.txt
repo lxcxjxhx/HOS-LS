@@ -1,0 +1,12 @@
+# Test Case ID: UD-P01
+# Rule: supply_chain_security.unverified_dependency
+# Test Type: positive
+# Description: 使用未经验证的依赖包来源
+# Expected Detection: true
+# Expected Severity: MEDIUM
+# Code Type: vulnerable
+
+# requirements.txt
+# 未知来源的包
+unknown-package @ https://example.com/packages/unknown-1.0.0.tar.gz
+git+https://github.com/unknown/repo.git#egg=mystery-package

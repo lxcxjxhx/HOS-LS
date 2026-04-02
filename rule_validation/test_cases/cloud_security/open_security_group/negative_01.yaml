@@ -1,0 +1,22 @@
+# Test Case ID: OS-N01
+# Rule: cloud_security.open_security_group
+# Test Type: negative
+# Description: 安全组限制访问
+# Expected Detection: false
+# Expected Severity: N/A
+# Code Type: safe
+
+# AWS Security Group - 限制访问
+GroupName: restricted-sg
+IpPermissions:
+  - IpProtocol: tcp
+    FromPort: 443
+    ToPort: 443
+    IpRanges:
+      - CidrIp: "10.0.0.0/8"      # 仅内网
+      - CidrIp: "192.168.1.0/24"  # 特定网段
+  - IpProtocol: tcp
+    FromPort: 22
+    ToPort: 22
+    IpRanges:
+      - CidrIp: "10.0.1.0/24"     # 仅堡垒机网段

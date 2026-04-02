@@ -1,0 +1,24 @@
+# Test Case ID: HM-P01
+# Rule: container_security.health_check_missing
+# Test Type: positive
+# Description: 缺少健康检查配置
+# Expected Detection: true
+# Expected Severity: MEDIUM
+# Code Type: vulnerable
+
+# docker-compose.yml
+version: '3.8'
+services:
+  web:
+    image: nginx:1.24
+    ports:
+      - "80:80"
+    # 没有配置 healthcheck
+    # 容器可能已故障但仍在运行
+    
+  api:
+    image: myapi:1.0.0
+    environment:
+      - PORT=8080
+    # 缺少健康检查
+    # 无法自动检测应用是否可用

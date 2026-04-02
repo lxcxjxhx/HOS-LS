@@ -1,0 +1,13 @@
+# Test Case ID: DC-P01
+# Rule: supply_chain_security.dependency_confusion
+# Test Type: positive
+# Description: 使用可能遭受依赖混淆攻击的包名
+# Expected Detection: true
+# Expected Severity: CRITICAL
+# Code Type: vulnerable
+
+# requirements.txt
+# 内部包名可能被恶意注册
+internal-utils==1.0.0
+company-core==2.0.0
+private-lib==1.5.0

@@ -1,0 +1,27 @@
+# Test Case ID: UD-N01
+# Rule: cloud_security.unencrypted_data
+# Test Type: negative
+# Description: 数据加密存储
+# Expected Detection: false
+# Expected Severity: N/A
+# Code Type: safe
+
+# AWS RDS - 启用加密
+RDSInstance:
+  DBInstanceIdentifier: my-database
+  StorageEncrypted: true
+  KmsKeyId: "arn:aws:kms:us-east-1:123456789012:key/mrk-12345678"
+
+# AWS S3 - 启用默认加密
+S3Bucket:
+  Bucket: my-bucket
+  ServerSideEncryptionConfiguration:
+    Rules:
+      - ApplyServerSideEncryptionByDefault:
+          SSEAlgorithm: "aws:kms"
+          KMSMasterKeyID: "arn:aws:kms:us-east-1:123456789012:key/mrk-12345678"
+
+# AWS EBS - 加密卷
+EBSVolume:
+  Encrypted: true
+  KmsKeyId: "arn:aws:kms:us-east-1:123456789012:key/mrk-12345678"

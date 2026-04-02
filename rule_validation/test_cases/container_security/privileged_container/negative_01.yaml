@@ -1,0 +1,17 @@
+# Test Case ID: PC-N01
+# Rule: container_security.privileged_container
+# Test Type: negative
+# Description: 非特权容器配置（安全）
+# Expected Detection: false
+# Expected Severity: N/A
+# Code Type: safe
+
+version: '3'
+services:
+  app:
+    image: myapp:latest
+    privileged: false
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    user: "1000:1000"

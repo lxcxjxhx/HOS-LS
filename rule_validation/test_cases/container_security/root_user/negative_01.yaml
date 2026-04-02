@@ -1,0 +1,28 @@
+# Test Case ID: RU-N01
+# Rule: container_security.root_user
+# Test Type: negative
+# Description: 使用非 root 用户运行容器
+# Expected Detection: false
+# Expected Severity: N/A
+# Code Type: safe
+
+# Dockerfile - 使用非 root 用户
+dockerfile_content: |
+  FROM python:3.11
+  
+  # 创建非 root 用户和组
+  RUN groupadd -r appgroup && useradd -r -g appgroup appuser
+  
+  WORKDIR /app
+  
+  # 复制文件
+  COPY requirements.txt .
+  RUN pip install --no-cache-dir -r requirements.txt
+  
+  COPY . .
+  
+  # 切换到非 root 用户
+  USER appuser
+  
+  # 以非 root 身份运行应用
+  CMD ["python", "app.py"]

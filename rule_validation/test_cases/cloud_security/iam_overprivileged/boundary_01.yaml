@@ -1,0 +1,24 @@
+# Test Case ID: IO-B01
+# Rule: cloud_security.iam_overprivileged
+# Test Type: boundary
+# Description: 管理角色需要较宽权限（可接受）
+# Expected Detection: false
+# Expected Severity: N/A
+# Code Type: safe
+
+# AWS IAM Policy - 管理角色
+Version: "2012-10-17"
+Statement:
+  - Effect: Allow
+    Action:
+      - "s3:*"
+      - "ec2:*"
+      - "rds:*"
+    Resource: "*"
+    Condition:
+      IpAddress:
+        aws:SourceIp: "10.0.0.0/8"
+      Bool:
+        aws:MultiFactorAuthPresent: "true"
+
+# 有 IP 和 MFA 条件限制

@@ -1,0 +1,11 @@
+# Test Case ID: LV-B01
+# Rule: supply_chain_security.license_violation
+# Test Type: boundary
+# Description: 使用 LGPL 包（动态链接时兼容）
+# Expected Detection: false
+# Expected Severity: N/A
+# Code Type: safe
+
+# requirements.txt
+# LGPL 包（动态链接场景下兼容）
+lgpl-library==1.0.0     # LGPL-2.1，动态链接时兼容

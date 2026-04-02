@@ -1,0 +1,22 @@
+# Test Case ID: II-N01
+# Rule: container_security.insecure_image
+# Test Type: negative
+# Description: 使用安全的容器镜像
+# Expected Detection: false
+# Expected Severity: N/A
+# Code Type: safe
+
+# Dockerfile - 安全的镜像使用示例
+dockerfile_content: |
+  # 使用具体版本标签
+  FROM python:3.11.4-slim
+  
+  # 或使用镜像哈希（最安全）
+  # FROM python@sha256:abc123...
+  
+  # 使用官方维护的镜像
+  FROM node:18.16.0-alpine
+  FROM golang:1.20.5
+  
+  # 使用最新 LTS 版本
+  FROM ubuntu:22.04

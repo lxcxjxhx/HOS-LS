@@ -1,0 +1,12 @@
+# Test Case ID: OD-B01
+# Rule: supply_chain_security.outdated_dependency
+# Test Type: boundary
+# Description: 使用较旧但仍在支持期内的版本
+# Expected Detection: false
+# Expected Severity: N/A
+# Code Type: safe
+
+# requirements.txt
+# 较旧但仍受支持的 LTS 版本
+django==3.2.0  # LTS 版本，仍在支持期内
+requests==2.28.0  # 仅落后一个小版本

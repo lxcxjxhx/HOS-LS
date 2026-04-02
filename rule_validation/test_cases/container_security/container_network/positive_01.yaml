@@ -1,0 +1,12 @@
+# Test Case ID: CN-P01
+# Rule: container_security.container_network
+# Test Type: positive
+# Description: 容器使用 host 网络模式
+# Expected Detection: true
+# Expected Severity: HIGH
+# Code Type: vulnerable
+
+version: '3'
+services:
+  app:
+    network_mode: "host"  # 使用 host 网络（危险）

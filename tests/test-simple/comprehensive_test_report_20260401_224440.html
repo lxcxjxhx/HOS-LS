@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HOS-LS 安全检测报告</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            border-bottom: 2px solid #333;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #555;
+            margin-top: 30px;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 5px;
+        }
+        .summary {
+            background-color: #f9f9f9;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .summary-item {
+            display: inline-block;
+            margin-right: 20px;
+        }
+        .high-risk {
+            color: #d32f2f;
+            font-weight: bold;
+        }
+        .medium-risk {
+            color: #f57c00;
+            font-weight: bold;
+        }
+        .low-risk {
+            color: #388e3c;
+            font-weight: bold;
+        }
+        .risk-level {
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-weight: bold;
+        }
+        .risk-high {
+            background-color: #ffebee;
+            color: #c62828;
+        }
+        .risk-medium {
+            background-color: #fff3e0;
+            color: #ef6c00;
+        }
+        .risk-low {
+            background-color: #e8f5e8;
+            color: #2e7d32;
+        }
+        .project-info {
+            background-color: #e3f2fd;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .security-assessment {
+            background-color: #f3e5f5;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .recommendations {
+            background-color: #fff8e1;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .recommendation-item {
+            margin-bottom: 10px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+            font-weight: bold;
+        }
+        tr:hover {
+            background-color: #f5f5f5;
+        }
+        .footer {
+            margin-top: 40px;
+            text-align: center;
+            color: #666;
+            font-size: 14px;
+        }
+        /* 选项卡样式 */
+        .tab-button {
+            background-color: #f1f1f1;
+            border: 1px solid #ddd;
+            padding: 10px 15px;
+            cursor: pointer;
+            margin-right: 5px;
+            border-radius: 4px 4px 0 0;
+            transition: background-color 0.3s;
+        }
+        .tab-button:hover {
+            background-color: #ddd;
+        }
+        .tab-button.active {
+            background-color: #f0f0f0;
+            font-weight: bold;
+        }
+        .tab-content {
+            border: 1px solid #ddd;
+            border-top: none;
+            border-radius: 0 0 4px 4px;
+        }
+        /* 复制按钮样式 */
+        .copy-button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 14px;
+            margin: 4px 2px;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: background-color 0.3s;
+        }
+        .copy-button:hover {
+            background-color: #45a049;
+        }
+        .copy-button:active {
+            background-color: #3e8e41;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>HOS-LS 安全检测报告</h1>
+        
+        <div class="project-info">
+            <h2>项目信息</h2>
+            <div class="summary-item">检测目标: c:\1AAA_PROJECT\HOS\HOS-LS\HOS-LS\tests\test-ai-tool</div>
+            <div class="summary-item">检测时间: 2026-04-01 22:44:40</div>
+            <div class="summary-item">项目类型: unknown</div>
+            <div class="summary-item">使用规则集: default</div>
+        </div>
+        
+        <div class="summary">
+            <h2>检测摘要</h2>
+            <div class="summary-item high-risk">高风险: 8</div>
+            <div class="summary-item medium-risk">中风险: 3</div>
+            <div class="summary-item low-risk">低风险: 0</div>
+            <div class="summary-item">总体风险等级: <span class="risk-level risk-high">高风险</span></div>
+        </div>
+        
+        <div class="security-assessment">
+            <h2>安全评估</h2>
+            <p>本次安全扫描共发现 8 个高风险问题，3 个中风险问题，0 个低风险问题。 系统存在严重安全隐患，建议立即处理高风险问题。</p>
+        </div>
+        
+        <div class="recommendations">
+            <h2>安全建议</h2>
+            
+            <div class="recommendation-item">
+                <strong>高风险:</strong> 立即处理所有高风险问题，特别是硬编码的敏感信息和后门代码。
+            </div>
+            
+            <div class="recommendation-item">
+                <strong>中风险:</strong> 尽快处理中风险问题，如网络访问代码的安全验证和依赖库版本管理。
+            </div>
+            
+            <div class="recommendation-item">
+                <strong>低风险:</strong> 使用环境变量存储敏感信息，避免硬编码。
+            </div>
+            
+            <div class="recommendation-item">
+                <strong>低风险:</strong> 遵循最小权限原则，限制文件和目录权限。
+            </div>
+            
+            <div class="recommendation-item">
+                <strong>低风险:</strong> 定期进行安全扫描，及时发现和处理安全问题。
+            </div>
+            
+        </div>
+        
+        
+        <h2>代码安全</h2>
+        <table>
+            <tr>
+                <th>文件</th>
+                <th>行号</th>
+                <th>问题</th>
+                <th>严重程度</th>
+                <th>详情</th>
+            </tr>
+            
+            <tr>
+                <td>c:\1AAA_PROJECT\HOS\HOS-LS\HOS-LS\tests\test-ai-tool\config.json</td>
+                <td>2</td>
+                <td>硬编码敏感信息</td>
+                <td class="high-risk">high</td>
+                <td>检测硬编码的敏感信息（API 密钥、密码、令牌等）</td>
+            </tr>
+            
+            <tr>
+                <td>c:\1AAA_PROJECT\HOS\HOS-LS\HOS-LS\tests\test-ai-tool\test.py</td>
+                <td>5</td>
+                <td>硬编码敏感信息</td>
+                <td class="high-risk">high</td>
+                <td>检测硬编码的敏感信息（API 密钥、密码、令牌等）</td>
+            </tr>
+            
+            <tr>
+                <td>c:\1AAA_PROJECT\HOS\HOS-LS\HOS-LS\tests\test-ai-tool\test.py</td>
+                <td>8</td>
+                <td>硬编码敏感信息</td>
+                <td class="high-risk">high</td>
+                <td>检测硬编码的敏感信息（API 密钥、密码、令牌等）</td>
+            </tr>
+            
+            <tr>
+                <td>c:\1AAA_PROJECT\HOS\HOS-LS\HOS-LS\tests\test-ai-tool\test.py</td>
+                <td>11</td>
+                <td>硬编码敏感信息</td>
+                <td class="high-risk">high</td>
+                <td>检测硬编码的敏感信息（API 密钥、密码、令牌等）</td>
+            </tr>
+            
+            <tr>
+                <td>c:\1AAA_PROJECT\HOS\HOS-LS\HOS-LS\tests\test-ai-tool\test.py</td>
+                <td>5</td>
+                <td>硬编码敏感信息</td>
+                <td class="high-risk">high</td>
+                <td>检测硬编码的敏感信息（API 密钥、密码、令牌等）</td>
+            </tr>
+            
+            <tr>
+                <td>c:\1AAA_PROJECT\HOS\HOS-LS\HOS-LS\tests\test-ai-tool\test.py</td>
+                <td>20</td>
+                <td>网络访问代码</td>
+                <td class="medium-risk">medium</td>
+                <td>检测网络访问代码，需要适当的安全验证</td>
+            </tr>
+            
+        </table>
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        <h2>配置安全</h2>
+        <table>
+            <tr>
+                <th>文件</th>
+                <th>行号</th>
+                <th>问题</th>
+                <th>严重程度</th>
+                <th>详情</th>
+            </tr>
+            
+            <tr>
+                <td>c:\1AAA_PROJECT\HOS\HOS-LS\HOS-LS\tests\test-ai-tool\test.py</td>
+                <td>5</td>
+                <td>配置包含敏感信息</td>
+                <td class="high-risk">high</td>
+                <td>检测配置文件中包含敏感信息</td>
+            </tr>
+            
+            <tr>
+                <td>c:\1AAA_PROJECT\HOS\HOS-LS\HOS-LS\tests\test-ai-tool\test.py</td>
+                <td>8</td>
+                <td>配置包含敏感信息</td>
+                <td class="high-risk">high</td>
+                <td>检测配置文件中包含敏感信息</td>
+            </tr>
+            
+            <tr>
+                <td>c:\1AAA_PROJECT\HOS\HOS-LS\HOS-LS\tests\test-ai-tool\test.py</td>
+                <td>11</td>
+                <td>配置包含敏感信息</td>
+                <td class="high-risk">high</td>
+                <td>检测配置文件中包含敏感信息</td>
+            </tr>
+            
+            <tr>
+                <td>c:\1AAA_PROJECT\HOS\HOS-LS\HOS-LS\tests\test-ai-tool\test.py</td>
+                <td>5</td>
+                <td>AI 配置</td>
+                <td class="medium-risk">medium</td>
+                <td>检测 AI 特定配置</td>
+            </tr>
+            
+        </table>
+        
+        
+        <div class="recommendations">
+            <h2>AI安全建议</h2>
+            
+            <div class="recommendation-item">
+                <strong>风险评估:</strong> ### **安全修复建议报告**
+
+**总体评估**：项目测试代码中存在大量硬编码的敏感信息，构成极高的安全风险。必须立即处理。
+
+---
+
+### **一、 高风险问题修复（硬编码敏感信息）**
+
+**问题根源**：在 `config.json` 和 `test.py` 文件中明文存储了 API 密钥、密码和 JWT 令牌。
+
+**安全风险**：
+*   **凭证泄露**：代码若提交至版本控制系统（如 Git），所有历史记录都将暴露这些密钥。
+*   **未授权访问**：攻击者可直接使用这些密钥访问外部服务（如 AI 模型 API、数据库），导致数据泄露、资源盗用和经济损失。
+*   **权限提升**：JWT 令牌可能用于模拟用户身份，进行越权操作。
+
+**修复方案**：使用环境变量管理所有敏感信息。
+
+**修复步骤与示例**：
+
+1.  **从代码中移除所有硬编码的敏感信息**：
+    *   **`config.json`**：将文件修改为模板，移除实际密钥。
+        ```json
+        {
+          "api_key": "${API_KEY}"
+            </div>
+            <h3>针对性建议</h3>
+            
+            <div class="recommendation-item">
+                使用环境变量管理敏感信息
+            </div>
+            
+            <div class="recommendation-item">
+                避免使用危险函数
+            </div>
+            
+            <div class="recommendation-item">
+                定期更新依赖
+            </div>
+            
+            <div class="recommendation-item">
+                实施输入验证
+            </div>
+            
+            <div class="recommendation-item">
+                使用参数化查询
+            </div>
+            
+            <h3>安全最佳实践</h3>
+            
+            <div class="recommendation-item">
+                最小权限原则
+            </div>
+            
+            <div class="recommendation-item">
+                输入验证
+            </div>
+            
+            <div class="recommendation-item">
+                输出编码
+            </div>
+            
+            <div class="recommendation-item">
+                安全配置管理
+            </div>
+            
+            <div class="recommendation-item">
+                日志记录与监控
+            </div>
+            
+            
+            <h3>AI 工具提示词（由 AI 生成）</h3>
+            
+            <!-- 选项卡 -->
+            <div style="margin-bottom: 10px;">
+                <button class="tab-button active" onclick="switchTab('cursor')">Cursor</button>
+                <button class="tab-button" onclick="switchTab('trae')">Trae</button>
+                <button class="tab-button" onclick="switchTab('kiro')">Kiro</button>
+            </div>
+            
+            <!-- 提示词内容 - 使用 AI 生成的内容 -->
+            <div id="cursor-tab" class="tab-content active" style="background-color: #f0f0f0; padding: 15px; border-radius: 5px; white-space: pre-wrap; font-family: monospace;">
+                
+## 安全提示词：AI 开发安全编码规范
+
+基于扫描结果，为您生成以下 5 条核心安全规则，请严格遵守。
+
+## 规则一：禁止硬编码任何敏感凭证
+要求：严禁在代码或配置文件中直接写入 API 密钥、密码、令牌等敏感信息。
+示例：```python
+# 错误做法
+api_key = "sk-1234567890abcdefghijklmnopqrstuvwxyz"
+# 正确做法：使用环境变量
+import os
+api_key = os.environ.get("API_KEY")
+```
+
+## 规则二：配置文件必须排除敏感信息
+要求：JSON、YAML 等配置文件不得包含任何形式的密钥、密码等秘密数据。
+示例：```json
+// 错误做法
+{
+  "api_key": "sk-1234567890abcdefghijklmnopqrstuvwxyz"
+}
+// 正确做法：配置文件仅保留非敏感配置，密钥从外部注入
+{
+  "model": "gpt-4",
+  "endpoint": "https://api.openai.com/v1"
+}
+```
+
+## 规则三：网络请求必须实施安全验证
+要求：所有对外部 API 或服务的网络请求，必须包含超时、错误处理和身份验证。
+示例：```python
+# 错误做法：缺乏安全控制的请求
+response = requests.get("https://api.example.com")
+# 正确做法：使用安全参数
+import requests
+try:
+    response = requests.get(
+        url="https://api.example.com",
+        timeout=10,
+        headers={"Authorization": f"Bearer {os.environ.get('API_TOKEN')}"}
+    )
+    response.raise_for_status()
+except requests.exceptions.RequestException as e:
+    # 处理异常，避免信息泄露
+    print(f"请求失败: {e}")
+```
+
+## 规则四：使用环境变量管理所有秘密
+要求：所有密钥、令牌、密码等必须通过操作系
+                
+            </div>
+            <div id="trae-tab" class="tab-content" style="background-color: #f0f0f0; padding: 15px; border-radius: 5px; white-space: pre-wrap; font-family: monospace; display: none;">
+                
+## 规则1：禁止硬编码敏感信息
+要求：严禁在代码或配置文件中直接写入API密钥、密码、令牌等敏感信息。
+示例：```python
+# 错误做法
+api_key = "sk-1234567890abcdefghijklmnopqrstuvwxyz"
+# 正确做法
+api_key = os.getenv("API_KEY")  # 从环境变量读取
+```
+
+## 规则2：配置文件需排除敏感数据
+要求：配置文件（如JSON）不得包含任何形式的明文密钥、密码或令牌。
+示例：```json
+// 错误做法
+{
+  "api_key": "sk-1234567890abcdefghijklmnopqrstuvwxyz"
+}
+// 正确做法
+{
+  "api_key_env_var": "API_KEY"  // 仅引用环境变量名
+}
+```
+
+## 规则3：网络请求必须进行安全验证
+要求：所有对外部API的网络访问必须包含适当的超时、错误处理和身份验证机制。
+示例：```python
+# 错误做法
+response = requests.get("https://api.example.com")
+# 正确做法
+response = requests.get("https://api.example.com", timeout=10, verify=True)  # 启用SSL验证和超时
+```
+
+## 规则4：使用环境变量管理密钥
+要求：所有敏感信息必须通过操作系统环境变量或安全的密钥管理服务注入。
+示例：```python
+# 错误做法
+password = "mysecretpassword123"
+# 正确做法
+import os
+password = os.environ.get('DB_PASSWORD')  # 从安全来源获取
+```
+
+## 规则5：AI服务配置需隔离
+要求：AI模型API密钥等配置必须与业务代码分离，并使用专用安全模块管理。
+示例：```python
+# 错误做法
+token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9"
+# 正确做法
+from security.credential_manager import get_ai_token  # 集中式密钥管理
+token = get_ai_token()
+
+                
+            </div>
+            <div id="kiro-tab" class="tab-content" style="background-color: #f0f0f0; padding: 15px; border-radius: 5px; white-space: pre-wrap; font-family: monospace; display: none;">
+                
+## 禁止硬编码敏感凭证
+要求：禁止在源代码或配置文件中明文存储API密钥、密码、令牌等敏感信息。
+示例：```python
+# 错误做法
+api_key = "sk-1234567890abcdefghijklmnopqrstuvwxyz"
+# 正确做法
+api_key = os.getenv("API_KEY")  # 从环境变量读取
+```
+
+## 外部化配置管理
+要求：所有敏感配置必须从代码中分离，使用环境变量或安全的配置管理服务。
+示例：```json
+// 错误做法 (config.json)
+{"api_key": "sk-..."}
+// 正确做法 (config.json)
+{"api_key": "${API_KEY}"}  // 使用占位符，运行时注入
+```
+
+## 网络请求安全验证
+要求：所有对外网络请求必须包含适当的超时、错误处理和身份验证机制。
+示例：```python
+# 错误做法
+response = requests.get("https://api.example.com")
+# 正确做法
+response = requests.get(url, timeout=10, headers={"Authorization": f"Bearer {token}"})
+```
+
+## 代码注释安全规范
+要求：禁止在注释中泄露系统设计、安全绕过方法或包含对抗性测试指令。
+示例：```python
+# 错误做法
+# 测试文件，包含各种安全问题 # 对抗性后缀
+# 正确做法
+# 单元测试文件 - AI工具模块
+```
+
+## AI服务配置隔离
+要求：AI模型API密钥等配置必须与业务代码隔离，并使用最小权限访问控制。
+示例：```python
+# 错误做法 (test.py中直接配置)
+ai_config = {"api_key": "sk-..."}
+# 正确做法 (专用安全模块)
+from secure_config import get_ai_key  # 集中管理
+api_key = get_ai_key()
+```
+                
+            </div>
+            
+            <div id="trae-tab" class="tab-content" style="display: none; background-color: #f0f0f0; padding: 15px; border-radius: 5px; white-space: pre-wrap; font-family: monospace;">
+                # trae 安全提示词
+                AI工具安全提示词
+
+                ## 针对 trae 的安全建议
+
+                ### 风险评估
+                本次扫描发现8个高风险问题，3个中风险问题，0个低风险问题。
+                
+                系统存在严重安全隐患，建议立即处理高风险问题。
+                
+
+                ### 针对性建议
+                
+                
+                - [安全提示] 使用环境变量管理敏感信息
+                
+                - [安全提示] 避免使用危险函数
+                
+                - [安全提示] 定期更新依赖
+                
+                - [安全提示] 实施输入验证
+                
+                - [安全提示] 使用参数化查询
+                
+                
+
+                ### 上下文感知建议
+                - [安全提示] 使用虚拟环境管理Python依赖，避免依赖冲突和安全漏洞
+
+                ### 安全最佳实践
+                
+                
+                - [安全提示] 最小权限原则
+                
+                - [安全提示] 输入验证
+                
+                - [安全提示] 输出编码
+                
+                - [安全提示] 安全配置管理
+                
+                - [安全提示] 日志记录与监控
+                
+                
+
+                ### 通用安全规则
+                [安全规则] 请遵循以下安全要求：
+                检测硬编码的敏感信息 - 移除硬编码的敏感信息，使用环境变量或配置文件存储
+                检测潜在的后门代码 - 审查代码，确保这些函数的使用是安全的
+                检测网络访问代码 - 确保网络访问代码有适当的错误处理和安全验证
+                检测AI模型加载代码 - 确保模型加载路径安全，避免加载恶意模型
+                检测AI输入处理代码，可能缺少输入验证 - 添加输入验证和sanitization代码
+                检测使用root用户运行 - 创建专用用户运行AI工具，遵循最小权限原则
+                检测可执行文件 - 仅对必要的脚本设置执行权限
+                检测AI模型文件权限过于宽松 - 执行 'chmod 640 <file>' 限制模型文件访问
+                检测SSH私钥权限不安全 - 执行 'chmod 600 <key>' 限制私钥访问
+                检测端口暴露到公网 - 修改配置，将监听地址改为 127.0.0.1 或配置防火墙限制访问
+                检测防火墙未启用 - 安装并启用防火墙，如 ufw、firewalld 或 iptables
+                检测SSH允许root登录 - 修改 /etc/ssh/sshd_config，设置 'PermitRootLogin no'
+                检测反向Shell - 立即检查进程详情并终止可疑进程
+                检测依赖库版本未固定 - 固定依赖库版本，避免自动更新引入安全问题
+                检测AI相关依赖库 - 确保依赖库版本安全，定期更新
+                检测配置文件中包含敏感信息 - 移除敏感信息，使用环境变量存储
+                检测AI特定配置 - 确保配置安全，避免硬编码敏感信息
+                检测OpenClaw版本过旧 - 立即执行 'openclaw update' 升级到最新版本
+                检测OpenClaw安装来源非官方 - 建议从官方渠道安装：https://openclaw.ai 或 https://github.com/openclaw/openclaw
+                检测OpenClaw端口暴露到公网 - 修改 ~/.openclaw/config.json 中的 'host' 配置，将 '0.0.0.0' 改为 '127.0.0.1'，或在防火墙中限制访问
+                检测OpenClaw技能包可能包含恶意代码 - 审查技能包代码，确保不包含恶意代码
+                检测Cursor生成的代码中硬编码的API密钥 - 使用环境变量存储API密钥
+                检测不安全的AI提示模板 - 确保提示模板不包含敏感信息，并且经过安全审查
+
+                确保代码符合安全最佳实践。
+            </div>
+            
+            <div id="kiro-tab" class="tab-content" style="display: none; background-color: #f0f0f0; padding: 15px; border-radius: 5px; white-space: pre-wrap; font-family: monospace;">
+                # kiro 安全提示词
+                AI工具安全提示词
+
+                ## 针对 kiro 的安全建议
+
+                ### 风险评估
+                本次扫描发现8个高风险问题，3个中风险问题，0个低风险问题。
+                
+                系统存在严重安全隐患，建议立即处理高风险问题。
+                
+
+                ### 针对性建议
+                
+                
+                - 安全提醒：使用环境变量管理敏感信息
+                
+                - 安全提醒：避免使用危险函数
+                
+                - 安全提醒：定期更新依赖
+                
+                - 安全提醒：实施输入验证
+                
+                - 安全提醒：使用参数化查询
+                
+                
+
+                ### 上下文感知建议
+                - 安全提醒：使用虚拟环境管理Python依赖，避免依赖冲突和安全漏洞
+
+                ### 安全最佳实践
+                
+                
+                - 安全提醒：最小权限原则
+                
+                - 安全提醒：输入验证
+                
+                - 安全提醒：输出编码
+                
+                - 安全提醒：安全配置管理
+                
+                - 安全提醒：日志记录与监控
+                
+                
+
+                ### 通用安全规则
+                • 避免硬编码敏感信息，使用环境变量存储
+                • 谨慎使用exec()、eval()等函数，防止代码注入攻击
+                • 确保网络访问代码有适当的错误处理和安全验证
+            </div>
+            
+            <!-- 复制按钮 -->
+            <div style="margin-top: 10px;">
+                <button onclick="copyContent('cursor-tab')" class="copy-button">复制Cursor提示词</button>
+                <button onclick="copyContent('trae-tab')" class="copy-button">复制Trae提示词</button>
+                <button onclick="copyContent('kiro-tab')" class="copy-button">复制Kiro提示词</button>
+            </div>
+            <p style="margin-top: 10px; font-size: 12px; color: #666;">提示：点击上方按钮复制对应IDE的提示词</p>
+        </div>
+        
+        <div class="footer">
+            <p>报告生成时间: 2026-04-01 22:44:40</p>
+            <p>HOS-LS 安全检测工具 v1.0.0</p>
+        </div>
+    </div>
+    <script>
+        // 选项卡切换功能
+        function switchTab(tabName) {
+            // 隐藏所有选项卡内容
+            const tabContents = document.querySelectorAll('.tab-content');
+            tabContents.forEach(content => {
+                content.style.display = 'none';
+            });
+            
+            // 移除所有选项卡按钮的活动状态
+            const tabButtons = document.querySelectorAll('.tab-button');
+            tabButtons.forEach(button => {
+                button.classList.remove('active');
+            });
+            
+            // 显示选中的选项卡内容
+            document.getElementById(tabName + '-tab').style.display = 'block';
+            
+            // 激活选中的选项卡按钮
+            event.currentTarget.classList.add('active');
+        }
+        
+        // 复制内容到剪贴板
+        function copyContent(tabId) {
+            const content = document.getElementById(tabId).innerText;
+            navigator.clipboard.writeText(content)
+                .then(() => {
+                    // 显示复制成功提示
+                    const button = event.currentTarget;
+                    const originalText = button.innerText;
+                    button.innerText = '已复制!';
+                    button.style.backgroundColor = '#4CAF50';
+                    
+                    // 2秒后恢复按钮状态
+                    setTimeout(() => {
+                        button.innerText = originalText;
+                        button.style.backgroundColor = '';
+                    }, 2000);
+                })
+                .catch(err => {
+                    console.error('复制失败:', err);
+                });
+        }
+    </script>
+</body>
+</html>

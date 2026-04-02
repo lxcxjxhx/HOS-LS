@@ -1,0 +1,23 @@
+# Test Case ID: CF-B01
+# Rule: dependency_security.conflicting_dependency
+# Test Type: boundary
+# Description: 使用 resolutions/overrides 解决冲突（可接受）
+# Expected Detection: false
+# Expected Severity: N/A
+# Code Type: safe
+
+# package.json
+{
+  "dependencies": {
+    "package-a": "1.0.0",
+    "package-b": "2.0.0"
+  },
+  "resolutions": {
+    "**/shared-dep": "3.0.0"  # 强制统一版本
+  }
+}
+
+# 或 .npmrc
+# overrides.shared-dep=3.0.0
+
+# 显式解决传递依赖冲突

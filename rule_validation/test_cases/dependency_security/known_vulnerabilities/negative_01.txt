@@ -1,0 +1,12 @@
+# Test Case ID: KV-N01
+# Rule: dependency_security.known_vulnerabilities
+# Test Type: negative
+# Description: 使用安全版本的依赖包
+# Expected Detection: false
+# Expected Severity: N/A
+# Code Type: safe
+
+# requirements.txt
+requests>=2.28.0    # 安全版本
+Django>=4.0.0       # 安全版本
+flask>=2.0.0        # 安全版本

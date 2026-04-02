@@ -1,0 +1,23 @@
+# Test Case ID: IO-P01
+# Rule: cloud_security.iam_overprivileged
+# Test Type: positive
+# Description: IAM 权限过大
+# Expected Detection: true
+# Expected Severity: HIGH
+# Code Type: vulnerable
+
+# AWS IAM Policy - 过度权限
+Version: "2012-10-17"
+Statement:
+  - Effect: Allow
+    Action: "*"
+    Resource: "*"
+
+# 或使用过于宽泛的权限
+AlternativePolicy:
+  Effect: Allow
+  Action:
+    - "s3:*"
+    - "ec2:*"
+    - "iam:*"
+  Resource: "*"

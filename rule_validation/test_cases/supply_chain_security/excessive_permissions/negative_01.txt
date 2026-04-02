@@ -1,0 +1,13 @@
+# Test Case ID: EP-N01
+# Rule: supply_chain_security.excessive_permissions
+# Test Type: negative
+# Description: 依赖包权限合理
+# Expected Detection: false
+# Expected Severity: N/A
+# Code Type: safe
+
+# requirements.txt
+# 普通权限的包
+requests==2.31.0
+django==4.2.0
+flask==2.3.0

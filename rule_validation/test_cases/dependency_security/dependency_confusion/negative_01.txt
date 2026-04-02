@@ -1,0 +1,20 @@
+# Test Case ID: DC-N01
+# Rule: dependency_security.dependency_confusion
+# Test Type: negative
+# Description: 使用 scoped 包避免混淆
+# Expected Detection: false
+# Expected Severity: N/A
+# Code Type: safe
+
+# package.json
+{
+  "name": "my-app",
+  "version": "1.0.0",
+  "dependencies": {
+    "lodash": "^4.17.21",
+    "@company/internal-utils": "1.0.0",
+    "@company/core": "2.0.0"
+  }
+}
+
+# 使用 @company/ 作用域，避免与公共包冲突

@@ -1,0 +1,13 @@
+# Test Case ID: MD-P01
+# Rule: supply_chain_security.malicious_dependency
+# Test Type: positive
+# Description: 使用已知恶意依赖包
+# Expected Detection: true
+# Expected Severity: CRITICAL
+# Code Type: vulnerable
+
+# requirements.txt
+# 已知恶意包（示例）
+evil-package==1.0.0
+crypto-miner==0.1.0
+data-stealer==1.0.0

@@ -1,0 +1,28 @@
+# Test Case ID: UD-B01
+# Rule: dependency_security.unpinned_dependency
+# Test Type: boundary
+# Description: 开发依赖宽松版本（可接受）
+# Expected Detection: false
+# Expected Severity: N/A
+# Code Type: safe
+
+# requirements.txt
+# 生产依赖精确锁定
+requests==2.31.0
+django==4.2.0
+
+# 开发依赖可以宽松
+pytest>=7.0
+black>=23.0
+
+# package.json
+{
+  "dependencies": {
+    "react": "18.2.0",
+    "lodash": "4.17.21"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0",
+    "eslint": "^8.0.0"
+  }
+}

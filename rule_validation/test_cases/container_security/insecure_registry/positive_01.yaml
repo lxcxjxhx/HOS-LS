@@ -1,0 +1,12 @@
+# Test Case ID: IR-P01
+# Rule: container_security.insecure_registry
+# Test Type: positive
+# Description: 使用不安全的镜像仓库
+# Expected Detection: true
+# Expected Severity: HIGH
+# Code Type: vulnerable
+
+version: '3'
+services:
+  app:
+    image: http://insecure-registry.com/myapp:latest  # 不安全的 HTTP 仓库

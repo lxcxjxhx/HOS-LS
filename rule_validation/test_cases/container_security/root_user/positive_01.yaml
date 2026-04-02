@@ -1,0 +1,23 @@
+# Test Case ID: RU-P01
+# Rule: container_security.root_user
+# Test Type: positive
+# Description: 容器以 root 用户运行
+# Expected Detection: true
+# Expected Severity: HIGH
+# Code Type: vulnerable
+
+# Dockerfile - 以 root 运行（不安全）
+dockerfile_content: |
+  FROM python:3.11
+  
+  # 没有创建非 root 用户
+  # 默认以 root 用户运行
+  
+  WORKDIR /app
+  COPY . .
+  
+  # 没有 USER 指令指定非 root 用户
+  # 容器将以 root 身份运行
+  
+  RUN pip install -r requirements.txt
+  CMD ["python", "app.py"]

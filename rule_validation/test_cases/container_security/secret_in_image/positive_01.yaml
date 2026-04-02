@@ -1,0 +1,24 @@
+# Test Case ID: SI-P01
+# Rule: container_security.secret_in_image
+# Test Type: positive
+# Description: 镜像中包含敏感信息
+# Expected Detection: true
+# Expected Severity: CRITICAL
+# Code Type: vulnerable
+
+# Dockerfile - 包含敏感信息
+dockerfile_content: |
+  FROM python:3.11
+  
+  # 在镜像中硬编码密钥（危险）
+  ENV DATABASE_PASSWORD=supersecret123
+  ENV API_KEY=sk-1234567890abcdef
+  ENV AWS_SECRET_ACCESS_KEY=wJalrXUtnFEMI/K7MDENG
+  
+  # 复制包含密钥的配置文件
+  COPY .env /app/.env
+  COPY credentials.json /app/credentials.json
+  
+  # 在构建参数中传递密钥
+  ARG DB_PASSWORD
+  ENV DB_PASSWORD=$DB_PASSWORD

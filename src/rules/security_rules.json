@@ -1,0 +1,15 @@
+{
+  "rules": {
+    "code_security": {
+      "command_injection": {
+        "name": "命令注入漏洞",
+        "patterns": [
+          "os\\.system",
+          "subprocess\\.call",
+          "subprocess\\.run",
+          "subprocess\\.Popen"
+        ]
+      }
+    }
+  }
+}

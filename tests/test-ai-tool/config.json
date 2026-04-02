@@ -1,0 +1,7 @@
+{
+  "api_key": "sk-1234567890abcdefghijklmnopqrstuvwxyz",
+  "database_url": "postgresql://user:password@localhost:5432/mydb",
+  "secret_key": "mysecretkey123",
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9",
+  "password": "mysecretpassword123"
+}

@@ -1,0 +1,27 @@
+# Test Case ID: OS-B01
+# Rule: cloud_security.open_security_group
+# Test Type: boundary
+# Description: 负载均衡器公开 HTTPS（可接受）
+# Expected Detection: false
+# Expected Severity: N/A
+# Code Type: safe
+
+# AWS Security Group - 负载均衡器
+GroupName: alb-sg
+IpPermissions:
+  - IpProtocol: tcp
+    FromPort: 443
+    ToPort: 443
+    IpRanges:
+      - CidrIp: "0.0.0.0/0"  # 公开 HTTPS（Web 服务必需）
+  - IpProtocol: tcp
+    FromPort: 80
+    ToPort: 80
+    IpRanges:
+      - CidrIp: "0.0.0.0/0"  # HTTP 重定向到 HTTPS
+IpPermissionsEgress:
+  - IpProtocol: tcp
+    FromPort: 8080
+    ToPort: 8080
+    UserIdGroupPairs:
+      - GroupId: "backend-sg"  # 仅后端

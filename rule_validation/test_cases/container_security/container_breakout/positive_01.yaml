@@ -1,0 +1,21 @@
+# Test Case ID: CB-P01
+# Rule: container_security.container_breakout
+# Test Type: positive
+# Description: 容器逃逸风险配置
+# Expected Detection: true
+# Expected Severity: CRITICAL
+# Code Type: vulnerable
+
+# docker-compose.yml
+version: '3.8'
+services:
+  app:
+    image: myapp:latest
+    privileged: true              # 特权模式（危险）
+    pid: host                     # 共享主机 PID 命名空间
+    network_mode: host            # 共享主机网络
+    volumes:
+      - /:/host                   # 挂载主机根目录
+      - /var/run/docker.sock:/var/run/docker.sock  # Docker socket
+    cap_add:
+      - ALL                       # 添加所有能力

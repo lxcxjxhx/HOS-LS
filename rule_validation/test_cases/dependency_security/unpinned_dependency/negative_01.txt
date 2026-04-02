@@ -1,0 +1,25 @@
+# Test Case ID: UD-N01
+# Rule: dependency_security.unpinned_dependency
+# Test Type: negative
+# Description: 依赖版本精确锁定
+# Expected Detection: false
+# Expected Severity: N/A
+# Code Type: safe
+
+# requirements.txt
+requests==2.31.0
+django==4.2.0
+flask==2.3.0
+numpy==1.24.0
+
+# package.json
+{
+  "dependencies": {
+    "lodash": "4.17.21",
+    "react": "18.2.0",
+    "axios": "0.27.2"
+  },
+  "devDependencies": {
+    "typescript": "5.1.6"
+  }
+}

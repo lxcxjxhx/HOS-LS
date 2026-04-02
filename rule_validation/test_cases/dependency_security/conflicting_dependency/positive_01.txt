@@ -1,0 +1,24 @@
+# Test Case ID: CF-P01
+# Rule: dependency_security.conflicting_dependency
+# Test Type: positive
+# Description: 依赖版本冲突
+# Expected Detection: true
+# Expected Severity: MEDIUM
+# Code Type: vulnerable
+
+# requirements.txt
+# 直接依赖
+requests==2.31.0
+urllib3==1.26.0     # 旧版本
+
+# 间接依赖冲突
+# requests 2.31.0 需要 urllib3>=1.21.1,<3
+# 但另一个包需要 urllib3>=2.0.0
+
+# package.json
+{
+  "dependencies": {
+    "react": "^17.0.2",
+    "react-dom": "^18.2.0"  # 版本不匹配
+  }
+}

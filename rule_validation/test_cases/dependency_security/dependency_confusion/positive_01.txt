@@ -1,0 +1,21 @@
+# Test Case ID: DC-P01
+# Rule: dependency_security.dependency_confusion
+# Test Type: positive
+# Description: 依赖混淆风险
+# Expected Detection: true
+# Expected Severity: HIGH
+# Code Type: vulnerable
+
+# package.json
+{
+  "name": "my-app",
+  "version": "1.0.0",
+  "dependencies": {
+    "lodash": "^4.17.21",
+    "internal-utils": "1.0.0",
+    "company-core": "2.0.0"
+  }
+}
+
+# internal-utils 和 company-core 可能是内部包名
+# 攻击者可以在公共 npm 仓库注册同名包

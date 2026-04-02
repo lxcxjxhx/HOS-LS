@@ -1,0 +1,13 @@
+# Test Case ID: AD-N01
+# Rule: supply_chain_security.abandoned_dependency
+# Test Type: negative
+# Description: 使用活跃维护的依赖包
+# Expected Detection: false
+# Expected Severity: N/A
+# Code Type: safe
+
+# requirements.txt
+# 活跃维护的包
+requests==2.31.0        # 最后更新：2023 年
+django==4.2.0           # 最后更新：2023 年
+flask==2.3.0            # 最后更新：2023 年

@@ -1,0 +1,21 @@
+# Test Case ID: PS-B01
+# Rule: cloud_security.public_storage
+# Test Type: boundary
+# Description: 静态网站托管（有意公开）
+# Expected Detection: false
+# Expected Severity: N/A
+# Code Type: safe
+
+# AWS S3 Bucket Policy - 静态网站托管
+Version: "2012-10-17"
+Statement:
+  - Sid: PublicReadForStaticWebsite
+    Effect: Allow
+    Principal: "*"
+    Action: "s3:GetObject"
+    Resource: "arn:aws:s3:::website-bucket/*"
+    Condition:
+      StringEquals:
+        aws:UserAgent: "Mozilla*"
+
+# 仅用于静态网站，且仅限 Get 操作

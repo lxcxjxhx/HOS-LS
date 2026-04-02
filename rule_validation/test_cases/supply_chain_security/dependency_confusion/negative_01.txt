@@ -1,0 +1,13 @@
+# Test Case ID: DC-N01
+# Rule: supply_chain_security.dependency_confusion
+# Test Type: negative
+# Description: 使用知名公共包，无混淆风险
+# Expected Detection: false
+# Expected Severity: N/A
+# Code Type: safe
+
+# requirements.txt
+# 知名公共包
+requests==2.31.0
+django==4.2.0
+flask==2.3.0

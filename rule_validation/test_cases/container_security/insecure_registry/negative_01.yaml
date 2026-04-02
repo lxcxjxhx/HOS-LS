@@ -1,0 +1,12 @@
+# Test Case ID: IR-N01
+# Rule: container_security.insecure_registry
+# Test Type: negative
+# Description: 使用 HTTPS 安全仓库
+# Expected Detection: false
+# Expected Severity: N/A
+# Code Type: safe
+
+version: '3'
+services:
+  app:
+    image: https://secure-registry.com/myapp:latest  # 安全的 HTTPS 仓库

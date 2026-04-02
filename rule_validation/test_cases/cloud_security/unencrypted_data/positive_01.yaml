@@ -1,0 +1,23 @@
+# Test Case ID: UD-P01
+# Rule: cloud_security.unencrypted_data
+# Test Type: positive
+# Description: 数据未加密存储
+# Expected Detection: true
+# Expected Severity: HIGH
+# Code Type: vulnerable
+
+# AWS RDS - 未启用加密
+DBInstanceIdentifier: my-database
+StorageEncrypted: false
+KmsKeyId: null
+
+# AWS S3 - 未启用加密
+S3Bucket:
+  Bucket: my-bucket
+  ServerSideEncryptionConfiguration:
+    Rules: []
+
+# AWS EBS - 未加密卷
+EBSVolume:
+  Encrypted: false
+  KmsKeyId: null

@@ -1,0 +1,28 @@
+[
+  {
+    "attack_type": "sql_injection",
+    "payload": "' OR 1=1 --",
+    "target": "http://example.com/login",
+    "is_successful": true,
+    "response": "Welcome admin",
+    "timestamp": 1775110104.8507264,
+    "severity": "high",
+    "confidence": 0.9,
+    "details": {
+      "evidence": "SQL error detected"
+    }
+  },
+  {
+    "attack_type": "sql_injection",
+    "payload": "' OR 1=1 --",
+    "target": "http://example.com/login",
+    "is_successful": true,
+    "response": "Welcome admin",
+    "timestamp": 1775110614.3492618,
+    "severity": "high",
+    "confidence": 0.9,
+    "details": {
+      "evidence": "SQL error detected"
+    }
+  }
+]

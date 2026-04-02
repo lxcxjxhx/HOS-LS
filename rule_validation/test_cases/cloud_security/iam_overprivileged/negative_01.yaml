@@ -1,0 +1,21 @@
+# Test Case ID: IO-N01
+# Rule: cloud_security.iam_overprivileged
+# Test Type: negative
+# Description: 最小权限原则
+# Expected Detection: false
+# Expected Severity: N/A
+# Code Type: safe
+
+# AWS IAM Policy - 最小权限
+Version: "2012-10-17"
+Statement:
+  - Effect: Allow
+    Action:
+      - "s3:GetObject"
+      - "s3:PutObject"
+    Resource: "arn:aws:s3:::my-bucket/*"
+  - Effect: Allow
+    Action:
+      - "dynamodb:GetItem"
+      - "dynamodb:Query"
+    Resource: "arn:aws:dynamodb:us-east-1:123456789012:table/MyTable"
