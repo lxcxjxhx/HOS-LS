@@ -320,6 +320,10 @@ def main():
             )
             results = scanner.scan()
         
+        # 添加项目类型和规则集信息
+        results['project_type'] = 'web_app'  # 默认值，实际应该从扫描器获取
+        results['rule_set'] = 'default'  # 默认值
+        
         # HOS-LS v2.5 AI驱动功能
         if args.ai_scan:
             if not args.silent:

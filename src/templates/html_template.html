@@ -76,6 +76,26 @@
             .tab-content {
                 @apply bg-white border border-gray-200 rounded-b-lg p-4;
             }
+            .fade-in {
+                animation: fadeIn 0.5s ease-in-out;
+            }
+            @keyframes fadeIn {
+                from { opacity: 0; transform: translateY(10px); }
+                to { opacity: 1; transform: translateY(0); }
+            }
+            .pulse {
+                animation: pulse 2s infinite;
+            }
+            @keyframes pulse {
+                0%, 100% { opacity: 1; }
+                50% { opacity: 0.7; }
+            }
+            .search-input {
+                @apply w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent;
+            }
+            .filter-select {
+                @apply px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent;
+            }
         }
     </style>
 </head>
@@ -169,12 +189,71 @@
         </div>
         
         <!-- 安全问题详情 -->
-        {% if code_security or permission_security or network_security or dependency_security or config_security %}
-        <div class="card mb-6">
+        {% if code_security or md_security or permission_security or network_security or dependency_security or config_security %}
+        <div class="card mb-6 fade-in">
             <h2 class="text-xl font-semibold text-dark mb-4 flex items-center">
                 <i class="fa fa-exclamation-triangle text-primary mr-2"></i>
                 安全问题详情
             </h2>
+            
+            <!-- 搜索和过滤 -->
+            <div class="flex flex-wrap gap-4 mb-6">
+                <div class="flex-1 min-w-[300px]">
+                    <input type="text" id="search-input" placeholder="搜索问题..." class="search-input">
+                </div>
+                <div class="flex gap-2">
+                    <select id="severity-filter" class="filter-select">
+                        <option value="all">所有严重程度</option>
+                        <option value="high">高风险</option>
+                        <option value="medium">中风险</option>
+                        <option value="low">低风险</option>
+                    </select>
+                    <select id="category-filter" class="filter-select">
+                        <option value="all">所有类别</option>
+                        <option value="md">MD文件</option>
+                        <option value="code">代码</option>
+                        <option value="permission">权限</option>
+                        <option value="network">网络</option>
+                        <option value="dependency">依赖</option>
+                        <option value="config">配置</option>
+                    </select>
+                </div>
+            </div>
+            
+            <!-- MD文件安全 -->
+            {% if md_security %}
+            <div class="mb-6">
+                <h3 class="text-lg font-medium text-dark mb-3">MD文件安全</h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full border-collapse">
+                        <thead>
+                            <tr class="bg-gray-100">
+                                <th class="px-4 py-2 border border-gray-200 text-left">文件</th>
+                                <th class="px-4 py-2 border border-gray-200 text-left">行号</th>
+                                <th class="px-4 py-2 border border-gray-200 text-left">问题</th>
+                                <th class="px-4 py-2 border border-gray-200 text-left">严重程度</th>
+                                <th class="px-4 py-2 border border-gray-200 text-left">详情</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in md_security %}
+                            <tr class="table-row-hover" data-category="md" data-severity="{{ item.severity }}" data-issue="{{ item.issue }}" data-file="{{ item.file }}" data-details="{{ item.details }}">
+                                <td class="px-4 py-2 border border-gray-200">{{ item.file }}</td>
+                                <td class="px-4 py-2 border border-gray-200">{{ item.line_number }}</td>
+                                <td class="px-4 py-2 border border-gray-200">{{ item.issue }}</td>
+                                <td class="px-4 py-2 border border-gray-200">
+                                    <span class="badge {% if item.severity == 'high' %}badge-high{% elif item.severity == 'medium' %}badge-medium{% else %}badge-low{% endif %}">
+                                        {{ item.severity }}
+                                    </span>
+                                </td>
+                                <td class="px-4 py-2 border border-gray-200">{{ item.details }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            {% endif %}
             
             <!-- 代码安全 -->
             {% if code_security %}
@@ -193,7 +272,7 @@
                         </thead>
                         <tbody>
                             {% for item in code_security %}
-                            <tr class="table-row-hover">
+                            <tr class="table-row-hover" data-category="code" data-severity="{{ item.severity }}" data-issue="{{ item.issue }}" data-file="{{ item.file }}" data-details="{{ item.details }}">
                                 <td class="px-4 py-2 border border-gray-200">{{ item.file }}</td>
                                 <td class="px-4 py-2 border border-gray-200">{{ item.line_number }}</td>
                                 <td class="px-4 py-2 border border-gray-200">{{ item.issue }}</td>
@@ -228,7 +307,7 @@
                         </thead>
                         <tbody>
                             {% for item in permission_security %}
-                            <tr class="table-row-hover">
+                            <tr class="table-row-hover" data-category="permission" data-severity="{{ item.severity }}" data-issue="{{ item.issue }}" data-file="{{ item.file }}" data-details="{{ item.details }}">
                                 <td class="px-4 py-2 border border-gray-200">{{ item.file }}</td>
                                 <td class="px-4 py-2 border border-gray-200">{{ item.line_number }}</td>
                                 <td class="px-4 py-2 border border-gray-200">{{ item.issue }}</td>
@@ -263,7 +342,7 @@
                         </thead>
                         <tbody>
                             {% for item in network_security %}
-                            <tr class="table-row-hover">
+                            <tr class="table-row-hover" data-category="network" data-severity="{{ item.severity }}" data-issue="{{ item.issue }}" data-file="{{ item.file }}" data-details="{{ item.details }}">
                                 <td class="px-4 py-2 border border-gray-200">{{ item.file }}</td>
                                 <td class="px-4 py-2 border border-gray-200">{{ item.line_number }}</td>
                                 <td class="px-4 py-2 border border-gray-200">{{ item.issue }}</td>
@@ -298,7 +377,7 @@
                         </thead>
                         <tbody>
                             {% for item in dependency_security %}
-                            <tr class="table-row-hover">
+                            <tr class="table-row-hover" data-category="dependency" data-severity="{{ item.severity }}" data-issue="{{ item.issue }}" data-file="{{ item.file }}" data-details="{{ item.details }}">
                                 <td class="px-4 py-2 border border-gray-200">{{ item.file }}</td>
                                 <td class="px-4 py-2 border border-gray-200">{{ item.line_number }}</td>
                                 <td class="px-4 py-2 border border-gray-200">{{ item.issue }}</td>
@@ -333,7 +412,7 @@
                         </thead>
                         <tbody>
                             {% for item in config_security %}
-                            <tr class="table-row-hover">
+                            <tr class="table-row-hover" data-category="config" data-severity="{{ item.severity }}" data-issue="{{ item.issue }}" data-file="{{ item.file }}" data-details="{{ item.details }}">
                                 <td class="px-4 py-2 border border-gray-200">{{ item.file }}</td>
                                 <td class="px-4 py-2 border border-gray-200">{{ item.line_number }}</td>
                                 <td class="px-4 py-2 border border-gray-200">{{ item.issue }}</td>
@@ -541,6 +620,64 @@
                     console.error('复制失败:', err);
                 });
         }
+        
+        // 搜索和过滤功能
+        function filterIssues() {
+            const searchTerm = document.getElementById('search-input').value.toLowerCase();
+            const severityFilter = document.getElementById('severity-filter').value;
+            const categoryFilter = document.getElementById('category-filter').value;
+            
+            const rows = document.querySelectorAll('tr[data-category]');
+            
+            rows.forEach(row => {
+                const category = row.getAttribute('data-category');
+                const severity = row.getAttribute('data-severity');
+                const issue = row.getAttribute('data-issue').toLowerCase();
+                const file = row.getAttribute('data-file').toLowerCase();
+                const details = row.getAttribute('data-details').toLowerCase();
+                
+                const matchesSearch = searchTerm === '' || 
+                    issue.includes(searchTerm) || 
+                    file.includes(searchTerm) || 
+                    details.includes(searchTerm);
+                
+                const matchesSeverity = severityFilter === 'all' || severity === severityFilter;
+                const matchesCategory = categoryFilter === 'all' || category === categoryFilter;
+                
+                if (matchesSearch && matchesSeverity && matchesCategory) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        }
+        
+        // 初始化搜索和过滤功能
+        document.addEventListener('DOMContentLoaded', function() {
+            const searchInput = document.getElementById('search-input');
+            const severityFilter = document.getElementById('severity-filter');
+            const categoryFilter = document.getElementById('category-filter');
+            
+            if (searchInput) {
+                searchInput.addEventListener('input', filterIssues);
+            }
+            
+            if (severityFilter) {
+                severityFilter.addEventListener('change', filterIssues);
+            }
+            
+            if (categoryFilter) {
+                categoryFilter.addEventListener('change', filterIssues);
+            }
+            
+            // 添加卡片动画效果
+            const cards = document.querySelectorAll('.card');
+            cards.forEach((card, index) => {
+                setTimeout(() => {
+                    card.classList.add('fade-in');
+                }, index * 100);
+            });
+        });
     </script>
 </body>
 </html>

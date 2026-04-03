@@ -927,6 +927,7 @@ class AIModelManager:
         Returns:
             扫描策略
         """
+        import json
         # 转义项目信息中的大括号，避免LangChain模板解析错误
         escaped_project_info = json.dumps(project_info, ensure_ascii=False, indent=2).replace('{', '{{').replace('}', '}}')
         
