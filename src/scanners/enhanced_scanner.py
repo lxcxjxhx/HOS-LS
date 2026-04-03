@@ -1723,7 +1723,7 @@ class EnhancedSecurityScanner:
                 ]]
                 
                 for file in files:
-                    if file.endswith(('.py', '.js')):
+                    if file.endswith(('.py', '.js', '.ts', '.json', '.yaml', '.yml', '.env')):
                         file_path = os.path.join(root, file)
                         try:
                             with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
@@ -1747,7 +1747,7 @@ class EnhancedSecurityScanner:
                                         severity = severity_map.get(issue.get('severity'), 'medium')
                                         
                                         # 添加到扫描结果
-                                        self.results['code_security'].append({
+                                        issue_data = {
                                             'file': file_path,
                                             'line_number': 0,  # 沙盒分析暂不提供行号
                                             'issue': issue.get('description', '沙盒分析问题'),
@@ -1757,7 +1757,9 @@ class EnhancedSecurityScanner:
                                             'detection_method': 'sandbox',
                                             'confidence': issue.get('confidence', 0.8),
                                             'category': 'code_security'
-                                        })
+                                        }
+                                        self.results['code_security'].append(issue_data)
+                                        sandbox_issues.append(issue_data)
                                         
                                         # 更新风险计数
                                         if severity == 'high':
@@ -1777,7 +1779,7 @@ class EnhancedSecurityScanner:
             }
             
             if not self.silent:
-                print(f'{Fore.GREEN}沙盒分析完成，分析文件数：{analysis_count}{Style.RESET_ALL}')
+                print(f'{Fore.GREEN}沙盒分析完成，分析文件数：{analysis_count}，发现问题数：{len(sandbox_issues)}{Style.RESET_ALL}')
             
         except Exception as e:
             logger.error(f"沙盒分析失败：{e}")

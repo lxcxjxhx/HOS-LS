@@ -1462,14 +1462,24 @@
         "cwe": "CWE-1333",
         "owasp": "LLM03:2023",
         "patterns": [
-          "(?i)\\\\u200b",
-          "(?i)\\\\u200c",
-          "(?i)\\\\u200d",
-          "(?i)\\\\uFEFF",
-          "(?i)\\\\x00",
+          "(?i)\\u200b",
+          "(?i)\\u200c",
+          "(?i)\\u200d",
+          "(?i)\\uFEFF",
+          "(?i)\\x00",
           "(?i)base64\\.b64decode\\s*\\([^)]*prompt",
           "(?i)rot13\\s*\\(",
-          "(?i)caesar_cipher\\s*\\("
+          "(?i)caesar_cipher\\s*\\(",
+          "(?i)adversarial\\s+example",
+          "(?i)adversarial\\s+attack",
+          "(?i)poisoning\\s+attack",
+          "(?i)evasion\\s+attack",
+          "(?i)perturbation\\s+attack",
+          "(?i)fooling\\s+attack",
+          "(?i)adversarial\\s+input",
+          "(?i)adversarial\\s+sample",
+          "(?i)adversarial\\s+example\\s+detection",
+          "(?i)adversarial\\s+attack\\s+detection"
         ],
         "exclude_patterns": [
           "encoding",
@@ -1480,6 +1490,56 @@
         "fix": "实施输入规范化，检测并过滤特殊字符，使用对抗训练",
         "references": [
           "https://owasp.org/www-project-top-10-for-large-language-model-applications/"
+        ]
+      },
+      "ai_resource_exhaustion": {
+        "id": "ai_security.ai_resource_exhaustion",
+        "name": "AI 资源耗尽",
+        "description": "检测 AI 任务未限制资源使用",
+        "severity": "MEDIUM",
+        "confidence": 0.80,
+        "weight": 1.0,
+        "cwe": "CWE-400",
+        "owasp": "LLM04:2023",
+        "patterns": [
+          "(?i)timeout\\s*=\\s*0",
+          "(?i)timeout\\s*=\\s*None",
+          "(?i)max_tokens\\s*=\\s*0",
+          "(?i)max_tokens\\s*=\\s*None",
+          "(?i)max_execution_time\\s*=\\s*0",
+          "(?i)max_execution_time\\s*=\\s*None",
+          "(?i)memory_limit\\s*=\\s*0",
+          "(?i)memory_limit\\s*=\\s*None",
+          "(?i)resource_limit\\s*=\\s*0",
+          "(?i)resource_limit\\s*=\\s*None",
+          "(?i)unlimited\\s*resources",
+          "(?i)no\\s*resource\\s*limit",
+          "(?i)infinite\\s*timeout",
+          "(?i)unlimited\\s*timeout",
+          "(?i)no\\s*timeout",
+          "(?i)max_tokens\\s*>\\s*100000",
+          "(?i)max_time\\s*>\\s*3600",
+          "(?i)memory_limit\\s*>\\s*10240",
+          "(?i)cpu_limit\\s*>\\s*16",
+          "(?i)gpu_limit\\s*>\\s*4",
+          "(?i)concurrent\\s*requests\\s*>\\s*100",
+          "(?i)rate\\s*limit\\s*=\\s*0",
+          "(?i)rate\\s*limit\\s*=\\s*None",
+          "(?i)no\\s*rate\\s*limit",
+          "(?i)unlimited\\s*rate",
+          "(?i)unlimited\\s*concurrent\\s*requests"
+        ],
+        "exclude_patterns": [
+          "test_resource",
+          "mock_limit",
+          "development_mode",
+          "local_development"
+        ],
+        "context_patterns": [],
+        "fix": "设置合理的资源限制，包括超时、最大 token 数、内存限制等",
+        "references": [
+          "https://owasp.org/www-project-top-10-for-large-language-model-applications/",
+          "https://cwe.mitre.org/data/definitions/400.html"
         ]
       },
       "network_exfiltration": {

@@ -166,9 +166,20 @@ class AISemanticEngine:
         检查代码是否包含危险模式
         """
         danger_patterns = [
+            # Python
             'exec(', 'eval(', 'input(', 'open(',
             'cursor.execute', 'db.execute', 'conn.execute',
-            'os.system', 'subprocess', 'shell=True'
+            'os.system', 'subprocess', 'shell=True',
+            # JavaScript/TypeScript
+            'eval(', 'new Function(', 'document.write(',
+            'innerHTML', 'outerHTML', 'eval(',
+            'exec(', 'spawn(', 'execSync(',
+            # 通用
+            'password', 'secret', 'token', 'api_key',
+            'auth', 'access_token', 'secret_key',
+            'connection_string', 'database_url',
+            'curl ', 'wget ', 'fetch(', 'axios.',
+            'http.', 'https.'
         ]
         
         for pattern in danger_patterns:

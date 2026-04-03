@@ -596,16 +596,18 @@ class ParallelSecurityScanner:
         
         # 使用 ThreadPoolExecutor 进行并行扫描（避免进程间通信问题）
         scanned_count = 0
+        timeout_seconds = 30  # 设置30秒超时
         with ThreadPoolExecutor(max_workers=self.config.max_workers) as executor:
             # 提交所有任务
             future_to_task = {executor.submit(scan_single_file, task): task for task in tasks}
             
             # 收集结果
             with tqdm(total=total_tasks, desc="并行扫描进度", unit="文件") as pbar:
-                for future in as_completed(future_to_task):
+                for future in as_completed(future_to_task, timeout=timeout_seconds):
                     task = future_to_task[future]
                     try:
-                        task_results = future.result()
+                        # 为每个任务设置单独的超时
+                        task_results = future.result(timeout=timeout_seconds)
                         
                         # 合并结果
                         for category, issues in task_results.items():
@@ -623,6 +625,20 @@ class ParallelSecurityScanner:
                         if self.cache:
                             self.cache.set(task.file_path, task.file_hash, task_results)
                         
+                    except TimeoutError:
+                        logger.error(f"扫描文件超时 {task.file_path}")
+                        # 记录超时文件，以便后续处理
+                        if 'timeout_issues' not in self.results:
+                            self.results['timeout_issues'] = []
+                        self.results['timeout_issues'].append({
+                            'file': task.file_path,
+                            'issue': '扫描超时',
+                            'severity': 'low',
+                            'details': f'文件扫描超过 {timeout_seconds} 秒',
+                            'detection_method': 'timeout',
+                            'confidence': 0.5,
+                            'category': 'timeout_issues'
+                        })
                     except Exception as e:
                         logger.error(f"扫描文件失败 {task.file_path}: {e}")
                     

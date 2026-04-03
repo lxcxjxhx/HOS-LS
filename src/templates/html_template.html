@@ -4,530 +4,496 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>HOS-LS 安全检测报告</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            line-height: 1.6;
-            margin: 20px;
-            background-color: #f5f5f5;
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#3b82f6',
+                        secondary: '#64748b',
+                        danger: '#ef4444',
+                        warning: '#f59e0b',
+                        success: '#10b981',
+                        dark: '#1e293b',
+                        light: '#f8fafc'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                }
+            }
         }
-        .container {
-            max-width: 1000px;
-            margin: 0 auto;
-            background-color: white;
-            padding: 20px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
-        }
-        h1 {
-            color: #333;
-            text-align: center;
-            border-bottom: 2px solid #333;
-            padding-bottom: 10px;
-        }
-        h2 {
-            color: #555;
-            margin-top: 30px;
-            border-bottom: 1px solid #ddd;
-            padding-bottom: 5px;
-        }
-        .summary {
-            background-color: #f9f9f9;
-            padding: 15px;
-            border-radius: 5px;
-            margin-bottom: 20px;
-        }
-        .summary-item {
-            display: inline-block;
-            margin-right: 20px;
-        }
-        .high-risk {
-            color: #d32f2f;
-            font-weight: bold;
-        }
-        .medium-risk {
-            color: #f57c00;
-            font-weight: bold;
-        }
-        .low-risk {
-            color: #388e3c;
-            font-weight: bold;
-        }
-        .risk-level {
-            padding: 5px 10px;
-            border-radius: 15px;
-            font-weight: bold;
-        }
-        .risk-high {
-            background-color: #ffebee;
-            color: #c62828;
-        }
-        .risk-medium {
-            background-color: #fff3e0;
-            color: #ef6c00;
-        }
-        .risk-low {
-            background-color: #e8f5e8;
-            color: #2e7d32;
-        }
-        .project-info {
-            background-color: #e3f2fd;
-            padding: 15px;
-            border-radius: 5px;
-            margin-bottom: 20px;
-        }
-        .security-assessment {
-            background-color: #f3e5f5;
-            padding: 15px;
-            border-radius: 5px;
-            margin-bottom: 20px;
-        }
-        .recommendations {
-            background-color: #fff8e1;
-            padding: 15px;
-            border-radius: 5px;
-            margin-bottom: 20px;
-        }
-        .recommendation-item {
-            margin-bottom: 10px;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 10px;
-        }
-        th, td {
-            border: 1px solid #ddd;
-            padding: 8px;
-            text-align: left;
-        }
-        th {
-            background-color: #f2f2f2;
-            font-weight: bold;
-        }
-        tr:hover {
-            background-color: #f5f5f5;
-        }
-        .footer {
-            margin-top: 40px;
-            text-align: center;
-            color: #666;
-            font-size: 14px;
-        }
-        /* 选项卡样式 */
-        .tab-button {
-            background-color: #f1f1f1;
-            border: 1px solid #ddd;
-            padding: 10px 15px;
-            cursor: pointer;
-            margin-right: 5px;
-            border-radius: 4px 4px 0 0;
-            transition: background-color 0.3s;
-        }
-        .tab-button:hover {
-            background-color: #ddd;
-        }
-        .tab-button.active {
-            background-color: #f0f0f0;
-            font-weight: bold;
-        }
-        .tab-content {
-            border: 1px solid #ddd;
-            border-top: none;
-            border-radius: 0 0 4px 4px;
-        }
-        /* 复制按钮样式 */
-        .copy-button {
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            padding: 8px 15px;
-            text-align: center;
-            text-decoration: none;
-            display: inline-block;
-            font-size: 14px;
-            margin: 4px 2px;
-            cursor: pointer;
-            border-radius: 4px;
-            transition: background-color 0.3s;
-        }
-        .copy-button:hover {
-            background-color: #45a049;
-        }
-        .copy-button:active {
-            background-color: #3e8e41;
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .content-auto {
+                content-visibility: auto;
+            }
+            .text-shadow {
+                text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            }
+            .card {
+                @apply bg-white rounded-lg shadow-md p-6 transition-all duration-300 hover:shadow-lg;
+            }
+            .badge {
+                @apply px-3 py-1 rounded-full text-sm font-medium;
+            }
+            .badge-high {
+                @apply bg-red-100 text-red-800;
+            }
+            .badge-medium {
+                @apply bg-amber-100 text-amber-800;
+            }
+            .badge-low {
+                @apply bg-green-100 text-green-800;
+            }
+            .btn {
+                @apply px-4 py-2 rounded-md font-medium transition-all duration-300;
+            }
+            .btn-primary {
+                @apply bg-primary text-white hover:bg-blue-600;
+            }
+            .btn-secondary {
+                @apply bg-secondary text-white hover:bg-gray-700;
+            }
+            .btn-success {
+                @apply bg-success text-white hover:bg-green-600;
+            }
+            .table-row-hover {
+                @apply hover:bg-gray-50 transition-colors duration-200;
+            }
+            .tab {
+                @apply px-4 py-2 rounded-t-lg font-medium cursor-pointer transition-all duration-300;
+            }
+            .tab-active {
+                @apply bg-white border border-b-0 border-gray-200 text-primary;
+            }
+            .tab-inactive {
+                @apply bg-gray-100 text-gray-600 hover:bg-gray-200;
+            }
+            .tab-content {
+                @apply bg-white border border-gray-200 rounded-b-lg p-4;
+            }
         }
     </style>
 </head>
-<body>
-    <div class="container">
-        <h1>HOS-LS 安全检测报告</h1>
+<body class="bg-gray-50 min-h-screen">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- 头部 -->
+        <header class="mb-8 text-center">
+            <h1 class="text-3xl md:text-4xl font-bold text-dark text-shadow mb-2">HOS-LS 安全检测报告</h1>
+            <p class="text-secondary">全面的安全漏洞扫描与风险评估</p>
+        </header>
         
-        <div class="project-info">
-            <h2>项目信息</h2>
-            <div class="summary-item">检测目标: {{ target }}</div>
-            <div class="summary-item">检测时间: {{ timestamp }}</div>
-            <div class="summary-item">项目类型: {{ project_type }}</div>
-            <div class="summary-item">使用规则集: {{ rule_set }}</div>
+        <!-- 项目信息 -->
+        <div class="card mb-6">
+            <h2 class="text-xl font-semibold text-dark mb-4 flex items-center">
+                <i class="fa fa-info-circle text-primary mr-2"></i>
+                项目信息
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="bg-gray-50 p-3 rounded-md">
+                    <p class="text-sm text-secondary">检测目标</p>
+                    <p class="font-medium">{{ target }}</p>
+                </div>
+                <div class="bg-gray-50 p-3 rounded-md">
+                    <p class="text-sm text-secondary">检测时间</p>
+                    <p class="font-medium">{{ timestamp }}</p>
+                </div>
+                <div class="bg-gray-50 p-3 rounded-md">
+                    <p class="text-sm text-secondary">项目类型</p>
+                    <p class="font-medium">{{ project_type }}</p>
+                </div>
+                <div class="bg-gray-50 p-3 rounded-md">
+                    <p class="text-sm text-secondary">使用规则集</p>
+                    <p class="font-medium">{{ rule_set }}</p>
+                </div>
+            </div>
         </div>
         
-        <div class="summary">
-            <h2>检测摘要</h2>
-            <div class="summary-item high-risk">高风险: {{ high_risk }}</div>
-            <div class="summary-item medium-risk">中风险: {{ medium_risk }}</div>
-            <div class="summary-item low-risk">低风险: {{ low_risk }}</div>
-            <div class="summary-item">总体风险等级: <span class="risk-level risk-{{ overall_risk }}">{{ overall_risk_text }}</span></div>
+        <!-- 检测摘要 -->
+        <div class="card mb-6">
+            <h2 class="text-xl font-semibold text-dark mb-4 flex items-center">
+                <i class="fa fa-dashboard text-primary mr-2"></i>
+                检测摘要
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                <div class="bg-red-50 p-4 rounded-md text-center">
+                    <p class="text-sm text-red-600">高风险</p>
+                    <p class="text-2xl font-bold text-red-800">{{ high_risk }}</p>
+                </div>
+                <div class="bg-amber-50 p-4 rounded-md text-center">
+                    <p class="text-sm text-amber-600">中风险</p>
+                    <p class="text-2xl font-bold text-amber-800">{{ medium_risk }}</p>
+                </div>
+                <div class="bg-green-50 p-4 rounded-md text-center">
+                    <p class="text-sm text-green-600">低风险</p>
+                    <p class="text-2xl font-bold text-green-800">{{ low_risk }}</p>
+                </div>
+                <div class="bg-blue-50 p-4 rounded-md text-center">
+                    <p class="text-sm text-blue-600">总体风险等级</p>
+                    <span class="badge {% if overall_risk == 'high' %}badge-high{% elif overall_risk == 'medium' %}badge-medium{% else %}badge-low{% endif %}">
+                        {{ overall_risk_text }}
+                    </span>
+                </div>
+            </div>
         </div>
         
-        <div class="security-assessment">
-            <h2>安全评估</h2>
-            <p>{{ security_assessment }}</p>
+        <!-- 安全评估 -->
+        <div class="card mb-6">
+            <h2 class="text-xl font-semibold text-dark mb-4 flex items-center">
+                <i class="fa fa-shield text-primary mr-2"></i>
+                安全评估
+            </h2>
+            <p class="text-gray-700 leading-relaxed">{{ security_assessment }}</p>
         </div>
         
-        <div class="recommendations">
-            <h2>安全建议</h2>
-            {% for recommendation in recommendations %}
-            <div class="recommendation-item">
-                <strong>{{ recommendation.severity }}风险:</strong> {{ recommendation.text }}
+        <!-- 安全建议 -->
+        <div class="card mb-6">
+            <h2 class="text-xl font-semibold text-dark mb-4 flex items-center">
+                <i class="fa fa-lightbulb-o text-primary mr-2"></i>
+                安全建议
+            </h2>
+            <div class="space-y-3">
+                {% for recommendation in recommendations %}
+                <div class="bg-gray-50 p-3 rounded-md">
+                    <p class="font-medium {% if recommendation.severity == '高' %}text-red-700{% elif recommendation.severity == '中' %}text-amber-700{% else %}text-green-700{% endif %}">
+                        {{ recommendation.severity }}风险:
+                    </p>
+                    <p class="text-gray-700">{{ recommendation.text }}</p>
+                </div>
+                {% endfor %}
             </div>
-            {% endfor %}
         </div>
         
-        {% if code_security %}
-        <h2>代码安全</h2>
-        <table>
-            <tr>
-                <th>文件</th>
-                <th>行号</th>
-                <th>问题</th>
-                <th>严重程度</th>
-                <th>详情</th>
-            </tr>
-            {% for item in code_security %}
-            <tr>
-                <td>{{ item.file }}</td>
-                <td>{{ item.line_number }}</td>
-                <td>{{ item.issue }}</td>
-                <td class="{{ item.severity }}-risk">{{ item.severity }}</td>
-                <td>{{ item.details }}</td>
-            </tr>
-            {% endfor %}
-        </table>
-        {% endif %}
-        
-        {% if permission_security %}
-        <h2>权限安全</h2>
-        <table>
-            <tr>
-                <th>文件</th>
-                <th>行号</th>
-                <th>问题</th>
-                <th>严重程度</th>
-                <th>详情</th>
-            </tr>
-            {% for item in permission_security %}
-            <tr>
-                <td>{{ item.file }}</td>
-                <td>{{ item.line_number }}</td>
-                <td>{{ item.issue }}</td>
-                <td class="{{ item.severity }}-risk">{{ item.severity }}</td>
-                <td>{{ item.details }}</td>
-            </tr>
-            {% endfor %}
-        </table>
-        {% endif %}
-        
-        {% if network_security %}
-        <h2>网络安全</h2>
-        <table>
-            <tr>
-                <th>文件</th>
-                <th>行号</th>
-                <th>问题</th>
-                <th>严重程度</th>
-                <th>详情</th>
-            </tr>
-            {% for item in network_security %}
-            <tr>
-                <td>{{ item.file }}</td>
-                <td>{{ item.line_number }}</td>
-                <td>{{ item.issue }}</td>
-                <td class="{{ item.severity }}-risk">{{ item.severity }}</td>
-                <td>{{ item.details }}</td>
-            </tr>
-            {% endfor %}
-        </table>
-        {% endif %}
-        
-        {% if dependency_security %}
-        <h2>依赖安全</h2>
-        <table>
-            <tr>
-                <th>文件</th>
-                <th>行号</th>
-                <th>问题</th>
-                <th>严重程度</th>
-                <th>详情</th>
-            </tr>
-            {% for item in dependency_security %}
-            <tr>
-                <td>{{ item.file }}</td>
-                <td>{{ item.line_number }}</td>
-                <td>{{ item.issue }}</td>
-                <td class="{{ item.severity }}-risk">{{ item.severity }}</td>
-                <td>{{ item.details }}</td>
-            </tr>
-            {% endfor %}
-        </table>
-        {% endif %}
-        
-        {% if config_security %}
-        <h2>配置安全</h2>
-        <table>
-            <tr>
-                <th>文件</th>
-                <th>行号</th>
-                <th>问题</th>
-                <th>严重程度</th>
-                <th>详情</th>
-            </tr>
-            {% for item in config_security %}
-            <tr>
-                <td>{{ item.file }}</td>
-                <td>{{ item.line_number }}</td>
-                <td>{{ item.issue }}</td>
-                <td class="{{ item.severity }}-risk">{{ item.severity }}</td>
-                <td>{{ item.details }}</td>
-            </tr>
-            {% endfor %}
-        </table>
-        {% endif %}
-        
-        <div class="recommendations">
-            <h2>AI安全建议</h2>
-            {% if ai_suggestions %}
-            <div class="recommendation-item">
-                <strong>风险评估:</strong> {{ ai_suggestions.risk_assessment }}
-            </div>
-            <h3>针对性建议</h3>
-            {% for suggestion in ai_suggestions.specific_suggestions %}
-            <div class="recommendation-item">
-                {{ suggestion }}
-            </div>
-            {% endfor %}
-            <h3>安全最佳实践</h3>
-            {% for practice in ai_suggestions.best_practices %}
-            <div class="recommendation-item">
-                {{ practice }}
-            </div>
-            {% endfor %}
-            {% else %}
-            <div class="recommendation-item">
-                <strong>风险评估:</strong> 本次扫描发现{{ high_risk }}个高风险问题，{{ medium_risk }}个中风险问题，{{ low_risk }}个低风险问题。
-                {% if high_risk > 0 %}
-                系统存在严重安全隐患，建议立即处理高风险问题。
-                {% elif medium_risk > 0 %}
-                系统存在一定安全风险，建议尽快处理中风险问题。
-                {% else %}
-                系统安全状态良好，建议定期进行安全检查。
-                {% endif %}
-            </div>
-            <h3>针对性建议</h3>
-            <div class="recommendation-item">
-                避免硬编码敏感信息，使用环境变量存储
-            </div>
-            <div class="recommendation-item">
-                谨慎使用exec()、eval()等函数，防止代码注入攻击
-            </div>
-            <div class="recommendation-item">
-                确保网络访问代码有适当的错误处理和安全验证
-            </div>
-            <h3>安全最佳实践</h3>
-            <div class="recommendation-item">
-                使用环境变量存储所有敏感信息，避免硬编码
-            </div>
-            <div class="recommendation-item">
-                定期更新依赖库，修复已知安全漏洞
-            </div>
-            <div class="recommendation-item">
-                使用HTTPS进行所有网络通信，确保数据传输安全
-            </div>
-            <div class="recommendation-item">
-                实施输入验证，防止注入攻击
-            </div>
-            <div class="recommendation-item">
-                使用最小权限原则，限制代码和进程的权限
+        <!-- 安全问题详情 -->
+        {% if code_security or permission_security or network_security or dependency_security or config_security %}
+        <div class="card mb-6">
+            <h2 class="text-xl font-semibold text-dark mb-4 flex items-center">
+                <i class="fa fa-exclamation-triangle text-primary mr-2"></i>
+                安全问题详情
+            </h2>
+            
+            <!-- 代码安全 -->
+            {% if code_security %}
+            <div class="mb-6">
+                <h3 class="text-lg font-medium text-dark mb-3">代码安全</h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full border-collapse">
+                        <thead>
+                            <tr class="bg-gray-100">
+                                <th class="px-4 py-2 border border-gray-200 text-left">文件</th>
+                                <th class="px-4 py-2 border border-gray-200 text-left">行号</th>
+                                <th class="px-4 py-2 border border-gray-200 text-left">问题</th>
+                                <th class="px-4 py-2 border border-gray-200 text-left">严重程度</th>
+                                <th class="px-4 py-2 border border-gray-200 text-left">详情</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in code_security %}
+                            <tr class="table-row-hover">
+                                <td class="px-4 py-2 border border-gray-200">{{ item.file }}</td>
+                                <td class="px-4 py-2 border border-gray-200">{{ item.line_number }}</td>
+                                <td class="px-4 py-2 border border-gray-200">{{ item.issue }}</td>
+                                <td class="px-4 py-2 border border-gray-200">
+                                    <span class="badge {% if item.severity == 'high' %}badge-high{% elif item.severity == 'medium' %}badge-medium{% else %}badge-low{% endif %}">
+                                        {{ item.severity }}
+                                    </span>
+                                </td>
+                                <td class="px-4 py-2 border border-gray-200">{{ item.details }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
             </div>
             {% endif %}
-            <h3>AI 工具提示词（由 AI 生成）</h3>
             
-            <!-- 选项卡 -->
-            <div style="margin-bottom: 10px;">
-                <button class="tab-button active" onclick="switchTab('cursor')">Cursor</button>
-                <button class="tab-button" onclick="switchTab('trae')">Trae</button>
-                <button class="tab-button" onclick="switchTab('kiro')">Kiro</button>
+            <!-- 权限安全 -->
+            {% if permission_security %}
+            <div class="mb-6">
+                <h3 class="text-lg font-medium text-dark mb-3">权限安全</h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full border-collapse">
+                        <thead>
+                            <tr class="bg-gray-100">
+                                <th class="px-4 py-2 border border-gray-200 text-left">文件</th>
+                                <th class="px-4 py-2 border border-gray-200 text-left">行号</th>
+                                <th class="px-4 py-2 border border-gray-200 text-left">问题</th>
+                                <th class="px-4 py-2 border border-gray-200 text-left">严重程度</th>
+                                <th class="px-4 py-2 border border-gray-200 text-left">详情</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in permission_security %}
+                            <tr class="table-row-hover">
+                                <td class="px-4 py-2 border border-gray-200">{{ item.file }}</td>
+                                <td class="px-4 py-2 border border-gray-200">{{ item.line_number }}</td>
+                                <td class="px-4 py-2 border border-gray-200">{{ item.issue }}</td>
+                                <td class="px-4 py-2 border border-gray-200">
+                                    <span class="badge {% if item.severity == 'high' %}badge-high{% elif item.severity == 'medium' %}badge-medium{% else %}badge-low{% endif %}">
+                                        {{ item.severity }}
+                                    </span>
+                                </td>
+                                <td class="px-4 py-2 border border-gray-200">{{ item.details }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- 网络安全 -->
+            {% if network_security %}
+            <div class="mb-6">
+                <h3 class="text-lg font-medium text-dark mb-3">网络安全</h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full border-collapse">
+                        <thead>
+                            <tr class="bg-gray-100">
+                                <th class="px-4 py-2 border border-gray-200 text-left">文件</th>
+                                <th class="px-4 py-2 border border-gray-200 text-left">行号</th>
+                                <th class="px-4 py-2 border border-gray-200 text-left">问题</th>
+                                <th class="px-4 py-2 border border-gray-200 text-left">严重程度</th>
+                                <th class="px-4 py-2 border border-gray-200 text-left">详情</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in network_security %}
+                            <tr class="table-row-hover">
+                                <td class="px-4 py-2 border border-gray-200">{{ item.file }}</td>
+                                <td class="px-4 py-2 border border-gray-200">{{ item.line_number }}</td>
+                                <td class="px-4 py-2 border border-gray-200">{{ item.issue }}</td>
+                                <td class="px-4 py-2 border border-gray-200">
+                                    <span class="badge {% if item.severity == 'high' %}badge-high{% elif item.severity == 'medium' %}badge-medium{% else %}badge-low{% endif %}">
+                                        {{ item.severity }}
+                                    </span>
+                                </td>
+                                <td class="px-4 py-2 border border-gray-200">{{ item.details }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- 依赖安全 -->
+            {% if dependency_security %}
+            <div class="mb-6">
+                <h3 class="text-lg font-medium text-dark mb-3">依赖安全</h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full border-collapse">
+                        <thead>
+                            <tr class="bg-gray-100">
+                                <th class="px-4 py-2 border border-gray-200 text-left">文件</th>
+                                <th class="px-4 py-2 border border-gray-200 text-left">行号</th>
+                                <th class="px-4 py-2 border border-gray-200 text-left">问题</th>
+                                <th class="px-4 py-2 border border-gray-200 text-left">严重程度</th>
+                                <th class="px-4 py-2 border border-gray-200 text-left">详情</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in dependency_security %}
+                            <tr class="table-row-hover">
+                                <td class="px-4 py-2 border border-gray-200">{{ item.file }}</td>
+                                <td class="px-4 py-2 border border-gray-200">{{ item.line_number }}</td>
+                                <td class="px-4 py-2 border border-gray-200">{{ item.issue }}</td>
+                                <td class="px-4 py-2 border border-gray-200">
+                                    <span class="badge {% if item.severity == 'high' %}badge-high{% elif item.severity == 'medium' %}badge-medium{% else %}badge-low{% endif %}">
+                                        {{ item.severity }}
+                                    </span>
+                                </td>
+                                <td class="px-4 py-2 border border-gray-200">{{ item.details }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- 配置安全 -->
+            {% if config_security %}
+            <div class="mb-6">
+                <h3 class="text-lg font-medium text-dark mb-3">配置安全</h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full border-collapse">
+                        <thead>
+                            <tr class="bg-gray-100">
+                                <th class="px-4 py-2 border border-gray-200 text-left">文件</th>
+                                <th class="px-4 py-2 border border-gray-200 text-left">行号</th>
+                                <th class="px-4 py-2 border border-gray-200 text-left">问题</th>
+                                <th class="px-4 py-2 border border-gray-200 text-left">严重程度</th>
+                                <th class="px-4 py-2 border border-gray-200 text-left">详情</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in config_security %}
+                            <tr class="table-row-hover">
+                                <td class="px-4 py-2 border border-gray-200">{{ item.file }}</td>
+                                <td class="px-4 py-2 border border-gray-200">{{ item.line_number }}</td>
+                                <td class="px-4 py-2 border border-gray-200">{{ item.issue }}</td>
+                                <td class="px-4 py-2 border border-gray-200">
+                                    <span class="badge {% if item.severity == 'high' %}badge-high{% elif item.severity == 'medium' %}badge-medium{% else %}badge-low{% endif %}">
+                                        {{ item.severity }}
+                                    </span>
+                                </td>
+                                <td class="px-4 py-2 border border-gray-200">{{ item.details }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+        
+        <!-- AI安全建议 -->
+        <div class="card mb-6">
+            <h2 class="text-xl font-semibold text-dark mb-4 flex items-center">
+                <i class="fa fa-robot text-primary mr-2"></i>
+                AI安全建议
+            </h2>
+            
+            {% if ai_suggestions %}
+            <div class="mb-4">
+                <h3 class="text-lg font-medium text-dark mb-2">风险评估</h3>
+                <p class="text-gray-700">{{ ai_suggestions.risk_assessment }}</p>
             </div>
             
-            <!-- 提示词内容 - 使用 AI 生成的内容 -->
-            <div id="cursor-tab" class="tab-content active" style="background-color: #f0f0f0; padding: 15px; border-radius: 5px; white-space: pre-wrap; font-family: monospace;">
-                {% if ai_suggestions and ai_suggestions.cursor_prompt %}
+            <div class="mb-4">
+                <h3 class="text-lg font-medium text-dark mb-2">针对性建议</h3>
+                <ul class="list-disc list-inside space-y-2 text-gray-700">
+                    {% for suggestion in ai_suggestions.specific_suggestions %}
+                    <li>{{ suggestion }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+            
+            <div class="mb-4">
+                <h3 class="text-lg font-medium text-dark mb-2">安全最佳实践</h3>
+                <ul class="list-disc list-inside space-y-2 text-gray-700">
+                    {% for practice in ai_suggestions.best_practices %}
+                    <li>{{ practice }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% else %}
+            <div class="mb-4">
+                <h3 class="text-lg font-medium text-dark mb-2">风险评估</h3>
+                <p class="text-gray-700">
+                    本次扫描发现{{ high_risk }}个高风险问题，{{ medium_risk }}个中风险问题，{{ low_risk }}个低风险问题。
+                    {% if high_risk > 0 %}
+                    系统存在严重安全隐患，建议立即处理高风险问题。
+                    {% elif medium_risk > 0 %}
+                    系统存在一定安全风险，建议尽快处理中风险问题。
+                    {% else %}
+                    系统安全状态良好，建议定期进行安全检查。
+                    {% endif %}
+                </p>
+            </div>
+            
+            <div class="mb-4">
+                <h3 class="text-lg font-medium text-dark mb-2">针对性建议</h3>
+                <ul class="list-disc list-inside space-y-2 text-gray-700">
+                    <li>避免硬编码敏感信息，使用环境变量存储</li>
+                    <li>谨慎使用exec()、eval()等函数，防止代码注入攻击</li>
+                    <li>确保网络访问代码有适当的错误处理和安全验证</li>
+                </ul>
+            </div>
+            
+            <div class="mb-4">
+                <h3 class="text-lg font-medium text-dark mb-2">安全最佳实践</h3>
+                <ul class="list-disc list-inside space-y-2 text-gray-700">
+                    <li>使用环境变量存储所有敏感信息，避免硬编码</li>
+                    <li>定期更新依赖库，修复已知安全漏洞</li>
+                    <li>使用HTTPS进行所有网络通信，确保数据传输安全</li>
+                    <li>实施输入验证，防止注入攻击</li>
+                    <li>使用最小权限原则，限制代码和进程的权限</li>
+                </ul>
+            </div>
+            {% endif %}
+            
+            <!-- AI 工具提示词 -->
+            <div class="mt-6">
+                <h3 class="text-lg font-medium text-dark mb-3">AI 工具提示词（由 AI 生成）</h3>
+                
+                <!-- 选项卡 -->
+                <div class="flex border-b border-gray-200 mb-4">
+                    <button class="tab tab-active" onclick="switchTab('cursor')">
+                        <i class="fa fa-code mr-1"></i> Cursor
+                    </button>
+                    <button class="tab tab-inactive" onclick="switchTab('trae')">
+                        <i class="fa fa-terminal mr-1"></i> Trae
+                    </button>
+                    <button class="tab tab-inactive" onclick="switchTab('kiro')">
+                        <i class="fa fa-lightbulb-o mr-1"></i> Kiro
+                    </button>
+                </div>
+                
+                <!-- 提示词内容 -->
+                <div id="cursor-tab" class="tab-content active">
+                    <pre class="bg-gray-50 p-4 rounded-md overflow-auto max-h-96 font-mono text-sm">
+                        {% if ai_suggestions and ai_suggestions.cursor_prompt %}
 {{ ai_suggestions.cursor_prompt }}
-                {% else %}
+                        {% else %}
 # Cursor 安全提示词
 正在生成 AI 安全提示词...
-                {% endif %}
-            </div>
-            <div id="trae-tab" class="tab-content" style="background-color: #f0f0f0; padding: 15px; border-radius: 5px; white-space: pre-wrap; font-family: monospace; display: none;">
-                {% if ai_suggestions and ai_suggestions.trae_prompt %}
+                        {% endif %}
+                    </pre>
+                </div>
+                
+                <div id="trae-tab" class="tab-content" style="display: none;">
+                    <pre class="bg-gray-50 p-4 rounded-md overflow-auto max-h-96 font-mono text-sm">
+                        {% if ai_suggestions and ai_suggestions.trae_prompt %}
 {{ ai_suggestions.trae_prompt }}
-                {% else %}
+                        {% else %}
 # Trae 安全提示词
 正在生成 AI 安全提示词...
-                {% endif %}
-            </div>
-            <div id="kiro-tab" class="tab-content" style="background-color: #f0f0f0; padding: 15px; border-radius: 5px; white-space: pre-wrap; font-family: monospace; display: none;">
-                {% if ai_suggestions and ai_suggestions.kiro_prompt %}
+                        {% endif %}
+                    </pre>
+                </div>
+                
+                <div id="kiro-tab" class="tab-content" style="display: none;">
+                    <pre class="bg-gray-50 p-4 rounded-md overflow-auto max-h-96 font-mono text-sm">
+                        {% if ai_suggestions and ai_suggestions.kiro_prompt %}
 {{ ai_suggestions.kiro_prompt }}
-                {% else %}
+                        {% else %}
 # Kiro 安全提示词
 正在生成 AI 安全提示词...
-                {% endif %}
+                        {% endif %}
+                    </pre>
+                </div>
+                
+                <!-- 复制按钮 -->
+                <div class="mt-4 flex flex-wrap gap-2">
+                    <button onclick="copyContent('cursor-tab')" class="btn btn-success flex items-center">
+                        <i class="fa fa-copy mr-2"></i> 复制Cursor提示词
+                    </button>
+                    <button onclick="copyContent('trae-tab')" class="btn btn-success flex items-center">
+                        <i class="fa fa-copy mr-2"></i> 复制Trae提示词
+                    </button>
+                    <button onclick="copyContent('kiro-tab')" class="btn btn-success flex items-center">
+                        <i class="fa fa-copy mr-2"></i> 复制Kiro提示词
+                    </button>
+                </div>
+                <p class="mt-2 text-sm text-secondary">提示：点击上方按钮复制对应IDE的提示词</p>
             </div>
-            
-            <div id="trae-tab" class="tab-content" style="display: none; background-color: #f0f0f0; padding: 15px; border-radius: 5px; white-space: pre-wrap; font-family: monospace;">
-                # trae 安全提示词
-                AI工具安全提示词
-
-                ## 针对 trae 的安全建议
-
-                ### 风险评估
-                本次扫描发现{{ high_risk }}个高风险问题，{{ medium_risk }}个中风险问题，{{ low_risk }}个低风险问题。
-                {% if high_risk > 0 %}
-                系统存在严重安全隐患，建议立即处理高风险问题。
-                {% elif medium_risk > 0 %}
-                系统存在一定安全风险，建议尽快处理中风险问题。
-                {% else %}
-                系统安全状态良好，建议定期进行安全检查。
-                {% endif %}
-
-                ### 针对性建议
-                {% if ai_suggestions.specific_suggestions %}
-                {% for suggestion in ai_suggestions.specific_suggestions %}
-                - [安全提示] {{ suggestion }}
-                {% endfor %}
-                {% else %}
-                - [安全提示] 避免硬编码敏感信息，使用环境变量存储
-                - [安全提示] 谨慎使用exec()、eval()等函数，防止代码注入攻击
-                - [安全提示] 确保网络访问代码有适当的错误处理和安全验证
-                {% endif %}
-
-                ### 上下文感知建议
-                - [安全提示] 使用虚拟环境管理Python依赖，避免依赖冲突和安全漏洞
-
-                ### 安全最佳实践
-                {% if ai_suggestions.best_practices %}
-                {% for practice in ai_suggestions.best_practices %}
-                - [安全提示] {{ practice }}
-                {% endfor %}
-                {% else %}
-                - [安全提示] 使用环境变量存储所有敏感信息，避免硬编码
-                - [安全提示] 定期更新依赖库，修复已知安全漏洞
-                - [安全提示] 使用HTTPS进行所有网络通信，确保数据传输安全
-                - [安全提示] 实施输入验证，防止注入攻击
-                - [安全提示] 使用最小权限原则，限制代码和进程的权限
-                {% endif %}
-
-                ### 通用安全规则
-                [安全规则] 请遵循以下安全要求：
-                检测硬编码的敏感信息 - 移除硬编码的敏感信息，使用环境变量或配置文件存储
-                检测潜在的后门代码 - 审查代码，确保这些函数的使用是安全的
-                检测网络访问代码 - 确保网络访问代码有适当的错误处理和安全验证
-                检测AI模型加载代码 - 确保模型加载路径安全，避免加载恶意模型
-                检测AI输入处理代码，可能缺少输入验证 - 添加输入验证和sanitization代码
-                检测使用root用户运行 - 创建专用用户运行AI工具，遵循最小权限原则
-                检测可执行文件 - 仅对必要的脚本设置执行权限
-                检测AI模型文件权限过于宽松 - 执行 'chmod 640 <file>' 限制模型文件访问
-                检测SSH私钥权限不安全 - 执行 'chmod 600 <key>' 限制私钥访问
-                检测端口暴露到公网 - 修改配置，将监听地址改为 127.0.0.1 或配置防火墙限制访问
-                检测防火墙未启用 - 安装并启用防火墙，如 ufw、firewalld 或 iptables
-                检测SSH允许root登录 - 修改 /etc/ssh/sshd_config，设置 'PermitRootLogin no'
-                检测反向Shell - 立即检查进程详情并终止可疑进程
-                检测依赖库版本未固定 - 固定依赖库版本，避免自动更新引入安全问题
-                检测AI相关依赖库 - 确保依赖库版本安全，定期更新
-                检测配置文件中包含敏感信息 - 移除敏感信息，使用环境变量存储
-                检测AI特定配置 - 确保配置安全，避免硬编码敏感信息
-                检测OpenClaw版本过旧 - 立即执行 'openclaw update' 升级到最新版本
-                检测OpenClaw安装来源非官方 - 建议从官方渠道安装：https://openclaw.ai 或 https://github.com/openclaw/openclaw
-                检测OpenClaw端口暴露到公网 - 修改 ~/.openclaw/config.json 中的 'host' 配置，将 '0.0.0.0' 改为 '127.0.0.1'，或在防火墙中限制访问
-                检测OpenClaw技能包可能包含恶意代码 - 审查技能包代码，确保不包含恶意代码
-                检测Cursor生成的代码中硬编码的API密钥 - 使用环境变量存储API密钥
-                检测不安全的AI提示模板 - 确保提示模板不包含敏感信息，并且经过安全审查
-
-                确保代码符合安全最佳实践。
-            </div>
-            
-            <div id="kiro-tab" class="tab-content" style="display: none; background-color: #f0f0f0; padding: 15px; border-radius: 5px; white-space: pre-wrap; font-family: monospace;">
-                # kiro 安全提示词
-                AI工具安全提示词
-
-                ## 针对 kiro 的安全建议
-
-                ### 风险评估
-                本次扫描发现{{ high_risk }}个高风险问题，{{ medium_risk }}个中风险问题，{{ low_risk }}个低风险问题。
-                {% if high_risk > 0 %}
-                系统存在严重安全隐患，建议立即处理高风险问题。
-                {% elif medium_risk > 0 %}
-                系统存在一定安全风险，建议尽快处理中风险问题。
-                {% else %}
-                系统安全状态良好，建议定期进行安全检查。
-                {% endif %}
-
-                ### 针对性建议
-                {% if ai_suggestions.specific_suggestions %}
-                {% for suggestion in ai_suggestions.specific_suggestions %}
-                - 安全提醒：{{ suggestion }}
-                {% endfor %}
-                {% else %}
-                - 安全提醒：避免硬编码敏感信息，使用环境变量存储
-                - 安全提醒：谨慎使用exec()、eval()等函数，防止代码注入攻击
-                - 安全提醒：确保网络访问代码有适当的错误处理和安全验证
-                {% endif %}
-
-                ### 上下文感知建议
-                - 安全提醒：使用虚拟环境管理Python依赖，避免依赖冲突和安全漏洞
-
-                ### 安全最佳实践
-                {% if ai_suggestions.best_practices %}
-                {% for practice in ai_suggestions.best_practices %}
-                - 安全提醒：{{ practice }}
-                {% endfor %}
-                {% else %}
-                - 安全提醒：使用环境变量存储所有敏感信息，避免硬编码
-                - 安全提醒：定期更新依赖库，修复已知安全漏洞
-                - 安全提醒：使用HTTPS进行所有网络通信，确保数据传输安全
-                - 安全提醒：实施输入验证，防止注入攻击
-                - 安全提醒：使用最小权限原则，限制代码和进程的权限
-                {% endif %}
-
-                ### 通用安全规则
-                • 避免硬编码敏感信息，使用环境变量存储
-                • 谨慎使用exec()、eval()等函数，防止代码注入攻击
-                • 确保网络访问代码有适当的错误处理和安全验证
-            </div>
-            
-            <!-- 复制按钮 -->
-            <div style="margin-top: 10px;">
-                <button onclick="copyContent('cursor-tab')" class="copy-button">复制Cursor提示词</button>
-                <button onclick="copyContent('trae-tab')" class="copy-button">复制Trae提示词</button>
-                <button onclick="copyContent('kiro-tab')" class="copy-button">复制Kiro提示词</button>
-            </div>
-            <p style="margin-top: 10px; font-size: 12px; color: #666;">提示：点击上方按钮复制对应IDE的提示词</p>
         </div>
         
-        <div class="footer">
+        <!-- 页脚 -->
+        <footer class="mt-12 text-center text-secondary text-sm">
             <p>报告生成时间: {{ timestamp }}</p>
             <p>HOS-LS 安全检测工具 v1.0.0</p>
-        </div>
+            <p class="mt-2">© 2026 HOS-LS Security</p>
+        </footer>
     </div>
+    
     <script>
         // 选项卡切换功能
         function switchTab(tabName) {
@@ -538,16 +504,18 @@
             });
             
             // 移除所有选项卡按钮的活动状态
-            const tabButtons = document.querySelectorAll('.tab-button');
+            const tabButtons = document.querySelectorAll('.tab');
             tabButtons.forEach(button => {
-                button.classList.remove('active');
+                button.classList.remove('tab-active');
+                button.classList.add('tab-inactive');
             });
             
             // 显示选中的选项卡内容
             document.getElementById(tabName + '-tab').style.display = 'block';
             
             // 激活选中的选项卡按钮
-            event.currentTarget.classList.add('active');
+            event.currentTarget.classList.remove('tab-inactive');
+            event.currentTarget.classList.add('tab-active');
         }
         
         // 复制内容到剪贴板
@@ -559,12 +527,14 @@
                     const button = event.currentTarget;
                     const originalText = button.innerText;
                     button.innerText = '已复制!';
-                    button.style.backgroundColor = '#4CAF50';
+                    button.classList.remove('btn-success');
+                    button.classList.add('btn-secondary');
                     
                     // 2秒后恢复按钮状态
                     setTimeout(() => {
                         button.innerText = originalText;
-                        button.style.backgroundColor = '';
+                        button.classList.remove('btn-secondary');
+                        button.classList.add('btn-success');
                     }, 2000);
                 })
                 .catch(err => {
