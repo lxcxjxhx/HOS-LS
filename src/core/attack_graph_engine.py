@@ -1,3 +1,4 @@
+import os
 import networkx as nx
 from typing import List, Dict, Any, Optional
 from .context_builder import ContextBuilder
@@ -99,24 +100,55 @@ class AttackGraphEngine:
         entry_points = context.get("entry_points", [])
         danger_calls = context.get("danger_calls", [])
         
-        # 简单的连接逻辑：同一文件中的入口点和危险调用
+        # 改进的连接逻辑：
+        # 1. 同一文件中的入口点和危险调用
+        # 2. 跨文件的潜在攻击链
         for entry_point in entry_points:
             entry_file = entry_point['file']
             entry_node_id = f"entry_{entry_point['name']}_{entry_file}"
             
+            # 连接同一文件中的危险调用
             for danger_call in danger_calls:
                 if danger_call['file'] == entry_file:
                     danger_node_id = f"danger_{danger_call['function']}_{danger_call['file']}_{danger_call.get('line', 0)}"
                     self.graph.add_edge(entry_node_id, danger_node_id, type="potential_attack")
+            
+            # 连接跨文件的危险调用（基于文件名相似度或共同依赖）
+            for danger_call in danger_calls:
+                if danger_call['file'] != entry_file:
+                    # 检查文件名是否相关
+                    entry_basename = os.path.basename(entry_file)
+                    danger_basename = os.path.basename(danger_call['file'])
+                    
+                    # 如果文件名有共同部分，建立连接
+                    if any(part in danger_basename for part in entry_basename.split('.')[:-1]) or \
+                       any(part in entry_basename for part in danger_basename.split('.')[:-1]):
+                        danger_node_id = f"danger_{danger_call['function']}_{danger_call['file']}_{danger_call.get('line', 0)}"
+                        self.graph.add_edge(entry_node_id, danger_node_id, type="potential_cross_file_attack")
         
         # 连接数据流
         data_flows = context.get("data_flow", [])
         for data_flow in data_flows:
+            # 尝试多种节点ID格式
             source_node_id = f"entry_{data_flow['source']}_{data_flow['file']}"
-            sink_node_id = f"danger_{data_flow['sink']}_{data_flow['file']}_0"
+            sink_node_id = f"danger_{data_flow['sink']}_{data_flow['file']}_{data_flow.get('line', 0)}"
             
+            # 如果直接连接失败，尝试其他格式
             if source_node_id in self.graph.nodes and sink_node_id in self.graph.nodes:
                 self.graph.add_edge(source_node_id, sink_node_id, type="data_flow")
+            else:
+                # 尝试不带行号的格式
+                sink_node_id_no_line = f"danger_{data_flow['sink']}_{data_flow['file']}_0"
+                if source_node_id in self.graph.nodes and sink_node_id_no_line in self.graph.nodes:
+                    self.graph.add_edge(source_node_id, sink_node_id_no_line, type="data_flow")
+                else:
+                    # 尝试连接到任何危险调用节点
+                    for danger_call in danger_calls:
+                        if danger_call['file'] == data_flow['file'] and data_flow['sink'] in danger_call['function']:
+                            danger_node_id = f"danger_{danger_call['function']}_{danger_call['file']}_{danger_call.get('line', 0)}"
+                            if source_node_id in self.graph.nodes and danger_node_id in self.graph.nodes:
+                                self.graph.add_edge(source_node_id, danger_node_id, type="data_flow")
+                                break
     
     def _identify_attack_chains(self) -> List[List[str]]:
         """

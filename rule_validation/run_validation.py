@@ -18,6 +18,7 @@ from datetime import datetime
 
 # 添加项目根目录到路径
 sys.path.insert(0, str(Path(__file__).parent.parent))
+sys.path.insert(0, str(Path(__file__).parent.parent / 'src'))
 
 from scanners.enhanced_scanner import EnhancedSecurityScanner
 
@@ -483,8 +484,8 @@ def main():
     
     parser = argparse.ArgumentParser(description='HOS-LS 规则验证工具')
     parser.add_argument('--rules', '-r', 
-                       default='rules/security_rules.json',
-                       help='规则文件路径 (默认：rules/security_rules.json)')
+                       default='src/rules/security_rules.json',
+                       help='规则文件路径 (默认：src/rules/security_rules.json)')
     parser.add_argument('--test-cases', '-t',
                        default='rule_validation/test_cases',
                        help='测试用例目录 (默认：rule_validation/test_cases)')

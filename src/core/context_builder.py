@@ -1,7 +1,151 @@
 import ast
 import os
 import libcst
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
+from libcst.metadata import PositionProvider, MetadataWrapper
+
+class BaseAnalyzer:
+    """统一分析器抽象接口"""
+    def analyze(self, code: str, file_path: str) -> Dict[str, Any]:
+        """分析代码
+        
+        Args:
+            code: 代码内容
+            file_path: 文件路径
+            
+        Returns:
+            分析结果
+        """
+        raise NotImplementedError
+
+class ASTAnalyzer(BaseAnalyzer):
+    """AST分析器"""
+    def __init__(self):
+        self.entry_points = []
+        self.danger_calls = []
+    
+    def analyze(self, code: str, file_path: str) -> Dict[str, Any]:
+        """分析代码"""
+        class NodeVisitor(ast.NodeVisitor):
+            def __init__(self, analyzer):
+                self.analyzer = analyzer
+                self.current_function = None
+            
+            def visit_FunctionDef(self, node):
+                # 识别可能的入口点
+                if node.name in ['main', 'app', 'run', 'handler', 'lambda_handler']:
+                    self.analyzer.entry_points.append({
+                        'type': 'function',
+                        'name': node.name,
+                        'file': file_path,
+                        'line': node.lineno
+                    })
+                
+                # 记录当前函数
+                old_function = self.current_function
+                self.current_function = node.name
+                self.generic_visit(node)
+                self.current_function = old_function
+            
+            def visit_Call(self, node):
+                # 识别危险调用
+                if isinstance(node.func, ast.Name):
+                    func_name = node.func.id
+                    if func_name in ['exec', 'eval', 'execfile', 'open', 'input', 'raw_input']:
+                        self.analyzer.danger_calls.append({
+                            'type': 'danger_call',
+                            'function': func_name,
+                            'file': file_path,
+                            'line': node.lineno,
+                            'in_function': self.current_function
+                        })
+                
+                # 识别SQL相关调用
+                elif isinstance(node.func, ast.Attribute):
+                    if isinstance(node.func.value, ast.Name):
+                        if node.func.value.id in ['cursor', 'db', 'conn'] and node.func.attr in ['execute', 'executemany']:
+                            self.analyzer.danger_calls.append({
+                                'type': 'sql_call',
+                                'function': f"{node.func.value.id}.{node.func.attr}",
+                                'file': file_path,
+                                'line': node.lineno,
+                                'in_function': self.current_function
+                            })
+                
+                self.generic_visit(node)
+        
+        try:
+            tree = ast.parse(code, filename=file_path)
+            visitor = NodeVisitor(self)
+            visitor.visit(tree)
+        except Exception as e:
+            print(f"AST分析失败: {e}")
+        
+        return {
+            'entry_points': self.entry_points,
+            'danger_calls': self.danger_calls
+        }
+
+class CSTAnalyzer(BaseAnalyzer):
+    """CST分析器"""
+    def __init__(self):
+        self.entry_points = []
+        self.danger_calls = []
+    
+    def analyze(self, code: str, file_path: str) -> Dict[str, Any]:
+        """分析代码"""
+        class Visitor(libcst.CSTVisitor):
+            def __init__(self, analyzer):
+                self.analyzer = analyzer
+                self.current_function = None
+                self.file_path = file_path
+            
+            def visit_FunctionDef(self, node: libcst.FunctionDef):
+                # 识别可能的入口点
+                func_name = node.name.value
+                if func_name in ['main', 'app', 'run', 'handler', 'lambda_handler']:
+                    # 获取位置信息
+                    line = node.lineno if hasattr(node, 'lineno') else 0
+                    self.analyzer.entry_points.append({
+                        'type': 'function',
+                        'name': func_name,
+                        'file': self.file_path,
+                        'line': line
+                    })
+                
+                # 记录当前函数
+                old_function = self.current_function
+                self.current_function = func_name
+                # libcst 会自动处理子节点的访问
+                self.current_function = old_function
+            
+            def visit_Call(self, node: libcst.Call):
+                # 识别危险调用
+                if isinstance(node.func, libcst.Name):
+                    func_name = node.func.value
+                    if func_name in ['exec', 'eval', 'open']:
+                        # 获取位置信息
+                        line = node.lineno if hasattr(node, 'lineno') else 0
+                        self.analyzer.danger_calls.append({
+                            'type': 'danger_call',
+                            'function': func_name,
+                            'file': self.file_path,
+                            'line': line,
+                            'in_function': self.current_function
+                        })
+                # libcst 会自动处理子节点的访问
+        
+        try:
+            module = libcst.parse_module(code)
+            visitor = Visitor(self)
+            module.visit(visitor)
+        except Exception as e:
+            print(f"CST分析失败: {e}")
+        
+        return {
+            'entry_points': self.entry_points,
+            'danger_calls': self.danger_calls
+        }
 
 class ContextBuilder:
     def __init__(self):
@@ -40,12 +184,16 @@ class ContextBuilder:
                 content = f.read()
             
             # 使用AST分析
-            tree = ast.parse(content, filename=file_path)
-            self._analyze_ast(tree, file_path)
+            ast_analyzer = ASTAnalyzer()
+            ast_result = ast_analyzer.analyze(content, file_path)
+            self.entry_points.extend(ast_result['entry_points'])
+            self.danger_calls.extend(ast_result['danger_calls'])
             
-            # 使用libcst进行更详细的分析
-            cst = libcst.parse_module(content)
-            self._analyze_cst(cst, file_path)
+            # 使用CST分析
+            cst_analyzer = CSTAnalyzer()
+            cst_result = cst_analyzer.analyze(content, file_path)
+            self.entry_points.extend(cst_result['entry_points'])
+            self.danger_calls.extend(cst_result['danger_calls'])
             
         except Exception as e:
             print(f"Error analyzing {file_path}: {e}")
@@ -63,95 +211,6 @@ class ContextBuilder:
             
         except Exception as e:
             print(f"Error analyzing {file_path}: {e}")
-    
-    def _analyze_ast(self, tree: ast.AST, file_path: str):
-        """
-        分析AST树，识别入口点和危险调用
-        """
-        class ASTAnalyzer(ast.NodeVisitor):
-            def __init__(self, builder):
-                self.builder = builder
-                self.current_function = None
-            
-            def visit_FunctionDef(self, node):
-                # 识别可能的入口点
-                if node.name in ['main', 'app', 'run', 'handler', 'lambda_handler']:
-                    self.builder.entry_points.append({
-                        'type': 'function',
-                        'name': node.name,
-                        'file': file_path,
-                        'line': node.lineno
-                    })
-                
-                # 记录当前函数
-                old_function = self.current_function
-                self.current_function = node.name
-                self.generic_visit(node)
-                self.current_function = old_function
-            
-            def visit_Call(self, node):
-                # 识别危险调用
-                if isinstance(node.func, ast.Name):
-                    func_name = node.func.id
-                    if func_name in ['exec', 'eval', 'execfile', 'open', 'input', 'raw_input']:
-                        self.builder.danger_calls.append({
-                            'type': 'danger_call',
-                            'function': func_name,
-                            'file': file_path,
-                            'line': node.lineno,
-                            'in_function': self.current_function
-                        })
-                
-                # 识别SQL相关调用
-                elif isinstance(node.func, ast.Attribute):
-                    if isinstance(node.func.value, ast.Name):
-                        if node.func.value.id in ['cursor', 'db', 'conn'] and node.func.attr in ['execute', 'executemany']:
-                            self.builder.danger_calls.append({
-                                'type': 'sql_call',
-                                'function': f"{node.func.value.id}.{node.func.attr}",
-                                'file': file_path,
-                                'line': node.lineno,
-                                'in_function': self.current_function
-                            })
-                
-                self.generic_visit(node)
-        
-        analyzer = ASTAnalyzer(self)
-        analyzer.visit(tree)
-    
-    def _analyze_cst(self, cst: libcst.Module, file_path: str):
-        """
-        使用libcst进行更详细的代码分析
-        """
-        class CSTAnalyzer(libcst.CSTVisitor):
-            def __init__(self, builder):
-                self.builder = builder
-                self.current_function = None
-            
-            def visit_FunctionDef(self, node):
-                # 记录当前函数
-                old_function = self.current_function
-                self.current_function = node.name.value
-                self.visit_children(node)
-                self.current_function = old_function
-            
-            def visit_Call(self, node):
-                # 识别危险调用
-                if isinstance(node.func, libcst.Name):
-                    func_name = node.func.value
-                    if func_name in ['exec', 'eval', 'open']:
-                        self.builder.danger_calls.append({
-                            'type': 'danger_call',
-                            'function': func_name,
-                            'file': file_path,
-                            'line': node.lineno,
-                            'in_function': self.current_function
-                        })
-                
-                self.visit_children(node)
-        
-        analyzer = CSTAnalyzer(self)
-        analyzer.visit(cst)
     
     def _analyze_javascript_patterns(self, content: str, file_path: str):
         """

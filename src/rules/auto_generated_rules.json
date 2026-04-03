@@ -1,0 +1,13 @@
+[
+  {
+    "id": "auto_sql_injection_1775196122_0",
+    "name": "Auto-generated sql_injection rule",
+    "pattern": "' OR 1=1 --",
+    "severity": "high",
+    "description": "Auto-generated rule for sql_injection based on successful attacks",
+    "confidence": 0.9,
+    "attack_type": "sql_injection",
+    "created_by": "self_learning",
+    "created_at": 1775198058.2813778
+  }
+]

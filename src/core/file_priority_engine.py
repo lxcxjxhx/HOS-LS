@@ -22,6 +22,9 @@ from langchain_community.vectorstores.faiss import FAISS
 import networkx as nx
 import git
 
+from utils.config_manager import ConfigManager
+
+
 class FilePriorityEngine:
     def __init__(self, project_path: str, api_key: Optional[str] = None):
         """
@@ -29,18 +32,38 @@ class FilePriorityEngine:
         
         Args:
             project_path: 项目路径
-            api_key: OpenAI API 密钥
+            api_key: API 密钥
         """
         self.project_path = project_path
-        self.api_key = api_key or os.getenv('OPENAI_API_KEY')
-        if not self.api_key:
-            raise ValueError("OpenAI API key is required")
         
-        self.embeddings = OpenAIEmbeddings(api_key=self.api_key)
+        # 使用配置管理器获取AI配置
+        config_manager = ConfigManager()
+        ai_config = config_manager.get_ai_config()
+        
+        self.api_key = api_key or ai_config.get('api_key')
+        self.model = ai_config.get('model', 'deepseek-chat')
+        
+        if not self.api_key:
+            raise ValueError("API key is required")
+        
+        # 尝试使用 DeepSeek 嵌入模型，如果不可用则使用 OpenAI 嵌入模型
+        try:
+            from langchain_deepseek import DeepSeekEmbeddings
+            self.embeddings = DeepSeekEmbeddings(
+                api_key=self.api_key,
+                model="deepseek-embed"
+            )
+        except ImportError:
+            # 如果 DeepSeek 嵌入模型不可用，使用 OpenAI 嵌入模型
+            self.embeddings = OpenAIEmbeddings(
+                api_key=self.api_key,
+                model="text-embedding-3-small"
+            )
+        
         self.vector_store = None
         self.files_to_scan = []
         self.file_scores = {}
-        
+    
     def load_project_files(self) -> List[str]:
         """
         加载项目文件
@@ -48,24 +71,16 @@ class FilePriorityEngine:
         Returns:
             文件路径列表
         """
-        loader = DirectoryLoader(
-            self.project_path,
-            glob="**/*",
-            loader_cls=TextLoader,
-            show_progress=True,
-            use_multithreading=True
-        )
-        
-        documents = loader.load()
-        
-        # 过滤掉不需要扫描的文件
-        filtered_docs = []
-        for doc in documents:
-            file_path = doc.metadata['source']
-            # 跳过目录和二进制文件
-            if os.path.isfile(file_path) and self._is_text_file(file_path):
-                filtered_docs.append(doc)
-                self.files_to_scan.append(file_path)
+        # 先收集所有文件路径
+        for root, dirs, files in os.walk(self.project_path):
+            # 跳过不需要的目录
+            dirs[:] = [d for d in dirs if d not in ['node_modules', 'venv', '.venv', '__pycache__', '.git', 'dist', 'build', 'target']]
+            
+            for file in files:
+                file_path = os.path.join(root, file)
+                # 只添加文本文件
+                if os.path.isfile(file_path) and self._is_text_file(file_path):
+                    self.files_to_scan.append(file_path)
         
         return self.files_to_scan
     
@@ -85,21 +100,20 @@ class FilePriorityEngine:
         if not self.files_to_scan:
             self.load_project_files()
         
-        # 加载文档
-        loader = DirectoryLoader(
-            self.project_path,
-            glob="**/*",
-            loader_cls=TextLoader,
-            use_multithreading=True
-        )
-        documents = loader.load()
+        # 加载文档（只加载已过滤的文本文件）
+        from langchain_community.document_loaders import TextLoader
+        documents = []
         
-        # 过滤文档
-        filtered_docs = []
-        for doc in documents:
-            file_path = doc.metadata['source']
-            if os.path.isfile(file_path) and self._is_text_file(file_path):
-                filtered_docs.append(doc)
+        for file_path in self.files_to_scan:
+            try:
+                loader = TextLoader(file_path, encoding='utf-8')
+                doc = loader.load()[0]
+                documents.append(doc)
+            except Exception as e:
+                print(f"加载文件 {file_path} 时出错: {e}")
+                continue
+        
+        filtered_docs = documents
         
         # 文本分割
         text_splitter = RecursiveCharacterTextSplitter(

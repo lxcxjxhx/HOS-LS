@@ -1,16 +1,17 @@
 #!/usr/bin/env python3
 """
-规则来源追踪器 v2.0 (防编造机制)
+规则来源追踪器 v2.1 (防编造机制 + 数据库并发安全)
 
 功能:
 1. 记录规则生成过程
 2. 追踪规则变更历史
 3. 验证规则真实性 (防编造)
 4. 生成来源报告
+5. 数据库并发安全 (WAL模式 + 写锁)
 
-版本：2.0
+版本：2.1
 创建日期：2026-03-31
-优化依据：基于用户 develop.json 习惯
+优化依据：基于用户 develop.json 习惯 + 数据库并发修复
 """
 
 import json
@@ -19,10 +20,11 @@ import sqlite3
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Any, Optional
+from core.database_layer import database_layer
 
 
 class RuleProvenanceTracker:
-    """规则来源追踪器 (防编造)"""
+    """规则来源追踪器 (防编造 + 并发安全)"""
     
     def __init__(self, db_path: str = 'provenance.db'):
         """
@@ -32,180 +34,212 @@ class RuleProvenanceTracker:
             db_path: 数据库文件路径
         """
         self.db_path = db_path
+        # 初始化数据库层
+        database_layer.initialize(db_path)
         self.init_database()
     
     def init_database(self):
-        """初始化数据库表"""
-        conn = sqlite3.connect(self.db_path)
+        """初始化数据库表 - 使用统一的数据库层"""
+        conn = database_layer.get_sqlite_connection()
         cursor = conn.cursor()
         
-        # 规则生成记录表
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS rule_generation_records (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                rule_id TEXT UNIQUE,
-                generation_method TEXT,  -- 'ai_generated' / 'manual' / 'hybrid'
-                ai_model TEXT,
-                prompt_template TEXT,
-                ai_input TEXT,
-                ai_output TEXT,
-                human_reviewer TEXT,
-                review_date TIMESTAMP,
-                review_comments TEXT,
-                test_results TEXT,
-                quality_metrics TEXT,
-                created_at TIMESTAMP,
-                updated_at TIMESTAMP
-            )
-        ''')
-        
-        # 规则变更历史表
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS rule_change_history (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                rule_id TEXT,
-                version TEXT,
-                change_type TEXT,  -- 'create' / 'update' / 'delete'
-                change_description TEXT,
-                changed_by TEXT,
-                changed_at TIMESTAMP,
-                diff TEXT,
-                validation_result TEXT
-            )
-        ''')
-        
-        # 规则验证记录表
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS rule_validation_records (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                rule_id TEXT,
-                validation_date TIMESTAMP,
-                validation_type TEXT,  -- 'initial' / 'regression' / 'on_demand'
-                test_cases_count INTEGER,
-                pass_rate REAL,
-                quality_metrics TEXT,
-                validation_report_path TEXT,
-                passed BOOLEAN
-            )
-        ''')
-        
-        # 规则指纹表 (防编造)
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS rule_fingerprints (
-                rule_id TEXT PRIMARY KEY,
-                fingerprint TEXT,
-                created_at TIMESTAMP,
-                last_verified TIMESTAMP
-            )
-        ''')
-        
-        # 案例来源表 (防编造 - 案例真实性验证)
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS case_sources (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                rule_id TEXT,
-                case_id TEXT,
-                case_type TEXT,  -- 'positive' / 'negative'
-                source TEXT,  -- GitHub/CVE/OWASP/实际项目
-                source_link TEXT,
-                verified BOOLEAN DEFAULT FALSE,
-                verification_date TIMESTAMP,
-                description TEXT
-            )
-        ''')
-        
-        conn.commit()
-        conn.close()
+        try:
+            # 规则生成记录表
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS rule_generation_records (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    rule_id TEXT UNIQUE,
+                    generation_method TEXT,
+                    ai_model TEXT,
+                    prompt_template TEXT,
+                    ai_input TEXT,
+                    ai_output TEXT,
+                    human_reviewer TEXT,
+                    review_date TIMESTAMP,
+                    review_comments TEXT,
+                    test_results TEXT,
+                    quality_metrics TEXT,
+                    created_at TIMESTAMP,
+                    updated_at TIMESTAMP
+                )
+            ''')
+            
+            # 规则变更历史表
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS rule_change_history (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    rule_id TEXT,
+                    version TEXT,
+                    change_type TEXT,
+                    change_description TEXT,
+                    changed_by TEXT,
+                    changed_at TIMESTAMP,
+                    diff TEXT,
+                    validation_result TEXT
+                )
+            ''')
+            
+            # 规则验证记录表
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS rule_validation_records (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    rule_id TEXT,
+                    validation_date TIMESTAMP,
+                    validation_type TEXT,
+                    test_cases_count INTEGER,
+                    pass_rate REAL,
+                    quality_metrics TEXT,
+                    validation_report_path TEXT,
+                    passed BOOLEAN
+                )
+            ''')
+            
+            # 规则指纹表 (防编造)
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS rule_fingerprints (
+                    rule_id TEXT PRIMARY KEY,
+                    fingerprint TEXT,
+                    created_at TIMESTAMP,
+                    last_verified TIMESTAMP
+                )
+            ''')
+            
+            # 案例来源表 (防编造 - 案例真实性验证)
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS case_sources (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    rule_id TEXT,
+                    case_id TEXT,
+                    case_type TEXT,
+                    source TEXT,
+                    source_link TEXT,
+                    verified BOOLEAN DEFAULT FALSE,
+                    verification_date TIMESTAMP,
+                    description TEXT
+                )
+            ''')
+            
+            conn.commit()
+        finally:
+            conn.close()
     
-    def record_rule_generation(self, rule_data: Dict[str, Any], generation_info: Dict[str, Any]):
+    def record_rule_generation(self, rule_data: Dict[str, Any], generation_info: Dict[str, Any]) -> Dict[str, Any]:
         """
-        记录规则生成过程
+        记录规则生成过程 - 使用统一的数据库层
         
         Args:
             rule_data: 规则数据
             generation_info: 生成信息字典
+            
+        Returns:
+            操作结果 {"success": bool, "error": str}
         """
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        
-        # 生成规则指纹 (防编造)
-        fingerprint = self._generate_fingerprint(rule_data)
-        
-        # 插入或更新规则生成记录
-        cursor.execute('''
-            INSERT OR REPLACE INTO rule_generation_records
-            (rule_id, generation_method, ai_model, prompt_template, ai_input, ai_output,
-             human_reviewer, review_date, review_comments, test_results, quality_metrics,
-             created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ''', (
-            rule_data.get('id', 'UNKNOWN'),
-            generation_info.get('method', 'unknown'),
-            generation_info.get('ai_model', None),
-            generation_info.get('prompt_template', None),
-            json.dumps(generation_info.get('ai_input', {}), ensure_ascii=False),
-            json.dumps(generation_info.get('ai_output', {}), ensure_ascii=False),
-            generation_info.get('reviewer', None),
-            generation_info.get('review_date', datetime.now()),
-            generation_info.get('review_comments', None),
-            json.dumps(generation_info.get('test_results', {}), ensure_ascii=False),
-            json.dumps(generation_info.get('quality_metrics', {}), ensure_ascii=False),
-            datetime.now(),
-            datetime.now()
-        ))
-        
-        # 记录指纹
-        cursor.execute('''
-            INSERT OR REPLACE INTO rule_fingerprints
-            (rule_id, fingerprint, created_at, last_verified)
-            VALUES (?, ?, ?, ?)
-        ''', (rule_data.get('id', 'UNKNOWN'), fingerprint, datetime.now(), datetime.now()))
-        
-        # 记录变更历史
-        cursor.execute('''
-            INSERT INTO rule_change_history
-            (rule_id, version, change_type, change_description, changed_by, changed_at, diff)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-        ''', (rule_data.get('id', 'UNKNOWN'), '1.0', 'create', '初始规则创建',
-              generation_info.get('reviewer', 'system'), datetime.now(),
-              json.dumps({'action': 'create'}, ensure_ascii=False)))
-        
-        # 记录案例来源 (防编造 - 案例真实性)
-        self._record_case_sources(rule_data.get('id', 'UNKNOWN'), generation_info)
-        
-        conn.commit()
-        conn.close()
+        try:
+            # 生成规则指纹 (防编造)
+            fingerprint = self._generate_fingerprint(rule_data)
+            rule_id = rule_data.get('id', 'UNKNOWN')
+            
+            # 使用统一的数据库层执行写操作
+            from sqlalchemy import text as sql_text
+            
+            # 插入或更新规则生成记录
+            database_layer.execute_sync(
+                sql_text('''
+                    INSERT OR REPLACE INTO rule_generation_records
+                    (rule_id, generation_method, ai_model, prompt_template, ai_input, ai_output,
+                     human_reviewer, review_date, review_comments, test_results, quality_metrics,
+                     created_at, updated_at)
+                    VALUES (:rule_id, :method, :ai_model, :prompt_template, :ai_input, :ai_output,
+                            :reviewer, :review_date, :review_comments, :test_results, :quality_metrics,
+                            :created_at, :updated_at)
+                '''),
+                {
+                    'rule_id': rule_id,
+                    'method': generation_info.get('method', 'unknown'),
+                    'ai_model': generation_info.get('ai_model', None),
+                    'prompt_template': generation_info.get('prompt_template', None),
+                    'ai_input': json.dumps(generation_info.get('ai_input', {}), ensure_ascii=False),
+                    'ai_output': json.dumps(generation_info.get('ai_output', {}), ensure_ascii=False),
+                    'reviewer': generation_info.get('reviewer', None),
+                    'review_date': generation_info.get('review_date', datetime.now()),
+                    'review_comments': generation_info.get('review_comments', None),
+                    'test_results': json.dumps(generation_info.get('test_results', {}), ensure_ascii=False),
+                    'quality_metrics': json.dumps(generation_info.get('quality_metrics', {}), ensure_ascii=False),
+                    'created_at': datetime.now(),
+                    'updated_at': datetime.now()
+                }
+            )
+            
+            # 记录指纹
+            database_layer.execute_sync(
+                sql_text('''
+                    INSERT OR REPLACE INTO rule_fingerprints
+                    (rule_id, fingerprint, created_at, last_verified)
+                    VALUES (:rule_id, :fingerprint, :created_at, :last_verified)
+                '''),
+                {
+                    'rule_id': rule_id,
+                    'fingerprint': fingerprint,
+                    'created_at': datetime.now(),
+                    'last_verified': datetime.now()
+                }
+            )
+            
+            # 记录变更历史
+            database_layer.execute_sync(
+                sql_text('''
+                    INSERT INTO rule_change_history
+                    (rule_id, version, change_type, change_description, changed_by, changed_at, diff)
+                    VALUES (:rule_id, :version, :change_type, :change_description, :changed_by, :changed_at, :diff)
+                '''),
+                {
+                    'rule_id': rule_id,
+                    'version': '1.0',
+                    'change_type': 'create',
+                    'change_description': '初始规则创建',
+                    'changed_by': generation_info.get('reviewer', 'system'),
+                    'changed_at': datetime.now(),
+                    'diff': json.dumps({'action': 'create'}, ensure_ascii=False)
+                }
+            )
+            
+            # 记录案例来源
+            self._record_case_sources(rule_id, generation_info)
+            
+            return {"success": True, "error": None}
+            
+        except Exception as e:
+            return {"success": False, "error": str(e)}
     
     def _record_case_sources(self, rule_id: str, generation_info: Dict[str, Any]):
-        """记录案例来源"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
+        """记录案例来源 - 使用统一的数据库层"""
+        from sqlalchemy import text as sql_text
         
         # 从生成信息中提取案例
         ai_input = generation_info.get('ai_input', {})
         real_examples = ai_input.get('real_examples', [])
         
         for i, example in enumerate(real_examples):
-            cursor.execute('''
-                INSERT INTO case_sources
-                (rule_id, case_id, case_type, source, source_link, verified, description)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-            ''', (
-                rule_id,
-                f'EX{i+1:03d}',
-                'positive',
-                example.get('source', 'unknown'),
-                example.get('source_link', None),
-                False,  # 需要人工验证
-                example.get('description', '')
-            ))
-        
-        conn.commit()
-        conn.close()
+            database_layer.execute_sync(
+                sql_text('''
+                    INSERT INTO case_sources
+                    (rule_id, case_id, case_type, source, source_link, verified, description)
+                    VALUES (:rule_id, :case_id, :case_type, :source, :source_link, :verified, :description)
+                '''),
+                {
+                    'rule_id': rule_id,
+                    'case_id': f'EX{i+1:03d}',
+                    'case_type': 'positive',
+                    'source': example.get('source', 'unknown'),
+                    'source_link': example.get('source_link', None),
+                    'verified': False,
+                    'description': example.get('description', '')
+                }
+            )
     
     def verify_rule_authenticity(self, rule_data: Dict[str, Any]) -> Dict[str, Any]:
         """
-        验证规则真实性 (防编造)
+        验证规则真实性 (防编造) - 使用统一的数据库层
         
         Args:
             rule_data: 规则数据
@@ -213,99 +247,119 @@ class RuleProvenanceTracker:
         Returns:
             验证结果字典
         """
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        
-        # 计算当前指纹
-        current_fingerprint = self._generate_fingerprint(rule_data)
-        
-        # 获取存储的指纹
-        cursor.execute('''
-            SELECT fingerprint, created_at, last_verified
-            FROM rule_fingerprints
-            WHERE rule_id = ?
-        ''', (rule_data.get('id', 'UNKNOWN'),))
-        
-        row = cursor.fetchone()
-        
-        if row is None:
-            conn.close()
+        try:
+            from sqlalchemy import text as sql_text
+            
+            # 计算当前指纹
+            current_fingerprint = self._generate_fingerprint(rule_data)
+            rule_id = rule_data.get('id', 'UNKNOWN')
+            
+            # 获取存储的指纹
+            result = database_layer.execute_read_sync(
+                sql_text('''
+                    SELECT fingerprint, created_at, last_verified
+                    FROM rule_fingerprints
+                    WHERE rule_id = :rule_id
+                '''),
+                {'rule_id': rule_id}
+            )
+            
+            row = result.fetchone()
+            
+            if row is None:
+                return {
+                    'verified': False,
+                    'reason': '规则未找到记录',
+                    'action': '需要重新验证和记录',
+                    'authenticity_score': 0
+                }
+            
+            stored_fingerprint = row[0]
+            created_at = row[1]
+            last_verified = row[2]
+            
+            # 比对指纹
+            fingerprint_match = (current_fingerprint == stored_fingerprint)
+            
+            # 检查案例来源
+            case_authenticity = self._verify_case_sources(rule_id)
+            
+            # 计算真实性评分
+            authenticity_score = self._calculate_authenticity_score(
+                fingerprint_match,
+                case_authenticity
+            )
+            
+            if fingerprint_match:
+                return {
+                    'verified': True,
+                    'reason': '指纹匹配',
+                    'created_at': created_at,
+                    'last_verified': last_verified,
+                    'action': '规则真实可信',
+                    'authenticity_score': authenticity_score,
+                    'case_authenticity': case_authenticity
+                }
+            else:
+                return {
+                    'verified': False,
+                    'reason': '指纹不匹配，规则可能被修改',
+                    'action': '需要重新验证',
+                    'authenticity_score': authenticity_score,
+                    'case_authenticity': case_authenticity
+                }
+                
+        except Exception as e:
             return {
                 'verified': False,
-                'reason': '规则未找到记录',
-                'action': '需要重新验证和记录',
-                'authenticity_score': 0
-            }
-        
-        stored_fingerprint = row[0]
-        created_at = row[1]
-        last_verified = row[2]
-        
-        # 比对指纹
-        fingerprint_match = (current_fingerprint == stored_fingerprint)
-        
-        # 检查案例来源
-        case_authenticity = self._verify_case_sources(rule_data.get('id', 'UNKNOWN'))
-        
-        # 计算真实性评分
-        authenticity_score = self._calculate_authenticity_score(
-            fingerprint_match,
-            case_authenticity
-        )
-        
-        conn.close()
-        
-        if fingerprint_match:
-            return {
-                'verified': True,
-                'reason': '指纹匹配',
-                'created_at': created_at,
-                'last_verified': last_verified,
-                'action': '规则真实可信',
-                'authenticity_score': authenticity_score,
-                'case_authenticity': case_authenticity
-            }
-        else:
-            return {
-                'verified': False,
-                'reason': '指纹不匹配，规则可能被修改',
+                'reason': f'验证过程出错: {str(e)}',
                 'action': '需要重新验证',
-                'authenticity_score': authenticity_score,
-                'case_authenticity': case_authenticity
+                'authenticity_score': 0
             }
     
     def _verify_case_sources(self, rule_id: str) -> Dict[str, Any]:
-        """验证案例来源真实性"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        
-        cursor.execute('''
-            SELECT case_id, source, source_link, verified
-            FROM case_sources
-            WHERE rule_id = ?
-        ''', (rule_id,))
-        
-        cases = cursor.fetchall()
-        conn.close()
-        
-        if not cases:
+        """验证案例来源真实性 - 使用统一的数据库层"""
+        try:
+            from sqlalchemy import text as sql_text
+            
+            result = database_layer.execute_read_sync(
+                sql_text('''
+                    SELECT case_id, source, source_link, verified
+                    FROM case_sources
+                    WHERE rule_id = :rule_id
+                '''),
+                {'rule_id': rule_id}
+            )
+            
+            cases = result.fetchall()
+            
+            if not cases:
+                return {
+                    'total_cases': 0,
+                    'verified_cases': 0,
+                    'with_source_link': 0,
+                    'authenticity_rate': 0
+                }
+            
+            total = len(cases)
+            verified = sum(1 for c in cases if c[3])
+            with_link = sum(1 for c in cases if c[2])
+            
+            return {
+                'total_cases': total,
+                'verified_cases': verified,
+                'with_source_link': with_link,
+                'authenticity_rate': with_link / total if total > 0 else 0
+            }
+            
+        except Exception as e:
             return {
                 'total_cases': 0,
                 'verified_cases': 0,
                 'with_source_link': 0,
-                'authenticity_rate': 0
+                'authenticity_rate': 0,
+                'error': str(e)
             }
-        
-        total = len(cases)
-        verified = sum(1 for c in cases if c[3])
-        with_link = sum(1 for c in cases if c[2])
-        
-        return {
-            'total_cases': total,
-            'verified_cases': verified,
-            'with_source_link': with_link,
-            'authenticity_rate': with_link / total if total > 0 else 0
-        }
     
     def _calculate_authenticity_score(self, fingerprint_match: bool, case_authenticity: Dict[str, Any]) -> float:
         """计算真实性评分"""
@@ -350,7 +404,7 @@ class RuleProvenanceTracker:
     
     def get_rule_provenance(self, rule_id: str) -> Optional[Dict[str, Any]]:
         """
-        获取规则来源信息
+        获取规则来源信息 - 使用统一的数据库层
         
         Args:
             rule_id: 规则 ID
@@ -358,72 +412,81 @@ class RuleProvenanceTracker:
         Returns:
             来源信息字典
         """
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        
-        # 获取生成记录
-        cursor.execute('''
-            SELECT * FROM rule_generation_records WHERE rule_id = ?
-        ''', (rule_id,))
-        
-        row = cursor.fetchone()
-        
-        if row is None:
-            conn.close()
+        try:
+            from sqlalchemy import text as sql_text
+            
+            # 获取生成记录
+            result = database_layer.execute_read_sync(
+                sql_text('''
+                    SELECT * FROM rule_generation_records WHERE rule_id = :rule_id
+                '''),
+                {'rule_id': rule_id}
+            )
+            
+            row = result.fetchone()
+            
+            if row is None:
+                return None
+            
+            # 获取变更历史
+            result = database_layer.execute_read_sync(
+                sql_text('''
+                    SELECT version, change_type, change_description, changed_at
+                    FROM rule_change_history
+                    WHERE rule_id = :rule_id
+                    ORDER BY changed_at DESC
+                '''),
+                {'rule_id': rule_id}
+            )
+            
+            change_history = [
+                {
+                    'version': r[0],
+                    'change_type': r[1],
+                    'change_description': r[2],
+                    'changed_at': r[3]
+                }
+                for r in result.fetchall()
+            ]
+            
+            # 获取验证记录
+            result = database_layer.execute_read_sync(
+                sql_text('''
+                    SELECT validation_date, validation_type, pass_rate, passed
+                    FROM rule_validation_records
+                    WHERE rule_id = :rule_id
+                    ORDER BY validation_date DESC
+                    LIMIT 5
+                '''),
+                {'rule_id': rule_id}
+            )
+            
+            validation_history = [
+                {
+                    'date': r[0],
+                    'type': r[1],
+                    'pass_rate': r[2],
+                    'passed': r[3]
+                }
+                for r in result.fetchall()
+            ]
+            
+            return {
+                'generation_record': {
+                    'rule_id': row[1],
+                    'generation_method': row[2],
+                    'ai_model': row[3],
+                    'prompt_template': row[4],
+                    'human_reviewer': row[7],
+                    'review_date': row[8],
+                    'quality_metrics': json.loads(row[10]) if row[10] else {}
+                },
+                'change_history': change_history,
+                'validation_history': validation_history
+            }
+            
+        except Exception as e:
             return None
-        
-        # 获取变更历史
-        cursor.execute('''
-            SELECT version, change_type, change_description, changed_at
-            FROM rule_change_history
-            WHERE rule_id = ?
-            ORDER BY changed_at DESC
-        ''', (rule_id,))
-        
-        change_history = [
-            {
-                'version': r[0],
-                'change_type': r[1],
-                'change_description': r[2],
-                'changed_at': r[3]
-            }
-            for r in cursor.fetchall()
-        ]
-        
-        # 获取验证记录
-        cursor.execute('''
-            SELECT validation_date, validation_type, pass_rate, passed
-            FROM rule_validation_records
-            WHERE rule_id = ?
-            ORDER BY validation_date DESC
-            LIMIT 5
-        ''', (rule_id,))
-        
-        validation_history = [
-            {
-                'date': r[0],
-                'type': r[1],
-                'pass_rate': r[2],
-                'passed': r[3]
-            }
-            for r in cursor.fetchall()
-        ]
-        
-        conn.close()
-        
-        return {
-            'generation_record': {
-                'rule_id': row[1],
-                'generation_method': row[2],
-                'ai_model': row[3],
-                'prompt_template': row[4],
-                'human_reviewer': row[7],
-                'review_date': row[8],
-                'quality_metrics': json.loads(row[10]) if row[10] else {}
-            },
-            'change_history': change_history,
-            'validation_history': validation_history
-        }
     
     def generate_provenance_report(self, rule_id: str) -> str:
         """
@@ -480,51 +543,68 @@ class RuleProvenanceTracker:
         return report
     
     def list_unverified_cases(self) -> List[Dict[str, Any]]:
-        """列出所有未验证的案例"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        
-        cursor.execute('''
-            SELECT rule_id, case_id, source, source_link, description
-            FROM case_sources
-            WHERE verified = FALSE
-            ORDER BY rule_id, case_id
-        ''')
-        
-        cases = [
-            {
-                'rule_id': r[0],
-                'case_id': r[1],
-                'source': r[2],
-                'source_link': r[3],
-                'description': r[4]
-            }
-            for r in cursor.fetchall()
-        ]
-        
-        conn.close()
-        return cases
+        """列出所有未验证的案例 - 使用统一的数据库层"""
+        try:
+            from sqlalchemy import text as sql_text
+            
+            result = database_layer.execute_read_sync(
+                sql_text('''
+                    SELECT rule_id, case_id, source, source_link, description
+                    FROM case_sources
+                    WHERE verified = FALSE
+                    ORDER BY rule_id, case_id
+                ''')
+            )
+            
+            cases = [
+                {
+                    'rule_id': r[0],
+                    'case_id': r[1],
+                    'source': r[2],
+                    'source_link': r[3],
+                    'description': r[4]
+                }
+                for r in result.fetchall()
+            ]
+            
+            return cases
+            
+        except Exception as e:
+            return []
     
-    def verify_case(self, rule_id: str, case_id: str, verified: bool = True):
+    def verify_case(self, rule_id: str, case_id: str, verified: bool = True) -> Dict[str, Any]:
         """
-        验证单个案例
+        验证单个案例 - 使用统一的数据库层
         
         Args:
             rule_id: 规则 ID
             case_id: 案例 ID
             verified: 是否验证通过
+            
+        Returns:
+            操作结果 {"success": bool, "error": str}
         """
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        
-        cursor.execute('''
-            UPDATE case_sources
-            SET verified = ?, verification_date = ?
-            WHERE rule_id = ? AND case_id = ?
-        ''', (verified, datetime.now(), rule_id, case_id))
-        
-        conn.commit()
-        conn.close()
+        try:
+            from sqlalchemy import text as sql_text
+            
+            database_layer.execute_sync(
+                sql_text('''
+                    UPDATE case_sources
+                    SET verified = :verified, verification_date = :verification_date
+                    WHERE rule_id = :rule_id AND case_id = :case_id
+                '''),
+                {
+                    'verified': verified,
+                    'verification_date': datetime.now(),
+                    'rule_id': rule_id,
+                    'case_id': case_id
+                }
+            )
+            
+            return {"success": True, "error": None}
+            
+        except Exception as e:
+            return {"success": False, "error": str(e)}
 
 
 def main():
@@ -566,8 +646,12 @@ def main():
     }
     
     # 记录生成过程
-    tracker.record_rule_generation(rule_data, generation_info)
-    print(f"✓ 规则生成记录已保存：{rule_data['id']}")
+    result = tracker.record_rule_generation(rule_data, generation_info)
+    if result['success']:
+        print(f"✓ 规则生成记录已保存：{rule_data['id']}")
+    else:
+        print(f"✗ 规则生成记录失败：{result['error']}")
+        return
     
     # 验证规则真实性
     verification = tracker.verify_rule_authenticity(rule_data)

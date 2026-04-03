@@ -1,0 +1,4342 @@
+{
+  "timestamp": "2026-04-03T15:40:54.070500",
+  "rules_file": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\HOS-LS\\src\\rules\\security_rules.json",
+  "test_cases_dir": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\HOS-LS\\rule_validation\\test_cases",
+  "metrics": {
+    "overall": {
+      "total_tests": 231,
+      "passed_tests": 125,
+      "pass_rate": 0.5411255411255411,
+      "rule_count": 74,
+      "rules_passed_all": 0,
+      "rules_failed_any": 74,
+      "average_metrics": {
+        "recall": 0.0,
+        "precision": 0.0,
+        "f1_score": 0.0,
+        "false_positive_rate": 0.0
+      }
+    },
+    "by_rule": {
+      "ai_security.adversarial_example": {
+        "total": 2,
+        "passed": 1,
+        "positive_tests": 1,
+        "positive_passed": 0,
+        "negative_tests": 1,
+        "negative_passed": 1,
+        "pass_rate": 0.5,
+        "positive_rate": 0.0,
+        "negative_rate": 1.0,
+        "metrics": {
+          "recall": 0.0,
+          "precision": 0,
+          "f1_score": 0,
+          "false_positive_rate": 0.0,
+          "false_negative_rate": 1.0,
+          "confusion_matrix": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 1,
+            "tn": 1
+          }
+        }
+      },
+      "ai_security.ai_resource_exhaustion": {
+        "total": 3,
+        "passed": 2,
+        "positive_tests": 1,
+        "positive_passed": 0,
+        "negative_tests": 1,
+        "negative_passed": 1,
+        "pass_rate": 0.6666666666666666,
+        "positive_rate": 0.0,
+        "negative_rate": 1.0,
+        "metrics": {
+          "recall": 0.0,
+          "precision": 0,
+          "f1_score": 0,
+          "false_positive_rate": 0.0,
+          "false_negative_rate": 1.0,
+          "confusion_matrix": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 1,
+            "tn": 1
+          }
+        }
+      },
+      "ai_security.api_abuse": {
+        "total": 3,
+        "passed": 2,
+        "positive_tests": 1,
+        "positive_passed": 0,
+        "negative_tests": 1,
+        "negative_passed": 1,
+        "pass_rate": 0.6666666666666666,
+        "positive_rate": 0.0,
+        "negative_rate": 1.0,
+        "metrics": {
+          "recall": 0.0,
+          "precision": 0,
+          "f1_score": 0,
+          "false_positive_rate": 0.0,
+          "false_negative_rate": 1.0,
+          "confusion_matrix": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 1,
+            "tn": 1
+          }
+        }
+      },
+      "ai_security.backdoor_attack": {
+        "total": 3,
+        "passed": 2,
+        "positive_tests": 1,
+        "positive_passed": 0,
+        "negative_tests": 1,
+        "negative_passed": 1,
+        "pass_rate": 0.6666666666666666,
+        "positive_rate": 0.0,
+        "negative_rate": 1.0,
+        "metrics": {
+          "recall": 0.0,
+          "precision": 0,
+          "f1_score": 0,
+          "false_positive_rate": 0.0,
+          "false_negative_rate": 1.0,
+          "confusion_matrix": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 1,
+            "tn": 1
+          }
+        }
+      },
+      "ai_security.gradient_leakage": {
+        "total": 3,
+        "passed": 2,
+        "positive_tests": 1,
+        "positive_passed": 0,
+        "negative_tests": 1,
+        "negative_passed": 1,
+        "pass_rate": 0.6666666666666666,
+        "positive_rate": 0.0,
+        "negative_rate": 1.0,
+        "metrics": {
+          "recall": 0.0,
+          "precision": 0,
+          "f1_score": 0,
+          "false_positive_rate": 0.0,
+          "false_negative_rate": 1.0,
+          "confusion_matrix": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 1,
+            "tn": 1
+          }
+        }
+      },
+      "ai_security.insecure_model_serialization": {
+        "total": 3,
+        "passed": 2,
+        "positive_tests": 1,
+        "positive_passed": 0,
+        "negative_tests": 1,
+        "negative_passed": 1,
+        "pass_rate": 0.6666666666666666,
+        "positive_rate": 0.0,
+        "negative_rate": 1.0,
+        "metrics": {
+          "recall": 0.0,
+          "precision": 0,
+          "f1_score": 0,
+          "false_positive_rate": 0.0,
+          "false_negative_rate": 1.0,
+          "confusion_matrix": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 1,
+            "tn": 1
+          }
+        }
+      },
+      "ai_security.jailbreak_enhanced": {
+        "total": 3,
+        "passed": 1,
+        "positive_tests": 2,
+        "positive_passed": 0,
+        "negative_tests": 1,
+        "negative_passed": 1,
+        "pass_rate": 0.3333333333333333,
+        "positive_rate": 0.0,
+        "negative_rate": 1.0,
+        "metrics": {
+          "recall": 0.0,
+          "precision": 0,
+          "f1_score": 0,
+          "false_positive_rate": 0.0,
+          "false_negative_rate": 1.0,
+          "confusion_matrix": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 2,
+            "tn": 1
+          }
+        }
+      },
+      "ai_security.jailbreak_keyword": {
+        "total": 2,
+        "passed": 1,
+        "positive_tests": 1,
+        "positive_passed": 0,
+        "negative_tests": 1,
+        "negative_passed": 1,
+        "pass_rate": 0.5,
+        "positive_rate": 0.0,
+        "negative_rate": 1.0,
+        "metrics": {
+          "recall": 0.0,
+          "precision": 0,
+          "f1_score": 0,
+          "false_positive_rate": 0.0,
+          "false_negative_rate": 1.0,
+          "confusion_matrix": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 1,
+            "tn": 1
+          }
+        }
+      },
+      "ai_security.membership_inference": {
+        "total": 3,
+        "passed": 2,
+        "positive_tests": 1,
+        "positive_passed": 0,
+        "negative_tests": 1,
+        "negative_passed": 1,
+        "pass_rate": 0.6666666666666666,
+        "positive_rate": 0.0,
+        "negative_rate": 1.0,
+        "metrics": {
+          "recall": 0.0,
+          "precision": 0,
+          "f1_score": 0,
+          "false_positive_rate": 0.0,
+          "false_negative_rate": 1.0,
+          "confusion_matrix": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 1,
+            "tn": 1
+          }
+        }
+      },
+      "ai_security.model_inversion": {
+        "total": 3,
+        "passed": 2,
+        "positive_tests": 1,
+        "positive_passed": 0,
+        "negative_tests": 1,
+        "negative_passed": 1,
+        "pass_rate": 0.6666666666666666,
+        "positive_rate": 0.0,
+        "negative_rate": 1.0,
+        "metrics": {
+          "recall": 0.0,
+          "precision": 0,
+          "f1_score": 0,
+          "false_positive_rate": 0.0,
+          "false_negative_rate": 1.0,
+          "confusion_matrix": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 1,
+            "tn": 1
+          }
+        }
+      },
+      "ai_security.model_poisoning": {
+        "total": 3,
+        "passed": 2,
+        "positive_tests": 1,
+        "positive_passed": 0,
+        "negative_tests": 1,
+        "negative_passed": 1,
+        "pass_rate": 0.6666666666666666,
+        "positive_rate": 0.0,
+        "negative_rate": 1.0,
+        "metrics": {
+          "recall": 0.0,
+          "precision": 0,
+          "f1_score": 0,
+          "false_positive_rate": 0.0,
+          "false_negative_rate": 1.0,
+          "confusion_matrix": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 1,
+            "tn": 1
+          }
+        }
+      },
+      "ai_security.model_theft": {
+        "total": 3,
+        "passed": 1,
+        "positive_tests": 2,
+        "positive_passed": 0,
+        "negative_tests": 1,
+        "negative_passed": 1,
+        "pass_rate": 0.3333333333333333,
+        "positive_rate": 0.0,
+        "negative_rate": 1.0,
+        "metrics": {
+          "recall": 0.0,
+          "precision": 0,
+          "f1_score": 0,
+          "false_positive_rate": 0.0,
+          "false_negative_rate": 1.0,
+          "confusion_matrix": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 2,
+            "tn": 1
+          }
+        }
+      },
+      "ai_security.prompt_injection": {
+        "total": 3,
+        "passed": 1,
+        "positive_tests": 2,
+        "positive_passed": 0,
+        "negative_tests": 1,
+        "negative_passed": 1,
+        "pass_rate": 0.3333333333333333,
+        "positive_rate": 0.0,
+        "negative_rate": 1.0,
+        "metrics": {
+          "recall": 0.0,
+          "precision": 0,
+          "f1_score": 0,
+          "false_positive_rate": 0.0,
+          "false_negative_rate": 1.0,
+          "confusion_matrix": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 2,
+            "tn": 1
+          }
+        }
+      },
+      "ai_security.prompt_injection_enhanced": {
+        "total": 3,
+        "passed": 1,
+        "positive_tests": 2,
+        "positive_passed": 0,
+        "negative_tests": 1,
+        "negative_passed": 1,
+        "pass_rate": 0.3333333333333333,
+        "positive_rate": 0.0,
+        "negative_rate": 1.0,
+        "metrics": {
+          "recall": 0.0,
+          "precision": 0,
+          "f1_score": 0,
+          "false_positive_rate": 0.0,
+          "false_negative_rate": 1.0,
+          "confusion_matrix": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 2,
+            "tn": 1
+          }
+        }
+      },
+      "ai_security.tool_call_file_write": {
+        "total": 3,
+        "passed": 1,
+        "positive_tests": 2,
+        "positive_passed": 0,
+        "negative_tests": 1,
+        "negative_passed": 1,
+        "pass_rate": 0.3333333333333333,
+        "positive_rate": 0.0,
+        "negative_rate": 1.0,
+        "metrics": {
+          "recall": 0.0,
+          "precision": 0,
+          "f1_score": 0,
+          "false_positive_rate": 0.0,
+          "false_negative_rate": 1.0,
+          "confusion_matrix": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 2,
+            "tn": 1
+          }
+        }
+      },
+      "ai_security.tool_call_rce": {
+        "total": 3,
+        "passed": 1,
+        "positive_tests": 2,
+        "positive_passed": 0,
+        "negative_tests": 1,
+        "negative_passed": 1,
+        "pass_rate": 0.3333333333333333,
+        "positive_rate": 0.0,
+        "negative_rate": 1.0,
+        "metrics": {
+          "recall": 0.0,
+          "precision": 0,
+          "f1_score": 0,
+          "false_positive_rate": 0.0,
+          "false_negative_rate": 1.0,
+          "confusion_matrix": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 2,
+            "tn": 1
+          }
+        }
+      },
+      "ai_security.tool_call_shell": {
+        "total": 2,
+        "passed": 1,
+        "positive_tests": 1,
+        "positive_passed": 0,
+        "negative_tests": 1,
+        "negative_passed": 1,
+        "pass_rate": 0.5,
+        "positive_rate": 0.0,
+        "negative_rate": 1.0,
+        "metrics": {
+          "recall": 0.0,
+          "precision": 0,
+          "f1_score": 0,
+          "false_positive_rate": 0.0,
+          "false_negative_rate": 1.0,
+          "confusion_matrix": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 1,
+            "tn": 1
+          }
+        }
+      },
+      "ai_security.training_data_extraction": {
+        "total": 3,
+        "passed": 1,
+        "positive_tests": 2,
+        "positive_passed": 0,
+        "negative_tests": 1,
+        "negative_passed": 1,
+        "pass_rate": 0.3333333333333333,
+        "positive_rate": 0.0,
+        "negative_rate": 1.0,
+        "metrics": {
+          "recall": 0.0,
+          "precision": 0,
+          "f1_score": 0,
+          "false_positive_rate": 0.0,
+          "false_negative_rate": 1.0,
+          "confusion_matrix": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 2,
+            "tn": 1
+          }
+        }
+      },
+      "ai_security.training_data_leakage": {
+        "total": 3,
+        "passed": 2,
+        "positive_tests": 1,
+        "positive_passed": 0,
+        "negative_tests": 1,
+        "negative_passed": 1,
+        "pass_rate": 0.6666666666666666,
+        "positive_rate": 0.0,
+        "negative_rate": 1.0,
+        "metrics": {
+          "recall": 0.0,
+          "precision": 0,
+          "f1_score": 0,
+          "false_positive_rate": 0.0,
+          "false_negative_rate": 1.0,
+          "confusion_matrix": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 1,
+            "tn": 1
+          }
+        }
+      },
+      "ai_security.training_data_poisoning": {
+        "total": 3,
+        "passed": 2,
+        "positive_tests": 1,
+        "positive_passed": 0,
+        "negative_tests": 1,
+        "negative_passed": 1,
+        "pass_rate": 0.6666666666666666,
+        "positive_rate": 0.0,
+        "negative_rate": 1.0,
+        "metrics": {
+          "recall": 0.0,
+          "precision": 0,
+          "f1_score": 0,
+          "false_positive_rate": 0.0,
+          "false_negative_rate": 1.0,
+          "confusion_matrix": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 1,
+            "tn": 1
+          }
+        }
+      },
+      "cloud_security.hardcoded_cloud_credentials": {
+        "total": 2,
+        "passed": 1,
+        "positive_tests": 1,
+        "positive_passed": 0,
+        "negative_tests": 1,
+        "negative_passed": 1,
+        "pass_rate": 0.5,
+        "positive_rate": 0.0,
+        "negative_rate": 1.0,
+        "metrics": {
+          "recall": 0.0,
+          "precision": 0,
+          "f1_score": 0,
+          "false_positive_rate": 0.0,
+          "false_negative_rate": 1.0,
+          "confusion_matrix": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 1,
+            "tn": 1
+          }
+        }
+      },
+      "cloud_security.s3_public_access": {
+        "total": 3,
+        "passed": 1,
+        "positive_tests": 2,
+        "positive_passed": 0,
+        "negative_tests": 1,
+        "negative_passed": 1,
+        "pass_rate": 0.3333333333333333,
+        "positive_rate": 0.0,
+        "negative_rate": 1.0,
+        "metrics": {
+          "recall": 0.0,
+          "precision": 0,
+          "f1_score": 0,
+          "false_positive_rate": 0.0,
+          "false_negative_rate": 1.0,
+          "confusion_matrix": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 2,
+            "tn": 1
+          }
+        }
+      },
+      "cloud_security.security_group_open": {
+        "total": 3,
+        "passed": 1,
+        "positive_tests": 2,
+        "positive_passed": 0,
+        "negative_tests": 1,
+        "negative_passed": 1,
+        "pass_rate": 0.3333333333333333,
+        "positive_rate": 0.0,
+        "negative_rate": 1.0,
+        "metrics": {
+          "recall": 0.0,
+          "precision": 0,
+          "f1_score": 0,
+          "false_positive_rate": 0.0,
+          "false_negative_rate": 1.0,
+          "confusion_matrix": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 2,
+            "tn": 1
+          }
+        }
+      },
+      "code_security.access_control": {
+        "total": 3,
+        "passed": 2,
+        "positive_tests": 1,
+        "positive_passed": 0,
+        "negative_tests": 1,
+        "negative_passed": 1,
+        "pass_rate": 0.6666666666666666,
+        "positive_rate": 0.0,
+        "negative_rate": 1.0,
+        "metrics": {
+          "recall": 0.0,
+          "precision": 0,
+          "f1_score": 0,
+          "false_positive_rate": 0.0,
+          "false_negative_rate": 1.0,
+          "confusion_matrix": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 1,
+            "tn": 1
+          }
+        }
+      },
+      "code_security.authentication": {
+        "total": 3,
+        "passed": 2,
+        "positive_tests": 1,
+        "positive_passed": 0,
+        "negative_tests": 1,
+        "negative_passed": 1,
+        "pass_rate": 0.6666666666666666,
+        "positive_rate": 0.0,
+        "negative_rate": 1.0,
+        "metrics": {
+          "recall": 0.0,
+          "precision": 0,
+          "f1_score": 0,
+          "false_positive_rate": 0.0,
+          "false_negative_rate": 1.0,
+          "confusion_matrix": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 1,
+            "tn": 1
+          }
+        }
+      },
+      "code_security.authorization": {
+        "total": 3,
+        "passed": 2,
+        "positive_tests": 1,
+        "positive_passed": 0,
+        "negative_tests": 1,
+        "negative_passed": 1,
+        "pass_rate": 0.6666666666666666,
+        "positive_rate": 0.0,
+        "negative_rate": 1.0,
+        "metrics": {
+          "recall": 0.0,
+          "precision": 0,
+          "f1_score": 0,
+          "false_positive_rate": 0.0,
+          "false_negative_rate": 1.0,
+          "confusion_matrix": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 1,
+            "tn": 1
+          }
+        }
+      },
+      "code_security.backdoor_code": {
+        "total": 3,
+        "passed": 1,
+        "positive_tests": 2,
+        "positive_passed": 0,
+        "negative_tests": 1,
+        "negative_passed": 1,
+        "pass_rate": 0.3333333333333333,
+        "positive_rate": 0.0,
+        "negative_rate": 1.0,
+        "metrics": {
+          "recall": 0.0,
+          "precision": 0,
+          "f1_score": 0,
+          "false_positive_rate": 0.0,
+          "false_negative_rate": 1.0,
+          "confusion_matrix": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 2,
+            "tn": 1
+          }
+        }
+      },
+      "code_security.business_logic": {
+        "total": 3,
+        "passed": 2,
+        "positive_tests": 1,
+        "positive_passed": 0,
+        "negative_tests": 1,
+        "negative_passed": 1,
+        "pass_rate": 0.6666666666666666,
+        "positive_rate": 0.0,
+        "negative_rate": 1.0,
+        "metrics": {
+          "recall": 0.0,
+          "precision": 0,
+          "f1_score": 0,
+          "false_positive_rate": 0.0,
+          "false_negative_rate": 1.0,
+          "confusion_matrix": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 1,
+            "tn": 1
+          }
+        }
+      },
+      "code_security.cache_poisoning": {
+        "total": 3,
+        "passed": 2,
+        "positive_tests": 1,
+        "positive_passed": 0,
+        "negative_tests": 1,
+        "negative_passed": 1,
+        "pass_rate": 0.6666666666666666,
+        "positive_rate": 0.0,
+        "negative_rate": 1.0,
+        "metrics": {
+          "recall": 0.0,
+          "precision": 0,
+          "f1_score": 0,
+          "false_positive_rate": 0.0,
+          "false_negative_rate": 1.0,
+          "confusion_matrix": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 1,
+            "tn": 1
+          }
+        }
+      },
+      "code_security.clickjacking": {
+        "total": 3,
+        "passed": 2,
+        "positive_tests": 1,
+        "positive_passed": 0,
+        "negative_tests": 1,
+        "negative_passed": 1,
+        "pass_rate": 0.6666666666666666,
+        "positive_rate": 0.0,
+        "negative_rate": 1.0,
+        "metrics": {
+          "recall": 0.0,
+          "precision": 0,
+          "f1_score": 0,
+          "false_positive_rate": 0.0,
+          "false_negative_rate": 1.0,
+          "confusion_matrix": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 1,
+            "tn": 1
+          }
+        }
+      },
+      "code_security.csrf": {
+        "total": 3,
+        "passed": 2,
+        "positive_tests": 1,
+        "positive_passed": 0,
+        "negative_tests": 1,
+        "negative_passed": 1,
+        "pass_rate": 0.6666666666666666,
+        "positive_rate": 0.0,
+        "negative_rate": 1.0,
+        "metrics": {
+          "recall": 0.0,
+          "precision": 0,
+          "f1_score": 0,
+          "false_positive_rate": 0.0,
+          "false_negative_rate": 1.0,
+          "confusion_matrix": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 1,
+            "tn": 1
+          }
+        }
+      },
+      "code_security.debug_code": {
+        "total": 3,
+        "passed": 1,
+        "positive_tests": 2,
+        "positive_passed": 0,
+        "negative_tests": 1,
+        "negative_passed": 1,
+        "pass_rate": 0.3333333333333333,
+        "positive_rate": 0.0,
+        "negative_rate": 1.0,
+        "metrics": {
+          "recall": 0.0,
+          "precision": 0,
+          "f1_score": 0,
+          "false_positive_rate": 0.0,
+          "false_negative_rate": 1.0,
+          "confusion_matrix": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 2,
+            "tn": 1
+          }
+        }
+      },
+      "code_security.encryption": {
+        "total": 3,
+        "passed": 2,
+        "positive_tests": 1,
+        "positive_passed": 0,
+        "negative_tests": 1,
+        "negative_passed": 1,
+        "pass_rate": 0.6666666666666666,
+        "positive_rate": 0.0,
+        "negative_rate": 1.0,
+        "metrics": {
+          "recall": 0.0,
+          "precision": 0,
+          "f1_score": 0,
+          "false_positive_rate": 0.0,
+          "false_negative_rate": 1.0,
+          "confusion_matrix": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 1,
+            "tn": 1
+          }
+        }
+      },
+      "code_security.error_handling": {
+        "total": 3,
+        "passed": 2,
+        "positive_tests": 1,
+        "positive_passed": 0,
+        "negative_tests": 1,
+        "negative_passed": 1,
+        "pass_rate": 0.6666666666666666,
+        "positive_rate": 0.0,
+        "negative_rate": 1.0,
+        "metrics": {
+          "recall": 0.0,
+          "precision": 0,
+          "f1_score": 0,
+          "false_positive_rate": 0.0,
+          "false_negative_rate": 1.0,
+          "confusion_matrix": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 1,
+            "tn": 1
+          }
+        }
+      },
+      "code_security.file_upload": {
+        "total": 3,
+        "passed": 2,
+        "positive_tests": 1,
+        "positive_passed": 0,
+        "negative_tests": 1,
+        "negative_passed": 1,
+        "pass_rate": 0.6666666666666666,
+        "positive_rate": 0.0,
+        "negative_rate": 1.0,
+        "metrics": {
+          "recall": 0.0,
+          "precision": 0,
+          "f1_score": 0,
+          "false_positive_rate": 0.0,
+          "false_negative_rate": 1.0,
+          "confusion_matrix": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 1,
+            "tn": 1
+          }
+        }
+      },
+      "code_security.hardcoded_secrets": {
+        "total": 6,
+        "passed": 2,
+        "positive_tests": 3,
+        "positive_passed": 0,
+        "negative_tests": 2,
+        "negative_passed": 2,
+        "pass_rate": 0.3333333333333333,
+        "positive_rate": 0.0,
+        "negative_rate": 1.0,
+        "metrics": {
+          "recall": 0.0,
+          "precision": 0,
+          "f1_score": 0,
+          "false_positive_rate": 0.0,
+          "false_negative_rate": 1.0,
+          "confusion_matrix": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 3,
+            "tn": 2
+          }
+        }
+      },
+      "code_security.hardcoded_secrets_cloud": {
+        "total": 6,
+        "passed": 3,
+        "positive_tests": 3,
+        "positive_passed": 0,
+        "negative_tests": 2,
+        "negative_passed": 2,
+        "pass_rate": 0.5,
+        "positive_rate": 0.0,
+        "negative_rate": 1.0,
+        "metrics": {
+          "recall": 0.0,
+          "precision": 0,
+          "f1_score": 0,
+          "false_positive_rate": 0.0,
+          "false_negative_rate": 1.0,
+          "confusion_matrix": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 3,
+            "tn": 2
+          }
+        }
+      },
+      "code_security.hardcoded_secrets_encoded": {
+        "total": 6,
+        "passed": 2,
+        "positive_tests": 3,
+        "positive_passed": 0,
+        "negative_tests": 2,
+        "negative_passed": 2,
+        "pass_rate": 0.3333333333333333,
+        "positive_rate": 0.0,
+        "negative_rate": 1.0,
+        "metrics": {
+          "recall": 0.0,
+          "precision": 0,
+          "f1_score": 0,
+          "false_positive_rate": 0.0,
+          "false_negative_rate": 1.0,
+          "confusion_matrix": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 3,
+            "tn": 2
+          }
+        }
+      },
+      "code_security.hardcoded_secrets_env_fallback": {
+        "total": 6,
+        "passed": 2,
+        "positive_tests": 3,
+        "positive_passed": 0,
+        "negative_tests": 2,
+        "negative_passed": 2,
+        "pass_rate": 0.3333333333333333,
+        "positive_rate": 0.0,
+        "negative_rate": 1.0,
+        "metrics": {
+          "recall": 0.0,
+          "precision": 0,
+          "f1_score": 0,
+          "false_positive_rate": 0.0,
+          "false_negative_rate": 1.0,
+          "confusion_matrix": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 3,
+            "tn": 2
+          }
+        }
+      },
+      "code_security.hardcoded_secrets_private_key": {
+        "total": 5,
+        "passed": 2,
+        "positive_tests": 2,
+        "positive_passed": 0,
+        "negative_tests": 2,
+        "negative_passed": 2,
+        "pass_rate": 0.4,
+        "positive_rate": 0.0,
+        "negative_rate": 1.0,
+        "metrics": {
+          "recall": 0.0,
+          "precision": 0,
+          "f1_score": 0,
+          "false_positive_rate": 0.0,
+          "false_negative_rate": 1.0,
+          "confusion_matrix": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 2,
+            "tn": 2
+          }
+        }
+      },
+      "code_security.http_security_headers": {
+        "total": 3,
+        "passed": 2,
+        "positive_tests": 1,
+        "positive_passed": 0,
+        "negative_tests": 1,
+        "negative_passed": 1,
+        "pass_rate": 0.6666666666666666,
+        "positive_rate": 0.0,
+        "negative_rate": 1.0,
+        "metrics": {
+          "recall": 0.0,
+          "precision": 0,
+          "f1_score": 0,
+          "false_positive_rate": 0.0,
+          "false_negative_rate": 1.0,
+          "confusion_matrix": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 1,
+            "tn": 1
+          }
+        }
+      },
+      "code_security.information_exposure": {
+        "total": 3,
+        "passed": 2,
+        "positive_tests": 1,
+        "positive_passed": 0,
+        "negative_tests": 1,
+        "negative_passed": 1,
+        "pass_rate": 0.6666666666666666,
+        "positive_rate": 0.0,
+        "negative_rate": 1.0,
+        "metrics": {
+          "recall": 0.0,
+          "precision": 0,
+          "f1_score": 0,
+          "false_positive_rate": 0.0,
+          "false_negative_rate": 1.0,
+          "confusion_matrix": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 1,
+            "tn": 1
+          }
+        }
+      },
+      "code_security.input_validation": {
+        "total": 3,
+        "passed": 2,
+        "positive_tests": 1,
+        "positive_passed": 0,
+        "negative_tests": 1,
+        "negative_passed": 1,
+        "pass_rate": 0.6666666666666666,
+        "positive_rate": 0.0,
+        "negative_rate": 1.0,
+        "metrics": {
+          "recall": 0.0,
+          "precision": 0,
+          "f1_score": 0,
+          "false_positive_rate": 0.0,
+          "false_negative_rate": 1.0,
+          "confusion_matrix": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 1,
+            "tn": 1
+          }
+        }
+      },
+      "code_security.insecure_deserialization": {
+        "total": 3,
+        "passed": 2,
+        "positive_tests": 1,
+        "positive_passed": 0,
+        "negative_tests": 1,
+        "negative_passed": 1,
+        "pass_rate": 0.6666666666666666,
+        "positive_rate": 0.0,
+        "negative_rate": 1.0,
+        "metrics": {
+          "recall": 0.0,
+          "precision": 0,
+          "f1_score": 0,
+          "false_positive_rate": 0.0,
+          "false_negative_rate": 1.0,
+          "confusion_matrix": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 1,
+            "tn": 1
+          }
+        }
+      },
+      "code_security.insecure_randomness": {
+        "total": 3,
+        "passed": 1,
+        "positive_tests": 2,
+        "positive_passed": 0,
+        "negative_tests": 1,
+        "negative_passed": 1,
+        "pass_rate": 0.3333333333333333,
+        "positive_rate": 0.0,
+        "negative_rate": 1.0,
+        "metrics": {
+          "recall": 0.0,
+          "precision": 0,
+          "f1_score": 0,
+          "false_positive_rate": 0.0,
+          "false_negative_rate": 1.0,
+          "confusion_matrix": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 2,
+            "tn": 1
+          }
+        }
+      },
+      "code_security.jwt_security": {
+        "total": 3,
+        "passed": 2,
+        "positive_tests": 1,
+        "positive_passed": 0,
+        "negative_tests": 1,
+        "negative_passed": 1,
+        "pass_rate": 0.6666666666666666,
+        "positive_rate": 0.0,
+        "negative_rate": 1.0,
+        "metrics": {
+          "recall": 0.0,
+          "precision": 0,
+          "f1_score": 0,
+          "false_positive_rate": 0.0,
+          "false_negative_rate": 1.0,
+          "confusion_matrix": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 1,
+            "tn": 1
+          }
+        }
+      },
+      "code_security.logging": {
+        "total": 3,
+        "passed": 2,
+        "positive_tests": 1,
+        "positive_passed": 0,
+        "negative_tests": 1,
+        "negative_passed": 1,
+        "pass_rate": 0.6666666666666666,
+        "positive_rate": 0.0,
+        "negative_rate": 1.0,
+        "metrics": {
+          "recall": 0.0,
+          "precision": 0,
+          "f1_score": 0,
+          "false_positive_rate": 0.0,
+          "false_negative_rate": 1.0,
+          "confusion_matrix": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 1,
+            "tn": 1
+          }
+        }
+      },
+      "code_security.memory_corruption": {
+        "total": 3,
+        "passed": 2,
+        "positive_tests": 1,
+        "positive_passed": 0,
+        "negative_tests": 1,
+        "negative_passed": 1,
+        "pass_rate": 0.6666666666666666,
+        "positive_rate": 0.0,
+        "negative_rate": 1.0,
+        "metrics": {
+          "recall": 0.0,
+          "precision": 0,
+          "f1_score": 0,
+          "false_positive_rate": 0.0,
+          "false_negative_rate": 1.0,
+          "confusion_matrix": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 1,
+            "tn": 1
+          }
+        }
+      },
+      "code_security.path_traversal": {
+        "total": 3,
+        "passed": 2,
+        "positive_tests": 1,
+        "positive_passed": 0,
+        "negative_tests": 1,
+        "negative_passed": 1,
+        "pass_rate": 0.6666666666666666,
+        "positive_rate": 0.0,
+        "negative_rate": 1.0,
+        "metrics": {
+          "recall": 0.0,
+          "precision": 0,
+          "f1_score": 0,
+          "false_positive_rate": 0.0,
+          "false_negative_rate": 1.0,
+          "confusion_matrix": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 1,
+            "tn": 1
+          }
+        }
+      },
+      "code_security.rate_limiting": {
+        "total": 3,
+        "passed": 2,
+        "positive_tests": 1,
+        "positive_passed": 0,
+        "negative_tests": 1,
+        "negative_passed": 1,
+        "pass_rate": 0.6666666666666666,
+        "positive_rate": 0.0,
+        "negative_rate": 1.0,
+        "metrics": {
+          "recall": 0.0,
+          "precision": 0,
+          "f1_score": 0,
+          "false_positive_rate": 0.0,
+          "false_negative_rate": 1.0,
+          "confusion_matrix": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 1,
+            "tn": 1
+          }
+        }
+      },
+      "code_security.resource_leak": {
+        "total": 3,
+        "passed": 2,
+        "positive_tests": 1,
+        "positive_passed": 0,
+        "negative_tests": 1,
+        "negative_passed": 1,
+        "pass_rate": 0.6666666666666666,
+        "positive_rate": 0.0,
+        "negative_rate": 1.0,
+        "metrics": {
+          "recall": 0.0,
+          "precision": 0,
+          "f1_score": 0,
+          "false_positive_rate": 0.0,
+          "false_negative_rate": 1.0,
+          "confusion_matrix": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 1,
+            "tn": 1
+          }
+        }
+      },
+      "code_security.security_misconfiguration": {
+        "total": 3,
+        "passed": 2,
+        "positive_tests": 1,
+        "positive_passed": 0,
+        "negative_tests": 1,
+        "negative_passed": 1,
+        "pass_rate": 0.6666666666666666,
+        "positive_rate": 0.0,
+        "negative_rate": 1.0,
+        "metrics": {
+          "recall": 0.0,
+          "precision": 0,
+          "f1_score": 0,
+          "false_positive_rate": 0.0,
+          "false_negative_rate": 1.0,
+          "confusion_matrix": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 1,
+            "tn": 1
+          }
+        }
+      },
+      "code_security.session_security": {
+        "total": 3,
+        "passed": 2,
+        "positive_tests": 1,
+        "positive_passed": 0,
+        "negative_tests": 1,
+        "negative_passed": 1,
+        "pass_rate": 0.6666666666666666,
+        "positive_rate": 0.0,
+        "negative_rate": 1.0,
+        "metrics": {
+          "recall": 0.0,
+          "precision": 0,
+          "f1_score": 0,
+          "false_positive_rate": 0.0,
+          "false_negative_rate": 1.0,
+          "confusion_matrix": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 1,
+            "tn": 1
+          }
+        }
+      },
+      "code_security.supply_chain": {
+        "total": 3,
+        "passed": 2,
+        "positive_tests": 1,
+        "positive_passed": 0,
+        "negative_tests": 1,
+        "negative_passed": 1,
+        "pass_rate": 0.6666666666666666,
+        "positive_rate": 0.0,
+        "negative_rate": 1.0,
+        "metrics": {
+          "recall": 0.0,
+          "precision": 0,
+          "f1_score": 0,
+          "false_positive_rate": 0.0,
+          "false_negative_rate": 1.0,
+          "confusion_matrix": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 1,
+            "tn": 1
+          }
+        }
+      },
+      "code_security.third_party_integrations": {
+        "total": 3,
+        "passed": 2,
+        "positive_tests": 1,
+        "positive_passed": 0,
+        "negative_tests": 1,
+        "negative_passed": 1,
+        "pass_rate": 0.6666666666666666,
+        "positive_rate": 0.0,
+        "negative_rate": 1.0,
+        "metrics": {
+          "recall": 0.0,
+          "precision": 0,
+          "f1_score": 0,
+          "false_positive_rate": 0.0,
+          "false_negative_rate": 1.0,
+          "confusion_matrix": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 1,
+            "tn": 1
+          }
+        }
+      },
+      "code_security.todo_comments": {
+        "total": 3,
+        "passed": 1,
+        "positive_tests": 2,
+        "positive_passed": 0,
+        "negative_tests": 1,
+        "negative_passed": 1,
+        "pass_rate": 0.3333333333333333,
+        "positive_rate": 0.0,
+        "negative_rate": 1.0,
+        "metrics": {
+          "recall": 0.0,
+          "precision": 0,
+          "f1_score": 0,
+          "false_positive_rate": 0.0,
+          "false_negative_rate": 1.0,
+          "confusion_matrix": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 2,
+            "tn": 1
+          }
+        }
+      },
+      "code_security.unvalidated_redirect": {
+        "total": 3,
+        "passed": 2,
+        "positive_tests": 1,
+        "positive_passed": 0,
+        "negative_tests": 1,
+        "negative_passed": 1,
+        "pass_rate": 0.6666666666666666,
+        "positive_rate": 0.0,
+        "negative_rate": 1.0,
+        "metrics": {
+          "recall": 0.0,
+          "precision": 0,
+          "f1_score": 0,
+          "false_positive_rate": 0.0,
+          "false_negative_rate": 1.0,
+          "confusion_matrix": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 1,
+            "tn": 1
+          }
+        }
+      },
+      "code_security.weak_crypto": {
+        "total": 3,
+        "passed": 1,
+        "positive_tests": 2,
+        "positive_passed": 0,
+        "negative_tests": 1,
+        "negative_passed": 1,
+        "pass_rate": 0.3333333333333333,
+        "positive_rate": 0.0,
+        "negative_rate": 1.0,
+        "metrics": {
+          "recall": 0.0,
+          "precision": 0,
+          "f1_score": 0,
+          "false_positive_rate": 0.0,
+          "false_negative_rate": 1.0,
+          "confusion_matrix": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 2,
+            "tn": 1
+          }
+        }
+      },
+      "code_security.xss": {
+        "total": 3,
+        "passed": 2,
+        "positive_tests": 1,
+        "positive_passed": 0,
+        "negative_tests": 1,
+        "negative_passed": 1,
+        "pass_rate": 0.6666666666666666,
+        "positive_rate": 0.0,
+        "negative_rate": 1.0,
+        "metrics": {
+          "recall": 0.0,
+          "precision": 0,
+          "f1_score": 0,
+          "false_positive_rate": 0.0,
+          "false_negative_rate": 1.0,
+          "confusion_matrix": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 1,
+            "tn": 1
+          }
+        }
+      },
+      "dependency_security.unused_dependency": {
+        "total": 3,
+        "passed": 2,
+        "positive_tests": 1,
+        "positive_passed": 0,
+        "negative_tests": 1,
+        "negative_passed": 1,
+        "pass_rate": 0.6666666666666666,
+        "positive_rate": 0.0,
+        "negative_rate": 1.0,
+        "metrics": {
+          "recall": 0.0,
+          "precision": 0,
+          "f1_score": 0,
+          "false_positive_rate": 0.0,
+          "false_negative_rate": 1.0,
+          "confusion_matrix": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 1,
+            "tn": 1
+          }
+        }
+      },
+      "injection_security.command_injection": {
+        "total": 3,
+        "passed": 2,
+        "positive_tests": 1,
+        "positive_passed": 0,
+        "negative_tests": 1,
+        "negative_passed": 1,
+        "pass_rate": 0.6666666666666666,
+        "positive_rate": 0.0,
+        "negative_rate": 1.0,
+        "metrics": {
+          "recall": 0.0,
+          "precision": 0,
+          "f1_score": 0,
+          "false_positive_rate": 0.0,
+          "false_negative_rate": 1.0,
+          "confusion_matrix": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 1,
+            "tn": 1
+          }
+        }
+      },
+      "injection_security.command_injection_ai_generated": {
+        "total": 3,
+        "passed": 1,
+        "positive_tests": 2,
+        "positive_passed": 0,
+        "negative_tests": 1,
+        "negative_passed": 1,
+        "pass_rate": 0.3333333333333333,
+        "positive_rate": 0.0,
+        "negative_rate": 1.0,
+        "metrics": {
+          "recall": 0.0,
+          "precision": 0,
+          "f1_score": 0,
+          "false_positive_rate": 0.0,
+          "false_negative_rate": 1.0,
+          "confusion_matrix": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 2,
+            "tn": 1
+          }
+        }
+      },
+      "injection_security.ldap_injection": {
+        "total": 3,
+        "passed": 2,
+        "positive_tests": 1,
+        "positive_passed": 0,
+        "negative_tests": 1,
+        "negative_passed": 1,
+        "pass_rate": 0.6666666666666666,
+        "positive_rate": 0.0,
+        "negative_rate": 1.0,
+        "metrics": {
+          "recall": 0.0,
+          "precision": 0,
+          "f1_score": 0,
+          "false_positive_rate": 0.0,
+          "false_negative_rate": 1.0,
+          "confusion_matrix": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 1,
+            "tn": 1
+          }
+        }
+      },
+      "injection_security.path_traversal": {
+        "total": 3,
+        "passed": 1,
+        "positive_tests": 2,
+        "positive_passed": 0,
+        "negative_tests": 1,
+        "negative_passed": 1,
+        "pass_rate": 0.3333333333333333,
+        "positive_rate": 0.0,
+        "negative_rate": 1.0,
+        "metrics": {
+          "recall": 0.0,
+          "precision": 0,
+          "f1_score": 0,
+          "false_positive_rate": 0.0,
+          "false_negative_rate": 1.0,
+          "confusion_matrix": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 2,
+            "tn": 1
+          }
+        }
+      },
+      "injection_security.sql_injection": {
+        "total": 2,
+        "passed": 1,
+        "positive_tests": 1,
+        "positive_passed": 0,
+        "negative_tests": 1,
+        "negative_passed": 1,
+        "pass_rate": 0.5,
+        "positive_rate": 0.0,
+        "negative_rate": 1.0,
+        "metrics": {
+          "recall": 0.0,
+          "precision": 0,
+          "f1_score": 0,
+          "false_positive_rate": 0.0,
+          "false_negative_rate": 1.0,
+          "confusion_matrix": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 1,
+            "tn": 1
+          }
+        }
+      },
+      "injection_security.template_injection": {
+        "total": 3,
+        "passed": 2,
+        "positive_tests": 1,
+        "positive_passed": 0,
+        "negative_tests": 1,
+        "negative_passed": 1,
+        "pass_rate": 0.6666666666666666,
+        "positive_rate": 0.0,
+        "negative_rate": 1.0,
+        "metrics": {
+          "recall": 0.0,
+          "precision": 0,
+          "f1_score": 0,
+          "false_positive_rate": 0.0,
+          "false_negative_rate": 1.0,
+          "confusion_matrix": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 1,
+            "tn": 1
+          }
+        }
+      },
+      "injection_security.xpath_injection": {
+        "total": 3,
+        "passed": 2,
+        "positive_tests": 1,
+        "positive_passed": 0,
+        "negative_tests": 1,
+        "negative_passed": 1,
+        "pass_rate": 0.6666666666666666,
+        "positive_rate": 0.0,
+        "negative_rate": 1.0,
+        "metrics": {
+          "recall": 0.0,
+          "precision": 0,
+          "f1_score": 0,
+          "false_positive_rate": 0.0,
+          "false_negative_rate": 1.0,
+          "confusion_matrix": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 1,
+            "tn": 1
+          }
+        }
+      },
+      "injection_security.xss_injection": {
+        "total": 3,
+        "passed": 1,
+        "positive_tests": 2,
+        "positive_passed": 0,
+        "negative_tests": 1,
+        "negative_passed": 1,
+        "pass_rate": 0.3333333333333333,
+        "positive_rate": 0.0,
+        "negative_rate": 1.0,
+        "metrics": {
+          "recall": 0.0,
+          "precision": 0,
+          "f1_score": 0,
+          "false_positive_rate": 0.0,
+          "false_negative_rate": 1.0,
+          "confusion_matrix": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 2,
+            "tn": 1
+          }
+        }
+      },
+      "injection_security.xxe_injection": {
+        "total": 3,
+        "passed": 2,
+        "positive_tests": 1,
+        "positive_passed": 0,
+        "negative_tests": 1,
+        "negative_passed": 1,
+        "pass_rate": 0.6666666666666666,
+        "positive_rate": 0.0,
+        "negative_rate": 1.0,
+        "metrics": {
+          "recall": 0.0,
+          "precision": 0,
+          "f1_score": 0,
+          "false_positive_rate": 0.0,
+          "false_negative_rate": 1.0,
+          "confusion_matrix": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 1,
+            "tn": 1
+          }
+        }
+      },
+      "privacy_security.consent_management": {
+        "total": 3,
+        "passed": 2,
+        "positive_tests": 1,
+        "positive_passed": 0,
+        "negative_tests": 1,
+        "negative_passed": 1,
+        "pass_rate": 0.6666666666666666,
+        "positive_rate": 0.0,
+        "negative_rate": 1.0,
+        "metrics": {
+          "recall": 0.0,
+          "precision": 0,
+          "f1_score": 0,
+          "false_positive_rate": 0.0,
+          "false_negative_rate": 1.0,
+          "confusion_matrix": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 1,
+            "tn": 1
+          }
+        }
+      },
+      "privacy_security.data_retention": {
+        "total": 3,
+        "passed": 2,
+        "positive_tests": 1,
+        "positive_passed": 0,
+        "negative_tests": 1,
+        "negative_passed": 1,
+        "pass_rate": 0.6666666666666666,
+        "positive_rate": 0.0,
+        "negative_rate": 1.0,
+        "metrics": {
+          "recall": 0.0,
+          "precision": 0,
+          "f1_score": 0,
+          "false_positive_rate": 0.0,
+          "false_negative_rate": 1.0,
+          "confusion_matrix": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 1,
+            "tn": 1
+          }
+        }
+      },
+      "privacy_security.personal_data_exposure": {
+        "total": 3,
+        "passed": 1,
+        "positive_tests": 2,
+        "positive_passed": 0,
+        "negative_tests": 1,
+        "negative_passed": 1,
+        "pass_rate": 0.3333333333333333,
+        "positive_rate": 0.0,
+        "negative_rate": 1.0,
+        "metrics": {
+          "recall": 0.0,
+          "precision": 0,
+          "f1_score": 0,
+          "false_positive_rate": 0.0,
+          "false_negative_rate": 1.0,
+          "confusion_matrix": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 2,
+            "tn": 1
+          }
+        }
+      },
+      "privacy_security.pii_in_logs": {
+        "total": 3,
+        "passed": 1,
+        "positive_tests": 2,
+        "positive_passed": 0,
+        "negative_tests": 1,
+        "negative_passed": 1,
+        "pass_rate": 0.3333333333333333,
+        "positive_rate": 0.0,
+        "negative_rate": 1.0,
+        "metrics": {
+          "recall": 0.0,
+          "precision": 0,
+          "f1_score": 0,
+          "false_positive_rate": 0.0,
+          "false_negative_rate": 1.0,
+          "confusion_matrix": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 2,
+            "tn": 1
+          }
+        }
+      },
+      "privacy_security.right_to_erasure": {
+        "total": 3,
+        "passed": 2,
+        "positive_tests": 1,
+        "positive_passed": 0,
+        "negative_tests": 1,
+        "negative_passed": 1,
+        "pass_rate": 0.6666666666666666,
+        "positive_rate": 0.0,
+        "negative_rate": 1.0,
+        "metrics": {
+          "recall": 0.0,
+          "precision": 0,
+          "f1_score": 0,
+          "false_positive_rate": 0.0,
+          "false_negative_rate": 1.0,
+          "confusion_matrix": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 1,
+            "tn": 1
+          }
+        }
+      }
+    }
+  },
+  "details": [
+    {
+      "test_id": "AE-N01",
+      "rule_id": "ai_security.adversarial_example",
+      "description": "实现对抗样本检测机制",
+      "test_type": "negative",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "AE-P01",
+      "rule_id": "ai_security.adversarial_example",
+      "description": "模型输入未进行对抗样本检测",
+      "test_type": "positive",
+      "expected": true,
+      "actual": false,
+      "passed": false,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "RE-B01",
+      "rule_id": "ai_security.ai_resource_exhaustion",
+      "description": "小规模训练任务（资源消耗可控）",
+      "test_type": "boundary",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "RE-N01",
+      "rule_id": "ai_security.ai_resource_exhaustion",
+      "description": "AI 任务有完善的资源限制",
+      "test_type": "negative",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "RE-P01",
+      "rule_id": "ai_security.ai_resource_exhaustion",
+      "description": "AI 任务未限制资源使用",
+      "test_type": "positive",
+      "expected": true,
+      "actual": false,
+      "passed": false,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "AA-B01",
+      "rule_id": "ai_security.api_abuse",
+      "description": "内部开发环境（可接受）",
+      "test_type": "boundary",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "AA-N01",
+      "rule_id": "ai_security.api_abuse",
+      "description": "防止 AI API 滥用",
+      "test_type": "negative",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "AA-P01",
+      "rule_id": "ai_security.api_abuse",
+      "description": "AI API 滥用风险",
+      "test_type": "positive",
+      "expected": true,
+      "actual": false,
+      "passed": false,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "BA-B01",
+      "rule_id": "ai_security.backdoor_attack",
+      "description": "受控环境的对抗训练（可接受）",
+      "test_type": "boundary",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "BA-N01",
+      "rule_id": "ai_security.backdoor_attack",
+      "description": "防止后门攻击",
+      "test_type": "negative",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "BA-P01",
+      "rule_id": "ai_security.backdoor_attack",
+      "description": "后门攻击风险",
+      "test_type": "positive",
+      "expected": true,
+      "actual": false,
+      "passed": false,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "GL-B01",
+      "rule_id": "ai_security.gradient_leakage",
+      "description": "本地训练不共享梯度（可接受）",
+      "test_type": "boundary",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "GL-N01",
+      "rule_id": "ai_security.gradient_leakage",
+      "description": "防止梯度泄露",
+      "test_type": "negative",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "GL-P01",
+      "rule_id": "ai_security.gradient_leakage",
+      "description": "梯度泄露风险",
+      "test_type": "positive",
+      "expected": true,
+      "actual": false,
+      "passed": false,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "MS-B01",
+      "rule_id": "ai_security.insecure_model_serialization",
+      "description": "使用 joblib 保存轻量级模型（可接受）",
+      "test_type": "boundary",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "MS-N01",
+      "rule_id": "ai_security.insecure_model_serialization",
+      "description": "使用安全的模型序列化方式",
+      "test_type": "negative",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "MS-P01",
+      "rule_id": "ai_security.insecure_model_serialization",
+      "description": "使用不安全的模型序列化方式",
+      "test_type": "positive",
+      "expected": true,
+      "actual": false,
+      "passed": false,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "JKE-N01",
+      "rule_id": "ai_security.jailbreak_enhanced",
+      "description": "正常的角色扮演（安全）",
+      "test_type": "negative",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "JKE-P01",
+      "rule_id": "ai_security.jailbreak_enhanced",
+      "description": "增强越狱 - DAN 模式",
+      "test_type": "positive",
+      "expected": true,
+      "actual": false,
+      "passed": false,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "JKE-P02",
+      "rule_id": "ai_security.jailbreak_enhanced",
+      "description": "增强越狱 - 假装模式",
+      "test_type": "positive",
+      "expected": true,
+      "actual": false,
+      "passed": false,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "JK-N01",
+      "rule_id": "ai_security.jailbreak_keyword",
+      "description": "正常的开发相关讨论",
+      "test_type": "negative",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "JK-P01",
+      "rule_id": "ai_security.jailbreak_keyword",
+      "description": "越狱关键词 - developer mode",
+      "test_type": "positive",
+      "expected": true,
+      "actual": false,
+      "passed": false,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "MINF-B01",
+      "rule_id": "ai_security.membership_inference",
+      "description": "差分隐私保护（可接受）",
+      "test_type": "boundary",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "MINF-N01",
+      "rule_id": "ai_security.membership_inference",
+      "description": "防止成员推断攻击",
+      "test_type": "negative",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "MINF-P01",
+      "rule_id": "ai_security.membership_inference",
+      "description": "成员推断攻击风险",
+      "test_type": "positive",
+      "expected": true,
+      "actual": false,
+      "passed": false,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "MI-B01",
+      "rule_id": "ai_security.model_inversion",
+      "description": "内部研究用途（可接受）",
+      "test_type": "boundary",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "MI-N01",
+      "rule_id": "ai_security.model_inversion",
+      "description": "防止模型反演攻击",
+      "test_type": "negative",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "MI-P01",
+      "rule_id": "ai_security.model_inversion",
+      "description": "模型反演攻击风险",
+      "test_type": "positive",
+      "expected": true,
+      "actual": false,
+      "passed": false,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "MP-B01",
+      "rule_id": "ai_security.model_poisoning",
+      "description": "使用可信来源的训练数据（官方数据集）",
+      "test_type": "boundary",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "MP-N01",
+      "rule_id": "ai_security.model_poisoning",
+      "description": "使用验证过的训练数据",
+      "test_type": "negative",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "MP-P01",
+      "rule_id": "ai_security.model_poisoning",
+      "description": "模型训练数据可能被投毒",
+      "test_type": "positive",
+      "expected": true,
+      "actual": false,
+      "passed": false,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "MT-N01",
+      "rule_id": "ai_security.model_theft",
+      "description": "正常的模型询问",
+      "test_type": "negative",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "MT-P01",
+      "rule_id": "ai_security.model_theft",
+      "description": "模型窃取尝试",
+      "test_type": "positive",
+      "expected": true,
+      "actual": false,
+      "passed": false,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "MT-P02",
+      "rule_id": "ai_security.model_theft",
+      "description": "模型提取攻击",
+      "test_type": "positive",
+      "expected": true,
+      "actual": false,
+      "passed": false,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "PI-N01",
+      "rule_id": "ai_security.prompt_injection",
+      "description": "正常的用户问题",
+      "test_type": "negative",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "PI-P01",
+      "rule_id": "ai_security.prompt_injection",
+      "description": "Prompt 注入攻击 - 忽略指令",
+      "test_type": "positive",
+      "expected": true,
+      "actual": false,
+      "passed": false,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "PI-P02",
+      "rule_id": "ai_security.prompt_injection",
+      "description": "Prompt 注入攻击 - 角色扮演越狱",
+      "test_type": "positive",
+      "expected": true,
+      "actual": false,
+      "passed": false,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "PIE-N01",
+      "rule_id": "ai_security.prompt_injection_enhanced",
+      "description": "正常的多行输入",
+      "test_type": "negative",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "PIE-P01",
+      "rule_id": "ai_security.prompt_injection_enhanced",
+      "description": "高级 Prompt 注入 - 系统提示覆盖",
+      "test_type": "positive",
+      "expected": true,
+      "actual": false,
+      "passed": false,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "PIE-P02",
+      "rule_id": "ai_security.prompt_injection_enhanced",
+      "description": "高级 Prompt 注入 - 分隔符攻击",
+      "test_type": "positive",
+      "expected": true,
+      "actual": false,
+      "passed": false,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "TFW-N01",
+      "rule_id": "ai_security.tool_call_file_write",
+      "description": "安全的日志写入",
+      "test_type": "negative",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "TFW-P01",
+      "rule_id": "ai_security.tool_call_file_write",
+      "description": "AI 工具写入文件",
+      "test_type": "positive",
+      "expected": true,
+      "actual": false,
+      "passed": false,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "TFW-P02",
+      "rule_id": "ai_security.tool_call_file_write",
+      "description": "AI 工具写入系统文件",
+      "test_type": "positive",
+      "expected": true,
+      "actual": false,
+      "passed": false,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "TCR-N01",
+      "rule_id": "ai_security.tool_call_rce",
+      "description": "安全的数学计算",
+      "test_type": "negative",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "TCR-P01",
+      "rule_id": "ai_security.tool_call_rce",
+      "description": "AI 工具调用远程代码执行",
+      "test_type": "positive",
+      "expected": true,
+      "actual": false,
+      "passed": false,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "TCR-P02",
+      "rule_id": "ai_security.tool_call_rce",
+      "description": "AI 工具执行 exec",
+      "test_type": "positive",
+      "expected": true,
+      "actual": false,
+      "passed": false,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "TS-N01",
+      "rule_id": "ai_security.tool_call_shell",
+      "description": "安全的工具调用（非 Shell 执行）",
+      "test_type": "negative",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "TS-P01",
+      "rule_id": "ai_security.tool_call_shell",
+      "description": "AI 工具调用 Shell 执行",
+      "test_type": "positive",
+      "expected": true,
+      "actual": false,
+      "passed": false,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "TDE-N01",
+      "rule_id": "ai_security.training_data_extraction",
+      "description": "正常的训练数据询问",
+      "test_type": "negative",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "TDE-P01",
+      "rule_id": "ai_security.training_data_extraction",
+      "description": "训练数据提取攻击",
+      "test_type": "positive",
+      "expected": true,
+      "actual": false,
+      "passed": false,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "TDE-P02",
+      "rule_id": "ai_security.training_data_extraction",
+      "description": "训练数据成员推断",
+      "test_type": "positive",
+      "expected": true,
+      "actual": false,
+      "passed": false,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "TL-B01",
+      "rule_id": "ai_security.training_data_leakage",
+      "description": "使用交叉验证但正确处理数据",
+      "test_type": "boundary",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "TL-N01",
+      "rule_id": "ai_security.training_data_leakage",
+      "description": "正确的数据集划分和预处理",
+      "test_type": "negative",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "TL-P01",
+      "rule_id": "ai_security.training_data_leakage",
+      "description": "训练数据与测试数据混合",
+      "test_type": "positive",
+      "expected": true,
+      "actual": false,
+      "passed": false,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "TDP-B01",
+      "rule_id": "ai_security.training_data_poisoning",
+      "description": "使用可信数据集（可接受）",
+      "test_type": "boundary",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "TDP-N01",
+      "rule_id": "ai_security.training_data_poisoning",
+      "description": "防止训练数据投毒",
+      "test_type": "negative",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "TDP-P01",
+      "rule_id": "ai_security.training_data_poisoning",
+      "description": "训练数据投毒风险",
+      "test_type": "positive",
+      "expected": true,
+      "actual": false,
+      "passed": false,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "CC-N01",
+      "rule_id": "cloud_security.hardcoded_cloud_credentials",
+      "description": "使用 IAM 角色（安全做法）",
+      "test_type": "negative",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "CC-P01",
+      "rule_id": "cloud_security.hardcoded_cloud_credentials",
+      "description": "硬编码 AWS 凭证",
+      "test_type": "positive",
+      "expected": true,
+      "actual": false,
+      "passed": false,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "CS-N01",
+      "rule_id": "cloud_security.s3_public_access",
+      "description": "S3 阻止公开访问（安全）",
+      "test_type": "negative",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "CS-P01",
+      "rule_id": "cloud_security.s3_public_access",
+      "description": "S3 存储桶公开访问",
+      "test_type": "positive",
+      "expected": true,
+      "actual": false,
+      "passed": false,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "CS-P02",
+      "rule_id": "cloud_security.s3_public_access",
+      "description": "S3 阻止公开访问被禁用",
+      "test_type": "positive",
+      "expected": true,
+      "actual": false,
+      "passed": false,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "SG-N01",
+      "rule_id": "cloud_security.security_group_open",
+      "description": "安全组限制特定 IP（安全）",
+      "test_type": "negative",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "SG-P01",
+      "rule_id": "cloud_security.security_group_open",
+      "description": "安全组开放所有端口",
+      "test_type": "positive",
+      "expected": true,
+      "actual": false,
+      "passed": false,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "SG-P02",
+      "rule_id": "cloud_security.security_group_open",
+      "description": "安全组开放 SSH 到互联网",
+      "test_type": "positive",
+      "expected": true,
+      "actual": false,
+      "passed": false,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "AC-B01",
+      "rule_id": "code_security.access_control",
+      "description": "公开 API 端点（可接受）",
+      "test_type": "boundary",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "AC-N01",
+      "rule_id": "code_security.access_control",
+      "description": "实现访问控制",
+      "test_type": "negative",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "AC-P01",
+      "rule_id": "code_security.access_control",
+      "description": "访问控制缺失",
+      "test_type": "positive",
+      "expected": true,
+      "actual": false,
+      "passed": false,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "AU-B01",
+      "rule_id": "code_security.authentication",
+      "description": "公开 API 端点（可接受）",
+      "test_type": "boundary",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "AU-N01",
+      "rule_id": "code_security.authentication",
+      "description": "实现认证机制",
+      "test_type": "negative",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "AU-P01",
+      "rule_id": "code_security.authentication",
+      "description": "认证机制缺失",
+      "test_type": "positive",
+      "expected": true,
+      "actual": false,
+      "passed": false,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "AZ-B01",
+      "rule_id": "code_security.authorization",
+      "description": "团队协作功能（可接受）",
+      "test_type": "boundary",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "AZ-N01",
+      "rule_id": "code_security.authorization",
+      "description": "实现授权检查",
+      "test_type": "negative",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "AZ-P01",
+      "rule_id": "code_security.authorization",
+      "description": "授权检查缺失",
+      "test_type": "positive",
+      "expected": true,
+      "actual": false,
+      "passed": false,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "BC-N01",
+      "rule_id": "code_security.backdoor_code",
+      "description": "安全的日志记录代码",
+      "test_type": "negative",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "BC-P01",
+      "rule_id": "code_security.backdoor_code",
+      "description": "包含反向 shell 后门代码",
+      "test_type": "positive",
+      "expected": true,
+      "actual": false,
+      "passed": false,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "BC-P02",
+      "rule_id": "code_security.backdoor_code",
+      "description": "包含 eval 执行用户输入",
+      "test_type": "positive",
+      "expected": true,
+      "actual": false,
+      "passed": false,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "BL-B01",
+      "rule_id": "code_security.business_logic",
+      "description": "测试环境的简化逻辑（可接受）",
+      "test_type": "boundary",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "BL-N01",
+      "rule_id": "code_security.business_logic",
+      "description": "正确的业务逻辑实现",
+      "test_type": "negative",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "BL-P01",
+      "rule_id": "code_security.business_logic",
+      "description": "业务逻辑漏洞",
+      "test_type": "positive",
+      "expected": true,
+      "actual": false,
+      "passed": false,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "CP-B01",
+      "rule_id": "code_security.cache_poisoning",
+      "description": "公开数据的缓存（可接受）",
+      "test_type": "boundary",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "CP-N01",
+      "rule_id": "code_security.cache_poisoning",
+      "description": "安全的缓存策略",
+      "test_type": "negative",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "CP-P01",
+      "rule_id": "code_security.cache_poisoning",
+      "description": "缓存投毒风险",
+      "test_type": "positive",
+      "expected": true,
+      "actual": false,
+      "passed": false,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "CJ-B01",
+      "rule_id": "code_security.clickjacking",
+      "description": "允许同源 iframe（可接受）",
+      "test_type": "boundary",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "CJ-N01",
+      "rule_id": "code_security.clickjacking",
+      "description": "防止点击劫持",
+      "test_type": "negative",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "CJ-P01",
+      "rule_id": "code_security.clickjacking",
+      "description": "缺少点击劫持防护",
+      "test_type": "positive",
+      "expected": true,
+      "actual": false,
+      "passed": false,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "CS-B01",
+      "rule_id": "code_security.csrf",
+      "description": "API 使用 Token 认证（无 CSRF 风险）",
+      "test_type": "boundary",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "CS-N01",
+      "rule_id": "code_security.csrf",
+      "description": "启用 CSRF 保护",
+      "test_type": "negative",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "CS-P01",
+      "rule_id": "code_security.csrf",
+      "description": "缺少 CSRF 保护",
+      "test_type": "positive",
+      "expected": true,
+      "actual": false,
+      "passed": false,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "DC-N01",
+      "rule_id": "code_security.debug_code",
+      "description": "使用日志代替调试输出",
+      "test_type": "negative",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "DC-P01",
+      "rule_id": "code_security.debug_code",
+      "description": "生产代码中的调试语句",
+      "test_type": "positive",
+      "expected": true,
+      "actual": false,
+      "passed": false,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "DC-P02",
+      "rule_id": "code_security.debug_code",
+      "description": "未移除的 pdb 断点",
+      "test_type": "positive",
+      "expected": true,
+      "actual": false,
+      "passed": false,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "EN-B01",
+      "rule_id": "code_security.encryption",
+      "description": "非敏感数据加密（可接受）",
+      "test_type": "boundary",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "EN-N01",
+      "rule_id": "code_security.encryption",
+      "description": "正确的加密实践",
+      "test_type": "negative",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "EN-P01",
+      "rule_id": "code_security.encryption",
+      "description": "加密使用不当",
+      "test_type": "positive",
+      "expected": true,
+      "actual": false,
+      "passed": false,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "EH-B01",
+      "rule_id": "code_security.error_handling",
+      "description": "开发环境详细错误（可接受）",
+      "test_type": "boundary",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "EH-N01",
+      "rule_id": "code_security.error_handling",
+      "description": "正确的错误处理",
+      "test_type": "negative",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "EH-P01",
+      "rule_id": "code_security.error_handling",
+      "description": "错误处理不当",
+      "test_type": "positive",
+      "expected": true,
+      "actual": false,
+      "passed": false,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "FU-B01",
+      "rule_id": "code_security.file_upload",
+      "description": "使用 MIME 类型验证（辅助检查）",
+      "test_type": "boundary",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "FU-N01",
+      "rule_id": "code_security.file_upload",
+      "description": "安全的文件上传验证",
+      "test_type": "negative",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "FU-P01",
+      "rule_id": "code_security.file_upload",
+      "description": "文件上传未验证类型",
+      "test_type": "positive",
+      "expected": true,
+      "actual": false,
+      "passed": false,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "HS-B01",
+      "rule_id": "code_security.hardcoded_secrets",
+      "description": "短密钥（边界情况）",
+      "test_type": "boundary",
+      "expected": true,
+      "actual": false,
+      "passed": false,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "HS-N01",
+      "rule_id": "code_security.hardcoded_secrets",
+      "description": "使用环境变量（安全做法）",
+      "test_type": "negative",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "HS-N02",
+      "rule_id": "code_security.hardcoded_secrets",
+      "description": "使用 dotenv 加载配置（安全做法）",
+      "test_type": "negative",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "HS-P01",
+      "rule_id": "code_security.hardcoded_secrets",
+      "description": "硬编码 OpenAI API 密钥",
+      "test_type": "positive",
+      "expected": true,
+      "actual": false,
+      "passed": false,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "HS-P02",
+      "rule_id": "code_security.hardcoded_secrets",
+      "description": "硬编码数据库密码",
+      "test_type": "positive",
+      "expected": true,
+      "actual": false,
+      "passed": false,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "HS-P03",
+      "rule_id": "code_security.hardcoded_secrets",
+      "description": "硬编码 AWS 访问密钥",
+      "test_type": "positive",
+      "expected": true,
+      "actual": false,
+      "passed": false,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "HSC-B01",
+      "rule_id": "code_security.hardcoded_secrets_cloud",
+      "description": "类似 AWS Key 但不是（边界情况）",
+      "test_type": "boundary",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "HSC-N01",
+      "rule_id": "code_security.hardcoded_secrets_cloud",
+      "description": "使用 IAM 角色（安全）",
+      "test_type": "negative",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "HSC-N02",
+      "rule_id": "code_security.hardcoded_secrets_cloud",
+      "description": "使用环境变量",
+      "test_type": "negative",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "HSC-P01",
+      "rule_id": "code_security.hardcoded_secrets_cloud",
+      "description": "硬编码 AWS Access Key",
+      "test_type": "positive",
+      "expected": true,
+      "actual": false,
+      "passed": false,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "HSC-P02",
+      "rule_id": "code_security.hardcoded_secrets_cloud",
+      "description": "硬编码 GitHub Token",
+      "test_type": "positive",
+      "expected": true,
+      "actual": false,
+      "passed": false,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "HSC-P03",
+      "rule_id": "code_security.hardcoded_secrets_cloud",
+      "description": "硬编码 Slack Token",
+      "test_type": "positive",
+      "expected": true,
+      "actual": false,
+      "passed": false,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "HSE-B01",
+      "rule_id": "code_security.hardcoded_secrets_encoded",
+      "description": "包含特殊字符的 Base64 字符串",
+      "test_type": "boundary",
+      "expected": true,
+      "actual": false,
+      "passed": false,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "HSE-N01",
+      "rule_id": "code_security.hardcoded_secrets_encoded",
+      "description": "正常的 Base64 编码（非密钥）",
+      "test_type": "negative",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "HSE-N02",
+      "rule_id": "code_security.hardcoded_secrets_encoded",
+      "description": "短的 Base64 字符串",
+      "test_type": "negative",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "HSE-P01",
+      "rule_id": "code_security.hardcoded_secrets_encoded",
+      "description": "Base64 编码的 API 密钥",
+      "test_type": "positive",
+      "expected": true,
+      "actual": false,
+      "passed": false,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "HSE-P02",
+      "rule_id": "code_security.hardcoded_secrets_encoded",
+      "description": "Hex 编码的密钥",
+      "test_type": "positive",
+      "expected": true,
+      "actual": false,
+      "passed": false,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "HSE-P03",
+      "rule_id": "code_security.hardcoded_secrets_encoded",
+      "description": "长 Base64 字符串（可能是密钥）",
+      "test_type": "positive",
+      "expected": true,
+      "actual": false,
+      "passed": false,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "HSEF-B01",
+      "rule_id": "code_security.hardcoded_secrets_env_fallback",
+      "description": "短默认值（边界情况）",
+      "test_type": "boundary",
+      "expected": true,
+      "actual": false,
+      "passed": false,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "HSEF-N01",
+      "rule_id": "code_security.hardcoded_secrets_env_fallback",
+      "description": "无 fallback 的环境变量",
+      "test_type": "negative",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "HSEF-N02",
+      "rule_id": "code_security.hardcoded_secrets_env_fallback",
+      "description": "fallback 为 None",
+      "test_type": "negative",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "HSEF-P01",
+      "rule_id": "code_security.hardcoded_secrets_env_fallback",
+      "description": "环境变量 fallback 硬编码默认值",
+      "test_type": "positive",
+      "expected": true,
+      "actual": false,
+      "passed": false,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "HSEF-P02",
+      "rule_id": "code_security.hardcoded_secrets_env_fallback",
+      "description": "环境变量 fallback 默认值",
+      "test_type": "positive",
+      "expected": true,
+      "actual": false,
+      "passed": false,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "HSEF-P03",
+      "rule_id": "code_security.hardcoded_secrets_env_fallback",
+      "description": "getenv fallback 默认值",
+      "test_type": "positive",
+      "expected": true,
+      "actual": false,
+      "passed": false,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "HSP-B01",
+      "rule_id": "code_security.hardcoded_secrets_private_key",
+      "description": "不完整的私钥格式",
+      "test_type": "boundary",
+      "expected": true,
+      "actual": false,
+      "passed": false,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "HSP-N01",
+      "rule_id": "code_security.hardcoded_secrets_private_key",
+      "description": "文档中的示例私钥（占位符）",
+      "test_type": "negative",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "HSP-N02",
+      "rule_id": "code_security.hardcoded_secrets_private_key",
+      "description": "测试用的假私钥",
+      "test_type": "negative",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "HSP-P01",
+      "rule_id": "code_security.hardcoded_secrets_private_key",
+      "description": "RSA 私钥硬编码",
+      "test_type": "positive",
+      "expected": true,
+      "actual": false,
+      "passed": false,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "HSP-P02",
+      "rule_id": "code_security.hardcoded_secrets_private_key",
+      "description": "EC 私钥硬编码",
+      "test_type": "positive",
+      "expected": true,
+      "actual": false,
+      "passed": false,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "HS-B01",
+      "rule_id": "code_security.http_security_headers",
+      "description": "API 端点的最小安全头（可接受）",
+      "test_type": "boundary",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "HS-N01",
+      "rule_id": "code_security.http_security_headers",
+      "description": "配置完整的 HTTP 安全响应头",
+      "test_type": "negative",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "HS-P01",
+      "rule_id": "code_security.http_security_headers",
+      "description": "缺少 HTTP 安全响应头",
+      "test_type": "positive",
+      "expected": true,
+      "actual": false,
+      "passed": false,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "IE-B01",
+      "rule_id": "code_security.information_exposure",
+      "description": "开发环境详细错误（可接受）",
+      "test_type": "boundary",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "IE-N01",
+      "rule_id": "code_security.information_exposure",
+      "description": "正确的错误处理，不泄露敏感信息",
+      "test_type": "negative",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "IE-P01",
+      "rule_id": "code_security.information_exposure",
+      "description": "敏感信息暴露",
+      "test_type": "positive",
+      "expected": true,
+      "actual": false,
+      "passed": false,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "IV-B01",
+      "rule_id": "code_security.input_validation",
+      "description": "宽松验证的内部 API（可接受）",
+      "test_type": "boundary",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "IV-N01",
+      "rule_id": "code_security.input_validation",
+      "description": "实现输入验证",
+      "test_type": "negative",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "IV-P01",
+      "rule_id": "code_security.input_validation",
+      "description": "缺少输入验证",
+      "test_type": "positive",
+      "expected": true,
+      "actual": false,
+      "passed": false,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "ID-B01",
+      "rule_id": "code_security.insecure_deserialization",
+      "description": "受信任来源的反序列化（可接受）",
+      "test_type": "boundary",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "ID-N01",
+      "rule_id": "code_security.insecure_deserialization",
+      "description": "使用安全的序列化格式",
+      "test_type": "negative",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "ID-P01",
+      "rule_id": "code_security.insecure_deserialization",
+      "description": "不安全的反序列化",
+      "test_type": "positive",
+      "expected": true,
+      "actual": false,
+      "passed": false,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "IR2-N01",
+      "rule_id": "code_security.insecure_randomness",
+      "description": "使用安全的随机数生成",
+      "test_type": "negative",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "IR2-P01",
+      "rule_id": "code_security.insecure_randomness",
+      "description": "使用不安全的随机数生成",
+      "test_type": "positive",
+      "expected": true,
+      "actual": false,
+      "passed": false,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "IR2-P02",
+      "rule_id": "code_security.insecure_randomness",
+      "description": "使用 time 作为随机种子",
+      "test_type": "positive",
+      "expected": true,
+      "actual": false,
+      "passed": false,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "JW-B01",
+      "rule_id": "code_security.jwt_security",
+      "description": "使用 RS256 非对称加密（可接受）",
+      "test_type": "boundary",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "JW-N01",
+      "rule_id": "code_security.jwt_security",
+      "description": "安全的 JWT 配置",
+      "test_type": "negative",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "JW-P01",
+      "rule_id": "code_security.jwt_security",
+      "description": "JWT 安全配置问题",
+      "test_type": "positive",
+      "expected": true,
+      "actual": false,
+      "passed": false,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "LG-B01",
+      "rule_id": "code_security.logging",
+      "description": "审计日志（合规要求）",
+      "test_type": "boundary",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "LG-N01",
+      "rule_id": "code_security.logging",
+      "description": "安全的日志记录",
+      "test_type": "negative",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "LG-P01",
+      "rule_id": "code_security.logging",
+      "description": "日志记录不当",
+      "test_type": "positive",
+      "expected": true,
+      "actual": false,
+      "passed": false,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "MC-B01",
+      "rule_id": "code_security.memory_corruption",
+      "description": "使用安全的高级数据结构（可接受）",
+      "test_type": "boundary",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "MC-N01",
+      "rule_id": "code_security.memory_corruption",
+      "description": "安全的内存操作",
+      "test_type": "negative",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "MC-P01",
+      "rule_id": "code_security.memory_corruption",
+      "description": "潜在的内存破坏风险",
+      "test_type": "positive",
+      "expected": true,
+      "actual": false,
+      "passed": false,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "PT-B01",
+      "rule_id": "code_security.path_traversal",
+      "description": "使用白名单文件访问",
+      "test_type": "boundary",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "PT-N01",
+      "rule_id": "code_security.path_traversal",
+      "description": "正确的路径验证",
+      "test_type": "negative",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "PT-P01",
+      "rule_id": "code_security.path_traversal",
+      "description": "路径遍历漏洞",
+      "test_type": "positive",
+      "expected": true,
+      "actual": false,
+      "passed": false,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "RL-B01",
+      "rule_id": "code_security.rate_limiting",
+      "description": "内部 API 速率限制（较宽松）",
+      "test_type": "boundary",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "RL-N01",
+      "rule_id": "code_security.rate_limiting",
+      "description": "实现速率限制",
+      "test_type": "negative",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "RL-P01",
+      "rule_id": "code_security.rate_limiting",
+      "description": "缺少速率限制",
+      "test_type": "positive",
+      "expected": true,
+      "actual": false,
+      "passed": false,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "RL-B01",
+      "rule_id": "code_security.resource_leak",
+      "description": "长生命周期资源（可接受）",
+      "test_type": "boundary",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "RL-N01",
+      "rule_id": "code_security.resource_leak",
+      "description": "正确的资源管理",
+      "test_type": "negative",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "RL-P01",
+      "rule_id": "code_security.resource_leak",
+      "description": "资源泄露",
+      "test_type": "positive",
+      "expected": true,
+      "actual": false,
+      "passed": false,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "SM-B01",
+      "rule_id": "code_security.security_misconfiguration",
+      "description": "开发环境配置（可接受）",
+      "test_type": "boundary",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "SM-N01",
+      "rule_id": "code_security.security_misconfiguration",
+      "description": "正确的安全配置",
+      "test_type": "negative",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "SM-P01",
+      "rule_id": "code_security.security_misconfiguration",
+      "description": "安全配置缺失或错误",
+      "test_type": "positive",
+      "expected": true,
+      "actual": false,
+      "passed": false,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "SS-B01",
+      "rule_id": "code_security.session_security",
+      "description": "开发环境会话配置（可接受）",
+      "test_type": "boundary",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "SS-N01",
+      "rule_id": "code_security.session_security",
+      "description": "安全的会话配置",
+      "test_type": "negative",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "SS-P01",
+      "rule_id": "code_security.session_security",
+      "description": "会话安全配置缺失",
+      "test_type": "positive",
+      "expected": true,
+      "actual": false,
+      "passed": false,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "SC-B01",
+      "rule_id": "code_security.supply_chain",
+      "description": "内部可信源（可接受）",
+      "test_type": "boundary",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "SC-N01",
+      "rule_id": "code_security.supply_chain",
+      "description": "安全的供应链实践",
+      "test_type": "negative",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "SC-P01",
+      "rule_id": "code_security.supply_chain",
+      "description": "供应链安全风险",
+      "test_type": "positive",
+      "expected": true,
+      "actual": false,
+      "passed": false,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "TP-B01",
+      "rule_id": "code_security.third_party_integrations",
+      "description": "企业内部服务集成（可接受）",
+      "test_type": "boundary",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "TP-N01",
+      "rule_id": "code_security.third_party_integrations",
+      "description": "安全的第三方集成",
+      "test_type": "negative",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "TP-P01",
+      "rule_id": "code_security.third_party_integrations",
+      "description": "第三方集成风险",
+      "test_type": "positive",
+      "expected": true,
+      "actual": false,
+      "passed": false,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "TC-N01",
+      "rule_id": "code_security.todo_comments",
+      "description": "普通注释（无 TODO）",
+      "test_type": "negative",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "TC-P01",
+      "rule_id": "code_security.todo_comments",
+      "description": "TODO 注释 - 未完成的功能",
+      "test_type": "positive",
+      "expected": true,
+      "actual": false,
+      "passed": false,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "TC-P02",
+      "rule_id": "code_security.todo_comments",
+      "description": "FIXME 注释 - 需要修复",
+      "test_type": "positive",
+      "expected": true,
+      "actual": false,
+      "passed": false,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "UR-B01",
+      "rule_id": "code_security.unvalidated_redirect",
+      "description": "使用白名单验证重定向",
+      "test_type": "boundary",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "UR-N01",
+      "rule_id": "code_security.unvalidated_redirect",
+      "description": "验证重定向目标",
+      "test_type": "negative",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "UR-P01",
+      "rule_id": "code_security.unvalidated_redirect",
+      "description": "未经验证的重定向",
+      "test_type": "positive",
+      "expected": true,
+      "actual": false,
+      "passed": false,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "WC-N01",
+      "rule_id": "code_security.weak_crypto",
+      "description": "使用强加密算法",
+      "test_type": "negative",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "WC-P01",
+      "rule_id": "code_security.weak_crypto",
+      "description": "使用弱加密算法 MD5",
+      "test_type": "positive",
+      "expected": true,
+      "actual": false,
+      "passed": false,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "WC-P02",
+      "rule_id": "code_security.weak_crypto",
+      "description": "使用弱加密算法 SHA1",
+      "test_type": "positive",
+      "expected": true,
+      "actual": false,
+      "passed": false,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "XS-B01",
+      "rule_id": "code_security.xss",
+      "description": "允许安全的 HTML 子集（可接受）",
+      "test_type": "boundary",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "XS-N01",
+      "rule_id": "code_security.xss",
+      "description": "防止 XSS 攻击",
+      "test_type": "negative",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "XS-P01",
+      "rule_id": "code_security.xss",
+      "description": "XSS（跨站脚本）漏洞",
+      "test_type": "positive",
+      "expected": true,
+      "actual": false,
+      "passed": false,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "UF-B01",
+      "rule_id": "dependency_security.unused_dependency",
+      "description": "条件导入的依赖（可接受）",
+      "test_type": "boundary",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "UF-N01",
+      "rule_id": "dependency_security.unused_dependency",
+      "description": "所有依赖都被使用",
+      "test_type": "negative",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "UF-P01",
+      "rule_id": "dependency_security.unused_dependency",
+      "description": "未使用的依赖",
+      "test_type": "positive",
+      "expected": true,
+      "actual": false,
+      "passed": false,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "CI-B01",
+      "rule_id": "injection_security.command_injection",
+      "description": "使用安全包装器执行命令",
+      "test_type": "boundary",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "CI-N01",
+      "rule_id": "injection_security.command_injection",
+      "description": "安全的命令执行",
+      "test_type": "negative",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "CI-P01",
+      "rule_id": "injection_security.command_injection",
+      "description": "命令注入漏洞",
+      "test_type": "positive",
+      "expected": true,
+      "actual": false,
+      "passed": false,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "CI2-N01",
+      "rule_id": "injection_security.command_injection_ai_generated",
+      "description": "AI 建议的安全用法",
+      "test_type": "negative",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "CI2-P01",
+      "rule_id": "injection_security.command_injection_ai_generated",
+      "description": "AI 生成的命令注入代码",
+      "test_type": "positive",
+      "expected": true,
+      "actual": false,
+      "passed": false,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "CI2-P02",
+      "rule_id": "injection_security.command_injection_ai_generated",
+      "description": "AI 建议的 subprocess 滥用",
+      "test_type": "positive",
+      "expected": true,
+      "actual": false,
+      "passed": false,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "LI-B01",
+      "rule_id": "injection_security.ldap_injection",
+      "description": "使用白名单验证 LDAP 查询",
+      "test_type": "boundary",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "LI-N01",
+      "rule_id": "injection_security.ldap_injection",
+      "description": "安全的 LDAP 查询",
+      "test_type": "negative",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "LI-P01",
+      "rule_id": "injection_security.ldap_injection",
+      "description": "LDAP 注入漏洞",
+      "test_type": "positive",
+      "expected": true,
+      "actual": false,
+      "passed": false,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "PATH-N01",
+      "rule_id": "injection_security.path_traversal",
+      "description": "路径验证（安全）",
+      "test_type": "negative",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "PATH-P01",
+      "rule_id": "injection_security.path_traversal",
+      "description": "路径遍历攻击",
+      "test_type": "positive",
+      "expected": true,
+      "actual": false,
+      "passed": false,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "PATH-P02",
+      "rule_id": "injection_security.path_traversal",
+      "description": "路径遍历 - 上级目录",
+      "test_type": "positive",
+      "expected": true,
+      "actual": false,
+      "passed": false,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "SI-N01",
+      "rule_id": "injection_security.sql_injection",
+      "description": "安全的参数化查询",
+      "test_type": "negative",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "SI-P01",
+      "rule_id": "injection_security.sql_injection",
+      "description": "SQL 注入 - 字符串拼接查询",
+      "test_type": "positive",
+      "expected": true,
+      "actual": false,
+      "passed": false,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "TI-B01",
+      "rule_id": "injection_security.template_injection",
+      "description": "使用白名单模板",
+      "test_type": "boundary",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "TI-N01",
+      "rule_id": "injection_security.template_injection",
+      "description": "安全的模板渲染",
+      "test_type": "negative",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "TI-P01",
+      "rule_id": "injection_security.template_injection",
+      "description": "模板注入漏洞（SSTI）",
+      "test_type": "positive",
+      "expected": true,
+      "actual": false,
+      "passed": false,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "XI-B01",
+      "rule_id": "injection_security.xpath_injection",
+      "description": "使用白名单验证 XPath 查询",
+      "test_type": "boundary",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "XI-N01",
+      "rule_id": "injection_security.xpath_injection",
+      "description": "安全的 XPath 查询",
+      "test_type": "negative",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "XI-P01",
+      "rule_id": "injection_security.xpath_injection",
+      "description": "XPath 注入漏洞",
+      "test_type": "positive",
+      "expected": true,
+      "actual": false,
+      "passed": false,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "XSS-N01",
+      "rule_id": "injection_security.xss_injection",
+      "description": "XSS 防护 - HTML 转义",
+      "test_type": "negative",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "XSS-P01",
+      "rule_id": "injection_security.xss_injection",
+      "description": "XSS 注入 - 直接输出用户输入",
+      "test_type": "positive",
+      "expected": true,
+      "actual": false,
+      "passed": false,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "XSS-P02",
+      "rule_id": "injection_security.xss_injection",
+      "description": "XSS 注入 - HTML 渲染",
+      "test_type": "positive",
+      "expected": true,
+      "actual": false,
+      "passed": false,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "XX-B01",
+      "rule_id": "injection_security.xxe_injection",
+      "description": "使用 defusedxml 安全库",
+      "test_type": "boundary",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "XX-N01",
+      "rule_id": "injection_security.xxe_injection",
+      "description": "安全的 XML 解析，禁用外部实体",
+      "test_type": "negative",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "XX-P01",
+      "rule_id": "injection_security.xxe_injection",
+      "description": "XXE（XML 外部实体）注入漏洞",
+      "test_type": "positive",
+      "expected": true,
+      "actual": false,
+      "passed": false,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "CM-B01",
+      "rule_id": "privacy_security.consent_management",
+      "description": "必要的服务功能（无需单独同意）",
+      "test_type": "boundary",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "CM-N01",
+      "rule_id": "privacy_security.consent_management",
+      "description": "实现用户同意管理",
+      "test_type": "negative",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "CM-P01",
+      "rule_id": "privacy_security.consent_management",
+      "description": "缺少用户同意管理",
+      "test_type": "positive",
+      "expected": true,
+      "actual": false,
+      "passed": false,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "DR-B01",
+      "rule_id": "privacy_security.data_retention",
+      "description": "合规要求的永久保留（可接受）",
+      "test_type": "boundary",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "DR-N01",
+      "rule_id": "privacy_security.data_retention",
+      "description": "实现数据保留策略",
+      "test_type": "negative",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "DR-P01",
+      "rule_id": "privacy_security.data_retention",
+      "description": "数据保留策略缺失",
+      "test_type": "positive",
+      "expected": true,
+      "actual": false,
+      "passed": false,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "PD-N01",
+      "rule_id": "privacy_security.personal_data_exposure",
+      "description": "使用占位符邮箱",
+      "test_type": "negative",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "PD-P01",
+      "rule_id": "privacy_security.personal_data_exposure",
+      "description": "代码中包含个人邮箱",
+      "test_type": "positive",
+      "expected": true,
+      "actual": false,
+      "passed": false,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "PD-P02",
+      "rule_id": "privacy_security.personal_data_exposure",
+      "description": "代码中包含电话号码",
+      "test_type": "positive",
+      "expected": true,
+      "actual": false,
+      "passed": false,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "PI-N01",
+      "rule_id": "privacy_security.pii_in_logs",
+      "description": "日志脱敏处理",
+      "test_type": "negative",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "PI-P01",
+      "rule_id": "privacy_security.pii_in_logs",
+      "description": "日志中记录个人身份信息",
+      "test_type": "positive",
+      "expected": true,
+      "actual": false,
+      "passed": false,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "PI-P02",
+      "rule_id": "privacy_security.pii_in_logs",
+      "description": "日志记录身份证号",
+      "test_type": "positive",
+      "expected": true,
+      "actual": false,
+      "passed": false,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "RE-B01",
+      "rule_id": "privacy_security.right_to_erasure",
+      "description": "法律要求的保留期（可接受）",
+      "test_type": "boundary",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "RE-N01",
+      "rule_id": "privacy_security.right_to_erasure",
+      "description": "实现用户删除权",
+      "test_type": "negative",
+      "expected": false,
+      "actual": false,
+      "passed": true,
+      "issues_found": 0,
+      "issue_details": []
+    },
+    {
+      "test_id": "RE-P01",
+      "rule_id": "privacy_security.right_to_erasure",
+      "description": "缺少用户删除权实现",
+      "test_type": "positive",
+      "expected": true,
+      "actual": false,
+      "passed": false,
+      "issues_found": 0,
+      "issue_details": []
+    }
+  ]
+}

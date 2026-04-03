@@ -1,22 +1,33 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-安全发现过滤模块
+安全发现过滤模块 v2.0 (AI协议修复版)
 
 功能：
 1. 基于硬编码规则过滤常见误报
-2. 基于 AI 分析过滤误报
+2. 基于 AI 分析过滤误报 (强制JSON协议)
 3. 提供可配置的过滤选项
-4. 支持自定义过滤规则
+4. AI失败时进入BLOCK状态（不降级）
 """
 
 import re
 import time
 from typing import Dict, Any, List, Tuple, Optional, Pattern
 from dataclasses import dataclass, field
+from enum import Enum
 
 from utils.ai_model_client import AIModelManager
 from utils.config_manager import ConfigManager
+from utils.ai_output_models import AIFindingAnalysis, AI_FILTER_PROMPT_TEMPLATE
+from utils.ai_structured_response_parser import ai_structured_response_parser, AIResponseParseError
+
+
+class FilterStatus(Enum):
+    """过滤器状态"""
+    SUCCESS = "success"
+    AI_PARSE_ERROR = "ai_parse_error"
+    AI_API_ERROR = "ai_api_error"
+    BLOCKED = "blocked"
 
 
 @dataclass
@@ -29,6 +40,17 @@ class FilterStats:
     exclusion_breakdown: Dict[str, int] = field(default_factory=dict)
     confidence_scores: List[float] = field(default_factory=list)
     runtime_seconds: float = 0.0
+    ai_parse_failures: int = 0
+
+
+@dataclass
+class FilterResult:
+    """过滤结果"""
+    status: FilterStatus
+    filtered_findings: List[Dict[str, Any]]
+    excluded_findings: List[Dict[str, Any]]
+    stats: FilterStats
+    error_message: str = ""
 
 
 class HardExclusionRules:
@@ -160,13 +182,14 @@ class HardExclusionRules:
 
 
 class FindingsFilter:
-    """安全发现过滤器"""
+    """安全发现过滤器 v2.0"""
     
     def __init__(self, 
                  use_hard_exclusions: bool = True,
                  use_ai_filtering: bool = True,
                  config: Optional[Dict[str, Any]] = None,
-                 custom_filtering_instructions: Optional[str] = None):
+                 custom_filtering_instructions: Optional[str] = None,
+                 block_on_ai_failure: bool = True):  # 新增：AI失败时是否BLOCK
         """初始化发现过滤器
         
         Args:
@@ -174,10 +197,12 @@ class FindingsFilter:
             use_ai_filtering: 是否使用 AI 进行过滤
             config: 配置字典
             custom_filtering_instructions: 自定义过滤指令
+            block_on_ai_failure: AI失败时是否进入BLOCK状态（不降级）
         """
         self.use_hard_exclusions = use_hard_exclusions
         self.use_ai_filtering = use_ai_filtering
         self.custom_filtering_instructions = custom_filtering_instructions
+        self.block_on_ai_failure = block_on_ai_failure
         
         # 加载配置
         self.config = config or ConfigManager().get_ai_config()
@@ -215,30 +240,26 @@ class FindingsFilter:
     
     def filter_findings(self, 
                        findings: List[Dict[str, Any]],
-                       context: Optional[Dict[str, Any]] = None) -> Tuple[bool, Dict[str, Any], FilterStats]:
-        """过滤安全发现以减少误报
+                       context: Optional[Dict[str, Any]] = None) -> FilterResult:
+        """过滤安全发现以减少误报 - v2.0 (强制协议版)
         
         Args:
             findings: 安全发现列表
             context: 上下文信息
             
         Returns:
-            (成功, 过滤结果, 统计信息)
+            FilterResult 包含状态和结果
         """
         start_time = time.time()
         
         if not findings:
             stats = FilterStats(total_findings=0, runtime_seconds=0.0)
-            return True, {
-                "filtered_findings": [],
-                "excluded_findings": [],
-                "analysis_summary": {
-                    "total_findings": 0,
-                    "kept_findings": 0,
-                    "excluded_findings": 0,
-                    "exclusion_breakdown": {}
-                }
-            }, stats
+            return FilterResult(
+                status=FilterStatus.SUCCESS,
+                filtered_findings=[],
+                excluded_findings=[],
+                stats=stats
+            )
         
         print(f"过滤 {len(findings)} 个安全发现")
         
@@ -271,7 +292,7 @@ class FindingsFilter:
         else:
             findings_after_hard = [(i, f) for i, f in enumerate(findings)]
         
-        # 步骤 2: 应用 AI 过滤
+        # 步骤 2: 应用 AI 过滤 (强制协议)
         findings_after_ai = []
         excluded_ai = []
         
@@ -285,20 +306,20 @@ class FindingsFilter:
                 )
                 
                 if success and analysis_result:
-                    # 处理 AI 分析结果
-                    confidence = analysis_result.get('confidence_score', 10.0)
-                    keep_finding = analysis_result.get('keep_finding', True)
-                    justification = analysis_result.get('justification', '')
-                    exclusion_reason = analysis_result.get('exclusion_reason')
+                    # AI分析成功 - 处理结果
+                    confidence = analysis_result.confidence_score
+                    is_fp = analysis_result.is_false_positive
+                    justification = analysis_result.justification
+                    exclusion_reason = analysis_result.exclusion_reason
                     
                     stats.confidence_scores.append(confidence)
                     
-                    if not keep_finding:
+                    if is_fp:
                         # AI 建议排除
                         excluded_ai.append({
                             "finding": finding,
                             "confidence_score": confidence,
-                            "exclusion_reason": exclusion_reason or f"低置信度分数: {confidence}",
+                            "exclusion_reason": exclusion_reason or f"AI判断为误报，置信度: {confidence}",
                             "justification": justification,
                             "filter_stage": "ai_analysis"
                         })
@@ -309,26 +330,43 @@ class FindingsFilter:
                         enriched_finding['_filter_metadata'] = {
                             'confidence_score': confidence,
                             'justification': justification,
+                            'ai_verified': True
                         }
                         findings_after_ai.append(enriched_finding)
                         stats.kept_findings += 1
                 else:
-                    # AI 分析失败 - 保留发现并添加警告
-                    print(f"AI 分析失败: {error_msg}")
-                    enriched_finding = finding.copy()
-                    enriched_finding['_filter_metadata'] = {
-                        'confidence_score': 10.0,  # 默认高置信度
-                        'justification': f'AI 分析失败: {error_msg}',
-                    }
-                    findings_after_ai.append(enriched_finding)
-                    stats.kept_findings += 1
+                    # AI 分析失败 - 根据策略处理
+                    stats.ai_parse_failures += 1
+                    
+                    if self.block_on_ai_failure:
+                        # BLOCK策略：AI失败时停止处理
+                        stats.runtime_seconds = time.time() - start_time
+                        return FilterResult(
+                            status=FilterStatus.AI_PARSE_ERROR,
+                            filtered_findings=[],
+                            excluded_findings=excluded_hard + excluded_ai,
+                            stats=stats,
+                            error_message=f"AI分析失败: {error_msg}"
+                        )
+                    else:
+                        # 降级策略：保留发现但标记为未验证（不推荐）
+                        print(f"警告: AI分析失败，降级保留发现: {error_msg}")
+                        enriched_finding = finding.copy()
+                        enriched_finding['_filter_metadata'] = {
+                            'confidence_score': 5.0,
+                            'justification': f'AI分析失败: {error_msg}',
+                            'ai_verified': False
+                        }
+                        findings_after_ai.append(enriched_finding)
+                        stats.kept_findings += 1
         else:
             # AI 过滤禁用或无客户端 - 保留所有通过硬编码规则的发现
             for orig_idx, finding in findings_after_hard:
                 enriched_finding = finding.copy()
                 enriched_finding['_filter_metadata'] = {
-                    'confidence_score': 10.0,  # 默认高置信度
-                    'justification': 'AI 过滤禁用',
+                    'confidence_score': 10.0,
+                    'justification': 'AI过滤禁用',
+                    'ai_verified': False
                 }
                 findings_after_ai.append(enriched_finding)
                 stats.kept_findings += 1
@@ -339,31 +377,20 @@ class FindingsFilter:
         # 计算最终统计信息
         stats.runtime_seconds = time.time() - start_time
         
-        # 构建过滤结果
-        filtered_results = {
-            "filtered_findings": findings_after_ai,
-            "excluded_findings": all_excluded,
-            "analysis_summary": {
-                "total_findings": stats.total_findings,
-                "kept_findings": stats.kept_findings,
-                "excluded_findings": len(all_excluded),
-                "hard_excluded": stats.hard_excluded,
-                "ai_excluded": stats.ai_excluded,
-                "exclusion_breakdown": stats.exclusion_breakdown,
-                "average_confidence": sum(stats.confidence_scores) / len(stats.confidence_scores) if stats.confidence_scores else None,
-                "runtime_seconds": stats.runtime_seconds
-            }
-        }
-        
         print(f"过滤完成: {stats.kept_findings}/{stats.total_findings} 个发现被保留 ({stats.runtime_seconds:.1f}s)")
         
-        return True, filtered_results, stats
+        return FilterResult(
+            status=FilterStatus.SUCCESS,
+            filtered_findings=findings_after_ai,
+            excluded_findings=all_excluded,
+            stats=stats
+        )
     
     def _analyze_single_finding(self, 
                               finding: Dict[str, Any], 
                               context: Optional[Dict[str, Any]] = None, 
-                              custom_instructions: Optional[str] = None) -> Tuple[bool, Optional[Dict[str, Any]], str]:
-        """使用 AI 分析单个安全发现
+                              custom_instructions: Optional[str] = None) -> Tuple[bool, Optional[AIFindingAnalysis], str]:
+        """使用 AI 分析单个安全发现 - 强制协议版
         
         Args:
             finding: 安全发现
@@ -374,7 +401,7 @@ class FindingsFilter:
             (成功, 分析结果, 错误信息)
         """
         try:
-            # 构建提示词
+            # 构建提示词（使用强制JSON模板）
             prompt = self._build_filtering_prompt(finding, context, custom_instructions)
             
             # 调用 AI 模型
@@ -383,29 +410,29 @@ class FindingsFilter:
             if not result['success']:
                 return False, None, result.get('error', 'AI 生成失败')
             
-            # 解析 AI 响应
-            import json
+            # 使用结构化解析器解析响应
             response_text = result['content']
             
-            # 提取 JSON 部分
-            json_start = response_text.find('{')
-            json_end = response_text.rfind('}') + 1
+            # 强制解析为 AIFindingAnalysis 模型
+            parse_success, parsed_result, error_msg = ai_structured_response_parser.parse_strict(
+                response_text, AIFindingAnalysis
+            )
             
-            if json_start == -1 or json_end == -1:
-                return False, None, 'AI 响应格式错误，未找到 JSON'
+            if not parse_success:
+                return False, None, f"AI输出解析失败: {error_msg}"
             
-            json_str = response_text[json_start:json_end]
-            analysis_result = json.loads(json_str)
+            return True, parsed_result, ""
             
-            return True, analysis_result, ""
+        except AIResponseParseError as e:
+            return False, None, f"AI响应解析错误: {str(e)}"
         except Exception as e:
-            return False, None, str(e)
+            return False, None, f"未知错误: {str(e)}"
     
     def _build_filtering_prompt(self, 
                               finding: Dict[str, Any], 
                               context: Optional[Dict[str, Any]] = None, 
                               custom_instructions: Optional[str] = None) -> str:
-        """构建过滤提示词
+        """构建过滤提示词 - 使用强制JSON模板
         
         Args:
             finding: 安全发现
@@ -435,42 +462,17 @@ class FindingsFilter:
         if custom_instructions:
             custom_instructions_str = f"\n自定义过滤指令:\n{custom_instructions}\n"
         
-        return f"""
-你是一个专业的安全分析师，负责评估安全扫描发现的误报可能性。
-
-请分析以下安全发现，判断它是否是误报：
-
-文件: {file_path}
-行号: {line_number}
-问题: {issue}
-严重程度: {severity}
-详情: {details}
-代码片段: {code_snippet}
-{context_str}
-{custom_instructions_str}
-
-评估标准：
-1. 这个问题是否真实存在？
-2. 它是否构成真正的安全风险？
-3. 它是否可能是误报或低影响问题？
-4. 基于代码片段和上下文，这个问题的可信度如何？
-
-请输出 JSON 格式的分析结果，包含以下字段：
-- keep_finding: 布尔值，表示是否应该保留这个发现
-- confidence_score: 0-10 的分数，表示保留/排除的置信度
-- justification: 详细的判断理由
-- exclusion_reason: 如果是误报，说明排除的原因
-
-示例输出：
-{
-  "keep_finding": false,
-  "confidence_score": 8.5,
-  "justification": "这是一个典型的误报，因为代码中使用了参数化查询，不存在 SQL 注入风险",
-  "exclusion_reason": "使用了参数化查询，不存在 SQL 注入风险"
-}
-
-请只输出 JSON，不要添加任何其他内容。
-"""
+        # 使用强制JSON模板
+        return AI_FILTER_PROMPT_TEMPLATE.format(
+            file_path=file_path,
+            line_number=line_number,
+            issue=issue,
+            severity=severity,
+            details=details,
+            code_snippet=code_snippet,
+            context_str=context_str,
+            custom_instructions_str=custom_instructions_str
+        )
 
 
 if __name__ == '__main__':
@@ -502,18 +504,21 @@ if __name__ == '__main__':
         }
     ]
     
-    # 创建过滤器
+    # 创建过滤器（禁用AI，仅测试硬规则）
     filter = FindingsFilter(use_hard_exclusions=True, use_ai_filtering=False)
     
     # 过滤发现
-    success, results, stats = filter.filter_findings(test_findings)
+    result = filter.filter_findings(test_findings)
     
-    print(f"过滤结果: {success}")
-    print(f"保留的发现: {len(results['filtered_findings'])}")
-    print(f"排除的发现: {len(results['excluded_findings'])}")
-    print(f"统计信息: {stats}")
+    print(f"\n过滤结果状态: {result.status.value}")
+    print(f"保留的发现: {len(result.filtered_findings)}")
+    print(f"排除的发现: {len(result.excluded_findings)}")
+    print(f"统计信息: {result.stats}")
+    
+    if result.error_message:
+        print(f"错误信息: {result.error_message}")
     
     # 打印排除的发现
     print("\n排除的发现:")
-    for excluded in results['excluded_findings']:
+    for excluded in result.excluded_findings:
         print(f"- {excluded['finding']['issue']}: {excluded['exclusion_reason']}")

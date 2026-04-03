@@ -14,10 +14,10 @@ import os
 import json
 import time
 from typing import List, Dict, Any, Optional
-from langchain_openai import OpenAI
-from langchain_core.prompts import PromptTemplate
-from langchain_core.output_parsers import StrOutputParser
-from langchain_core.runnables import RunnableSequence
+
+from utils.config_manager import ConfigManager
+from utils.ai_model_client import AIModelManager
+
 
 class TestCaseGenerator:
     def __init__(self, api_key: Optional[str] = None):
@@ -25,13 +25,24 @@ class TestCaseGenerator:
         初始化测试用例生成器
         
         Args:
-            api_key: OpenAI API 密钥
+            api_key: API 密钥
         """
-        self.api_key = api_key or os.getenv('OPENAI_API_KEY')
-        if not self.api_key:
-            raise ValueError("OpenAI API key is required")
+        # 使用配置管理器获取AI配置
+        config_manager = ConfigManager()
+        ai_config = config_manager.get_ai_config()
         
-        self.llm = OpenAI(api_key=self.api_key, temperature=0.3)
+        self.api_key = api_key or ai_config.get('api_key')
+        self.model = ai_config.get('model', 'deepseek-chat')
+        
+        if not self.api_key:
+            raise ValueError("API key is required")
+        
+        # 使用AI模型管理器
+        self.ai_model_manager = AIModelManager({
+            'api_key': self.api_key,
+            'model': self.model
+        })
+        
         self._setup_prompts()
     
     def _setup_prompts(self):
@@ -39,9 +50,7 @@ class TestCaseGenerator:
         设置测试用例生成提示词
         """
         # 单元测试生成提示词
-        self.unit_test_prompt = PromptTemplate(
-            input_variables=["code_content", "file_path"],
-            template="""你是高级测试工程师，请为以下代码生成完整的单元测试：
+        self.unit_test_prompt = """你是高级测试工程师，请为以下代码生成完整的单元测试：
 
 文件路径：{file_path}
 
@@ -55,12 +64,9 @@ class TestCaseGenerator:
 4. 测试文件名建议：test_{file_name}.py
 
 输出格式：仅输出测试代码，不要包含其他说明"""
-        )
         
         # 安全测试生成提示词
-        self.security_test_prompt = PromptTemplate(
-            input_variables=["code_content", "file_path"],
-            template="""你是高级安全测试工程师，请为以下代码生成安全测试用例：
+        self.security_test_prompt = """你是高级安全测试工程师，请为以下代码生成安全测试用例：
 
 文件路径：{file_path}
 
@@ -81,12 +87,9 @@ class TestCaseGenerator:
 4. 测试文件名建议：test_security_{file_name}.py
 
 输出格式：仅输出测试代码，不要包含其他说明"""
-        )
         
         # 模糊测试生成提示词
-        self.fuzz_test_prompt = PromptTemplate(
-            input_variables=["code_content", "file_path"],
-            template="""你是高级安全测试工程师，请为以下代码生成模糊测试用例：
+        self.fuzz_test_prompt = """你是高级安全测试工程师，请为以下代码生成模糊测试用例：
 
 文件路径：{file_path}
 
@@ -100,7 +103,6 @@ class TestCaseGenerator:
 4. 测试文件名建议：test_fuzz_{file_name}.py
 
 输出格式：仅输出测试代码，不要包含其他说明"""
-        )
     
     def generate_unit_test(self, file_path: str) -> str:
         """
@@ -117,17 +119,23 @@ class TestCaseGenerator:
                 code_content = f.read()
             
             # 生成测试代码
-            chain = RunnableSequence(
-                self.unit_test_prompt,
-                self.llm,
-                StrOutputParser()
-            )
-            result = chain.invoke({
-                "code_content": code_content,
-                "file_path": file_path
-            })
+            file_name = os.path.basename(file_path)
+            base_name = os.path.splitext(file_name)[0]
             
-            return result
+            prompt = self.unit_test_prompt.format(
+                code_content=code_content,
+                file_path=file_path,
+                file_name=base_name
+            )
+            
+            result = self.ai_model_manager.generate(prompt, max_tokens=3000)
+            
+            if result['success']:
+                return result['content']
+            else:
+                print(f"生成单元测试失败：{result.get('error', 'Unknown error')}")
+                return ""
+                
         except Exception as e:
             print(f"生成单元测试失败：{e}")
             return ""
@@ -147,17 +155,23 @@ class TestCaseGenerator:
                 code_content = f.read()
             
             # 生成测试代码
-            chain = RunnableSequence(
-                self.security_test_prompt,
-                self.llm,
-                StrOutputParser()
-            )
-            result = chain.invoke({
-                "code_content": code_content,
-                "file_path": file_path
-            })
+            file_name = os.path.basename(file_path)
+            base_name = os.path.splitext(file_name)[0]
             
-            return result
+            prompt = self.security_test_prompt.format(
+                code_content=code_content,
+                file_path=file_path,
+                file_name=base_name
+            )
+            
+            result = self.ai_model_manager.generate(prompt, max_tokens=4000)
+            
+            if result['success']:
+                return result['content']
+            else:
+                print(f"生成安全测试失败：{result.get('error', 'Unknown error')}")
+                return ""
+                
         except Exception as e:
             print(f"生成安全测试失败：{e}")
             return ""
@@ -177,17 +191,23 @@ class TestCaseGenerator:
                 code_content = f.read()
             
             # 生成测试代码
-            chain = RunnableSequence(
-                self.fuzz_test_prompt,
-                self.llm,
-                StrOutputParser()
-            )
-            result = chain.invoke({
-                "code_content": code_content,
-                "file_path": file_path
-            })
+            file_name = os.path.basename(file_path)
+            base_name = os.path.splitext(file_name)[0]
             
-            return result
+            prompt = self.fuzz_test_prompt.format(
+                code_content=code_content,
+                file_path=file_path,
+                file_name=base_name
+            )
+            
+            result = self.ai_model_manager.generate(prompt, max_tokens=3000)
+            
+            if result['success']:
+                return result['content']
+            else:
+                print(f"生成模糊测试失败：{result.get('error', 'Unknown error')}")
+                return ""
+                
         except Exception as e:
             print(f"生成模糊测试失败：{e}")
             return ""

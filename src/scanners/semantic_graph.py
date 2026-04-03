@@ -162,11 +162,16 @@ class SemanticGraphBuilder:
         elif isinstance(node, libcst.FunctionDef):
             function_id = self.generate_node_id()
             function_name = node.name.value
+            # 获取行号
+            line = None
+            if hasattr(node, 'start') and hasattr(node.start, 'location'):
+                line = node.start.location.line
+            
             function_node = SemanticNode(
                 node_id=function_id,
                 node_type="function",
                 name=function_name,
-                line=node.lineno,
+                line=line,
                 file_path=file_path
             )
             self.graph.add_node(function_node)
@@ -184,11 +189,16 @@ class SemanticGraphBuilder:
                 if isinstance(param, libcst.Param):
                     param_id = self.generate_node_id()
                     param_name = param.name.value
+                    # 获取行号
+                    param_line = None
+                    if hasattr(param, 'start') and hasattr(param.start, 'location'):
+                        param_line = param.start.location.line
+                    
                     param_node = SemanticNode(
                         node_id=param_id,
                         node_type="parameter",
                         name=param_name,
-                        line=param.lineno,
+                        line=param_line,
                         file_path=file_path
                     )
                     self.graph.add_node(param_node)
@@ -212,11 +222,16 @@ class SemanticGraphBuilder:
             elif isinstance(node.func, libcst.Attribute):
                 function_name = f"{node.func.value.value}.{node.func.attr.value}"
             
+            # 获取行号
+            line = None
+            if hasattr(node, 'start') and hasattr(node.start, 'location'):
+                line = node.start.location.line
+            
             call_node = SemanticNode(
                 node_id=call_id,
                 node_type="call",
                 name=function_name,
-                line=node.lineno,
+                line=line,
                 file_path=file_path
             )
             self.graph.add_node(call_node)
@@ -236,11 +251,16 @@ class SemanticGraphBuilder:
         
         elif isinstance(node, libcst.Name):
             name_id = self.generate_node_id()
+            # 获取行号
+            line = None
+            if hasattr(node, 'start') and hasattr(node.start, 'location'):
+                line = node.start.location.line
+            
             name_node = SemanticNode(
                 node_id=name_id,
                 node_type="name",
                 name=node.value,
-                line=node.lineno,
+                line=line,
                 file_path=file_path
             )
             self.graph.add_node(name_node)
@@ -265,11 +285,16 @@ class SemanticGraphBuilder:
                     node.func.value.value == "tool" and 
                     node.func.attr.value == "call"):
                     tool_call_id = self.generate_node_id()
+                    # 获取行号
+                    line = None
+                    if hasattr(node, 'start') and hasattr(node.start, 'location'):
+                        line = node.start.location.line
+                    
                     tool_call_node = SemanticNode(
                         node_id=tool_call_id,
                         node_type="agentflow_tool_call",
                         name="tool.call",
-                        line=node.lineno,
+                        line=line,
                         file_path=file_path
                     )
                     self.graph.add_node(tool_call_node)
@@ -288,11 +313,16 @@ class SemanticGraphBuilder:
                     node.func.value.value == "agent" and 
                     node.func.attr.value == "execute"):
                     agent_execute_id = self.generate_node_id()
+                    # 获取行号
+                    line = None
+                    if hasattr(node, 'start') and hasattr(node.start, 'location'):
+                        line = node.start.location.line
+                    
                     agent_execute_node = SemanticNode(
                         node_id=agent_execute_id,
                         node_type="agentflow_agent_execute",
                         name="agent.execute",
-                        line=node.lineno,
+                        line=line,
                         file_path=file_path
                     )
                     self.graph.add_node(agent_execute_node)
@@ -311,11 +341,16 @@ class SemanticGraphBuilder:
                 node.value.value == "prompt" and 
                 node.attr.value == "template"):
                 prompt_template_id = self.generate_node_id()
+                # 获取行号
+                line = None
+                if hasattr(node, 'start') and hasattr(node.start, 'location'):
+                    line = node.start.location.line
+                
                 prompt_template_node = SemanticNode(
                     node_id=prompt_template_id,
                     node_type="agentflow_prompt_template",
                     name="prompt.template",
-                    line=node.lineno,
+                    line=line,
                     file_path=file_path
                 )
                 self.graph.add_node(prompt_template_node)

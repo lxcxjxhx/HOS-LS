@@ -15,6 +15,7 @@ import os
 import sys
 import time
 
+from utils.config_manager import ConfigManager
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 try:
@@ -27,17 +28,18 @@ class AISuggestionGenerator:
         """初始化 AI 建议生成器"""
         self.rule_manager = RuleManager() if RuleManager else None
         
-        # 使用环境变量或默认 API 密钥
-        api_key = os.environ.get("DEEPSEEK_API_KEY", "sk-2d8a7018de364da8a573a9f962062331")
+        # 使用配置管理器获取 AI 配置
+        config_manager = ConfigManager()
+        ai_config = config_manager.get_ai_config()
         
         self.ai_model_config = {
-            "enabled": True,
+            "enabled": ai_config.get('enabled', True),
             "type": "api",
-            "api_key": api_key,
+            "api_key": ai_config.get('api_key'),
             "api_url": "https://api.deepseek.com/v1/chat/completions",
-            "model": "deepseek-chat",
-            "timeout": 30,
-            "max_tokens": 1000
+            "model": ai_config.get('model', 'deepseek-chat'),
+            "timeout": ai_config.get('timeout', 30),
+            "max_tokens": ai_config.get('max_tokens', 1000)
         }
         
         if os.environ.get("ENABLE_AI_MODEL", "true").lower() == "false":
@@ -655,6 +657,11 @@ Security is priority!"""
         """调用外部 AI 模型"""
         if not self.ai_model_config["enabled"]:
             print("AI 模型已禁用")
+            return None
+        
+        # 检查 API key
+        if not self.ai_model_config.get("api_key"):
+            print("API key 未配置，跳过 AI 调用")
             return None
         
         try:

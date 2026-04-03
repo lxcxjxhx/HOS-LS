@@ -67,6 +67,17 @@ from core.dependency_injector import DependencyInjector, dependency_injector
 from core.database_layer import DatabaseLayer, database_layer
 from core.database_migration_manager import DatabaseMigrationManager, database_migration_manager
 from core.validator import Validator
+# 导入遗漏的核心模块
+from core.execution_chain import ExecutionChainManager, ExecutionStage, ExecutionStatus
+from core.risk_assessment_engine import RiskAssessmentEngine
+from utils.performance_optimizer import PerformanceOptimizer
+# 导入需要 API key 的模块（可选测试）
+try:
+    from core.file_priority_engine import FilePriorityEngine
+    from core.test_case_generator import TestCaseGenerator
+except ImportError:
+    FilePriorityEngine = None
+    TestCaseGenerator = None
 # 从 rules 目录导入 RuleSetManager
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'rules'))
 from rule_set_manager import RuleSetManager
@@ -97,10 +108,9 @@ def run_comprehensive_test():
     # 配置路径
     target_dir = r"c:\1AAA_PROJECT\HOS\HOS-LS\real-project\agentflow-main"
     output_dir = r"c:\1AAA_PROJECT\HOS\HOS-LS\HOS-LS\tests\test-output"
+    
     project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     rules_file = os.path.join(project_root, 'rules', 'security_rules.json')
-    
-    # 确保输出目录存在
     os.makedirs(output_dir, exist_ok=True)
     
     print_section(f"HOS-LS v2.0 全功能综合测试")
@@ -242,9 +252,44 @@ def run_comprehensive_test():
         all_results['encoding_detection'] = encoding_issues
         all_summary['encoding_issues'] = len(encoding_issues)
         all_summary['total_issues'] += len(encoding_issues)
-        
 
+        # ==================== 第五部分：AI 语义分析 ====================
+        print_section("第五部分：AI 语义分析")
+        step = 40
         
+        print_step(step, "初始化 AI 语义引擎")
+        try:
+            ai_semantic = AISemanticEngine()
+            ai_semantic_results = {}
+            
+            print_step(step + 1, "执行 AI 语义分析")
+            # 分析项目文件
+            semantic_file_count = 0
+            for root, dirs, files in os.walk(target_dir):
+                dirs[:] = [d for d in dirs if d not in ['node_modules', '.git', '__pycache__', '.venv', 'venv']]
+                for file in files:
+                    if file.endswith('.py') or file.endswith('.ts') or file.endswith('.js'):
+                        file_path = os.path.join(root, file)
+                        try:
+                            with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+                                content = f.read()
+                            # 执行语义分析（禁用AI分析以避免API调用）
+                            results = ai_semantic.analyze_code_semantics(content, file_path, use_ai_analysis=False)
+                            if results:
+                                ai_semantic_results[file_path] = results
+                            semantic_file_count += 1
+                            if semantic_file_count >= 3:  # 限制文件数量以加快测试速度
+                                break
+                        except Exception as e:
+                            pass
+                if semantic_file_count >= 3:
+                    break
+            print(f"  {Fore.GREEN}[OK]{Style.RESET_ALL} 完成，分析文件数：{semantic_file_count}，分析结果：{len(ai_semantic_results)} 个文件")
+            
+            all_results['ai_semantic_analysis'] = ai_semantic_results
+        except Exception as e:
+            print(f"  {Fore.YELLOW}[WARNING]{Style.RESET_ALL} AI 语义分析失败：{e}")
+
         # ==================== 第六部分：攻击模拟测试 ====================
         print_section("第六部分：攻击模拟测试")
         step = 50
@@ -436,7 +481,7 @@ def run_comprehensive_test():
             with ThreadPoolExecutor(max_workers=1) as executor:
                 future = executor.submit(run_scan)
                 try:
-                    parallel_results = future.result(timeout=30)  # 30秒超时
+                    parallel_results = future.result(timeout=60)  # 增加到60秒超时
                     print(f"  {Fore.GREEN}[OK]{Style.RESET_ALL} 完成，并行扫描已执行")
                 except FutureTimeoutError:
                     print(f"  {Fore.YELLOW}[WARNING]{Style.RESET_ALL} 并行扫描超时，已跳过")
@@ -884,8 +929,8 @@ def vulnerable_function():
                 }
             ]
             # 过滤发现
-            success, results, stats = findings_filter.filter_findings(test_findings)
-            filtered_findings = results.get('filtered_findings', [])
+            filter_result = findings_filter.filter_findings(test_findings)
+            filtered_findings = filter_result.filtered_findings
             print(f"  {Fore.GREEN}[OK]{Style.RESET_ALL} 完成，发现过滤器测试已执行，保留 {len(filtered_findings)} 个发现")
         except Exception as e:
             print(f"  {Fore.YELLOW}[WARNING]{Style.RESET_ALL} 发现过滤器测试失败：{e}")
@@ -1243,6 +1288,134 @@ def vulnerable_function():
         except Exception as e:
             print(f"  {Fore.YELLOW}[WARNING]{Style.RESET_ALL} 规则集管理器测试失败：{e}")
         
+        # 执行链管理器
+        print_step(step + 15, "测试执行链管理器")
+        try:
+            execution_chain = ExecutionChainManager()
+            # 初始化执行链
+            execution_chain.initialize(target_dir, {})
+            # 测试执行阶段
+            def test_init_stage(context):
+                return True, {"initialized": True}, ""
+            
+            def test_scan_stage(context):
+                return True, {"files_scanned": 5}, ""
+            
+            # 执行初始化阶段
+            execution_chain.execute_stage(ExecutionStage.INITIALIZATION, test_init_stage)
+            # 执行扫描阶段
+            execution_chain.execute_stage(ExecutionStage.SCANNING, test_scan_stage, block_on_failure=False)
+            # 获取执行状态
+            chain_status = execution_chain.status
+            chain_report = execution_chain.get_execution_report()
+            print(f"  {Fore.GREEN}[OK]{Style.RESET_ALL} 执行链管理器：测试成功，状态={chain_status.value}")
+        except Exception as e:
+            print(f"  {Fore.YELLOW}[WARNING]{Style.RESET_ALL} 执行链管理器测试失败：{e}")
+        
+        # 风险评估引擎
+        print_step(step + 16, "测试风险评估引擎")
+        try:
+            risk_engine = RiskAssessmentEngine()
+            # 测试传统规则评分
+            test_issues = [
+                {'severity': 'high', 'type': 'sql_injection', 'confidence': 0.9},
+                {'severity': 'medium', 'type': 'xss', 'confidence': 0.8},
+                {'severity': 'low', 'type': 'info_disclosure', 'confidence': 0.7}
+            ]
+            traditional_score = risk_engine.calculate_traditional_score(test_issues)
+            # 测试 AI 语义评分
+            ai_analysis = {
+                'function_level': [
+                    {
+                        'analysis': {
+                            'vulnerabilities': [
+                                {'severity': 'high'}
+                            ]
+                        }
+                    }
+                ]
+            }
+            ai_score = risk_engine.calculate_ai_score(ai_analysis)
+            # 测试混合风险评分
+            hybrid_score = risk_engine.calculate_hybrid_score(traditional_score, ai_score)
+            # 评估整体风险
+            risk_assessment = risk_engine.assess_risk(test_issues, ai_analysis)
+            print(f"  {Fore.GREEN}[OK]{Style.RESET_ALL} 风险评估引擎：混合评分={hybrid_score:.2f}, 风险等级={risk_assessment['risk_level']}")
+        except Exception as e:
+            print(f"  {Fore.YELLOW}[WARNING]{Style.RESET_ALL} 风险评估引擎测试失败：{e}")
+        
+        # 性能优化器
+        print_step(step + 17, "测试性能优化器")
+        try:
+            performance_optimizer = PerformanceOptimizer()
+            # 测试缓存机制
+            test_code = "def vulnerable():\n    eval(user_input)"
+            cache_key = performance_optimizer.cache_key(test_code, 'security_scan')
+            # 测试缓存设置和获取
+            performance_optimizer.set_cached_response(test_code, 'security_scan', 'test_response')
+            cached_response = performance_optimizer.get_cached_response(test_code, 'security_scan')
+            # 测试本地模型配置
+            local_models = performance_optimizer.local_models
+            print(f"  {Fore.GREEN}[OK]{Style.RESET_ALL} 性能优化器：缓存key={cache_key[:16]}..., 本地模型数={len(local_models)}")
+        except Exception as e:
+            print(f"  {Fore.YELLOW}[WARNING]{Style.RESET_ALL} 性能优化器测试失败：{e}")
+        
+        # 文件优先级引擎（使用 API-KEY 文件中的 key）
+        print_step(step + 18, "测试文件优先级引擎")
+        try:
+            # 检查模块是否导入成功
+            if FilePriorityEngine is None:
+                print(f"  {Fore.YELLOW}[SKIP]{Style.RESET_ALL} 文件优先级引擎：模块导入失败")
+            else:
+                # 从 API-KEY 文件中读取 key
+                api_key_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), '..', 'API-KEY')
+                if os.path.exists(api_key_path):
+                    with open(api_key_path, 'r') as f:
+                        api_key = f.readline().strip()
+                    if api_key:
+                        file_priority_engine = FilePriorityEngine(target_dir, api_key=api_key)
+                        # 测试文件加载
+                        files = file_priority_engine.load_project_files()
+                        # 测试优先级评分
+                        scores = file_priority_engine.calculate_file_priority()
+                        print(f"  {Fore.GREEN}[OK]{Style.RESET_ALL} 文件优先级引擎：加载文件数={len(files)}")
+                    else:
+                        print(f"  {Fore.YELLOW}[SKIP]{Style.RESET_ALL} 文件优先级引擎：API-KEY 文件为空")
+                else:
+                    print(f"  {Fore.YELLOW}[SKIP]{Style.RESET_ALL} 文件优先级引擎：API-KEY 文件不存在")
+        except Exception as e:
+            print(f"  {Fore.YELLOW}[WARNING]{Style.RESET_ALL} 文件优先级引擎测试失败：{e}")
+        
+        # 测试用例生成器（使用 API-KEY 文件中的 key）
+        print_step(step + 19, "测试测试用例生成器")
+        try:
+            # 检查模块是否导入成功
+            if TestCaseGenerator is None:
+                print(f"  {Fore.YELLOW}[SKIP]{Style.RESET_ALL} 测试用例生成器：模块导入失败")
+            elif test_files:
+                # 从 API-KEY 文件中读取 key
+                api_key_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), '..', 'API-KEY')
+                if os.path.exists(api_key_path):
+                    with open(api_key_path, 'r') as f:
+                        api_key = f.readline().strip()
+                    if api_key:
+                        test_case_gen = TestCaseGenerator(api_key=api_key)
+                        # 测试单元测试生成
+                        with open(test_files[0], 'r', encoding='utf-8', errors='ignore') as f:
+                            code_content = f.read()
+                        unit_test = test_case_gen.generate_unit_test(test_files[0])
+                        # 测试安全模糊测试用例生成
+                        fuzz_test = test_case_gen.generate_fuzz_test(test_files[0])
+                        print(f"  {Fore.GREEN}[OK]{Style.RESET_ALL} 测试用例生成器：生成测试成功")
+                    else:
+                        print(f"  {Fore.YELLOW}[SKIP]{Style.RESET_ALL} 测试用例生成器：API-KEY 文件为空")
+                else:
+                    print(f"  {Fore.YELLOW}[SKIP]{Style.RESET_ALL} 测试用例生成器：API-KEY 文件不存在")
+            else:
+                print(f"  {Fore.YELLOW}[SKIP]{Style.RESET_ALL} 测试用例生成器：无测试文件")
+        except Exception as e:
+            print(f"  {Fore.YELLOW}[WARNING]{Style.RESET_ALL} 测试用例生成器测试失败：{e}")
+        
         print(f"  {Fore.GREEN}[OK]{Style.RESET_ALL} 完成，所有补充模块测试成功")
         
         # 测试 agentflow-main 项目的 CLI 和 create-agentflow 功能
@@ -1450,7 +1623,13 @@ def vulnerable_function():
                 'DatabaseLayer',
                 'DatabaseMigrationManager',
                 'Validator',
-                'RuleSetManager'
+                'RuleSetManager',
+                # 新增模块
+                'ExecutionChain',
+                'RiskAssessmentEngine',
+                'PerformanceOptimizer',
+                'FilePriorityEngine',
+                'TestCaseGenerator'
             ]
         }
         

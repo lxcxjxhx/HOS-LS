@@ -1,91 +1,57 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+AI语义引擎 v2.0 (协议修复版)
+
+功能：
+1. 分析代码文件中的漏洞（函数级、文件级、项目级）
+2. 使用强制JSON协议与AI交互
+3. 支持攻击链分析
+4. AI输出100%可解析
+"""
+
 import os
 import json
-from typing import List, Dict, Any, Optional
-from langchain_openai import OpenAI
-from langchain_core.prompts import PromptTemplate
-from langchain_core.output_parsers import StrOutputParser
-from langchain_core.runnables import RunnableSequence
+from typing import List, Dict, Any, Optional, Tuple
+
 from .context_builder import ContextBuilder
+from utils.ai_output_models import (
+    AIVulnerabilityAnalysis,
+    AIAttackChainAnalysis,
+    AI_VULNERABILITY_PROMPT_TEMPLATE,
+    AI_ATTACK_CHAIN_PROMPT_TEMPLATE
+)
+from utils.ai_structured_response_parser import ai_structured_response_parser, AIResponseParseError
+from utils.config_manager import ConfigManager
+from utils.ai_model_client import AIModelManager
+
 
 class AISemanticEngine:
+    """AI语义分析引擎 v2.0"""
+    
     def __init__(self, api_key: Optional[str] = None):
         """
         初始化AI语义分析引擎
         
         Args:
-            api_key: OpenAI API密钥，如果不提供则使用环境变量中的OPENAI_API_KEY
+            api_key: API密钥，如果不提供则使用配置管理器中的配置
         """
-        self.api_key = api_key or os.getenv('OPENAI_API_KEY')
+        # 使用配置管理器获取AI配置
+        config_manager = ConfigManager()
+        ai_config = config_manager.get_ai_config()
+        
+        self.api_key = api_key or ai_config.get('api_key')
+        self.model = ai_config.get('model', 'deepseek-chat')
+        
         if not self.api_key:
-            raise ValueError("OpenAI API key is required")
+            raise ValueError("API key is required")
         
-        self.llm = OpenAI(api_key=self.api_key, temperature=0.3)
+        # 使用AI模型管理器
+        self.ai_model_manager = AIModelManager({
+            'api_key': self.api_key,
+            'model': self.model
+        })
         self.context_builder = ContextBuilder()
-        self._setup_prompts()
-    
-    def _setup_prompts(self):
-        """
-        设置分析Prompt
-        """
-        # 漏洞分析Prompt
-        self.vulnerability_prompt = PromptTemplate(
-            input_variables=["code_context", "vulnerability_type"],
-            template="""你是高级安全审计专家，请分析以下代码是否存在{vulnerability_type}漏洞：
-
-代码：
-{code_context}
-
-请输出：
-1. 是否存在漏洞（是/否）
-2. 漏洞类型
-3. 攻击路径
-4. 可利用方式
-5. 修复建议
-
-输出格式：JSON
-{"vulnerable": bool, "type": string, "attack_path": string, "exploit": string, "fix": string}"""
-        )
-        
-        # 代码安全分析Prompt
-        self.code_security_prompt = PromptTemplate(
-            input_variables=["code_context"],
-            template="""你是高级安全审计专家，请分析以下代码的安全性：
-
-代码：
-{code_context}
-
-请识别：
-1. 所有可能的安全漏洞
-2. 每个漏洞的类型和严重程度
-3. 攻击路径和可利用方式
-4. 修复建议
-
-输出格式：JSON
-{"vulnerabilities": [{"type": string, "severity": string, "attack_path": string, "exploit": string, "fix": string}]}"""
-        )
-        
-        # 攻击链分析Prompt
-        self.attack_chain_prompt = PromptTemplate(
-            input_variables=["code_context", "entry_points", "danger_calls"],
-            template="""你是高级安全审计专家，请分析以下代码的攻击链：
-
-代码：
-{code_context}
-
-入口点：
-{entry_points}
-
-危险调用：
-{danger_calls}
-
-请输出：
-1. 可能的攻击链
-2. 每个攻击链的风险等级
-3. 攻击步骤
-
-输出格式：JSON
-{"attack_chains": [{"chain": [string], "risk": string, "steps": [string]}]}"""
-        )
     
     def analyze(self, files: List[str]) -> Dict[str, Any]:
         """
@@ -212,90 +178,135 @@ class AISemanticEngine:
     
     def _analyze_function(self, func_code: str, func_name: str, file_path: str) -> Dict[str, Any]:
         """
-        分析单个函数
+        分析单个函数 - 使用强制JSON协议
         """
         try:
-            # 使用RunnableSequence替代LLMChain
-            chain = RunnableSequence(
-                self.code_security_prompt,
-                self.llm,
-                StrOutputParser()
+            # 构建提示词
+            prompt = AI_VULNERABILITY_PROMPT_TEMPLATE.format(
+                vulnerability_type="安全漏洞",
+                code_context=func_code
             )
-            result = chain.invoke({"code_context": func_code})
             
-            # 解析JSON结果
-            try:
-                analysis = json.loads(result)
-            except json.JSONDecodeError:
-                analysis = {"vulnerabilities": []}
+            # 调用AI
+            result = self.ai_model_manager.generate(prompt, max_tokens=2000)
             
-            return {
-                "function": func_name,
-                "file": file_path,
-                "analysis": analysis
-            }
+            if not result['success']:
+                return {
+                    "function": func_name,
+                    "file": file_path,
+                    "error": f"AI调用失败: {result.get('error', 'Unknown error')}",
+                    "parsed": False
+                }
+            
+            # 使用结构化解析器解析响应
+            parse_success, parsed_result, error_msg = ai_structured_response_parser.parse_strict(
+                result['content'], AIVulnerabilityAnalysis
+            )
+            
+            if parse_success:
+                return {
+                    "function": func_name,
+                    "file": file_path,
+                    "analysis": parsed_result.dict(),
+                    "parsed": True
+                }
+            else:
+                return {
+                    "function": func_name,
+                    "file": file_path,
+                    "error": f"解析失败: {error_msg}",
+                    "raw_response": result['content'],
+                    "parsed": False
+                }
+                
         except Exception as e:
             return {
                 "function": func_name,
                 "file": file_path,
-                "error": str(e)
+                "error": str(e),
+                "parsed": False
             }
     
     def _analyze_file(self, content: str, file_path: str) -> Dict[str, Any]:
         """
-        分析单个文件
+        分析单个文件 - 使用强制JSON协议
         """
         try:
-            # 使用RunnableSequence替代LLMChain
-            chain = RunnableSequence(
-                self.code_security_prompt,
-                self.llm,
-                StrOutputParser()
+            # 构建提示词
+            prompt = AI_VULNERABILITY_PROMPT_TEMPLATE.format(
+                vulnerability_type="安全漏洞",
+                code_context=content[:4000]  # 限制长度
             )
-            result = chain.invoke({"code_context": content})
             
-            # 解析JSON结果
-            try:
-                analysis = json.loads(result)
-            except json.JSONDecodeError:
-                analysis = {"vulnerabilities": []}
+            # 调用AI
+            result = self.ai_model_manager.generate(prompt, max_tokens=4000)
             
-            return {
-                "file": file_path,
-                "analysis": analysis
-            }
+            if not result['success']:
+                return {
+                    "file": file_path,
+                    "error": f"AI调用失败: {result.get('error', 'Unknown error')}",
+                    "parsed": False
+                }
+            
+            # 使用结构化解析器解析响应
+            parse_success, parsed_result, error_msg = ai_structured_response_parser.parse_strict(
+                result['content'], AIVulnerabilityAnalysis
+            )
+            
+            if parse_success:
+                return {
+                    "file": file_path,
+                    "analysis": parsed_result.dict(),
+                    "parsed": True
+                }
+            else:
+                return {
+                    "file": file_path,
+                    "error": f"解析失败: {error_msg}",
+                    "raw_response": result['content'],
+                    "parsed": False
+                }
+                
         except Exception as e:
             return {
                 "file": file_path,
-                "error": str(e)
+                "error": str(e),
+                "parsed": False
             }
     
     def _analyze_attack_chains(self, project_context: Dict[str, Any]) -> List[Dict[str, Any]]:
         """
-        分析攻击链
+        分析攻击链 - 使用强制JSON协议
         """
         try:
             entry_points_str = json.dumps(project_context.get("entry_points", []), ensure_ascii=False)
             danger_calls_str = json.dumps(project_context.get("danger_calls", []), ensure_ascii=False)
             
-            # 使用RunnableSequence替代LLMChain
-            chain = RunnableSequence(
-                self.attack_chain_prompt,
-                self.llm,
-                StrOutputParser()
+            # 构建提示词
+            prompt = AI_ATTACK_CHAIN_PROMPT_TEMPLATE.format(
+                code_context="Project code analysis",
+                entry_points=entry_points_str,
+                danger_calls=danger_calls_str
             )
-            result = chain.invoke({
-                "code_context": "Project code analysis",
-                "entry_points": entry_points_str,
-                "danger_calls": danger_calls_str
-            })
             
-            # 解析JSON结果
-            try:
-                analysis = json.loads(result)
-                return analysis.get("attack_chains", [])
-            except json.JSONDecodeError:
+            # 调用AI
+            result = self.ai_model_manager.generate(prompt, max_tokens=2000)
+            
+            if not result['success']:
+                print(f"攻击链分析失败: {result.get('error', 'Unknown error')}")
                 return []
+            
+            # 使用结构化解析器解析响应
+            parse_success, parsed_result, error_msg = ai_structured_response_parser.parse_strict(
+                result['content'], AIAttackChainAnalysis
+            )
+            
+            if parse_success:
+                return [chain.dict() for chain in parsed_result.attack_chains]
+            else:
+                print(f"攻击链解析失败: {error_msg}")
+                return []
+                
         except Exception as e:
             print(f"Error analyzing attack chains: {e}")
             return []

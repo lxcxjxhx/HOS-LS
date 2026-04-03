@@ -9,6 +9,258 @@
           "subprocess\\.run",
           "subprocess\\.Popen"
         ]
+      },
+      "hardcoded_secrets": {
+        "name": "硬编码密钥",
+        "patterns": [
+          "password\\s*[:=]",
+          "api[_-]?key\\s*[:=]",
+          "secret\\s*[:=]",
+          "token\\s*[:=]",
+          "private[_-]?key\\s*[:=]"
+        ]
+      },
+      "backdoor_code": {
+        "name": "后门代码",
+        "patterns": [
+          "exec\\s*\\(",
+          "eval\\s*\\(",
+          "compile\\s*\\(",
+          "__import__\\s*\\("
+        ]
+      },
+      "network_access": {
+        "name": "网络访问",
+        "patterns": [
+          "requests\\.get",
+          "requests\\.post",
+          "urllib\\.request",
+          "socket\\.socket"
+        ]
+      },
+      "ai_model_loading": {
+        "name": "AI模型加载",
+        "patterns": [
+          "load_model",
+          "from_pretrained",
+          "torch\\.load",
+          "tf\\.keras\\.models\\.load_model"
+        ]
+      },
+      "ai_input_validation": {
+        "name": "AI输入验证",
+        "patterns": [
+          "user_input",
+          "prompt",
+          "chat_input",
+          "input_text"
+        ]
+      }
+    },
+    "privacy_security": {
+      "pii_in_logs": {
+        "name": "日志中的个人身份信息",
+        "patterns": [
+          "\\d{17}[\\dXx]",
+          "\\d{11}",
+          "[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}",
+          "身份证",
+          "电话",
+          "邮箱",
+          "(logging|logger)\\..*(email|phone|id_card|identity|password)="
+        ]
+      },
+      "right_to_erasure": {
+        "name": "用户删除权实现",
+        "patterns": [
+          "delete_user",
+          "erase_data",
+          "remove_user",
+          "GDPR"
+        ]
+      },
+      "personal_data_exposure": {
+        "name": "个人数据暴露",
+        "patterns": [
+          "personal_data",
+          "user_data",
+          "PII",
+          "private_info"
+        ]
+      },
+      "consent_management": {
+        "name": "用户同意管理",
+        "patterns": [
+          "consent",
+          "privacy_policy",
+          "terms_of_service",
+          "user_agreement"
+        ]
+      }
+    },
+    "ai_security": {
+      "prompt_injection": {
+        "name": "提示词注入",
+        "patterns": [
+          "Ignore previous instructions",
+          "system prompt",
+          "prompt injection",
+          " jailbreak "
+        ]
+      },
+      "jailbreak_keyword": {
+        "name": "越狱关键词",
+        "patterns": [
+          "developer mode",
+          "DAN",
+          "GPT-4",
+          "break the rules"
+        ]
+      },
+      "model_poisoning": {
+        "name": "模型投毒",
+        "patterns": [
+          "poison",
+          "backdoor",
+          "adversarial",
+          "corrupt"
+        ]
+      },
+      "training_data_leakage": {
+        "name": "训练数据泄露",
+        "patterns": [
+          "training_data",
+          "dataset",
+          "leak",
+          "expose"
+        ]
+      }
+    },
+    "injection_security": {
+      "sql_injection": {
+        "name": "SQL注入",
+        "patterns": [
+          "execute\\s*\\(",
+          "query\\s*\\(",
+          "raw\\s*\\(",
+          "SELECT.*FROM"
+        ]
+      },
+      "xss": {
+        "name": "跨站脚本",
+        "patterns": [
+          "innerHTML",
+          "outerHTML",
+          "document\\.write",
+          "eval\\s*\\("
+        ]
+      },
+      "command_injection": {
+        "name": "命令注入",
+        "patterns": [
+          "os\\.system",
+          "subprocess\\.call",
+          "subprocess\\.run",
+          "subprocess\\.Popen"
+        ]
+      },
+      "path_traversal": {
+        "name": "路径遍历",
+        "patterns": [
+          "..\\\\",
+          "../",
+          "os\\.path",
+          "open\\s*\\("
+        ]
+      }
+    },
+    "permission_security": {
+      "root_user": {
+        "name": "root用户",
+        "patterns": [
+          "root",
+          "sudo",
+          "administrator",
+          "admin"
+        ]
+      },
+      "executable_files": {
+        "name": "可执行文件",
+        "patterns": [
+          "chmod\\s+\\+x",
+          "executable",
+          "permission",
+          "mode"
+        ]
+      },
+      "model_file_permissions": {
+        "name": "模型文件权限",
+        "patterns": [
+          "model\\.pt",
+          "model\\.pth",
+          "model\\.onnx",
+          "model\\.h5"
+        ]
+      }
+    },
+    "network_security": {
+      "public_ports": {
+        "name": "公共端口",
+        "patterns": [
+          "port\\s*=",
+          "listen\\s*\\(",
+          "server\\.listen",
+          "bind\\s*\\("
+        ]
+      },
+      "firewall_disabled": {
+        "name": "防火墙禁用",
+        "patterns": [
+          "firewall\\s*=\\s*false",
+          "disable_firewall",
+          "no_firewall",
+          "firewall\\s*off"
+        ]
+      }
+    },
+    "dependency_security": {
+      "unpinned_versions": {
+        "name": "未固定版本",
+        "patterns": [
+          "\\*",
+          "latest",
+          "^\\d+\\.\\d+",
+          "~\\d+\\.\\d+"
+        ]
+      }
+    },
+    "config_security": {
+      "sensitive_config": {
+        "name": "敏感配置",
+        "patterns": [
+          "config\\.json",
+          ".env",
+          "secrets\\.json",
+          "config\\.yaml"
+        ]
+      },
+      "ai_config": {
+        "name": "AI配置",
+        "patterns": [
+          "api_key",
+          "model_name",
+          "temperature",
+          "max_tokens"
+        ]
+      },
+      "debug_enabled": {
+        "name": "调试模式启用",
+        "patterns": [
+          "debug\\s*=\\s*true",
+          "DEBUG\\s*=\\s*1",
+          "debug_mode",
+          "verbose\\s*=\\s*true"
+        ]
       }
     }
   }

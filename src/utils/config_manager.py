@@ -8,6 +8,7 @@
 2. 建立分层配置体系
 3. 提供默认配置和用户自定义配置
 4. 配置加载优先级管理
+5. 从 API-KEY 文件加载 API key
 """
 
 import os
@@ -40,6 +41,9 @@ class ConfigManager:
     
     def _load_default_config(self) -> Dict[str, Any]:
         """加载默认配置"""
+        # 尝试从 API-KEY 文件加载 API key
+        api_key = self._load_api_key_from_file()
+        
         return {
             # 扫描配置
             'scanner': {
@@ -58,7 +62,7 @@ class ConfigManager:
             # AI 配置
             'ai': {
                 'enabled': True,
-                'api_key': os.environ.get('DEEPSEEK_API_KEY', 'sk-2d8a7018de364da8a573a9f962062331'),
+                'api_key': api_key or os.environ.get('DEEPSEEK_API_KEY', 'sk-2d8a7018de364da8a573a9f962062331'),
                 'model': 'deepseek-chat',
                 'timeout': 30,
                 'max_tokens': 2000
@@ -83,6 +87,38 @@ class ConfigManager:
                 'format': '%(asctime)s - %(levelname)s - %(message)s'
             }
         }
+    
+    def _load_api_key_from_file(self) -> Optional[str]:
+        """从 API-KEY 文件加载 API key
+        
+        Returns:
+            API key 如果文件存在且包含有效 key
+        """
+        # 尝试读取 API-KEY 文件
+        # 检查多个可能的位置
+        possible_paths = [
+            # 上级目录（HOS-LS 目录）
+            os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), '..', 'API-KEY'),
+            # 当前目录（HOS-LS\HOS-LS 目录）
+            os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'API-KEY')
+        ]
+        
+        for api_key_file in possible_paths:
+            if os.path.exists(api_key_file):
+                try:
+                    with open(api_key_file, 'r', encoding='utf-8') as f:
+                        # 读取第一行作为 API key
+                        first_line = f.readline().strip()
+                        # 检查是否是有效的 API key 格式
+                        if first_line and len(first_line) >= 20:
+                            print(f"从文件加载 API key: {api_key_file}")
+                            return first_line
+                except Exception as e:
+                    print(f"读取 API-KEY 文件失败: {e}")
+                    pass
+        
+        print("未找到 API-KEY 文件，使用默认值")
+        return None
     
     def _load_env_config(self) -> Dict[str, Any]:
         """从环境变量加载配置"""

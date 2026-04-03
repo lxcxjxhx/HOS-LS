@@ -565,9 +565,10 @@ class ASTScanner:
     def scan_file(self, file_path: str) -> List[Dict[str, Any]]:
         """扫描单个文件"""
         try:
-            # 检查文件类型，只解析 Python 文件
-            if not file_path.endswith('.py'):
-                logger.debug(f"跳过非 Python 文件: {file_path}")
+            # 检查文件类型，支持 Python 和 TypeScript 文件
+            supported_extensions = ['.py', '.ts', '.js']
+            if not any(file_path.endswith(ext) for ext in supported_extensions):
+                logger.debug(f"跳过不支持的文件类型: {file_path}")
                 self.stats['files_skipped'] += 1
                 return []
                 
@@ -593,46 +594,122 @@ class ASTScanner:
                 self.stats['files_skipped'] += 1
                 return []
             
-            # 预检查代码内容
-            if not is_valid_python_code(source_code):
-                logger.debug(f"跳过非 Python 代码内容: {file_path}")
-                self.stats['files_skipped'] += 1
-                return []
-            
             self.stats['files_scanned'] += 1
             
-            # 解析 AST
-            tree = safe_parse(source_code)
-            if tree is None:
-                logger.warning(f"AST 解析失败 {file_path}: 语法错误")
-                self.stats['parse_errors'] += 1
-                return []
+            issues = []
             
-            # 创建访问者并遍历
-            visitor = SecurityVisitor(file_path, source_code)
-            visitor.visit(tree)
-            
-            # 执行完整分析
-            visitor.analyze()
-            
-            # 构建语义图
-            self.semantic_graph = semantic_graph_builder.build_from_file(file_path)
-            
-            # 分析语义图
-            graph_issues = self._analyze_semantic_graph(file_path)
-            visitor.issues.extend(graph_issues)
+            # 对于 Python 文件，使用 AST 解析
+            if file_path.endswith('.py'):
+                # 预检查代码内容
+                if not is_valid_python_code(source_code):
+                    logger.debug(f"跳过非 Python 代码内容: {file_path}")
+                    self.stats['files_skipped'] += 1
+                    return []
+                
+                # 解析 AST
+                tree = safe_parse(source_code)
+                if tree is None:
+                    logger.warning(f"AST 解析失败 {file_path}: 语法错误")
+                    self.stats['parse_errors'] += 1
+                    return []
+                
+                # 创建访问者并遍历
+                visitor = SecurityVisitor(file_path, source_code)
+                visitor.visit(tree)
+                
+                # 执行完整分析
+                visitor.analyze()
+                
+                # 构建语义图
+                self.semantic_graph = semantic_graph_builder.build_from_file(file_path)
+                
+                # 分析语义图
+                graph_issues = self._analyze_semantic_graph(file_path)
+                visitor.issues.extend(graph_issues)
+                
+                issues = visitor.issues
+            else:
+                # 对于 TypeScript 和 JavaScript 文件，使用基于模式的分析
+                ts_issues = self._analyze_typescript_file(file_path, source_code)
+                issues.extend(ts_issues)
             
             # 添加文件信息到每个问题
-            for issue in visitor.issues:
+            for issue in issues:
                 issue['file'] = file_path
             
-            self.stats['issues_found'] += len(visitor.issues)
+            self.stats['issues_found'] += len(issues)
             
-            return visitor.issues
+            return issues
         
         except Exception as e:
             logger.error(f"AST 扫描文件 {file_path} 时出错：{e}")
             return []
+    
+    def _analyze_typescript_file(self, file_path: str, source_code: str) -> List[Dict[str, Any]]:
+        """分析 TypeScript 和 JavaScript 文件"""
+        import re
+        issues = []
+        lines = source_code.splitlines()
+        
+        # 危险函数调用模式
+        dangerous_patterns = [
+            (r'eval\s*\(', 'eval() 可能导致代码注入', 'HIGH'),
+            (r'exec\s*\(', 'exec() 可能导致代码注入', 'HIGH'),
+            (r'new\s+Function\s*\(', 'new Function() 可能导致代码注入', 'HIGH'),
+            (r'child_process\.exec\s*\(', 'child_process.exec 可能执行系统命令', 'HIGH'),
+            (r'child_process\.execSync\s*\(', 'child_process.execSync 可能执行系统命令', 'HIGH'),
+            (r'child_process\.spawn\s*\(', 'child_process.spawn 可能执行系统命令', 'HIGH'),
+            (r'child_process\.spawnSync\s*\(', 'child_process.spawnSync 可能执行系统命令', 'HIGH'),
+            (r'fs\.writeFile\s*\(', '文件写入操作需要验证路径', 'MEDIUM'),
+            (r'fs\.writeFileSync\s*\(', '文件写入操作需要验证路径', 'MEDIUM'),
+            (r'fs\.appendFile\s*\(', '文件追加操作需要验证路径', 'MEDIUM'),
+            (r'fs\.appendFileSync\s*\(', '文件追加操作需要验证路径', 'MEDIUM'),
+            (r'fs\.open\s*\(', '文件打开操作需要验证路径', 'MEDIUM'),
+            (r'fs\.openSync\s*\(', '文件打开操作需要验证路径', 'MEDIUM'),
+        ]
+        
+        # 敏感信息模式
+        sensitive_patterns = [
+            (r'password\s*[:=]', '硬编码密码', 'HIGH'),
+            (r'api[_-]?key\s*[:=]', '硬编码 API 密钥', 'HIGH'),
+            (r'secret\s*[:=]', '硬编码密钥', 'HIGH'),
+            (r'token\s*[:=]', '硬编码令牌', 'HIGH'),
+            (r'private[_-]?key\s*[:=]', '硬编码私钥', 'HIGH'),
+        ]
+        
+        # 提示词拼接模式
+        prompt_patterns = [
+            (r'prompt\s*[+]', '提示词拼接风险', 'HIGH'),
+            (r'system[_-]?prompt\s*[+]', '系统提示词拼接风险', 'HIGH'),
+            (r'user[_-]?input\s*[+]', '用户输入拼接风险', 'HIGH'),
+            (r'chat[_-]?input\s*[+]', '聊天输入拼接风险', 'HIGH'),
+        ]
+        
+        # 网络请求模式
+        network_patterns = [
+            (r'fetch\s*\(', '网络请求需要验证 URL', 'MEDIUM'),
+            (r'axios\.get\s*\(', '网络请求需要验证 URL', 'MEDIUM'),
+            (r'axios\.post\s*\(', '网络请求需要验证 URL', 'MEDIUM'),
+            (r'axios\.put\s*\(', '网络请求需要验证 URL', 'MEDIUM'),
+            (r'axios\.delete\s*\(', '网络请求需要验证 URL', 'MEDIUM'),
+        ]
+        
+        # 遍历所有模式
+        all_patterns = dangerous_patterns + sensitive_patterns + prompt_patterns + network_patterns
+        
+        for i, line in enumerate(lines, 1):
+            for pattern, description, severity in all_patterns:
+                if re.search(pattern, line, re.IGNORECASE):
+                    issues.append({
+                        'line_number': i,
+                        'severity': severity,
+                        'issue': description,
+                        'details': f'在 {file_path} 中检测到安全问题',
+                        'code_snippet': line.strip(),
+                        'category': 'ts_js_analysis'
+                    })
+        
+        return issues
     
     def _analyze_semantic_graph(self, file_path: str) -> List[Dict[str, Any]]:
         """分析语义图"""
@@ -703,7 +780,7 @@ class ASTScanner:
     def scan_directory(self, directory: str, extensions: List[str] = None) -> List[Dict[str, Any]]:
         """扫描目录"""
         if extensions is None:
-            extensions = ['.py', '.pyw']
+            extensions = ['.py', '.pyw', '.ts', '.js']
         
         results = []
         

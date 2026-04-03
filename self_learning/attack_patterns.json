@@ -1,1 +1,13 @@
-[]
+[
+  {
+    "pattern_id": "sql_injection_1775196122_0",
+    "attack_type": "sql_injection",
+    "pattern": "' OR 1=1 --",
+    "success_rate": 1.0,
+    "examples": [
+      "' OR 1=1 --"
+    ],
+    "severity": "high",
+    "confidence": 0.9
+  }
+]
