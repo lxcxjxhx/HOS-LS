@@ -14,6 +14,10 @@ import os
 import json
 from typing import List, Dict, Any, Optional, Tuple
 
+import sys
+import os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from .context_builder import ContextBuilder
 from utils.ai_output_models import (
     AIVulnerabilityAnalysis,

@@ -25,6 +25,9 @@ from collections import defaultdict
 
 from tqdm import tqdm
 
+import sys
+import os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from utils.shared_memory_manager import shared_memory_manager, RedisLikeQueue
 
 try:
@@ -68,6 +71,14 @@ except ImportError:
     except ImportError:
         VulnerabilityAssessor = None
         VulnerabilityAssessment = None
+
+try:
+    from .sandbox_analyzer import SandboxAnalyzer
+except ImportError:
+    try:
+        from sandbox_analyzer import SandboxAnalyzer
+    except ImportError:
+        SandboxAnalyzer = None
 
 logger = logging.getLogger(__name__)
 
@@ -363,6 +374,7 @@ class ParallelSecurityScanner:
         self.attack_planner = AttackPlanner() if AttackPlanner else None
         self.dynamic_executor = DynamicExecutor() if DynamicExecutor else None
         self.vulnerability_assessor = VulnerabilityAssessor() if VulnerabilityAssessor else None
+        self.sandbox_analyzer = SandboxAnalyzer() if SandboxAnalyzer else None
         
         # 统计信息
         self.stats = {
@@ -596,7 +608,7 @@ class ParallelSecurityScanner:
         
         # 使用 ThreadPoolExecutor 进行并行扫描（避免进程间通信问题）
         scanned_count = 0
-        timeout_seconds = 30  # 设置30秒超时
+        timeout_seconds = 60  # 增加超时时间到60秒
         with ThreadPoolExecutor(max_workers=self.config.max_workers) as executor:
             # 提交所有任务
             future_to_task = {executor.submit(scan_single_file, task): task for task in tasks}
@@ -681,6 +693,11 @@ class ParallelSecurityScanner:
         if self.dynamic_executor and 'attack_strategies' in self.results:
             logger.info("执行攻击策略...")
             self._run_dynamic_execution()
+        
+        # 沙盒分析 (如果可用)
+        if self.sandbox_analyzer:
+            logger.info("执行沙盒分析...")
+            self._run_sandbox_analysis()
         
         return self._build_results(start_time)
     
@@ -1061,6 +1078,80 @@ class ParallelSecurityScanner:
             
         except Exception as e:
             logger.error(f"攻击执行失败：{e}")
+    
+    def _run_sandbox_analysis(self):
+        """执行沙盒分析"""
+        try:
+            analysis_count = 0
+            sandbox_issues = []
+            
+            # 遍历所有文件，执行沙盒分析
+            for root, dirs, files in os.walk(self.config.target):
+                dirs[:] = [d for d in dirs if d not in [
+                    'node_modules', 'venv', '.venv', '__pycache__',
+                    '.git', 'dist', 'build', 'target', '.trae'
+                ]]
+                
+                for file in files:
+                    if file.endswith(('.py', '.js', '.ts', '.json', '.yaml', '.yml', '.env')):
+                        file_path = os.path.join(root, file)
+                        try:
+                            with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+                                content = f.read()
+                            
+                            # 执行沙盒分析
+                            analysis = self.sandbox_analyzer.analyze(content)
+                            analysis_count += 1
+                            
+                            # 处理分析结果
+                            for issue_type, issues in analysis.items():
+                                if isinstance(issues, list):
+                                    for issue in issues:
+                                        # 转换严重程度
+                                        severity_map = {
+                                            'CRITICAL': 'high',
+                                            'HIGH': 'high',
+                                            'MEDIUM': 'medium',
+                                            'LOW': 'low'
+                                        }
+                                        severity = severity_map.get(issue.get('severity'), 'medium')
+                                        
+                                        # 添加到扫描结果
+                                        issue_data = {
+                                            'file': file_path,
+                                            'line_number': 0,  # 沙盒分析暂不提供行号
+                                            'issue': issue.get('description', '沙盒分析问题'),
+                                            'severity': severity,
+                                            'details': issue.get('risk', ''),
+                                            'code_snippet': issue.get('match', ''),
+                                            'detection_method': 'sandbox',
+                                            'confidence': issue.get('confidence', 0.8),
+                                            'category': 'code_security'
+                                        }
+                                        self.results['code_security'].append(issue_data)
+                                        sandbox_issues.append(issue_data)
+                                        
+                                        # 更新风险计数
+                                        if severity == 'high':
+                                            self.high_risk += 1
+                                        elif severity == 'medium':
+                                            self.medium_risk += 1
+                                        else:
+                                            self.low_risk += 1
+                            
+                        except Exception as e:
+                            logger.debug(f"沙盒分析 {file_path} 失败：{e}")
+            
+            # 添加沙盒分析结果到扫描结果
+            self.results['sandbox_analysis'] = {
+                'analyzed_files': analysis_count,
+                'total_issues': len(sandbox_issues)
+            }
+            
+            logger.info(f"沙盒分析完成，分析文件数：{analysis_count}，发现问题数：{len(sandbox_issues)}")
+            
+        except Exception as e:
+            logger.error(f"沙盒分析失败：{e}")
     
     def _build_results(self, start_time: float) -> Dict[str, Any]:
         """构建扫描结果"""

@@ -19,8 +19,8 @@ import logging
 from typing import Dict, List, Set, Tuple, Optional, Any
 from collections import defaultdict
 
-from scanners.file_discovery_engine import file_discovery_engine
-from scanners.sandbox_executor_pool import sandbox_executor_pool
+from .file_discovery_engine import file_discovery_engine
+from .sandbox_executor_pool import sandbox_executor_pool
 
 logger = logging.getLogger(__name__)
 

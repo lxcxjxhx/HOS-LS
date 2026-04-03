@@ -107,7 +107,7 @@ def run_comprehensive_test():
     import os
     # 配置路径
     target_dir = r"c:\1AAA_PROJECT\HOS\HOS-LS\real-project\agentflow-main"
-    output_dir = r"c:\1AAA_PROJECT\HOS\HOS-LS\HOS-LS\tests\test-output"
+    output_dir = r"c:\1AAA_PROJECT\HOS\HOS-LS\HOS-LS\tests\test-all"
     
     project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     rules_file = os.path.join(project_root, 'rules', 'security_rules.json')
