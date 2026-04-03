@@ -741,6 +741,56 @@ class AIModelManager:
         client = self.get_client(model_type)
         return client.analyze_security(code, context)
     
+    def generate_scan_strategy(self, project_info: Dict[str, Any], model_type: Optional[str] = None) -> Dict[str, Any]:
+        """生成AI驱动的扫描策略
+        
+        Args:
+            project_info: 项目信息
+            model_type: 模型类型
+            
+        Returns:
+            扫描策略
+        """
+        # 优先使用 LangChain 生成扫描策略
+        langchain_client = self.get_langchain_client(model_type)
+        if langchain_client:
+            try:
+                return self._generate_scan_strategy_with_langchain(langchain_client, project_info)
+            except Exception as e:
+                logger.warning(f"LangChain 扫描策略生成失败：{e}")
+        
+        # 回退到原始 API 调用
+        prompt = f"""
+        你是一个安全扫描专家，根据以下项目信息生成扫描策略：
+        
+        项目信息：
+        {json.dumps(project_info, ensure_ascii=False, indent=2)}
+        
+        请生成一个详细的扫描策略，包括：
+        1. 重点扫描的文件类型和目录
+        2. 优先检测的漏洞类型
+        3. 扫描深度和范围
+        4. 特殊配置建议
+        
+        输出格式为 JSON，包含以下字段：
+        - file_types: 重点扫描的文件类型
+        - directories: 重点扫描的目录
+        - vulnerability_types: 优先检测的漏洞类型
+        - scan_depth: 扫描深度
+        - special_configs: 特殊配置建议
+        """
+        
+        client = self.get_client(model_type)
+        result = client.generate(prompt)
+        if result['success']:
+            try:
+                strategy = json.loads(result['content'])
+                return {"success": True, "strategy": strategy}
+            except json.JSONDecodeError:
+                return {"success": False, "error": "扫描策略解析失败"}
+        else:
+            return result
+    
     def _analyze_security_with_langchain(self, langchain_client, code: str, context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """使用 LangChain 分析代码安全性
         
@@ -866,6 +916,79 @@ class AIModelManager:
         result = client.generate(prompt, **kwargs)
         result['langchain_used'] = False
         return result
+    
+    def _generate_scan_strategy_with_langchain(self, langchain_client, project_info: Dict[str, Any]) -> Dict[str, Any]:
+        """使用 LangChain 生成扫描策略
+        
+        Args:
+            langchain_client: LangChain 客户端
+            project_info: 项目信息
+            
+        Returns:
+            扫描策略
+        """
+        # 转义项目信息中的大括号，避免LangChain模板解析错误
+        escaped_project_info = json.dumps(project_info, ensure_ascii=False, indent=2).replace('{', '{{').replace('}', '}}')
+        
+        # 创建系统提示
+        system_prompt = """你是一个安全扫描专家，根据项目信息生成详细的扫描策略。
+        请按照要求生成包含重点扫描文件类型、目录、漏洞类型、扫描深度和特殊配置的策略。
+        严格按照JSON格式输出，不要包含任何额外的文本。
+        """
+        
+        # 创建人类提示
+        human_prompt = f"""请根据以下项目信息生成扫描策略：
+        
+        项目信息：
+        {escaped_project_info}
+        
+        请生成一个详细的扫描策略，包括：
+        1. 重点扫描的文件类型和目录
+        2. 优先检测的漏洞类型
+        3. 扫描深度和范围
+        4. 特殊配置建议
+        
+        输出格式为 JSON，包含以下字段：
+        - file_types: 重点扫描的文件类型
+        - directories: 重点扫描的目录
+        - vulnerability_types: 优先检测的漏洞类型
+        - scan_depth: 扫描深度
+        - special_configs: 特殊配置建议
+        """
+        
+        # 创建提示模板
+        prompt = ChatPromptTemplate.from_messages([
+            ("system", system_prompt),
+            ("human", human_prompt)
+        ])
+        
+        # 创建输出解析器
+        output_parser = StrOutputParser()
+        
+        # 创建链
+        chain = prompt | langchain_client | output_parser
+        
+        # 执行生成
+        try:
+            result = chain.invoke({})
+            # 尝试解析JSON
+            try:
+                strategy = json.loads(result)
+                return {
+                    "success": True,
+                    "strategy": strategy
+                }
+            except json.JSONDecodeError:
+                return {
+                    "success": False,
+                    "error": "扫描策略解析失败",
+                    "raw_content": result
+                }
+        except Exception as e:
+            return {
+                "success": False,
+                "error": f"LangChain 扫描策略生成失败：{str(e)}"
+            }
     
     def _generate_with_langchain(self, langchain_client, prompt: str, **kwargs) -> Dict[str, Any]:
         """使用 LangChain 生成 AI 响应

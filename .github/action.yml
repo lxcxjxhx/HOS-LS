@@ -1,0 +1,25 @@
+name: 'HOS-LS Security Scan'
+description: 'AI-powered security scan for pull requests'
+inputs:
+  github-token:
+    description: 'GitHub token'
+    required: true
+  ai-provider:
+    description: 'AI provider (qwen/deepseek/openai)'
+    required: false
+    default: 'deepseek'
+  ai-api-key:
+    description: 'AI API key'
+    required: true
+  enable-ai-filter:
+    description: 'Enable AI-powered false positive filtering'
+    required: false
+    default: 'true'
+  exclude-directories:
+    description: 'Comma-separated list of directories to exclude'
+    required: false
+    default: 'node_modules,venv,.venv'
+
+runs:
+  using: 'node20'
+  main: 'scripts/pr_security_audit.py'

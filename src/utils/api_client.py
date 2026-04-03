@@ -199,10 +199,62 @@ class HttpClient(ApiClient):
                 if retries > self.max_retries:
                     raise ApiClientError(f"请求失败，已达到最大重试次数: {e}")
                 
-                # 计算退避时间
-                backoff_time = self.backoff_factor * (2 ** (retries - 1))
-                logger.warning(f"请求失败，{backoff_time:.2f}秒后重试: {e}")
+                # 智能重试策略，根据错误类型调整重试间隔
+                error_type = self._get_error_type(e)
+                backoff_time = self._calculate_backoff_time(retries, error_type)
+                
+                logger.warning(f"请求失败 (类型: {error_type})，{backoff_time:.2f}秒后重试: {e}")
                 time.sleep(backoff_time)
+    
+    def _get_error_type(self, exception: requests.RequestException) -> str:
+        """获取错误类型
+        
+        Args:
+            exception: 请求异常
+            
+        Returns:
+            str: 错误类型
+        """
+        if isinstance(exception, requests.ConnectionError):
+            return "connection_error"
+        elif isinstance(exception, requests.Timeout):
+            return "timeout"
+        elif isinstance(exception, requests.HTTPError):
+            if exception.response and 500 <= exception.response.status_code < 600:
+                return "server_error"
+            elif exception.response and 400 <= exception.response.status_code < 500:
+                return "client_error"
+        return "unknown_error"
+    
+    def _calculate_backoff_time(self, retries: int, error_type: str) -> float:
+        """计算退避时间
+        
+        Args:
+            retries: 重试次数
+            error_type: 错误类型
+            
+        Returns:
+            float: 退避时间（秒）
+        """
+        # 基础退避时间
+        base_backoff = self.backoff_factor * (2 ** (retries - 1))
+        
+        # 根据错误类型调整退避时间
+        if error_type == "connection_error":
+            # 网络连接错误，增加退避时间
+            return base_backoff * 1.5
+        elif error_type == "timeout":
+            # 超时错误，适度增加退避时间
+            return base_backoff * 1.2
+        elif error_type == "server_error":
+            # 服务器错误，大幅增加退避时间
+            return base_backoff * 2.0
+        elif error_type == "client_error":
+            # 客户端错误，减少退避时间（可能是参数问题）
+            return base_backoff * 0.5
+        else:
+            # 未知错误，使用基础退避时间
+            return base_backoff
     
     def get(self, endpoint: str, params: Optional[Dict[str, Any]] = None, headers: Optional[Dict[str, str]] = None) -> ApiResponse:
         """发送 GET 请求

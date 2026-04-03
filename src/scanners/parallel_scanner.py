@@ -23,6 +23,8 @@ from pathlib import Path
 from dataclasses import dataclass, field
 from collections import defaultdict
 
+from tqdm import tqdm
+
 from utils.shared_memory_manager import shared_memory_manager, RedisLikeQueue
 
 try:
@@ -88,6 +90,10 @@ class ScanConfig:
         '.pytest_cache', '.eggs', '*.egg-info'
     })
     max_file_size: int = 10 * 1024 * 1024  # 10MB
+    scan_depth: int = 3  # 扫描深度
+    project_type: str = "auto"  # 项目类型 (auto, python, javascript, react, vue, nodejs, etc.)
+    incremental_scan: bool = False  # 是否启用增量扫描
+    special_configs: Dict[str, Any] = field(default_factory=dict)  # 特殊配置
 
 
 @dataclass
@@ -336,6 +342,13 @@ class ParallelSecurityScanner:
         self.task_queue = RedisLikeQueue("scan_tasks")
         self.result_queue = RedisLikeQueue("scan_results")
         
+        # 自动检测项目类型
+        if config.project_type == "auto":
+            config.project_type = self._detect_project_type()
+        
+        # 根据项目类型调整扫描策略
+        self._adjust_scan_strategy()
+        
         # 加载规则
         self.rules = self._load_rules()
         
@@ -367,6 +380,66 @@ class ParallelSecurityScanner:
             'total_tasks': 0,
             'completed_tasks': 0
         })
+    
+    def _detect_project_type(self) -> str:
+        """自动检测项目类型"""
+        project_type = "generic"
+        
+        # 检查项目根目录的特征文件
+        root_dir = self.config.target
+        
+        # Python 项目
+        if os.path.exists(os.path.join(root_dir, "requirements.txt")) or \
+           os.path.exists(os.path.join(root_dir, "setup.py")) or \
+           os.path.exists(os.path.join(root_dir, "pyproject.toml")):
+            project_type = "python"
+        
+        # JavaScript/Node.js 项目
+        elif os.path.exists(os.path.join(root_dir, "package.json")):
+            # 检查是否是 React 项目
+            if os.path.exists(os.path.join(root_dir, "src", "App.js")) or \
+               os.path.exists(os.path.join(root_dir, "src", "App.jsx")) or \
+               os.path.exists(os.path.join(root_dir, "src", "App.tsx")):
+                project_type = "react"
+            # 检查是否是 Vue 项目
+            elif os.path.exists(os.path.join(root_dir, "src", "App.vue")):
+                project_type = "vue"
+            else:
+                project_type = "nodejs"
+        
+        # Docker 项目
+        elif os.path.exists(os.path.join(root_dir, "Dockerfile")):
+            project_type = "docker"
+        
+        # 配置管理项目
+        elif os.path.exists(os.path.join(root_dir, "terraform.tf")) or \
+             os.path.exists(os.path.join(root_dir, "main.tf")):
+            project_type = "terraform"
+        
+        logger.info(f"自动检测到项目类型：{project_type}")
+        return project_type
+    
+    def _adjust_scan_strategy(self):
+        """根据项目类型调整扫描策略"""
+        project_type = self.config.project_type
+        
+        # 根据项目类型调整文件扩展名和排除目录
+        if project_type == "python":
+            # Python 项目特定配置
+            self.config.file_extensions.extend(['.pyw', '.pyc'])
+            self.config.exclude_dirs.update(['__pycache__', '*.egg-info', '.eggs'])
+        elif project_type == "nodejs" or project_type == "react" or project_type == "vue":
+            # JavaScript 相关项目特定配置
+            self.config.file_extensions.extend(['.mjs', '.cjs', '.tsx', '.jsx', '.vue'])
+            self.config.exclude_dirs.update(['node_modules', 'dist', 'build'])
+        elif project_type == "docker":
+            # Docker 项目特定配置
+            self.config.file_extensions.extend(['.dockerfile', '.dockerignore'])
+        elif project_type == "terraform":
+            # Terraform 项目特定配置
+            self.config.file_extensions.extend(['.tf', '.tfvars'])
+        
+        logger.info(f"根据项目类型 {project_type} 调整扫描策略")
     
     def _load_rules(self) -> Dict[str, Any]:
         """加载规则配置"""
@@ -415,10 +488,13 @@ class ParallelSecurityScanner:
     def _collect_files(self) -> List[str]:
         """收集要扫描的文件"""
         files_to_scan = []
+        exclude_dirs_set = set(self.config.exclude_dirs)
+        extensions_set = set(self.config.file_extensions)
         
+        # 批量收集文件，减少IO操作
         for root, dirs, files in os.walk(self.config.target):
             # 跳过排除目录
-            dirs[:] = [d for d in dirs if d not in self.config.exclude_dirs]
+            dirs[:] = [d for d in dirs if d not in exclude_dirs_set]
             
             for file in files:
                 # 过滤 README.md 文件
@@ -426,11 +502,11 @@ class ParallelSecurityScanner:
                     self.stats['skipped_files'] += 1
                     continue
                 
-                file_path = os.path.join(root, file)
-                
-                # 检查扩展名
-                if not any(file.endswith(ext) for ext in self.config.file_extensions):
+                # 快速检查扩展名
+                if not any(file.endswith(ext) for ext in extensions_set):
                     continue
+                
+                file_path = os.path.join(root, file)
                 
                 # 检查.gitignore
                 if self.gitignore_parser and self.gitignore_parser.should_ignore(file_path):
@@ -454,7 +530,9 @@ class ParallelSecurityScanner:
         """创建扫描任务"""
         tasks = []
         
+        # 批量处理文件，减少IO操作
         for file_path in file_paths:
+            # 计算文件哈希
             file_hash = compute_file_hash(file_path)
             
             # 检查缓存
@@ -475,40 +553,16 @@ class ParallelSecurityScanner:
                                 self.low_risk += 1
                     continue
             
-            # 创建新任务
-            try:
-                with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
-                    line_count = len(f.readlines())
-            except Exception:
-                line_count = 0
-            
+            # 创建新任务（不读取文件行数，减少IO操作）
             task = FileTask(
                 file_path=file_path,
                 file_hash=file_hash,
                 rules=self.rules,
-                line_count=line_count
+                line_count=0  # 后续在扫描时再计算
             )
             tasks.append(task)
         
         return tasks
-    
-    def _worker_process(self):
-        """工作进程处理函数"""
-        while True:
-            # 从任务队列获取任务
-            task = self.task_queue.pop()
-            if not task:
-                # 队列为空，退出
-                break
-            
-            try:
-                # 执行扫描
-                task_results = scan_single_file(task)
-                
-                # 将结果添加到结果队列
-                self.result_queue.push((task_results, task))
-            except Exception as e:
-                logger.error(f"工作进程执行任务失败：{e}")
     
     def scan(self) -> Dict[str, Any]:
         """执行并行扫描"""
@@ -540,40 +594,37 @@ class ParallelSecurityScanner:
             'completed_tasks': 0
         })
         
-        # 填充任务队列
-        for task in tasks:
-            self.task_queue.push(task)
-        
-        # 并行扫描
+        # 使用 ThreadPoolExecutor 进行并行扫描（避免进程间通信问题）
         scanned_count = 0
-        with ProcessPoolExecutor(max_workers=self.config.max_workers) as executor:
-            # 创建工作进程
-            workers = []
-            for _ in range(self.config.max_workers):
-                worker = executor.submit(self._worker_process)
-                workers.append(worker)
+        with ThreadPoolExecutor(max_workers=self.config.max_workers) as executor:
+            # 提交所有任务
+            future_to_task = {executor.submit(scan_single_file, task): task for task in tasks}
             
             # 收集结果
-            while scanned_count < total_tasks:
-                result = self.result_queue.pop()
-                if result:
-                    task_results, task = result
-                    
-                    # 合并结果
-                    for category, issues in task_results.items():
-                        self.results[category].extend(issues)
-                        for issue in issues:
-                            severity = issue.get('severity', 'low')
-                            if severity == 'high':
-                                self.high_risk += 1
-                            elif severity == 'medium':
-                                self.medium_risk += 1
-                            else:
-                                self.low_risk += 1
-                    
-                    # 更新缓存
-                    if self.cache:
-                        self.cache.set(task.file_path, task.file_hash, task_results)
+            with tqdm(total=total_tasks, desc="并行扫描进度", unit="文件") as pbar:
+                for future in as_completed(future_to_task):
+                    task = future_to_task[future]
+                    try:
+                        task_results = future.result()
+                        
+                        # 合并结果
+                        for category, issues in task_results.items():
+                            self.results[category].extend(issues)
+                            for issue in issues:
+                                severity = issue.get('severity', 'low')
+                                if severity == 'high':
+                                    self.high_risk += 1
+                                elif severity == 'medium':
+                                    self.medium_risk += 1
+                                else:
+                                    self.low_risk += 1
+                        
+                        # 更新缓存
+                        if self.cache:
+                            self.cache.set(task.file_path, task.file_hash, task_results)
+                        
+                    except Exception as e:
+                        logger.error(f"扫描文件失败 {task.file_path}: {e}")
                     
                     scanned_count += 1
                     progress = (scanned_count / total_tasks) * 100
@@ -586,12 +637,12 @@ class ParallelSecurityScanner:
                         'completed_tasks': scanned_count
                     })
                     
+                    # 更新进度条
+                    pbar.update(1)
+                    pbar.set_postfix({'进度': f'{progress:.1f}%'})
+                    
                     if scanned_count % 50 == 0:
                         logger.info(f"扫描进度：{scanned_count}/{total_tasks} ({progress:.1f}%)")
-            
-            # 等待所有工作进程完成
-            for worker in workers:
-                worker.cancel()
         
         self.stats['scanned_files'] = scanned_count
         
