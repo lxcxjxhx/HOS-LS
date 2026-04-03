@@ -5,7 +5,7 @@ import json
 from datetime import datetime
 
 # 项目路径
-AGENTFLOW_PROJECT_PATH = "c:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\agentflow-main"
+AGENTFLOW_PROJECT_PATH = "c:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\hos_base-1.0.3\\hos_base-1.0.3\\hos_base"
 TEST_SCRIPT_PATH = "c:\\1AAA_PROJECT\\HOS\\HOS-LS\\HOS-LS\\tests\\AAA-ai-test.py"
 OUTPUT_DIR = "c:\\1AAA_PROJECT\\HOS\\HOS-LS\\HOS-LS\\tests\\test-ai"
 
@@ -28,11 +28,11 @@ def analyze_ai_modules():
     
     # 检查 AI 相关文件
     ai_files = [
-        "packages/core/src/ai/index.ts",
-        "packages/core/src/ai/calculator.ts",
-        "packages/core/src/ai/models.ts",
-        "packages/core/src/actions/gen-text.ts",
-        "packages/core/src/actions/gen-object.ts"
+        "backend/ai/ai_agent.js",
+        "backend/ai/ai_context.js",
+        "backend/ai/ai_gateway.js",
+        "backend/ai/ai_mcp.js",
+        "backend/ai/ai_workflow.js"
     ]
     
     found_files = []
@@ -60,10 +60,11 @@ def analyze_ai_modules():
         "found_files": found_files,
         "missing_files": missing_files,
         "ai_modules": [
-            "CostCalculator",
-            "gen-text action",
-            "gen-object action",
-            "AI models configuration"
+            "AI Agent",
+            "AI Context",
+            "AI Gateway",
+            "AI MCP",
+            "AI Workflow"
         ]
     }
     
@@ -72,70 +73,74 @@ def analyze_ai_modules():
         json.dump(analysis_result, f, indent=2)
     print(f"Saved AI analysis to: {result_path}")
 
-# 测试 CostCalculator 功能（通过分析源代码）
+# 测试 AI 成本计算功能（通过分析源代码）
 def test_cost_calculator():
-    print("\nTesting CostCalculator functionality...")
+    print("\nTesting AI cost calculation functionality...")
     
-    # 读取 calculator.ts 文件内容
-    calculator_path = os.path.join(AGENTFLOW_PROJECT_PATH, "packages/core/src/ai/calculator.ts")
-    if not os.path.exists(calculator_path):
-        print(f"Error: calculator.ts not found at {calculator_path}")
-        return
+    # 检查 AI 相关文件中的成本计算功能
+    ai_files = [
+        "backend/ai/ai_gateway.js",
+        "backend/ai/ai_agent.js"
+    ]
     
-    with open(calculator_path, "r", encoding="utf-8") as f:
-        content = f.read()
+    found_cost_functions = []
     
-    # 分析 CostCalculator 类
-    has_add_usage = "addUsage" in content
-    has_input_cost = "inputCost" in content
-    has_output_cost = "outputCost" in content
-    has_total_cost = "totalCost" in content
+    for file_path in ai_files:
+        full_path = os.path.join(AGENTFLOW_PROJECT_PATH, file_path)
+        if os.path.exists(full_path):
+            with open(full_path, "r", encoding="utf-8") as f:
+                content = f.read()
+            
+            # 检查成本计算相关的关键词
+            if "cost" in content.lower() or "price" in content.lower() or "usage" in content.lower():
+                found_cost_functions.append(file_path)
     
     # 测试结果
     test_results = {
         "timestamp": datetime.now().isoformat(),
         "tests": [
-            {"name": "addUsage method", "result": "PASS" if has_add_usage else "FAIL"},
-            {"name": "inputCost property", "result": "PASS" if has_input_cost else "FAIL"},
-            {"name": "outputCost property", "result": "PASS" if has_output_cost else "FAIL"},
-            {"name": "totalCost property", "result": "PASS" if has_total_cost else "FAIL"}
+            {"name": "Cost calculation functionality", "result": "PASS" if found_cost_functions else "FAIL"}
         ],
-        "source_code_preview": content[:500] + "..." if len(content) > 500 else content
+        "files_with_cost_functions": found_cost_functions
     }
     
     # 保存测试结果
     result_path = os.path.join(OUTPUT_DIR, "cost-calculator-test.json")
     with open(result_path, "w", encoding="utf-8") as f:
         json.dump(test_results, f, indent=2)
-    print(f"Saved CostCalculator test results to: {result_path}")
+    print(f"Saved AI cost calculation test results to: {result_path}")
 
 # 测试 AI 模型配置
 def test_ai_models():
     print("\nTesting AI models configuration...")
     
-    # 读取 models.ts 文件内容
-    models_path = os.path.join(AGENTFLOW_PROJECT_PATH, "packages/core/src/ai/models.ts")
-    if not os.path.exists(models_path):
-        print(f"Error: models.ts not found at {models_path}")
-        return
+    # 检查 AI 相关文件中的模型配置
+    ai_files = [
+        "backend/ai/ai_gateway.js",
+        "backend/ai/ai_agent.js"
+    ]
     
-    with open(models_path, "r", encoding="utf-8") as f:
-        content = f.read()
-    
-    # 分析模型配置
-    providers = ["openai", "anthropic", "google"]
+    providers = ["openai", "anthropic", "google", "azure"]
     found_providers = []
     
-    for provider in providers:
-        if provider in content:
-            found_providers.append(provider)
+    for file_path in ai_files:
+        full_path = os.path.join(AGENTFLOW_PROJECT_PATH, file_path)
+        if os.path.exists(full_path):
+            with open(full_path, "r", encoding="utf-8") as f:
+                content = f.read()
+            
+            for provider in providers:
+                if provider in content.lower():
+                    found_providers.append(provider)
+    
+    # 去重
+    found_providers = list(set(found_providers))
     
     # 测试结果
     test_results = {
         "timestamp": datetime.now().isoformat(),
         "found_providers": found_providers,
-        "total_providers": len(found_providers),
-        "source_code_preview": content[:500] + "..." if len(content) > 500 else content
+        "total_providers": len(found_providers)
     }
     
     # 保存测试结果

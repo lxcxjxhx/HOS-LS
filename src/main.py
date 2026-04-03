@@ -174,6 +174,20 @@ def main():
     )
     
     parser.add_argument(
+        '--smart-scan',
+        action='store_true',
+        default=True,
+        help='启用智能扫描模式（默认开启）'
+    )
+    
+    parser.add_argument(
+        '--no-smart-scan',
+        action='store_false',
+        dest='smart_scan',
+        help='禁用智能扫描模式'
+    )
+    
+    parser.add_argument(
         '--openai-api-key',
         help='OpenAI API密钥，用于AI语义分析'
     )
@@ -299,7 +313,8 @@ def main():
                 args.target, 
                 silent=args.silent,
                 use_parallel=args.parallel,
-                max_workers=args.workers
+                max_workers=args.workers,
+                use_smart_scan=args.smart_scan
             )
             results = scanner.scan()
         
@@ -510,12 +525,28 @@ def main():
             print(f'{Fore.CYAN}创建 ReportGenerator 实例...{Style.RESET_ALL}')
         generator = ReportGenerator(results, args.target, args.output_dir)
         
-        if not args.silent:
-            print(f'{Fore.CYAN}调用 generate_html() 方法...{Style.RESET_ALL}')
-        report_path = generator.generate_html()
+        # 根据输出格式生成报告
+        if args.output == 'html':
+            if not args.silent:
+                print(f'{Fore.CYAN}生成 HTML 报告...{Style.RESET_ALL}')
+            report_path = generator.generate_html()
+        elif args.output == 'md':
+            if not args.silent:
+                print(f'{Fore.CYAN}生成 Markdown 报告...{Style.RESET_ALL}')
+            report_path = generator.generate_md()
+        elif args.output == 'json':
+            if not args.silent:
+                print(f'{Fore.CYAN}生成 JSON 报告...{Style.RESET_ALL}')
+            report_path = generator.generate_json()
+        else:
+            # 默认生成 HTML 报告
+            if not args.silent:
+                print(f'{Fore.CYAN}生成 HTML 报告...{Style.RESET_ALL}')
+            report_path = generator.generate_html()
         
         if not args.silent:
-            print(f'{Fore.GREEN}[OK] HTML 报告已生成：{report_path}{Style.RESET_ALL}')
+            report_type = args.output.upper() if args.output in ['html', 'md', 'json'] else 'HTML'
+            print(f'{Fore.GREEN}[OK] {report_type} 报告已生成：{report_path}{Style.RESET_ALL}')
             if report_path and os.path.exists(report_path):
                 file_size = os.path.getsize(report_path)
                 print(f'{Fore.GREEN}  - 文件大小：{file_size} 字节{Style.RESET_ALL}')

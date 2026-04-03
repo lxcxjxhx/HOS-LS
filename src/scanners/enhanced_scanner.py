@@ -70,7 +70,7 @@ class EnhancedSecurityScanner:
     """增强型安全扫描器 (优化版)"""
     
     def __init__(self, target: str, rules_file: str = None, silent: bool = False, 
-                 use_parallel: bool = True, max_workers: int = 4):
+                 use_parallel: bool = True, max_workers: int = 4, use_smart_scan: bool = True):
         """初始化扫描器
         
         Args:
@@ -79,6 +79,7 @@ class EnhancedSecurityScanner:
             silent: 是否启用静默模式
             use_parallel: 是否使用并行扫描
             max_workers: 最大工作进程数
+            use_smart_scan: 是否使用智能扫描模式
         """
         # 执行延迟导入
         _lazy_import()
@@ -88,6 +89,7 @@ class EnhancedSecurityScanner:
         self.rules_file = rules_file
         self.use_parallel = use_parallel
         self.max_workers = max_workers
+        self.use_smart_scan = use_smart_scan
         
         # 使用规则管理器
         from rules import RuleManager
@@ -115,6 +117,33 @@ class EnhancedSecurityScanner:
         self.medium_risk = 0
         self.low_risk = 0
         self.files_to_scan = []
+        self.file_priority_engine = None
+        self.file_priorities = {}
+        
+        # 初始化文件优先级引擎
+        if self.use_smart_scan:
+            try:
+                from core import FilePriorityEngine
+                self.file_priority_engine = FilePriorityEngine(self.target)
+            except Exception as e:
+                logger.warning(f"初始化文件优先级引擎失败：{e}")
+                self.use_smart_scan = False
+        
+        # 初始化测试用例生成器
+        self.test_case_generator = None
+        try:
+            from core import TestCaseGenerator
+            self.test_case_generator = TestCaseGenerator()
+        except Exception as e:
+            logger.warning(f"初始化测试用例生成器失败：{e}")
+        
+        # 初始化风险评估引擎
+        self.risk_assessment_engine = None
+        try:
+            from core import RiskAssessmentEngine
+            self.risk_assessment_engine = RiskAssessmentEngine()
+        except Exception as e:
+            logger.warning(f"初始化风险评估引擎失败：{e}")
         
         self.ast_scanner = ASTScanner() if ASTScanner else None
         self.attack_surface_analyzer = AttackSurfaceAnalyzer() if AttackSurfaceAnalyzer else None
@@ -135,7 +164,8 @@ class EnhancedSecurityScanner:
             'total_files': 0,
             'scanned_files': 0,
             'scan_time': 0.0,
-            'method': 'parallel' if use_parallel else 'sequential'
+            'method': 'parallel' if use_parallel else 'sequential',
+            'smart_scan': self.use_smart_scan
         }
         
         # 模块健康状态
@@ -155,6 +185,9 @@ class EnhancedSecurityScanner:
             'xss_agent': {'available': self.xss_agent is not None, 'status': 'ok', 'errors': 0},
             'command_injection_agent': {'available': self.command_injection_agent is not None, 'status': 'ok', 'errors': 0},
             'sandbox_analyzer': {'available': self.sandbox_analyzer is not None, 'status': 'ok', 'errors': 0},
+            'file_priority_engine': {'available': self.file_priority_engine is not None, 'status': 'ok', 'errors': 0},
+            'test_case_generator': {'available': self.test_case_generator is not None, 'status': 'ok', 'errors': 0},
+            'risk_assessment_engine': {'available': self.risk_assessment_engine is not None, 'status': 'ok', 'errors': 0}
         }
     
 
@@ -230,64 +263,105 @@ class EnhancedSecurityScanner:
         if self.api_crawler:
             self._crawl_api_endpoints()
         
-        # 2. AST 分析（如果可用）
-        if self.ast_scanner:
-            self._scan_with_ast()
+        # 2. 初始化文件列表
+        if not self.files_to_scan:
+            self._initialize_files_to_scan()
         
-        # 3. 攻击面分析（如果可用）
-        if self.attack_surface_analyzer:
-            self._scan_with_attack_surface()
+        # 3. 根据文件优先级执行不同扫描策略
+        if self.use_smart_scan and self.file_priorities:
+            self._scan_with_priority_strategy()
+        else:
+            # 传统扫描策略
+            # 2. AST 分析（如果可用）
+            if self.ast_scanner:
+                self._scan_with_ast()
+            
+            # 3. 攻击面分析（如果可用）
+            if self.attack_surface_analyzer:
+                self._scan_with_attack_surface()
+            
+            # 4. 攻击策略生成（如果可用）
+            if self.attack_planner:
+                self._generate_attack_strategy()
+            
+            # 5. 动态执行攻击（如果可用）
+            if self.dynamic_executor and 'attack_strategies' in self.results:
+                self._execute_attacks()
+            
+            # 5. 正则检测 (使用预编译规则)
+            self._scan_with_regex()
+            
+            # 3. 上下文分析
+            self._analyze_context()
+            
+            # 4. 误报过滤
+            self._filter_false_positives()
+            
+            # 5. 计算置信度
+            self._calculate_confidence()
+            
+            # 6. 核心技术集成（如果可用）
+            if self.core_integration and os.environ.get('DISABLE_CORE_INTEGRATION') != 'true':
+                self._integrate_core_technologies()
+            
+            # 7. AI安全检测（如果可用）
+            if self.ai_security_detector and os.environ.get('DISABLE_AI_ANALYSIS') != 'true':
+                self._detect_ai_security_issues()
+            
+            # 8. 自学习（如果可用）
+            if self.self_learning_engine:
+                self._perform_self_learning()
+            
+            # 9. 多模型协同攻击（如果可用）
+            if self.multi_model_coordinator:
+                self._coordinate_multi_model_attack()
+            
+            # 10. 漏洞链分析（如果可用）
+            if self.vulnerability_chain_analyzer:
+                self._analyze_vulnerability_chain()
+            
+            # 11. 攻击代理执行（如果可用）
+            if self.sql_injection_agent or self.xss_agent or self.command_injection_agent:
+                self._execute_attack_agents()
+            
+            # 12. 沙盒分析（如果可用）
+            if self.sandbox_analyzer:
+                self._perform_sandbox_analysis()
+            
+            # 13. 权限安全扫描
+            self._scan_permission_security()
         
-        # 4. 攻击策略生成（如果可用）
-        if self.attack_planner:
-            self._generate_attack_strategy()
-        
-        # 5. 动态执行攻击（如果可用）
-        if self.dynamic_executor and 'attack_strategies' in self.results:
-            self._execute_attacks()
-        
-        # 5. 正则检测 (使用预编译规则)
-        self._scan_with_regex()
-        
-        # 3. 上下文分析
-        self._analyze_context()
-        
-        # 4. 误报过滤
-        self._filter_false_positives()
-        
-        # 5. 计算置信度
-        self._calculate_confidence()
-        
-        # 6. 核心技术集成（如果可用）
-        if self.core_integration and os.environ.get('DISABLE_CORE_INTEGRATION') != 'true':
-            self._integrate_core_technologies()
-        
-        # 7. AI安全检测（如果可用）
-        if self.ai_security_detector and os.environ.get('DISABLE_AI_ANALYSIS') != 'true':
-            self._detect_ai_security_issues()
-        
-        # 8. 自学习（如果可用）
-        if self.self_learning_engine:
-            self._perform_self_learning()
-        
-        # 9. 多模型协同攻击（如果可用）
-        if self.multi_model_coordinator:
-            self._coordinate_multi_model_attack()
-        
-        # 10. 漏洞链分析（如果可用）
-        if self.vulnerability_chain_analyzer:
-            self._analyze_vulnerability_chain()
-        
-        # 11. 攻击代理执行（如果可用）
-        if self.sql_injection_agent or self.xss_agent or self.command_injection_agent:
-            self._execute_attack_agents()
-        
-        # 12. 沙盒分析（如果可用）
-        if self.sandbox_analyzer:
-            self._perform_sandbox_analysis()
-        
-        # 13. 权限安全扫描
-        self._scan_permission_security()
+        # 执行风险评估
+        if self.risk_assessment_engine:
+            if not self.silent:
+                print(f'{Fore.CYAN}执行风险评估...{Style.RESET_ALL}')
+            
+            # 收集传统规则检测到的问题
+            traditional_issues = []
+            for category, issues in self.results.items():
+                if isinstance(issues, list):
+                    traditional_issues.extend(issues)
+            
+            # 收集 AI 语义分析结果
+            ai_analysis = self.results.get('ai_analysis', {})
+            
+            # 执行风险评估
+            assessment = self.risk_assessment_engine.assess_risk(traditional_issues, ai_analysis)
+            
+            # 生成风险评估报告
+            risk_report = self.risk_assessment_engine.generate_risk_report(
+                assessment,
+                os.path.join(os.path.dirname(self.target), 'hos_ls_risk_report.json')
+            )
+            
+            # 将风险评估结果添加到扫描结果中
+            self.results['risk_assessment'] = assessment
+            self.results['risk_report'] = risk_report
+            
+            if not self.silent:
+                print(f'{Fore.GREEN}风险评估完成!{Style.RESET_ALL}')
+                print(f'{Fore.CYAN}混合风险评分：{assessment.get("hybrid_score", 0):.2f}{Style.RESET_ALL}')
+                print(f'{Fore.CYAN}风险等级：{assessment.get("risk_level", "None")}{Style.RESET_ALL}')
         
         self.stats['scan_time'] = time.time() - start_time
         
@@ -298,6 +372,130 @@ class EnhancedSecurityScanner:
             print(f'{Fore.GREEN}低风险：{self.low_risk}{Style.RESET_ALL}')
         
         return self.results
+    
+    def _scan_with_priority_strategy(self):
+        """根据文件优先级执行不同扫描策略"""
+        if not self.silent:
+            print(f'{Fore.CYAN}使用智能优先级扫描策略...{Style.RESET_ALL}')
+        
+        # 按优先级分组文件
+        high_priority_files = []
+        medium_priority_files = []
+        low_priority_files = []
+        
+        for file_path, score in self.file_priorities.items():
+            if score >= 90:
+                high_priority_files.append(file_path)
+            elif score >= 60:
+                medium_priority_files.append(file_path)
+            else:
+                low_priority_files.append(file_path)
+        
+        if not self.silent:
+            print(f'{Fore.CYAN}高优先级文件: {len(high_priority_files)}{Style.RESET_ALL}')
+            print(f'{Fore.CYAN}中优先级文件: {len(medium_priority_files)}{Style.RESET_ALL}')
+            print(f'{Fore.CYAN}低优先级文件: {len(low_priority_files)}{Style.RESET_ALL}')
+        
+        # 1. 高优先级文件：深度扫描
+        if high_priority_files:
+            if not self.silent:
+                print(f'{Fore.CYAN}深度扫描高优先级文件...{Style.RESET_ALL}')
+            
+            # 保存原始文件列表
+            original_files = self.files_to_scan
+            
+            # 设置为高优先级文件
+            self.files_to_scan = high_priority_files
+            
+            # 执行深度扫描
+            if self.ast_scanner:
+                self._scan_with_ast()
+            if self.attack_surface_analyzer:
+                self._scan_with_attack_surface()
+            if self.attack_planner:
+                self._generate_attack_strategy()
+            if self.dynamic_executor and 'attack_strategies' in self.results:
+                self._execute_attacks()
+            self._scan_with_regex()
+            self._analyze_context()
+            self._filter_false_positives()
+            self._calculate_confidence()
+            if self.core_integration and os.environ.get('DISABLE_CORE_INTEGRATION') != 'true':
+                self._integrate_core_technologies()
+            if self.ai_security_detector and os.environ.get('DISABLE_AI_ANALYSIS') != 'true':
+                self._detect_ai_security_issues()
+            if self.multi_model_coordinator:
+                self._coordinate_multi_model_attack()
+            if self.vulnerability_chain_analyzer:
+                self._analyze_vulnerability_chain()
+            if self.sql_injection_agent or self.xss_agent or self.command_injection_agent:
+                self._execute_attack_agents()
+            if self.sandbox_analyzer:
+                self._perform_sandbox_analysis()
+            
+            # 生成测试用例（仅对高优先级文件）
+            if self.test_case_generator:
+                if not self.silent:
+                    print(f'{Fore.CYAN}为高优先级文件生成测试用例...{Style.RESET_ALL}')
+                
+                # 创建测试输出目录
+                test_output_dir = os.path.join(os.path.dirname(self.target), 'hos_ls_tests')
+                os.makedirs(test_output_dir, exist_ok=True)
+                
+                # 生成测试用例
+                self.test_case_generator.generate_tests_for_files(
+                    high_priority_files,
+                    test_output_dir
+                )
+            
+            # 恢复原始文件列表
+            self.files_to_scan = original_files
+        
+        # 2. 中优先级文件：标准扫描
+        if medium_priority_files:
+            if not self.silent:
+                print(f'{Fore.CYAN}标准扫描中优先级文件...{Style.RESET_ALL}')
+            
+            # 保存原始文件列表
+            original_files = self.files_to_scan
+            
+            # 设置为中优先级文件
+            self.files_to_scan = medium_priority_files
+            
+            # 执行标准扫描
+            if self.ast_scanner:
+                self._scan_with_ast()
+            self._scan_with_regex()
+            self._analyze_context()
+            self._filter_false_positives()
+            self._calculate_confidence()
+            if self.ai_security_detector and os.environ.get('DISABLE_AI_ANALYSIS') != 'true':
+                self._detect_ai_security_issues()
+            
+            # 恢复原始文件列表
+            self.files_to_scan = original_files
+        
+        # 3. 低优先级文件：快速扫描
+        if low_priority_files:
+            if not self.silent:
+                print(f'{Fore.CYAN}快速扫描低优先级文件...{Style.RESET_ALL}')
+            
+            # 保存原始文件列表
+            original_files = self.files_to_scan
+            
+            # 设置为低优先级文件
+            self.files_to_scan = low_priority_files
+            
+            # 执行快速扫描
+            self._scan_with_regex()
+            
+            # 恢复原始文件列表
+            self.files_to_scan = original_files
+        
+        # 4. 执行自学习和权限安全扫描
+        if self.self_learning_engine:
+            self._perform_self_learning()
+        self._scan_permission_security()
     
     def _scan_with_ast(self):
         """使用 AST 分析扫描"""
@@ -645,6 +843,44 @@ class EnhancedSecurityScanner:
         if not self.silent:
             print(f'{Fore.CYAN}初始化文件扫描列表...{Style.RESET_ALL}')
         
+        if self.use_smart_scan and self.file_priority_engine:
+            try:
+                # 使用文件优先级引擎
+                if not self.files_to_scan:
+                    self.files_to_scan = self.file_priority_engine.load_project_files()
+                
+                # 构建向量库
+                self.file_priority_engine.build_vector_store()
+                
+                # 计算文件优先级
+                self.file_priorities = self.file_priority_engine.calculate_file_priority()
+                
+                # 按优先级排序文件列表
+                sorted_files = sorted(
+                    self.file_priorities.items(),
+                    key=lambda x: x[1],
+                    reverse=True
+                )
+                self.files_to_scan = [file_path for file_path, _ in sorted_files]
+                
+                if not self.silent:
+                    print(f'{Fore.GREEN}智能文件优先级排序完成，共 {len(self.files_to_scan)} 个文件{Style.RESET_ALL}')
+                    # 显示前10个高优先级文件
+                    print(f'{Fore.CYAN}高优先级文件 (前10个):{Style.RESET_ALL}')
+                    for i, (file_path, score) in enumerate(sorted_files[:10]):
+                        priority_level = self.file_priority_engine._get_priority_level(score)
+                        print(f'{Fore.YELLOW}{i+1}. {file_path} (Score: {score:.2f}, Level: {priority_level}){Style.RESET_ALL}')
+                
+            except Exception as e:
+                logger.error(f"智能文件扫描失败：{e}")
+                # 回退到传统方法
+                self._initialize_files_to_scan_traditional()
+        else:
+            # 使用传统方法
+            self._initialize_files_to_scan_traditional()
+    
+    def _initialize_files_to_scan_traditional(self):
+        """使用传统方法初始化文件扫描列表"""
         for root, dirs, files in os.walk(self.target):
             dirs[:] = [d for d in dirs if d not in [
                 'node_modules', 'venv', '.venv', '__pycache__',

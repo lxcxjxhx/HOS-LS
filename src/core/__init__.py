@@ -11,6 +11,9 @@ from .dependency_injector import DependencyInjector, dependency_injector
 from .module_preloader import ModulePreloader, module_preloader
 from .database_layer import DatabaseLayer, database_layer
 from .database_migration_manager import DatabaseMigrationManager, database_migration_manager
+from .file_priority_engine import FilePriorityEngine
+from .test_case_generator import TestCaseGenerator
+from .risk_assessment_engine import RiskAssessmentEngine
 
 __all__ = [
     'CoreIntegration',
@@ -34,5 +37,8 @@ __all__ = [
     'DatabaseLayer',
     'database_layer',
     'DatabaseMigrationManager',
-    'database_migration_manager'
+    'database_migration_manager',
+    'FilePriorityEngine',
+    'TestCaseGenerator',
+    'RiskAssessmentEngine'
 ]

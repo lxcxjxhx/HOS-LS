@@ -2,6 +2,7 @@ from utils.advanced_features import AttackAgent, SQLInjectionAgent, XSSAgent, Co
 from utils.ai_suggestion_generator import AISuggestionGenerator
 from utils.api_client import ApiClient, HttpClient, AuthenticatedHttpClient, ApiClientFactory, ApiClientManager, ApiClientError, ApiResponse
 from utils.config_manager import ConfigManager
+from utils.performance_optimizer import PerformanceOptimizer
 
 __all__ = [
     'AttackAgent',
@@ -18,5 +19,6 @@ __all__ = [
     'ApiClientManager',
     'ApiClientError',
     'ApiResponse',
-    'ConfigManager'
+    'ConfigManager',
+    'PerformanceOptimizer'
 ]
