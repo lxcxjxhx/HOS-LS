@@ -1,0 +1,73 @@
+# HOS-LS 默认配置文件
+
+# AI 配置
+ai:
+  provider: deepseek
+  model: deepseek-chat
+  api_key: sk-b235bbdc776f47c3bee2e8e8d4ec1232
+  base_url: https://api.deepseek.com
+  temperature: 0.0
+  max_tokens: 4096
+  timeout: 60
+
+# 扫描配置
+scan:
+  max_workers: 4
+  cache_enabled: true
+  incremental: true
+  timeout: 300
+  max_file_size: 10485760  # 10MB
+  exclude_patterns:
+    - "*.min.js"
+    - "*.min.css"
+    - "node_modules/**"
+    - "__pycache__/**"
+    - ".git/**"
+    - ".venv/**"
+    - "venv/**"
+    - "dist/**"
+    - "build/**"
+  include_patterns:
+    - "*.py"
+    - "*.js"
+    - "*.ts"
+    - "*.java"
+    - "*.cpp"
+    - "*.c"
+    - "*.h"
+
+# 规则配置
+rules:
+  enabled: []
+  disabled: []
+  ruleset: default
+  severity_threshold: low
+  confidence_threshold: 0.5
+
+# 报告配置
+report:
+  format: html
+  output: ./security-report
+  include_code_snippets: true
+  include_fix_suggestions: true
+
+# 数据库配置
+database:
+  url: sqlite:///hos-ls.db
+  wal_mode: true
+  pool_size: 5
+  max_overflow: 10
+  echo: false
+
+# 沙箱配置
+sandbox:
+  enabled: true
+  max_memory: 536870912  # 512MB
+  max_cpu_time: 30
+  network_access: false
+  file_system_access: false
+
+# 全局配置
+debug: false
+verbose: false
+quiet: false
