@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>HOS-LS 安全扫描报告</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        h1 { color: #333; }
+        .summary { background: #f5f5f5; padding: 15px; border-radius: 5px; margin: 20px 0; }
+        .finding { border: 1px solid #ddd; margin: 10px 0; padding: 10px; border-radius: 3px; }
+        .severity-critical { border-left: 4px solid #dc3545; }
+        .severity-high { border-left: 4px solid #fd7e14; }
+        .severity-medium { border-left: 4px solid #ffc107; }
+        .severity-low { border-left: 4px solid #17a2b8; }
+        .severity-info { border-left: 4px solid #6c757d; }
+        .code { background: #f8f9fa; padding: 10px; border-radius: 3px; font-family: monospace; white-space: pre-wrap; }
+    </style>
+</head>
+<body>
+    <h1>HOS-LS 安全扫描报告</h1>
+    <div class="summary">
+        <h2>摘要</h2>
+        <p>扫描文件数: 1</p>
+        <p>发现问题数: 10</p>
+        <p>严重级别分布:</p>
+        <ul>
+            <li>严重: 0</li>
+            <li>高: 8</li>
+            <li>中: 2</li>
+            <li>低: 0</li>
+            <li>信息: 0</li>
+        </ul>
+    </div>
+    <h2>详细发现</h2>
+
+    <div class="finding severity-high">
+        <h3>路径遍历漏洞 (PATH_TRAVERSAL)</h3>
+        <p><strong>严重级别:</strong> high</p>
+        <p><strong>位置:</strong> :28:7</p>
+        <p><strong>描述:</strong> 该漏洞是一个路径遍历漏洞（Path Traversal），属于本地文件包含（LFI）的一种表现形式。其技术原理在于，代码通过 `fg.sync` 从 `prompts` 目录读取 `.mdx` 文件，并使用 `relative()` 函数获取相对路径作为键值。虽然 `relative()` 函数会对路径进行规范化处理，但如果攻击者能够通过创建恶意文件、控制目录结构或利用符号链接等方式，构造出包含 `../` 等路径遍历序列（如 `../../etc/passwd`）的相对路径，当此相对路径被传递给 `readFileSync` 函数时，将导致应用程序读取预期目录（`prompts`）之外的文件。这可能导致敏感系统文件（如 `/etc/passwd`、配置文件、日志文件、源代码等）被非授权读取，造成信息泄露，甚至可能结合其他漏洞（如文件上传）实现远程代码执行（RCE）。</p>
+        <p><strong>置信度:</strong> 0.9</p>
+        <div class="code">obj[relativePath] = readFileSync(path, { encoding: 'utf8' })</div>
+        <p><strong>修复建议:</strong> 1. 验证relativePath是否包含路径遍历序列（如../）；2. 使用path.resolve和path.relative确保路径在预期目录内；3. 限制文件扩展名为.mdx；4. 使用白名单验证路径</p>
+    </div>
+
+    <div class="finding severity-medium">
+        <h3>路径遍历漏洞 (PATH_TRAVERSAL)</h3>
+        <p><strong>严重级别:</strong> medium</p>
+        <p><strong>位置:</strong> :18:1</p>
+        <p><strong>描述:</strong> 该漏洞存在于 `execWorkflow` 函数中，其本质是一个本地文件包含（LFI）漏洞，具体表现为路径遍历。函数接收用户可控的 `name` 参数（workflow名称），经过 `basename()` 函数处理后得到 `flowName`。虽然 `basename()` 函数旨在移除路径中的目录部分（如 `../`），以防止简单的目录遍历，但此防护措施可能不充分或存在绕过可能。随后，`flowName` 被直接传递给 `findPath(join(cwd, 'flows'), flowName)` 函数，用于在 `flows` 目录下定位并读取文件。如果攻击者能够构造特殊的 `name` 输入（例如，利用操作系统或 `basename` 实现中的解析差异、空字节注入、或使用非标准路径分隔符），则可能绕过 `basename` 的清理，导致 `findPath` 和后续的 `readFileSync` 访问 `flows` 目录之外的任意文件，如系统配置文件、应用程序源代码或包含敏感数据的日志文件。此漏洞的潜在影响包括敏感信息泄露（`info_disclosure`），并可能为后续攻击（如读取包含数据库凭据的配置文件）创造条件。其严重性评估为中等，因为成功利用通常需要一定的前置条件（如对 `flows` 目录结构的部分了解）且不一定能直接导致远程代码执行。</p>
+        <p><strong>置信度:</strong> 0.85</p>
+        <div class="code">async function execWorkflow(name: string) {
+  const cwd = process.cwd()
+  const now = new Date()
+
+  const config = await resolveConfig(cwd)
+  const flowName = basename(name, extname(name))
+  const outputPath = buildOutputPath(flowName, now)
+
+  config.plugins ||= []
+  config.plugins.push(createExecutionPlugin({ outputPath }))
+
+  const env = new Environment(config)
+  const path = findPath(join(cwd, 'flows'), flowName)
+  const src = readFileSync(path, { encoding: 'utf8' })</div>
+        <p><strong>修复建议:</strong> 1. 对用户输入的workflow名称进行严格验证，只允许字母、数字、连字符和下划线
+2. 使用白名单验证文件扩展名
+3. 使用path.resolve()规范化路径并检查是否在预期目录内
+4. 避免直接使用用户输入构建文件路径</p>
+    </div>
+
+    <div class="finding severity-high">
+        <h3>路径遍历漏洞 (PATH_TRAVERSAL)</h3>
+        <p><strong>严重级别:</strong> high</p>
+        <p><strong>位置:</strong> :13:25</p>
+        <p><strong>描述:</strong> 该漏洞是一个路径遍历（Path Traversal）导致的任意文件写入漏洞。攻击者可以通过控制`outputPath`参数，利用路径遍历序列（如`../../../etc/passwd`）来操纵文件系统路径，将文件写入到预期目录之外的操作系统敏感位置。由于`outputPath`未经充分验证或净化就直接传递给`join()`函数并与固定字符串`'files'`连接，然后用于创建文件系统工具，这可能导致攻击者覆盖或创建关键系统文件、应用程序配置文件或可执行文件。成功利用此漏洞可能造成系统完整性破坏、敏感数据泄露（通过写入后读取）、权限提升（通过覆盖特权脚本）或导致拒绝服务（通过破坏关键文件）。其潜在影响严重性取决于应用程序的权限级别和可访问的文件系统范围。</p>
+        <p><strong>置信度:</strong> 0.95</p>
+        <div class="code">const fs = createFileSystemTools(join(outputPath, 'files'))</div>
+        <p><strong>修复建议:</strong> 1. 验证outputPath参数，确保它不包含路径遍历序列（如../）
+2. 使用path.resolve()规范化路径并检查是否在预期目录内
+3. 限制outputPath为相对路径或白名单目录
+4. 添加路径验证函数：function validateOutputPath(path: string): boolean</p>
+    </div>
+
+    <div class="finding severity-high">
+        <h3>路径遍历漏洞 (PATH_TRAVERSAL)</h3>
+        <p><strong>严重级别:</strong> high</p>
+        <p><strong>位置:</strong> :32:7</p>
+        <p><strong>描述:</strong> 该漏洞存在于promptFile函数中，由于对用户提供的文件路径参数`value`缺乏充分的验证和净化，导致存在路径遍历（Directory Traversal）风险。具体而言，代码使用`resolve(process.cwd(), value)`将用户输入与当前工作目录拼接。虽然`isUrlOrPath`函数会检查文件是否存在，但并未阻止路径中包含`../`等目录遍历序列。攻击者可构造如`../../../etc/passwd`的恶意路径，使`readFileSync`读取到应用程序预期工作目录之外的任意文件，例如系统配置文件、日志文件或包含敏感信息的其他文件，从而导致敏感信息泄露。此漏洞的本质是输入验证不严，允许攻击者通过相对路径遍历文件系统目录结构。</p>
+        <p><strong>置信度:</strong> 0.95</p>
+        <div class="code">const text = isUrl(value)
+  ? await fetch(value).then(r => r.text())
+  : readFileSync(resolve(process.cwd(), value), { encoding: 'utf8' })</div>
+        <p><strong>修复建议:</strong> 1. 使用path.resolve规范化路径后，验证路径是否在预期目录内
+2. 使用path.relative检查路径是否尝试向上遍历
+3. 限制允许的文件扩展名
+4. 使用白名单验证文件路径</p>
+    </div>
+
+    <div class="finding severity-high">
+        <h3>服务器端请求伪造 (SSRF)</h3>
+        <p><strong>严重级别:</strong> high</p>
+        <p><strong>位置:</strong> :32:7</p>
+        <p><strong>描述:</strong> 该漏洞存在于promptFile函数中，当用户输入被识别为URL时，代码会直接使用`fetch(value)`发起网络请求，且未对目标URL实施任何访问控制或限制策略。这构成了典型的服务器端请求伪造（SSRF）漏洞。攻击者可以提供一个指向内部网络资源（如`http://192.168.1.1/admin`、`http://127.0.0.1:8080`）或元数据服务（如`http://169.254.169.254/`）的URL，诱使应用程序从内部网络或本机发起请求。利用此漏洞，攻击者可以实现：1) 探测或攻击内部网络服务，绕过防火墙限制；2) 进行内部网络端口扫描，获取服务指纹信息；3) 在某些配置下，可能访问到云实例的元数据，从而获取临时凭证等敏感信息。该漏洞的潜在影响严重程度取决于内部网络环境及可访问的服务。</p>
+        <p><strong>置信度:</strong> 0.98</p>
+        <div class="code">const text = isUrl(value)
+  ? await fetch(value).then(r => r.text())
+  : readFileSync(resolve(process.cwd(), value), { encoding: 'utf8' })</div>
+        <p><strong>修复建议:</strong> 1. 验证URL是否指向允许的域名（白名单）
+2. 禁止访问内部IP地址段（如127.0.0.1, 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16）
+3. 设置请求超时和大小限制
+4. 使用DNS解析验证目标地址</p>
+    </div>
+
+    <div class="finding severity-medium">
+        <h3>不安全的文件上传处理 (INSECURE_FILE_UPLOAD)</h3>
+        <p><strong>严重级别:</strong> medium</p>
+        <p><strong>位置:</strong> :73:3</p>
+        <p><strong>描述:</strong> 该漏洞存在于`loadLocalImage`和`loadRemoteImage`函数中，具体表现为文件类型验证机制存在缺陷。代码仅依赖文件扩展名，通过`mime-types`库的`lookup`函数来确定文件的MIME类型，而未对文件的实际内容（魔数或文件头）进行验证。这种信任扩展名的做法可能导致文件类型混淆攻击（File Type Confusion）。攻击者可以上传一个恶意文件（例如包含可执行脚本或HTML的文件），但将其命名为`image.jpg`等看似无害的扩展名。由于验证仅基于扩展名，该恶意文件可能被错误地识别为图像类型并被后续处理流程接受，从而可能触发其他安全漏洞（如XSS，如果文件内容被渲染）或导致应用程序逻辑错误。代码注释中提到的基于字节前缀的后备方案（'fallback based on byte prefix'）并未实现，这进一步加剧了风险。此漏洞属于不安全的文件处理范畴，可能为其他攻击提供入口。</p>
+        <p><strong>置信度:</strong> 0.9</p>
+        <div class="code">function loadLocalImage(path: string): File {
+  const name = basename(path)
+  const data = readFileSync(path)
+  const type = lookup(name) || 'application/octet-stream' // todo - fallback based on byte prefix
+  return new File([data], name, { type })
+}</div>
+        <p><strong>修复建议:</strong> 1. 使用文件魔数（magic bytes）验证实际文件类型
+2. 限制允许的文件类型
+3. 对上传的文件进行病毒扫描
+4. 将文件存储在非Web可访问目录
+5. 使用随机生成的文件名</p>
+    </div>
+
+    <div class="finding severity-high">
+        <h3>提示注入漏洞 (PROMPT_INJECTION)</h3>
+        <p><strong>严重级别:</strong> high</p>
+        <p><strong>位置:</strong> :28:7</p>
+        <p><strong>描述:</strong> 该漏洞是一个提示注入（Prompt Injection）漏洞。其本质是应用程序在处理用户输入并将其直接传递给AI模型（如大型语言模型）时，未进行适当的清理、验证或上下文隔离。攻击者可以通过精心构造的输入（提示词），诱导AI模型偏离其预设的行为准则和功能限制。潜在影响包括：1. 模型越权：绕过系统设定的指令，访问或泄露训练数据、系统提示或其他敏感信息。2. 功能滥用：操纵模型执行未授权的操作，例如生成恶意内容、发送欺诈邮件或进行不当的自动化交互。3. 逻辑绕过：突破应用程序围绕AI模型构建的业务逻辑或安全控制。该漏洞的技术原理类似于针对AI系统的“注入攻击”，用户输入被直接解释为模型指令的一部分，而非单纯的数据，从而混淆了指令与数据的边界。由于AI模型的行为具有复杂性和不可完全预测性，此类漏洞可能导致严重的信息泄露和业务逻辑破坏。</p>
+        <p><strong>置信度:</strong> 0.9</p>
+        <div class="code">messages.push(await toCoreMessage('user', ctx.content))</div>
+        <p><strong>修复建议:</strong> 1. 对用户输入进行严格的验证和清理；2. 实施输入过滤，移除或转义可能影响提示的字符；3. 使用上下文分离技术，将用户输入与系统提示明确分开；4. 实施输出验证，确保 AI 响应符合预期格式</p>
+    </div>
+
+    <div class="finding severity-high">
+        <h3>Node.js VM 沙箱逃逸风险 (CODE_INJECTION)</h3>
+        <p><strong>严重级别:</strong> high</p>
+        <p><strong>位置:</strong> :40:10</p>
+        <p><strong>描述:</strong> 该漏洞涉及在Node.js环境中使用vm模块创建动态代码执行上下文时，未能实现充分的安全隔离，存在沙箱逃逸风险。vm模块本身并非设计用于完全隔离不可信代码的安全沙箱，攻击者可能通过多种技术手段（如原型链污染、访问全局对象或滥用上下文中的暴露函数）突破执行环境限制，最终在宿主进程中执行任意代码。虽然代码中通过配置禁用了字符串和WebAssembly代码生成，并设置了微任务模式，但_fragment函数暴露了评估器（evaluator），为攻击者提供了潜在的利用入口。此漏洞的核心风险在于，如果攻击者能够控制传入的context参数或影响_fragment函数的执行路径，则可能实现远程代码执行（RCE），从而完全控制应用程序服务器。</p>
+        <p><strong>置信度:</strong> 0.85</p>
+        <div class="code">function createEvalContext(env: Environment, context: Context = {}): vm.Context {
+  function _fragment(path: string, ctx: Context = {}): Fragment {
+    const evaluate = createSealedEvaluator(env, ctx)
+    const proc = createFragmentProcessor(env)
+    const ast = proc.parse(path)
+    const src = stringify(proc.runSync(ast), { evaluate })
+    return [FRAGMENT_SYMBOL, src]
+  }
+
+  return vm.createContext({ ...context, dedent, _fragment }, {
+    codeGeneration: { strings: false, wasm: false },
+    microtaskMode: 'afterEvaluate',
+  })
+}</div>
+        <p><strong>修复建议:</strong> 1. 使用更安全的沙箱方案如 isolated-vm 或 worker threads
+2. 如果必须使用 vm 模块，应严格限制上下文对象，避免暴露危险 API
+3. 实现严格的输入验证和白名单机制
+4. 考虑使用安全的模板引擎替代动态代码执行</p>
+    </div>
+
+    <div class="finding severity-high">
+        <h3>路径遍历漏洞 (PATH_TRAVERSAL)</h3>
+        <p><strong>严重级别:</strong> high</p>
+        <p><strong>位置:</strong> :12:25</p>
+        <p><strong>描述:</strong> 该漏洞是一个本地文件包含（LFI）漏洞，具体表现为路径遍历攻击。攻击者可以通过控制`template`参数，构造包含目录遍历序列（如`../../../`）的恶意输入。当该参数未经充分验证或净化便直接传递给`resolve()`函数时，攻击者可以突破预期的模板目录限制，访问并读取服务器文件系统上的任意文件。例如，攻击者可能通过传入类似`../../../../etc/passwd`的路径来读取系统敏感文件。虽然代码片段中提及存在对`templateDir`路径存在性的检查，但攻击者可以构造指向服务器上实际存在的敏感文件路径来绕过此检查。此漏洞的潜在影响包括但不限于：泄露服务器配置文件、源代码、数据库凭证、系统用户信息等敏感数据，为后续攻击（如权限提升、远程代码执行）提供关键信息。</p>
+        <p><strong>置信度:</strong> 0.95</p>
+        <div class="code">const templateDir = resolve(TEMPLATES_DIRNAME, template)</div>
+        <p><strong>修复建议:</strong> 1. 对template参数进行严格验证，只允许字母、数字、连字符和下划线
+2. 使用path.join()而不是resolve()来防止目录遍历
+3. 验证templateDir是否在TEMPLATES_DIRNAME目录内</p>
+    </div>
+
+    <div class="finding severity-high">
+        <h3>路径遍历漏洞 (PATH_TRAVERSAL)</h3>
+        <p><strong>严重级别:</strong> high</p>
+        <p><strong>位置:</strong> :20:11</p>
+        <p><strong>描述:</strong> 该漏洞是一个路径遍历漏洞，允许攻击者通过用户可控的`path`参数写入`baseDir`目录之外的任意文件位置。代码使用`join(baseDir, path)`组合文件路径，其中`path`参数直接来自用户输入（`files`对象的键值）。虽然`join()`函数会处理路径分隔符，但它不会验证或阻止目录遍历序列（如`../../`）。攻击者可构造类似`../../../etc/passwd`的恶意路径，导致写入或覆盖系统敏感文件（如配置文件、关键系统文件），可能造成数据泄露、系统破坏或权限提升。此漏洞的本质是未对用户输入进行规范化验证和路径限制，违反了最小权限原则。</p>
+        <p><strong>置信度:</strong> 0.95</p>
+        <div class="code">const filePath = join(baseDir, path)</div>
+        <p><strong>修复建议:</strong> 1. 使用path.resolve()或path.normalize()对路径进行规范化处理；2. 验证规范化后的路径是否以baseDir开头；3. 拒绝包含'..'或符号链接的路径；4. 使用白名单限制允许的文件扩展名或目录。</p>
+    </div>
+
+    <h2>攻击链路分析</h2>
+    <div class="summary">
+        <h3>分析摘要</h3>
+        <p>攻击链路分析完成，共发现 10 个漏洞节点和 11 个关联关系
+识别出 10 条可能的攻击路径
+总体风险评分: 0.77
+
+高风险攻击路径:
+1. 服务器端请求伪造 (high) → 路径遍历漏洞 (high) (风险: 0.77)
+2. 路径遍历漏洞 (high) → 路径遍历漏洞 (high) (风险: 0.76)
+3. 路径遍历漏洞 (high) → 服务器端请求伪造 (high) → 路径遍历漏洞 (high) (风险: 0.75)</p>
+        <p><strong>总体风险评分:</strong> 0.77</p>
+    </div>
+    <h3>高风险攻击路径</h3>
+    <ul>
+                <li>1. 服务器端请求伪造 (high) → 路径遍历漏洞 (high) (风险: 0.77)</li><li>2. 路径遍历漏洞 (high) → 路径遍历漏洞 (high) (风险: 0.76)</li><li>3. 路径遍历漏洞 (high) → 服务器端请求伪造 (high) → 路径遍历漏洞 (high) (风险: 0.75)</li><li>4. 提示注入漏洞 (high) → 服务器端请求伪造 (high) → 路径遍历漏洞 (high) (风险: 0.75)</li><li>5. 提示注入漏洞 (high) → 服务器端请求伪造 (high) (风险: 0.75)</li>
+    </ul>
+                
+</body>
+</html>

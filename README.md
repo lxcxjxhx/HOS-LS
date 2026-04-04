@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🔒 HOS-LS v3.0
+# 🔒 HOS-LS v0.3.0.0
 
 **AI 生成代码安全扫描的工业级解决方案**
 
@@ -108,7 +108,7 @@ hos-ls scan --format html --output report.html
 ### 预期输出
 
 ```
-🔒 HOS-LS Security Scanner v3.0.0
+🔒 HOS-LS Security Scanner v0.3.0.0
 
 📁 Scanning directory: ./my-project
 🔍 Files discovered: 156
@@ -303,6 +303,13 @@ graph TB
 | 报告模块 | `src/reporting/` | 多格式报告生成 |
 | 集成工具 | `src/integration/` | CI/CD、IDE 插件集成 |
 | 沙箱系统 | `src/sandbox/` | 安全代码执行环境 |
+| 风险评估 | `src/assessment/` | 漏洞风险评估 |
+| 缓存系统 | `src/cache/` | 扫描结果缓存 |
+| 插件系统 | `src/plugins/` | 可扩展插件架构 |
+| 污点分析 | `src/taint/` | 数据流污点分析 |
+| 学习系统 | `src/learning/` | AI 学习与知识管理 |
+| 存储系统 | `src/storage/` | 向量存储与代码嵌入 |
+| 工具库 | `src/utils/` | 通用工具函数 |
 
 ### 工作流程
 
@@ -572,19 +579,19 @@ HOS-LS 提供多种误报处理方式：
 
 ## 🗺️ 路线图
 
-### v3.1 (计划中)
+### v0.3.1 (计划中)
 - [ ] 支持更多语言（Go、Rust 完整支持）
 - [ ] 云原生安全扫描
 - [ ] SBOM 生成与漏洞关联
 - [ ] VS Code 插件增强
 
-### v3.2 (计划中)
+### v0.3.2 (计划中)
 - [ ] 实时协作扫描
 - [ ] 安全知识图谱
 - [ ] 自动化修复 PR 生成
 - [ ] 移动端安全扫描
 
-### v4.0 (远期)
+### v0.4.0 (远期)
 - [ ] 多租户 SaaS 版本
 - [ ] 自定义 AI 模型训练
 - [ ] 安全态势感知平台
@@ -639,7 +646,7 @@ mypy src
 
 ## 🙏 致谢
 
-HOS-LS v3.0 整合了以下项目的核心优势：
+HOS-LS v0.3.0.0 整合了以下项目的核心优势：
 
 - [cc-haha](https://github.com/example/cc-haha) - CLI 框架和工具集成
 - [claude-code-security-review](https://github.com/example/claude-code-security-review) - 安全扫描和误报过滤

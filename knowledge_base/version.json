@@ -1,0 +1,31 @@
+{
+  "version": 30,
+  "history": [
+    {
+      "timestamp": "2026-04-04T23:46:08.395479",
+      "version": 29,
+      "action": "save",
+      "details": {
+        "backup_path": "knowledge_base\\history\\v28_20260404_234608",
+        "knowledge_count": 14,
+        "pattern_count": 0,
+        "graph_nodes_count": 14,
+        "graph_edges_count": 0
+      }
+    },
+    {
+      "timestamp": "2026-04-04T23:46:08.451301",
+      "version": 30,
+      "action": "save",
+      "details": {
+        "backup_path": "knowledge_base\\history\\v29_20260404_234608",
+        "knowledge_count": 15,
+        "pattern_count": 0,
+        "graph_nodes_count": 15,
+        "graph_edges_count": 0
+      }
+    }
+  ],
+  "usage_count": 21,
+  "last_updated": "2026-04-04T23:46:08.451313"
+}

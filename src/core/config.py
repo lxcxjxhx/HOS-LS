@@ -159,6 +159,7 @@ class ConfigManager:
 
     # 默认配置路径
     DEFAULT_CONFIG_PATHS = [
+        "./config/default.yaml",
         "./hos-ls.yaml",
         "./hos-ls.yml",
         "./.hos-ls.yaml",
