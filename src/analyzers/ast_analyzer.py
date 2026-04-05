@@ -316,6 +316,8 @@ class ASTAnalyzer(BaseAnalyzer):
         # 检查危险函数调用
         language_functions = self._dangerous_functions.get(context.language, {})
         if func_name in language_functions:
+            # 获取 POC 利用方式
+            poc = self._get_poc_for_function(func_name, context.language)
             issue = self.create_issue(
                 rule_id="AST-DANGEROUS-FUNCTION",
                 message=language_functions[func_name],
@@ -326,14 +328,24 @@ class ASTAnalyzer(BaseAnalyzer):
                 severity="high",
                 confidence=0.8,
                 code_snippet=node.text.decode() if node.text else "",
+                fix_suggestion=self._get_fix_suggestion(func_name, context.language),
                 cwe_id="CWE-94",  # 代码注入
                 owasp_category="注入",
+                metadata={"poc": poc}
             )
             result.add_issue(issue)
 
         # 检查 SQL 注入风险
         if func_name in ["execute", "executemany", "query", "raw"]:
             self._check_sql_injection(node, context, result)
+
+        # 检查 XSS 风险
+        if func_name in ["innerHTML", "outerHTML", "insertAdjacentHTML", "document.write", "document.writeln"]:
+            self._check_xss(node, context, result)
+
+        # 检查命令注入风险
+        if func_name in ["system", "popen", "exec", "spawn", "execFile"]:
+            self._check_command_injection(node, context, result)
 
     def _check_function_definition(
         self, node, context: AnalysisContext, result: AnalysisResult
@@ -717,6 +729,8 @@ class ASTAnalyzer(BaseAnalyzer):
                 for arg in child.children:
                     arg_text = self._get_node_text(arg)
                     if "+" in arg_text or "f\"" in arg_text or ".format" in arg_text:
+                        poc = "攻击者可以通过输入包含 SQL 语句的参数来执行恶意 SQL 查询，例如：' OR 1=1 --"
+                        fix = "使用参数化查询或预处理语句，避免直接拼接 SQL 语句"
                         issue = self.create_issue(
                             rule_id="AST-SQL-INJECTION",
                             message="可能存在 SQL 注入风险",
@@ -727,10 +741,152 @@ class ASTAnalyzer(BaseAnalyzer):
                             severity="high",
                             confidence=0.8,
                             code_snippet=arg_text,
+                            fix_suggestion=fix,
                             cwe_id="CWE-89",  # SQL 注入
                             owasp_category="注入",
+                            metadata={"poc": poc}
                         )
                         result.add_issue(issue)
+
+    def _check_xss(
+        self, node, context: AnalysisContext, result: AnalysisResult
+    ) -> None:
+        """检查 XSS 风险
+
+        Args:
+            node: 函数调用节点
+            context: 分析上下文
+            result: 分析结果
+        """
+        for child in node.children:
+            if child.type == "arguments":
+                for arg in child.children:
+                    arg_text = self._get_node_text(arg)
+                    if "var" in arg_text or "input" in arg_text or "document" in arg_text:
+                        poc = "攻击者可以通过输入包含 JavaScript 代码的内容来执行恶意脚本，例如：<script>alert('XSS')</script>"
+                        fix = "对用户输入进行 HTML 转义，使用安全的 DOM 操作方法"
+                        issue = self.create_issue(
+                            rule_id="AST-XSS",
+                            message="可能存在 XSS 风险",
+                            line=node.start_point[0] + 1,
+                            column=node.start_point[1],
+                            end_line=node.end_point[0] + 1,
+                            end_column=node.end_point[1],
+                            severity="high",
+                            confidence=0.8,
+                            code_snippet=arg_text,
+                            fix_suggestion=fix,
+                            cwe_id="CWE-79",  # XSS
+                            owasp_category="注入",
+                            metadata={"poc": poc}
+                        )
+                        result.add_issue(issue)
+
+    def _check_command_injection(
+        self, node, context: AnalysisContext, result: AnalysisResult
+    ) -> None:
+        """检查命令注入风险
+
+        Args:
+            node: 函数调用节点
+            context: 分析上下文
+            result: 分析结果
+        """
+        for child in node.children:
+            if child.type == "arguments":
+                for arg in child.children:
+                    arg_text = self._get_node_text(arg)
+                    if "var" in arg_text or "input" in arg_text or "$" in arg_text:
+                        poc = "攻击者可以通过输入包含系统命令的参数来执行恶意命令，例如：; ls -la"
+                        fix = "使用参数数组形式调用命令，避免直接拼接命令字符串"
+                        issue = self.create_issue(
+                            rule_id="AST-COMMAND-INJECTION",
+                            message="可能存在命令注入风险",
+                            line=node.start_point[0] + 1,
+                            column=node.start_point[1],
+                            end_line=node.end_point[0] + 1,
+                            end_column=node.end_point[1],
+                            severity="high",
+                            confidence=0.8,
+                            code_snippet=arg_text,
+                            fix_suggestion=fix,
+                            cwe_id="CWE-78",  # 命令注入
+                            owasp_category="注入",
+                            metadata={"poc": poc}
+                        )
+                        result.add_issue(issue)
+
+    def _get_poc_for_function(self, func_name: str, language: str) -> str:
+        """获取函数的 POC 利用方式
+
+        Args:
+            func_name: 函数名
+            language: 语言
+
+        Returns:
+            POC 利用方式
+        """
+        poc_map = {
+            "python": {
+                "eval": "eval('__import__(\"os\").system(\"ls\")')",
+                "exec": "exec('import os; os.system(\"ls\")')",
+                "subprocess.Popen": "subprocess.Popen('ls -la', shell=True)",
+                "os.system": "os.system('ls -la')",
+                "open": "open('../../../etc/passwd', 'r')"
+            },
+            "javascript": {
+                "eval": "eval('alert(\"XSS\")')",
+                "new Function": "new Function('alert(\"XSS\")')()",
+                "innerHTML": "element.innerHTML = '<script>alert(\"XSS\")</script>'",
+                "document.write": "document.write('<script>alert(\"XSS\")</script>')"
+            },
+            "java": {
+                "Runtime.exec": "Runtime.getRuntime().exec('ls -la')",
+                "ProcessBuilder.start": "new ProcessBuilder('ls', '-la').start()"
+            },
+            "cpp": {
+                "system": "system('ls -la')",
+                "popen": "popen('ls -la', 'r')"
+            }
+        }
+        lang_poc = poc_map.get(language, {})
+        return lang_poc.get(func_name, "")
+
+    def _get_fix_suggestion(self, func_name: str, language: str) -> str:
+        """获取函数的修复建议
+
+        Args:
+            func_name: 函数名
+            language: 语言
+
+        Returns:
+            修复建议
+        """
+        fix_map = {
+            "python": {
+                "eval": "避免使用 eval()，使用更安全的替代方案",
+                "exec": "避免使用 exec()，使用更安全的替代方案",
+                "subprocess.Popen": "使用参数数组形式，设置 shell=False",
+                "os.system": "使用 subprocess 模块并设置 shell=False",
+                "open": "使用 os.path.realpath() 验证路径，避免路径遍历"
+            },
+            "javascript": {
+                "eval": "避免使用 eval()，使用更安全的替代方案",
+                "new Function": "避免使用 new Function()，使用更安全的替代方案",
+                "innerHTML": "使用 textContent 或 createElement() 替代",
+                "document.write": "使用 DOM 操作方法替代"
+            },
+            "java": {
+                "Runtime.exec": "使用 ProcessBuilder 并使用参数数组",
+                "ProcessBuilder.start": "使用参数数组形式，避免命令拼接"
+            },
+            "cpp": {
+                "system": "避免使用 system()，使用更安全的替代方案",
+                "popen": "避免使用 popen()，使用更安全的替代方案"
+            }
+        }
+        lang_fix = fix_map.get(language, {})
+        return lang_fix.get(func_name, "")
 
     def _check_sensitive_attributes(
         self, node, sensitive_attrs: List[str], context: AnalysisContext, result: AnalysisResult

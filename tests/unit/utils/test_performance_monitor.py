@@ -96,6 +96,7 @@ class TestPerformanceDecorator:
         assert records[0]["operation"] == "test_sync"
         assert records[0]["duration"] >= 0.1
 
+    @pytest.mark.asyncio
     async def test_async_decorator(self):
         """测试异步函数装饰器"""
         monitor = get_performance_monitor()

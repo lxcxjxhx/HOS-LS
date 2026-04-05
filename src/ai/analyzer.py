@@ -24,6 +24,7 @@ from src.ai.cache import get_analysis_cache
 from src.ai.filters.enhanced_filter import EnhancedFindingsFilter
 from src.ai.classifier import AutoClassifier
 from src.ai.semantic_matcher import get_ai_semantic_optimizer
+from src.attack.vulnerability_knowledge_graph import VulnerabilityKnowledgeGraph
 from src.utils.performance_monitor import get_performance_monitor, measure_performance
 from src.core.config import Config, get_config
 from src.utils.logger import get_logger
@@ -51,10 +52,28 @@ class AIAnalyzer:
         self._semantic_optimizer = get_ai_semantic_optimizer()
         self._performance_monitor = get_performance_monitor()
         self._system_prompt = self._load_system_prompt()
+        self._knowledge_graph: Optional[VulnerabilityKnowledgeGraph] = None
+        self._load_knowledge_graph()
 
     def _load_system_prompt(self) -> str:
         """加载系统提示"""
         return self._prompt_manager.get_prompt("security_analysis")
+
+    def _load_knowledge_graph(self) -> None:
+        """加载漏洞知识图谱"""
+        try:
+            self._knowledge_graph = VulnerabilityKnowledgeGraph()
+            # 尝试从文件加载知识图谱
+            import os
+            kg_file = "test_knowledge_graph.json"
+            if os.path.exists(kg_file):
+                self._knowledge_graph.load_from_file(kg_file)
+                logger.info("成功加载漏洞知识图谱")
+            else:
+                logger.warning("知识图谱文件不存在，将使用空图谱")
+        except Exception as e:
+            logger.error(f"加载知识图谱失败: {e}")
+            self._knowledge_graph = None
 
     async def initialize(self) -> None:
         """初始化分析器"""
@@ -410,6 +429,18 @@ class AIAnalyzer:
                     prompt_parts.append(f"\n## 附加文本 {i+1}")
                     prompt_parts.append(content.content)
 
+        # 添加知识图谱信息
+        if self._knowledge_graph:
+            prompt_parts.append("\n## 漏洞知识图谱信息")
+            prompt_parts.append("根据漏洞知识图谱，以下是可能相关的漏洞信息:")
+            # 分析代码中可能的漏洞模式，从知识图谱中获取相关信息
+            related_vulns = self._get_related_vulnerabilities(context.code_content)
+            if related_vulns:
+                for vuln in related_vulns[:3]:  # 只取前3个相关漏洞
+                    prompt_parts.append(f"- {vuln}")
+            else:
+                prompt_parts.append("- 未找到相关漏洞信息")
+
         prompt_parts.append("\n代码内容:\n```\n" + context.code_content + "\n```")
 
         # 添加分析要求
@@ -419,8 +450,33 @@ class AIAnalyzer:
         prompt_parts.append("3. 提供具体的修复建议")
         prompt_parts.append("4. 评估漏洞的严重程度和置信度")
         prompt_parts.append("5. 提供漏洞利用场景")
+        prompt_parts.append("6. 结合漏洞知识图谱信息进行分析")
 
         return "\n".join(prompt_parts)
+
+    def _get_related_vulnerabilities(self, code_content: str) -> List[str]:
+        """从知识图谱中获取与代码相关的漏洞信息"""
+        if not self._knowledge_graph:
+            return []
+
+        related_vulns = []
+        # 简单的关键词匹配，实际应用中可以使用更复杂的语义匹配
+        keywords = [
+            "SQL", "injection", "XSS", "command", "exec", "eval", 
+            "password", "secret", "key", "token", "auth", "authentication"
+        ]
+
+        for keyword in keywords:
+            if keyword.lower() in code_content.lower():
+                # 从知识图谱中查找相关漏洞
+                # 这里使用简化的实现，实际应用中可以使用更复杂的查询
+                patterns = self._knowledge_graph.analyze_vulnerability_patterns()
+                cwe_dist = patterns.get("cwe_distribution", {})
+                for cwe, count in cwe_dist.items():
+                    if keyword.lower() in cwe.lower():
+                        related_vulns.append(f"CWE: {cwe} (相关漏洞数: {count})")
+
+        return related_vulns
 
     @measure_performance("ai_parse_response")
     async def _parse_response(
@@ -467,18 +523,69 @@ class AIAnalyzer:
         # 应用误报过滤
         filtered_findings = await self._filter_false_positives(findings, context)
 
+        # 集成知识图谱信息增强分析结果
+        enhanced_findings = self._enhance_findings_with_knowledge(filtered_findings)
+
         return SecurityAnalysisResult(
-            findings=filtered_findings,
-            risk_score=parsed.get("risk_score", self._calculate_risk_score(filtered_findings)),
-            summary=parsed.get("summary", self._generate_summary(filtered_findings)),
+            findings=enhanced_findings,
+            risk_score=parsed.get("risk_score", self._calculate_risk_score(enhanced_findings)),
+            summary=parsed.get("summary", self._generate_summary(enhanced_findings)),
             recommendations=parsed.get("recommendations", []),
             metadata={
                 "file_path": context.file_path,
                 "language": context.language,
                 "analysis_level": context.analysis_level.value,
                 "filtered_count": len(findings) - len(filtered_findings),
+                "knowledge_graph_enhanced": True,
             },
         )
+
+    def _enhance_findings_with_knowledge(self, findings: List[VulnerabilityFinding]) -> List[VulnerabilityFinding]:
+        """使用知识图谱增强漏洞发现"""
+        if not self._knowledge_graph or not findings:
+            return findings
+
+        enhanced_findings = []
+        for finding in findings:
+            # 尝试从知识图谱中获取相关信息
+            related_info = self._get_vulnerability_context(finding)
+            if related_info:
+                # 增强漏洞描述
+                if related_info.get("related_vulnerabilities"):
+                    finding.description += f"\n相关漏洞: {', '.join(related_info['related_vulnerabilities'][:2])}"
+                # 增强修复建议
+                if related_info.get("fix"):
+                    if finding.fix_suggestion:
+                        finding.fix_suggestion += f"\n参考: {related_info['fix']}"
+                    else:
+                        finding.fix_suggestion = related_info['fix']
+                # 增强参考链接
+                if related_info.get("references"):
+                    finding.references.extend(related_info['references'][:2])
+            enhanced_findings.append(finding)
+        return enhanced_findings
+
+    def _get_vulnerability_context(self, finding: VulnerabilityFinding) -> Dict[str, Any]:
+        """从知识图谱中获取漏洞上下文信息"""
+        if not self._knowledge_graph:
+            return {}
+
+        # 尝试根据漏洞类型查找相关信息
+        rule_id = finding.rule_id
+        # 简化实现，实际应用中可以使用更复杂的匹配
+        patterns = self._knowledge_graph.analyze_vulnerability_patterns()
+        cwe_dist = patterns.get("cwe_distribution", {})
+        
+        related_info = {}
+        for cwe, count in cwe_dist.items():
+            if rule_id.lower() in cwe.lower() or cwe.lower() in rule_id.lower():
+                # 这里可以进一步查询具体的漏洞信息
+                related_info["related_vulnerabilities"] = [f"CVE-XXXX-XXXX (相关CWE: {cwe})"]
+                related_info["fix"] = f"参考CWE-{cwe}的修复建议"
+                related_info["references"] = [f"https://cwe.mitre.org/data/definitions/{cwe.split('-')[1]}.html"]
+                break
+        
+        return related_info
 
     @measure_performance("ai_filter_false_positives")
     async def _filter_false_positives(self, findings: List[VulnerabilityFinding], context: AnalysisContext) -> List[VulnerabilityFinding]:

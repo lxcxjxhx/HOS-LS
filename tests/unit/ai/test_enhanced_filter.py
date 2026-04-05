@@ -46,6 +46,7 @@ class TestEnhancedFindingsFilter:
         # 这个发现应该被排除，因为它是一个资源管理问题，不是安全漏洞
         assert reason is not None
 
+    @pytest.mark.asyncio
     async def test_filter_findings(self):
         """测试过滤发现"""
         filter = EnhancedFindingsFilter(use_hard_exclusions=True, use_ai_filtering=False)

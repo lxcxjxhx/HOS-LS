@@ -50,6 +50,8 @@ class HardExclusionRules:
         re.compile(r'\b(close|cleanup|release)\s+(resource|file|connection)', re.IGNORECASE),
         re.compile(r'\bpotential\s+memory\s+leak', re.IGNORECASE),
         re.compile(r'\b(database|thread|socket|connection)\s+leak', re.IGNORECASE),
+        re.compile(r'\b资源泄漏', re.IGNORECASE),
+        re.compile(r'\b可能的资源泄漏', re.IGNORECASE),
     ]
     
     _OPEN_REDIRECT_PATTERNS: List[Pattern] = [

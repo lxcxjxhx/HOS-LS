@@ -350,25 +350,37 @@ class ScanEngine:
         return result
 
     async def scan_batch(
-        self, targets: List[Union[str, Path]], max_concurrent: int = 4
+        self, targets: List[Union[str, Path]], max_concurrent: Optional[int] = None
     ) -> List[ScanResult]:
         """批量扫描
 
         Args:
             targets: 扫描目标列表
-            max_concurrent: 最大并发数
+            max_concurrent: 最大并发数，如果为 None 则使用配置中的值
 
         Returns:
             扫描结果列表
         """
-        semaphore = asyncio.Semaphore(max_concurrent)
+        # 使用配置中的最大工作线程数或默认值
+        concurrent_limit = max_concurrent or self.config.scan.max_workers
+        semaphore = asyncio.Semaphore(concurrent_limit)
 
         async def scan_with_limit(target: Union[str, Path]) -> ScanResult:
             async with semaphore:
-                return await self.scan(target)
+                try:
+                    return await self.scan(target)
+                except Exception as e:
+                    # 创建失败结果
+                    result = ScanResult(
+                        target=str(target),
+                        status=ScanStatus.FAILED,
+                        error_message=str(e)
+                    )
+                    result.end_time = datetime.now()
+                    return result
 
         tasks = [scan_with_limit(target) for target in targets]
-        return await asyncio.gather(*tasks)
+        return await asyncio.gather(*tasks, return_exceptions=False)
 
     def get_supported_scanners(self, target: Union[str, Path]) -> List[BaseScanner]:
         """获取支持目标的扫描器
