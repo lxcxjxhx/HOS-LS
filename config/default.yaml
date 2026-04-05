@@ -1,4 +1,4 @@
-# HOS-LS 默认配置文件
+# HOS-LS v3 默认配置文件
 
 # AI 配置
 ai:
@@ -36,6 +36,31 @@ scan:
     - "*.c"
     - "*.h"
 
+# 函数级切片器配置
+code_slicer:
+  enabled: true
+  max_slice_lines: 200
+  include_context_lines: 10
+  languages:
+    - python
+    - javascript
+    - typescript
+
+# 扫描调度器配置
+scan_scheduler:
+  enabled: true
+  max_concurrent: 5
+  max_retries: 3
+  rate_limit: 10
+  rate_limit_window: 60.0
+  retry_delay: 1.0
+
+# 多阶段扫描配置
+multi_phase_scan:
+  enabled: true
+  phase1_max_tokens: 1024
+  phase2_context_lines: 50
+
 # 规则配置
 rules:
   enabled: []
@@ -66,6 +91,36 @@ sandbox:
   max_cpu_time: 30
   network_access: false
   file_system_access: false
+
+# NVD CVE 配置
+nvd:
+  enabled: true
+  base_url: https://nvd.nist.gov/feeds/json/cve/1.1
+  github_mirror_url: https://github.com/fkie-cad/nvd-json-data-feeds
+  cache_dir: ~/.hos-ls/nvd_cache
+  request_timeout: 60
+
+# ExploitDB 配置
+exploitdb:
+  enabled: true
+  repo_url: https://github.com/offensive-security/exploitdb.git
+  local_dir: ~/.hos-ls/exploitdb
+
+# CVE 同步管理器配置
+cve_sync:
+  enabled: true
+  sync_interval_hours: 2
+  full_sync_interval_days: 7
+  nvd_enabled: true
+  exploitdb_enabled: true
+  state_file: ~/.hos-ls/cve_sync_state.json
+  data_dir: ~/.hos-ls/cve_data
+
+# 代理配置（7897端口）
+proxy:
+  enabled: true
+  http_url: http://127.0.0.1:7897
+  https_url: http://127.0.0.1:7897
 
 # 全局配置
 debug: false

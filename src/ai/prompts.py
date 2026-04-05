@@ -27,7 +27,188 @@ class PromptManager:
 
     def _load_default_prompts(self) -> None:
         """加载默认提示词"""
-        # 安全分析系统提示词
+        # ========== v3 规则驱动的安全分析 Prompt ==========
+        self._prompts["security_analysis_v3"] = """[任务]：检测代码中的安全漏洞
+
+[上下文]
+语言：{{language}}
+文件路径：{{file_path}}
+代码片段：
+{{code}}
+
+[检测规则]
+按以下规则逐一检查：
+
+1. SQL注入检测
+   - 是否存在字符串拼接 SQL
+   - 是否使用未过滤的用户输入
+   - 是否使用 ORM 安全方式
+   - 检查关键词：execute、cursor、sql、query
+
+2. 命令注入检测
+   - 是否存在 subprocess、os.system、eval、exec
+   - 是否使用未过滤的用户输入
+   - 是否使用 shlex.quote 或安全执行方式
+
+3. XSS 检测
+   - 是否存在 innerHTML、outerHTML、document.write
+   - 是否直接输出用户输入到 HTML
+   - 是否有适当的转义
+
+4. 硬编码凭证检测
+   - 是否存在 password、api_key、secret、token、key
+   - 值是否为硬编码字符串（非测试值）
+   - 检查是否从环境变量读取
+
+5. 弱加密检测
+   - 是否使用 md5、sha1、des、rc4、3des
+   - 是否使用不安全的随机数（random 而非 secrets）
+
+6. 路径遍历检测
+   - 是否存在 ../ 或路径拼接
+   - 是否使用 os.path.join 且未验证输入
+   - 是否有适当的路径规范化
+
+7. CSRF 检测
+   - 是否存在表单提交
+   - 是否缺少 CSRF token
+   - 是否有 Referer 验证
+
+8. SSRF 检测
+   - 是否存在 requests、urlopen、fetch、curl
+   - URL 是否由用户输入控制
+   - 是否有 SSRF 保护机制
+
+9. 反序列化检测
+   - 是否存在 pickle.load、yaml.load、jsonpickle
+   - 是否反序列化不受信任的数据
+
+10. 敏感数据暴露
+    - 是否在日志中输出密码、密钥、PII
+    - 是否在调试信息中暴露敏感数据
+
+[输出格式 - 严格 JSON]
+{
+  "findings": [
+    {
+      "rule_id": "SQL_INJECTION",
+      "rule_name": "SQL 注入漏洞",
+      "description": "存在 SQL 注入风险，代码中直接拼接用户输入到 SQL 查询",
+      "severity": "critical|high|medium|low|info",
+      "confidence": 0.95,
+      "location": {
+        "file": "{{file_path}}",
+        "line": 123,
+        "column": 45
+      },
+      "code_snippet": "cursor.execute(f\"SELECT * FROM users WHERE id = {user_id}\")",
+      "fix_suggestion": "使用参数化查询：cursor.execute(\"SELECT * FROM users WHERE id = ?\", (user_id,))",
+      "explanation": "用户输入 user_id 直接拼接到 SQL 查询中，攻击者可以注入恶意 SQL",
+      "references": [
+        "https://owasp.org/www-community/attacks/SQL_Injection"
+      ],
+      "exploit_scenario": "攻击者输入 '1 OR 1=1--' 可以获取所有用户数据"
+    }
+  ],
+  "summary": "发现 N 个潜在安全问题",
+  "risk_score": 7.5
+}
+
+[要求]
+- 只输出 JSON，不要有任何其他文本
+- 无问题时返回 {"findings": [], "summary": "未发现安全问题", "risk_score": 0.0}
+- 置信度范围 0.0-1.0，越接近 1.0 越确定
+- 严重性必须是：critical、high、medium、low、info 之一
+- 严格遵循 JSON 格式，确保可以被解析"""
+
+        # ========== 第一阶段：轻量定位 Prompt ==========
+        self._prompts["phase1_locate"] = """[任务]：快速定位代码中的可疑点（低 token）
+
+[上下文]
+语言：{{language}}
+代码片段：
+{{code}}
+
+[目标]
+只找出可能存在安全问题的代码位置，不要做深度分析
+
+[输出格式 - JSON]
+{
+  "suspicious_points": [
+    {
+      "line": 123,
+      "type": "sql_injection|xss|command_injection|hardcoded_credentials|...",
+      "snippet": "cursor.execute(f\"...\")"
+    }
+  ]
+}
+
+[可疑类型列表]
+sql_injection, xss, command_injection, hardcoded_credentials, weak_crypto,
+path_traversal, csrf, ssrf, deserialization, sensitive_data_exposure
+
+[要求]
+- 只输出 JSON
+- 无问题时返回 {"suspicious_points": []}"""
+
+        # ========== 第二阶段：精扫 Prompt ==========
+        self._prompts["phase2_deep_scan"] = """[任务]：深度分析可疑代码区域
+
+[上下文]
+语言：{{language}}
+文件路径：{{file_path}}
+可疑类型：{{vuln_type}}
+可疑行：{{line_num}}
+代码区域（±50行）：
+{{code}}
+
+[检测规则 - {{vuln_type}}]
+{{specific_rules}}
+
+[输出格式 - 严格 JSON]
+{
+  "vuln": true|false,
+  "rule_id": "{{vuln_type.upper()}}",
+  "rule_name": "{{vuln_type}} 漏洞",
+  "description": "...",
+  "severity": "critical|high|medium|low|info",
+  "confidence": 0.95,
+  "location": {
+    "file": "{{file_path}}",
+    "line": {{line_num}},
+    "column": 0
+  },
+  "code_snippet": "...",
+  "fix_suggestion": "...",
+  "explanation": "...",
+  "references": [],
+  "exploit_scenario": "..."
+}
+
+[要求]
+- 只输出 JSON
+- vuln 为 true 时才包含完整信息
+- vuln 为 false 时只返回 {"vuln": false}"""
+
+        # ========== SQL 注入专项规则 ==========
+        self._prompts["rules_sql_injection"] = """1. 检查是否存在字符串拼接 SQL 查询
+2. 检查是否使用未过滤的用户输入
+3. 检查是否使用参数化查询（安全）
+4. 检查 ORM 使用是否安全"""
+
+        # ========== 命令注入专项规则 ==========
+        self._prompts["rules_command_injection"] = """1. 检查 subprocess、os.system、eval、exec 的使用
+2. 检查参数是否由用户输入控制
+3. 检查是否使用 shell=True（危险）
+4. 检查是否使用 shlex.quote 或安全列表参数"""
+
+        # ========== XSS 专项规则 ==========
+        self._prompts["rules_xss"] = """1. 检查 innerHTML、outerHTML、document.write
+2. 检查用户输入是否直接输出到 HTML
+3. 检查是否有适当的转义（escape、sanitize）
+4. 检查框架是否自动转义（React、Vue 等）"""
+
+        # ========== 安全分析系统提示词（旧版保留兼容） ==========
         self._prompts["security_analysis"] = """你是专业代码安全分析师，专注识别安全漏洞和风险。
 
 目标：执行全面的代码安全审查，发现所有可能的安全问题，包括但不限于高影响漏洞。
@@ -213,6 +394,101 @@ sql_injection、xss、command_injection、hardcoded_credentials、hardcoded_keys
             list: 提示词键列表
         """
         return list(self._prompts.keys())
+
+    def render_template(self, key: str, variables: Dict[str, str]) -> str:
+        """渲染带变量的提示词模板
+
+        Args:
+            key: 提示词键
+            variables: 变量字典
+
+        Returns:
+            str: 渲染后的提示词
+        """
+        prompt = self.get_prompt(key)
+        if not prompt:
+            return ""
+        
+        # 替换 {{variable}} 格式的变量
+        for var_name, var_value in variables.items():
+            prompt = prompt.replace(f"{{{{{var_name}}}}}", str(var_value))
+        
+        return prompt
+
+    def get_rule_based_prompt(
+        self,
+        language: str,
+        file_path: str,
+        code: str,
+        rules: Optional[List[str]] = None
+    ) -> str:
+        """获取规则驱动的安全分析 Prompt
+
+        Args:
+            language: 编程语言
+            file_path: 文件路径
+            code: 代码片段
+            rules: 要启用的规则列表，None 表示使用所有规则
+
+        Returns:
+            str: 渲染后的 Prompt
+        """
+        variables = {
+            "language": language,
+            "file_path": file_path,
+            "code": code
+        }
+        return self.render_template("security_analysis_v3", variables)
+
+    def get_phase1_prompt(self, language: str, code: str) -> str:
+        """获取第一阶段：轻量定位 Prompt
+
+        Args:
+            language: 编程语言
+            code: 代码片段
+
+        Returns:
+            str: 渲染后的 Prompt
+        """
+        variables = {
+            "language": language,
+            "code": code
+        }
+        return self.render_template("phase1_locate", variables)
+
+    def get_phase2_prompt(
+        self,
+        language: str,
+        file_path: str,
+        vuln_type: str,
+        line_num: int,
+        code: str
+    ) -> str:
+        """获取第二阶段：精扫 Prompt
+
+        Args:
+            language: 编程语言
+            file_path: 文件路径
+            vuln_type: 漏洞类型
+            line_num: 可疑行号
+            code: 代码片段（±50行）
+
+        Returns:
+            str: 渲染后的 Prompt
+        """
+        # 获取专项规则
+        rule_key = f"rules_{vuln_type}"
+        specific_rules = self.get_prompt(rule_key, "请按常规安全分析方法检查")
+        
+        variables = {
+            "language": language,
+            "file_path": file_path,
+            "vuln_type": vuln_type,
+            "line_num": str(line_num),
+            "code": code,
+            "specific_rules": specific_rules
+        }
+        return self.render_template("phase2_deep_scan", variables)
 
 
 # 全局提示词管理器实例

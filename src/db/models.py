@@ -160,5 +160,178 @@ class ScanResult:
         }
 
 
+@dataclass
+class CVE:
+    """CVE 漏洞数据模型（v3 优化版）"""
+
+    cve_id: str = ""
+    description: str = ""
+    cwe: Optional[str] = None
+    cvss_v3_score: Optional[float] = None
+    cvss_v3_vector: Optional[str] = None
+    cvss_v2_score: Optional[float] = None
+    cvss_v2_vector: Optional[str] = None
+    cpe: List[str] = field(default_factory=list)
+    exploit: bool = False
+    exploit_refs: List[str] = field(default_factory=list)
+    patch_refs: List[str] = field(default_factory=list)
+    attack_vector: Optional[str] = None
+    tags: List[str] = field(default_factory=list)
+    published_date: Optional[datetime] = None
+    last_modified_date: Optional[datetime] = None
+    affected_products: List[str] = field(default_factory=list)
+    references: List[Dict[str, str]] = field(default_factory=list)
+    metadata: Dict[str, Any] = field(default_factory=dict)
+
+    def to_dict(self) -> Dict[str, Any]:
+        """转换为字典"""
+        return {
+            "cve_id": self.cve_id,
+            "description": self.description,
+            "cwe": self.cwe,
+            "cvss_v3_score": self.cvss_v3_score,
+            "cvss_v3_vector": self.cvss_v3_vector,
+            "cvss_v2_score": self.cvss_v2_score,
+            "cvss_v2_vector": self.cvss_v2_vector,
+            "cpe": self.cpe,
+            "exploit": self.exploit,
+            "exploit_refs": self.exploit_refs,
+            "patch_refs": self.patch_refs,
+            "attack_vector": self.attack_vector,
+            "tags": self.tags,
+            "published_date": self.published_date.isoformat() if self.published_date else None,
+            "last_modified_date": self.last_modified_date.isoformat() if self.last_modified_date else None,
+            "affected_products": self.affected_products,
+            "references": self.references,
+            "metadata": self.metadata,
+        }
+
+    def to_json(self) -> str:
+        """转换为 JSON 字符串"""
+        return json.dumps(self.to_dict(), ensure_ascii=False)
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "CVE":
+        """从字典创建实例"""
+        published_date = None
+        if data.get("published_date"):
+            try:
+                published_date = datetime.fromisoformat(data["published_date"])
+            except (ValueError, TypeError):
+                pass
+
+        last_modified_date = None
+        if data.get("last_modified_date"):
+            try:
+                last_modified_date = datetime.fromisoformat(data["last_modified_date"])
+            except (ValueError, TypeError):
+                pass
+
+        return cls(
+            cve_id=data.get("cve_id", ""),
+            description=data.get("description", ""),
+            cwe=data.get("cwe"),
+            cvss_v3_score=data.get("cvss_v3_score"),
+            cvss_v3_vector=data.get("cvss_v3_vector"),
+            cvss_v2_score=data.get("cvss_v2_score"),
+            cvss_v2_vector=data.get("cvss_v2_vector"),
+            cpe=data.get("cpe", []),
+            exploit=data.get("exploit", False),
+            exploit_refs=data.get("exploit_refs", []),
+            patch_refs=data.get("patch_refs", []),
+            attack_vector=data.get("attack_vector"),
+            tags=data.get("tags", []),
+            published_date=published_date,
+            last_modified_date=last_modified_date,
+            affected_products=data.get("affected_products", []),
+            references=data.get("references", []),
+            metadata=data.get("metadata", {}),
+        )
+
+    @classmethod
+    def from_json(cls, json_str: str) -> "CVE":
+        """从 JSON 字符串创建实例"""
+        data = json.loads(json_str)
+        return cls.from_dict(data)
+
+    @property
+    def severity(self) -> str:
+        """根据 CVSS 分数获取严重级别"""
+        if self.cvss_v3_score is not None:
+            score = self.cvss_v3_score
+        elif self.cvss_v2_score is not None:
+            score = self.cvss_v2_score
+        else:
+            return "medium"
+
+        if score >= 9.0:
+            return "critical"
+        elif score >= 7.0:
+            return "high"
+        elif score >= 4.0:
+            return "medium"
+        else:
+            return "low"
+
+
+@dataclass
+class CVECollection:
+    """CVE 数据集合（用于批量操作）"""
+
+    cves: List[CVE] = field(default_factory=list)
+    last_sync_time: Optional[datetime] = None
+    sync_source: str = ""
+
+    def to_dict(self) -> Dict[str, Any]:
+        """转换为字典"""
+        return {
+            "cves": [cve.to_dict() for cve in self.cves],
+            "last_sync_time": self.last_sync_time.isoformat() if self.last_sync_time else None,
+            "sync_source": self.sync_source,
+        }
+
+    def to_json(self) -> str:
+        """转换为 JSON 字符串"""
+        return json.dumps(self.to_dict(), ensure_ascii=False)
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "CVECollection":
+        """从字典创建实例"""
+        last_sync_time = None
+        if data.get("last_sync_time"):
+            try:
+                last_sync_time = datetime.fromisoformat(data["last_sync_time"])
+            except (ValueError, TypeError):
+                pass
+
+        cves = [CVE.from_dict(cve_data) for cve_data in data.get("cves", [])]
+        return cls(
+            cves=cves,
+            last_sync_time=last_sync_time,
+            sync_source=data.get("sync_source", ""),
+        )
+
+    def add_cve(self, cve: CVE) -> None:
+        """添加 CVE"""
+        self.cves.append(cve)
+
+    def get_cve(self, cve_id: str) -> Optional[CVE]:
+        """根据 ID 获取 CVE"""
+        for cve in self.cves:
+            if cve.cve_id == cve_id:
+                return cve
+        return None
+
+    def filter_by_severity(self, severity: str) -> "CVECollection":
+        """按严重级别过滤"""
+        filtered_cves = [cve for cve in self.cves if cve.severity == severity]
+        return CVECollection(cves=filtered_cves, last_sync_time=self.last_sync_time, sync_source=self.sync_source)
+
+    def filter_by_exploit(self, has_exploit: bool = True) -> "CVECollection":
+        """按是否有 exploit 过滤"""
+        filtered_cves = [cve for cve in self.cves if cve.exploit == has_exploit]
+        return CVECollection(cves=filtered_cves, last_sync_time=self.last_sync_time, sync_source=self.sync_source)
+
+
 # 基类（用于类型提示）
 Base = Scan
