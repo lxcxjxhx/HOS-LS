@@ -14,7 +14,7 @@ from src.ai.models import (
     AnalysisContext,
 )
 from src.ai.prompts import get_prompt_manager
-from src.learning.knowledge_base import get_knowledge_base
+from src.storage.rag_knowledge_base import get_rag_knowledge_base
 from src.utils.logger import get_logger
 from src.core.config import Config, get_config
 
@@ -57,7 +57,7 @@ class VulnerabilityPriorityEvaluator:
         self._manager: Optional[AIModelManager] = None
         self._prompt_manager = get_prompt_manager(self.config)
         self._system_prompt = self._load_system_prompt()
-        self._knowledge_base = get_knowledge_base()
+        self._rag_knowledge_base = get_rag_knowledge_base()
         self._priority_factors = self._load_priority_factors()
 
     def _load_system_prompt(self) -> str:
@@ -422,7 +422,7 @@ class VulnerabilityPriorityEvaluator:
             )
 
     def _add_priority_to_knowledge(self, finding: VulnerabilityFinding, priority_result: PriorityResult) -> None:
-        """将优先级评估结果添加到知识库
+        """将优先级评估结果添加到RAG知识库
 
         Args:
             finding: 漏洞发现
@@ -448,8 +448,8 @@ class VulnerabilityPriorityEvaluator:
             }
         )
 
-        # 添加到知识库
-        self._knowledge_base.add_knowledge(knowledge)
+        # 添加到RAG知识库
+        self._rag_knowledge_base.add_knowledge(knowledge)
 
     async def evaluate_batch_priority(self, findings: List[VulnerabilityFinding], context: AnalysisContext) -> List[PriorityResult]:
         """批量评估漏洞优先级

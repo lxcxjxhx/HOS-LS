@@ -1,6 +1,6 @@
-"""知识库管理模块
+"""RAG知识库管理模块
 
-实现知识库的存储、检索和更新机制，建立知识图谱，关联漏洞类型、模式和修复方案。
+实现基于向量存储的RAG知识库，替代传统的knowledge_base，支持语义检索和知识图谱。
 """
 
 import hashlib
@@ -14,45 +14,24 @@ from typing import Dict, List, Optional, Set, Union, Any
 from src.learning.self_learning import Knowledge, KnowledgeType, Pattern
 from src.utils.logger import get_logger
 from src.core.config import Config, get_config
+from src.storage.vector_store import VectorStore
 
 logger = get_logger(__name__)
 
 
 @dataclass
-class KnowledgeGraphNode:
-    """知识图谱节点"""
-    id: str
-    type: str  # vulnerability, pattern, fix, context
-    content: str
-    metadata: Dict[str, Any] = field(default_factory=dict)
-    created_at: datetime = field(default_factory=datetime.now)
-    updated_at: datetime = field(default_factory=datetime.now)
-
-
-@dataclass
-class KnowledgeGraphEdge:
-    """知识图谱边"""
-    id: str
-    source: str
-    target: str
-    relationship: str  # causes, prevents, related_to, etc.
-    weight: float = 1.0
-    metadata: Dict[str, Any] = field(default_factory=dict)
-    created_at: datetime = field(default_factory=datetime.now)
-
-
-class KnowledgeBase:
-    """知识库管理系统"""
+class RAGKnowledgeBase:
+    """RAG知识库管理系统"""
 
     def __init__(self, config: Optional[Config] = None, base_path: Optional[Union[str, Path]] = None):
-        """初始化知识库
+        """初始化RAG知识库
 
         Args:
             config: 配置对象
             base_path: 知识库基础路径
         """
         self.config = config or get_config()
-        self.base_path = Path(base_path or "./knowledge_base")
+        self.base_path = Path(base_path or "./rag_knowledge_base")
         self.base_path.mkdir(parents=True, exist_ok=True)
         
         # 知识库文件路径
@@ -65,11 +44,14 @@ class KnowledgeBase:
         self.history_path = self.base_path / "history"
         self.history_path.mkdir(parents=True, exist_ok=True)
         
+        # 向量存储
+        self.vector_store = VectorStore(self.base_path / "vector_store")
+        
         # 内存存储
         self._knowledge: Dict[str, Knowledge] = {}
         self._patterns: Dict[str, Pattern] = {}
-        self._graph_nodes: Dict[str, KnowledgeGraphNode] = {}
-        self._graph_edges: Dict[str, KnowledgeGraphEdge] = {}
+        self._graph_nodes: Dict[str, Dict] = {}
+        self._graph_edges: Dict[str, Dict] = {}
         
         # 索引
         self._type_index: Dict[str, List[str]] = {}
@@ -97,6 +79,18 @@ class KnowledgeBase:
         self._knowledge[knowledge.id] = knowledge
         self._update_indexes(knowledge)
         self._add_to_graph(knowledge)
+        
+        # 添加到向量存储
+        self.vector_store.add_document(
+            document_id=knowledge.id,
+            content=knowledge.content,
+            metadata={
+                "type": knowledge.knowledge_type.value,
+                "source": knowledge.source,
+                "tags": knowledge.tags
+            }
+        )
+        
         self.save()
         return knowledge.id
 
@@ -112,6 +106,17 @@ class KnowledgeBase:
         self.record_usage()
         self._patterns[pattern.id] = pattern
         self._add_to_graph(pattern)
+        
+        # 添加到向量存储
+        self.vector_store.add_document(
+            document_id=pattern.id,
+            content=pattern.description,
+            metadata={
+                "type": "pattern",
+                "pattern_type": pattern.pattern_type
+            }
+        )
+        
         self.save()
         return pattern.id
 
@@ -164,27 +169,35 @@ class KnowledgeBase:
         ids = self._tag_index.get(tag, [])
         return [self._knowledge.get(id) for id in ids if self._knowledge.get(id)]
 
-    def search_knowledge(self, query: str) -> List[Knowledge]:
+    def search_knowledge(self, query: str, top_k: int = 5) -> List[Knowledge]:
         """搜索知识
 
         Args:
             query: 搜索查询
+            top_k: 返回结果数量
 
         Returns:
             知识列表
         """
-        results = []
-        query_lower = query.lower()
+        self.record_usage()
         
-        for knowledge in self._knowledge.values():
-            if (
-                query_lower in knowledge.content.lower() or
-                query_lower in knowledge.source.lower() or
-                any(query_lower in tag.lower() for tag in knowledge.tags)
-            ):
-                results.append(knowledge)
+        # 使用向量存储进行语义搜索
+        results = self.vector_store.search(
+            query=query,
+            top_k=top_k
+        )
         
-        return results
+        # 转换为知识对象
+        knowledge_results = []
+        for result in results:
+            knowledge_id = result["document_id"]
+            if knowledge_id in self._knowledge:
+                knowledge_results.append(self._knowledge[knowledge_id])
+            elif knowledge_id in self._patterns:
+                # 也可以返回模式
+                pass
+        
+        return knowledge_results
 
     def update_knowledge(self, knowledge_id: str, **kwargs) -> bool:
         """更新知识
@@ -207,6 +220,18 @@ class KnowledgeBase:
         
         knowledge.updated_at = datetime.now()
         self._update_indexes(knowledge)
+        
+        # 更新向量存储
+        self.vector_store.update_document(
+            document_id=knowledge_id,
+            content=knowledge.content,
+            metadata={
+                "type": knowledge.knowledge_type.value,
+                "source": knowledge.source,
+                "tags": knowledge.tags
+            }
+        )
+        
         self.save()
         return True
 
@@ -230,6 +255,17 @@ class KnowledgeBase:
                 setattr(pattern, key, value)
         
         pattern.updated_at = datetime.now()
+        
+        # 更新向量存储
+        self.vector_store.update_document(
+            document_id=pattern_id,
+            content=pattern.description,
+            metadata={
+                "type": "pattern",
+                "pattern_type": pattern.pattern_type
+            }
+        )
+        
         self.save()
         return True
 
@@ -246,6 +282,10 @@ class KnowledgeBase:
             del self._knowledge[knowledge_id]
             self._remove_from_indexes(knowledge_id)
             self._remove_from_graph(knowledge_id)
+            
+            # 从向量存储中删除
+            self.vector_store.delete_document(knowledge_id)
+            
             self.save()
             return True
         return False
@@ -262,6 +302,10 @@ class KnowledgeBase:
         if pattern_id in self._patterns:
             del self._patterns[pattern_id]
             self._remove_from_graph(pattern_id)
+            
+            # 从向量存储中删除
+            self.vector_store.delete_document(pattern_id)
+            
             self.save()
             return True
         return False
@@ -282,7 +326,7 @@ class KnowledgeBase:
         """
         return list(self._patterns.values())
 
-    def get_graph_nodes(self) -> List[KnowledgeGraphNode]:
+    def get_graph_nodes(self) -> List[Dict]:
         """获取知识图谱节点
 
         Returns:
@@ -290,7 +334,7 @@ class KnowledgeBase:
         """
         return list(self._graph_nodes.values())
 
-    def get_graph_edges(self) -> List[KnowledgeGraphEdge]:
+    def get_graph_edges(self) -> List[Dict]:
         """获取知识图谱边
 
         Returns:
@@ -334,23 +378,8 @@ class KnowledgeBase:
         
         # 保存知识图谱
         graph_data = {
-            "nodes": [{
-                "id": node.id,
-                "type": node.type,
-                "content": node.content,
-                "metadata": node.metadata,
-                "created_at": node.created_at.isoformat(),
-                "updated_at": node.updated_at.isoformat()
-            } for node in self._graph_nodes.values()],
-            "edges": [{
-                "id": edge.id,
-                "source": edge.source,
-                "target": edge.target,
-                "relationship": edge.relationship,
-                "weight": edge.weight,
-                "metadata": edge.metadata,
-                "created_at": edge.created_at.isoformat()
-            } for edge in self._graph_edges.values()]
+            "nodes": list(self._graph_nodes.values()),
+            "edges": list(self._graph_edges.values())
         }
         with open(self.graph_path, "w", encoding="utf-8") as f:
             json.dump(graph_data, f, indent=2, ensure_ascii=False)
@@ -389,6 +418,17 @@ class KnowledgeBase:
                     )
                     self._knowledge[knowledge.id] = knowledge
                     self._update_indexes(knowledge)
+                    
+                    # 添加到向量存储
+                    self.vector_store.add_document(
+                        document_id=knowledge.id,
+                        content=knowledge.content,
+                        metadata={
+                            "type": knowledge.knowledge_type.value,
+                            "source": knowledge.source,
+                            "tags": knowledge.tags
+                        }
+                    )
             except Exception as e:
                 logger.error(f"加载知识失败: {e}")
         
@@ -410,6 +450,16 @@ class KnowledgeBase:
                         metadata=data.get("metadata", {})
                     )
                     self._patterns[pattern.id] = pattern
+                    
+                    # 添加到向量存储
+                    self.vector_store.add_document(
+                        document_id=pattern.id,
+                        content=pattern.description,
+                        metadata={
+                            "type": "pattern",
+                            "pattern_type": pattern.pattern_type
+                        }
+                    )
             except Exception as e:
                 logger.error(f"加载模式失败: {e}")
         
@@ -421,28 +471,11 @@ class KnowledgeBase:
                 
                 # 加载节点
                 for node_data in graph_data.get("nodes", []):
-                    node = KnowledgeGraphNode(
-                        id=node_data["id"],
-                        type=node_data["type"],
-                        content=node_data["content"],
-                        metadata=node_data.get("metadata", {}),
-                        created_at=datetime.fromisoformat(node_data["created_at"]),
-                        updated_at=datetime.fromisoformat(node_data["updated_at"])
-                    )
-                    self._graph_nodes[node.id] = node
+                    self._graph_nodes[node_data["id"]] = node_data
                 
                 # 加载边
                 for edge_data in graph_data.get("edges", []):
-                    edge = KnowledgeGraphEdge(
-                        id=edge_data["id"],
-                        source=edge_data["source"],
-                        target=edge_data["target"],
-                        relationship=edge_data["relationship"],
-                        weight=edge_data.get("weight", 1.0),
-                        metadata=edge_data.get("metadata", {}),
-                        created_at=datetime.fromisoformat(edge_data["created_at"])
-                    )
-                    self._graph_edges[edge.id] = edge
+                    self._graph_edges[edge_data["id"]] = edge_data
             except Exception as e:
                 logger.error(f"加载知识图谱失败: {e}")
 
@@ -485,6 +518,14 @@ class KnowledgeBase:
             shutil.copy(self.patterns_path, backup_dir / "patterns.json")
         if self.graph_path.exists():
             shutil.copy(self.graph_path, backup_dir / "knowledge_graph.json")
+        
+        # 备份向量存储
+        vector_backup = backup_dir / "vector_store"
+        vector_backup.mkdir(parents=True, exist_ok=True)
+        if (self.base_path / "vector_store").exists():
+            for file in (self.base_path / "vector_store").iterdir():
+                if file.is_file():
+                    shutil.copy(file, vector_backup / file.name)
         
         return str(backup_dir)
 
@@ -596,6 +637,28 @@ class KnowledgeBase:
         # 重新构建知识图谱
         self.build_knowledge_graph()
         
+        # 重新构建向量存储
+        self.vector_store.clear()
+        for knowledge in self._knowledge.values():
+            self.vector_store.add_document(
+                document_id=knowledge.id,
+                content=knowledge.content,
+                metadata={
+                    "type": knowledge.knowledge_type.value,
+                    "source": knowledge.source,
+                    "tags": knowledge.tags
+                }
+            )
+        for pattern in self._patterns.values():
+            self.vector_store.add_document(
+                document_id=pattern.id,
+                content=pattern.description,
+                metadata={
+                    "type": "pattern",
+                    "pattern_type": pattern.pattern_type
+                }
+            )
+        
         # 保存整理结果
         self.save()
         
@@ -665,6 +728,7 @@ class KnowledgeBase:
             backup_knowledge = target_backup / "knowledge.json"
             backup_patterns = target_backup / "patterns.json"
             backup_graph = target_backup / "knowledge_graph.json"
+            backup_vector = target_backup / "vector_store"
             
             if backup_knowledge.exists():
                 shutil.copy(backup_knowledge, self.knowledge_path)
@@ -672,6 +736,11 @@ class KnowledgeBase:
                 shutil.copy(backup_patterns, self.patterns_path)
             if backup_graph.exists():
                 shutil.copy(backup_graph, self.graph_path)
+            if backup_vector.exists():
+                vector_store_path = self.base_path / "vector_store"
+                if vector_store_path.exists():
+                    shutil.rmtree(vector_store_path)
+                shutil.copytree(backup_vector, vector_store_path)
             
             # 重新加载数据
             self._knowledge.clear()
@@ -680,6 +749,7 @@ class KnowledgeBase:
             self._graph_edges.clear()
             self._type_index.clear()
             self._tag_index.clear()
+            self.vector_store.clear()
             
             self.load()
             self.version = version
@@ -741,7 +811,9 @@ class KnowledgeBase:
                 "type": item.knowledge_type.value,
                 "source": item.source,
                 "confidence": item.confidence,
-                "tags": item.tags
+                "tags": item.tags,
+                "created_at": item.created_at.isoformat() if hasattr(item, 'created_at') else datetime.now().isoformat(),
+                "updated_at": item.updated_at.isoformat() if hasattr(item, 'updated_at') else datetime.now().isoformat()
             }
         else:  # Pattern
             node_id = item.id
@@ -751,23 +823,18 @@ class KnowledgeBase:
                 "pattern_type": item.pattern_type,
                 "pattern_value": item.pattern_value,
                 "confidence": item.confidence,
-                "occurrence_count": item.occurrence_count
+                "occurrence_count": item.occurrence_count,
+                "created_at": datetime.now().isoformat(),
+                "updated_at": datetime.now().isoformat()
             }
         
         # 创建或更新节点
-        if node_id in self._graph_nodes:
-            node = self._graph_nodes[node_id]
-            node.content = content
-            node.metadata = metadata
-            node.updated_at = datetime.now()
-        else:
-            node = KnowledgeGraphNode(
-                id=node_id,
-                type=node_type,
-                content=content,
-                metadata=metadata
-            )
-            self._graph_nodes[node_id] = node
+        self._graph_nodes[node_id] = {
+            "id": node_id,
+            "type": node_type,
+            "content": content,
+            "metadata": metadata
+        }
 
     def _remove_from_graph(self, item_id: str) -> None:
         """从知识图谱中移除"""
@@ -778,7 +845,7 @@ class KnowledgeBase:
         # 移除相关边
         edges_to_remove = []
         for edge_id, edge in self._graph_edges.items():
-            if edge.source == item_id or edge.target == item_id:
+            if edge["source"] == item_id or edge["target"] == item_id:
                 edges_to_remove.append(edge_id)
         
         for edge_id in edges_to_remove:
@@ -795,14 +862,14 @@ class KnowledgeBase:
                     if similarity > 0.5:
                         edge_id = hashlib.sha256(f"{knowledge1.id}_{knowledge2.id}_related".encode()).hexdigest()[:16]
                         if edge_id not in self._graph_edges:
-                            edge = KnowledgeGraphEdge(
-                                id=edge_id,
-                                source=knowledge1.id,
-                                target=knowledge2.id,
-                                relationship="related_to",
-                                weight=similarity
-                            )
-                            self._graph_edges[edge_id] = edge
+                            self._graph_edges[edge_id] = {
+                                "id": edge_id,
+                                "source": knowledge1.id,
+                                "target": knowledge2.id,
+                                "relationship": "related_to",
+                                "weight": similarity,
+                                "created_at": datetime.now().isoformat()
+                            }
         
         # 知识与模式之间的关系
         for knowledge in self._knowledge.values():
@@ -811,14 +878,14 @@ class KnowledgeBase:
                 if pattern.pattern_value in knowledge.content:
                     edge_id = hashlib.sha256(f"{knowledge.id}_{pattern.id}_contains".encode()).hexdigest()[:16]
                     if edge_id not in self._graph_edges:
-                        edge = KnowledgeGraphEdge(
-                            id=edge_id,
-                            source=knowledge.id,
-                            target=pattern.id,
-                            relationship="contains_pattern",
-                            weight=0.8
-                        )
-                        self._graph_edges[edge_id] = edge
+                        self._graph_edges[edge_id] = {
+                            "id": edge_id,
+                            "source": knowledge.id,
+                            "target": pattern.id,
+                            "relationship": "contains_pattern",
+                            "weight": 0.8,
+                            "created_at": datetime.now().isoformat()
+                        }
 
     def _calculate_similarity(self, text1: str, text2: str) -> float:
         """计算文本相似度
@@ -938,17 +1005,17 @@ class KnowledgeBase:
         )
 
 
-# 全局知识库实例
-_knowledge_base: Optional[KnowledgeBase] = None
+# 全局RAG知识库实例
+_rag_knowledge_base: Optional[RAGKnowledgeBase] = None
 
 
-def get_knowledge_base() -> KnowledgeBase:
-    """获取全局知识库实例
+def get_rag_knowledge_base() -> RAGKnowledgeBase:
+    """获取全局RAG知识库实例
 
     Returns:
-        知识库实例
+        RAG知识库实例
     """
-    global _knowledge_base
-    if _knowledge_base is None:
-        _knowledge_base = KnowledgeBase()
-    return _knowledge_base
+    global _rag_knowledge_base
+    if _rag_knowledge_base is None:
+        _rag_knowledge_base = RAGKnowledgeBase()
+    return _rag_knowledge_base

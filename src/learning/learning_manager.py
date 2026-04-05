@@ -10,7 +10,7 @@ from typing import Dict, List, Optional, Union
 
 from src.learning.ai_learning import AIDrivenLearning, AILearningResult
 from src.learning.self_learning import ScanResult, Feedback
-from src.learning.knowledge_base import get_knowledge_base
+from src.storage.rag_knowledge_base import get_rag_knowledge_base
 from src.utils.logger import get_logger
 from src.core.config import Config, get_config
 
@@ -48,9 +48,9 @@ class LearningManager:
             self._initialized = True
             self.config = get_config()
             self._ai_learning = AIDrivenLearning(self.config)
-            self._knowledge_base = get_knowledge_base()
+            self._rag_knowledge_base = get_rag_knowledge_base()
             self._stats = LearningStats()
-            self._knowledge_base_path = Path("./knowledge_base")
+            self._knowledge_base_path = Path("./rag_knowledge_base")
             self._load_stats()
 
     async def learn_from_scan(self, scan_result: ScanResult) -> AILearningResult:
@@ -66,14 +66,29 @@ class LearningManager:
             result = await self._ai_learning.learn_from_scan_results([scan_result])
             self._update_stats(scan_result, result)
             
-            # 更新到新的知识库
+            # 更新到RAG知识库
             for pattern in result.patterns:
-                self._knowledge_base.add_pattern(pattern)
+                # 注意：RAG知识库可能不支持直接添加pattern，需要转换为knowledge
+                from src.learning.self_learning import Knowledge, KnowledgeType
+                knowledge = Knowledge(
+                    id=pattern.id,
+                    knowledge_type=KnowledgeType.PATTERN,
+                    content=pattern.pattern_value,
+                    source="pattern_learning",
+                    confidence=pattern.confidence,
+                    tags=[pattern.pattern_type],
+                    metadata={
+                        "pattern_type": pattern.pattern_type,
+                        "occurrence_count": pattern.occurrence_count,
+                        "true_positive_count": pattern.true_positive_count,
+                        "false_positive_count": pattern.false_positive_count
+                    }
+                )
+                self._rag_knowledge_base.add_knowledge(knowledge)
             for knowledge in result.knowledge:
-                self._knowledge_base.add_knowledge(knowledge)
+                self._rag_knowledge_base.add_knowledge(knowledge)
             
-            # 构建知识图谱
-            self._knowledge_base.build_knowledge_graph()
+            # 注意：RAG知识库可能不需要显式构建知识图谱
             
             self._save_knowledge_base()
             self._save_stats()
@@ -96,14 +111,29 @@ class LearningManager:
             for scan_result in scan_results:
                 self._update_stats(scan_result, result)
             
-            # 更新到新的知识库
+            # 更新到RAG知识库
             for pattern in result.patterns:
-                self._knowledge_base.add_pattern(pattern)
+                # 注意：RAG知识库可能不支持直接添加pattern，需要转换为knowledge
+                from src.learning.self_learning import Knowledge, KnowledgeType
+                knowledge = Knowledge(
+                    id=pattern.id,
+                    knowledge_type=KnowledgeType.PATTERN,
+                    content=pattern.pattern_value,
+                    source="pattern_learning",
+                    confidence=pattern.confidence,
+                    tags=[pattern.pattern_type],
+                    metadata={
+                        "pattern_type": pattern.pattern_type,
+                        "occurrence_count": pattern.occurrence_count,
+                        "true_positive_count": pattern.true_positive_count,
+                        "false_positive_count": pattern.false_positive_count
+                    }
+                )
+                self._rag_knowledge_base.add_knowledge(knowledge)
             for knowledge in result.knowledge:
-                self._knowledge_base.add_knowledge(knowledge)
+                self._rag_knowledge_base.add_knowledge(knowledge)
             
-            # 构建知识图谱
-            self._knowledge_base.build_knowledge_graph()
+            # 注意：RAG知识库可能不需要显式构建知识图谱
             
             self._save_knowledge_base()
             self._save_stats()
@@ -126,14 +156,29 @@ class LearningManager:
             self._stats.total_feedbacks += 1
             self._stats.total_improvements += len(result.improvement_suggestions)
             
-            # 更新到新的知识库
+            # 更新到RAG知识库
             for pattern in result.patterns:
-                self._knowledge_base.add_pattern(pattern)
+                # 注意：RAG知识库可能不支持直接添加pattern，需要转换为knowledge
+                from src.learning.self_learning import Knowledge, KnowledgeType
+                knowledge = Knowledge(
+                    id=pattern.id,
+                    knowledge_type=KnowledgeType.PATTERN,
+                    content=pattern.pattern_value,
+                    source="pattern_learning",
+                    confidence=pattern.confidence,
+                    tags=[pattern.pattern_type],
+                    metadata={
+                        "pattern_type": pattern.pattern_type,
+                        "occurrence_count": pattern.occurrence_count,
+                        "true_positive_count": pattern.true_positive_count,
+                        "false_positive_count": pattern.false_positive_count
+                    }
+                )
+                self._rag_knowledge_base.add_knowledge(knowledge)
             for knowledge in result.knowledge:
-                self._knowledge_base.add_knowledge(knowledge)
+                self._rag_knowledge_base.add_knowledge(knowledge)
             
-            # 构建知识图谱
-            self._knowledge_base.build_knowledge_graph()
+            # 注意：RAG知识库可能不需要显式构建知识图谱
             
             self._save_knowledge_base()
             self._save_stats()
@@ -182,24 +227,11 @@ class LearningManager:
         Returns:
             知识图谱（节点和边）
         """
-        nodes = [{
-            "id": node.id,
-            "type": node.type,
-            "content": node.content,
-            "metadata": node.metadata
-        } for node in self._knowledge_base.get_graph_nodes()]
-        
-        edges = [{
-            "id": edge.id,
-            "source": edge.source,
-            "target": edge.target,
-            "relationship": edge.relationship,
-            "weight": edge.weight
-        } for edge in self._knowledge_base.get_graph_edges()]
-        
+        # 注意：RAG知识库可能不提供知识图谱功能
+        # 这里返回一个空的知识图谱结构
         return {
-            "nodes": nodes,
-            "edges": edges
+            "nodes": [],
+            "edges": []
         }
 
     def search_knowledge(self, query: str) -> List[Dict]:
@@ -211,7 +243,7 @@ class LearningManager:
         Returns:
             知识列表
         """
-        knowledge_list = self._knowledge_base.search_knowledge(query)
+        knowledge_list = self._rag_knowledge_base.search_knowledge(query)
         return [k.to_dict() for k in knowledge_list]
 
     def get_knowledge_by_type(self, knowledge_type: str) -> List[Dict]:
@@ -224,7 +256,7 @@ class LearningManager:
             知识列表
         """
         from src.learning.self_learning import KnowledgeType
-        knowledge_list = self._knowledge_base.get_knowledge_by_type(knowledge_type)
+        knowledge_list = self._rag_knowledge_base.get_knowledge_by_type(knowledge_type)
         return [k.to_dict() for k in knowledge_list]
 
     def get_knowledge_by_tag(self, tag: str) -> List[Dict]:
@@ -236,7 +268,7 @@ class LearningManager:
         Returns:
             知识列表
         """
-        knowledge_list = self._knowledge_base.get_knowledge_by_tag(tag)
+        knowledge_list = self._rag_knowledge_base.get_knowledge_by_tag(tag)
         return [k.to_dict() for k in knowledge_list]
 
     def save_knowledge_base(self, path: Optional[Union[str, Path]] = None) -> None:

@@ -454,7 +454,7 @@ class AIAnalyzer:
                 rule_id=data.get("rule_id", "UNKNOWN"),
                 rule_name=data.get("rule_name", "Unknown"),
                 description=data.get("description", ""),
-                severity=data.get("severity", "medium"),
+                severity=data.get("severity", "medium").lower(),
                 confidence=data.get("confidence", 0.5),
                 location=location,
                 code_snippet=data.get("code_snippet", ""),
@@ -544,11 +544,11 @@ class AIAnalyzer:
         false_positive_patterns = {
             # SQL注入误报模式
             "SQL_INJECTION": [
-                r"cursor\.execute\([\"'].*[\"']\s*\)"  # 硬编码SQL
+                r"cursor\.execute\(['\"].*['\"]\s*\)"  # 硬编码SQL
             ],
             # 命令注入误报模式
             "CMD_INJECTION": [
-                r"subprocess\.call\(\[[\"'].*[\"']\]\)"  # 硬编码命令
+                r"subprocess\.call\(\[['\"].*['\"]\]\)"  # 硬编码命令
             ],
             # XSS误报模式
             "XSS": [
@@ -556,8 +556,8 @@ class AIAnalyzer:
             ],
             # 硬编码凭据误报模式
             "HARDCODED_CREDENTIALS": [
-                r"password\s*=\s*[\"']test[\"']",  # 测试密码
-                r"api_key\s*=\s*[\"']test[\"']"  # 测试API密钥
+                r"password\s*=\s*['\"]test['\"]",  # 测试密码
+                r"api_key\s*=\s*['\"]test['\"]"  # 测试API密钥
             ]
         }
 
@@ -574,11 +574,14 @@ class AIAnalyzer:
 
         # 检查是否为示例代码
         if "example" in context.file_path.lower() or "sample" in context.file_path.lower():
-            return True
+            # 只过滤低严重级别的问题
+            if finding.severity in ["low", "info"]:
+                return True
 
         # 检查是否为文档或注释中的代码
         if "doc" in context.file_path.lower() or "docs" in context.file_path.lower():
-            return True
+            if finding.severity in ["low", "info"]:
+                return True
 
         return False
 

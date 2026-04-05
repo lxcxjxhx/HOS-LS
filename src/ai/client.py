@@ -63,6 +63,9 @@ class AIClient(ABC):
         Raises:
             Exception: 所有重试都失败后抛出异常
         """
+        from src.ai.token_tracker import get_token_tracker
+        
+        token_tracker = get_token_tracker()
         retries = 0
         last_error = None
 
@@ -72,6 +75,19 @@ class AIClient(ABC):
                 start_time = time.time()
                 response = await self.generate(request)
                 duration = time.time() - start_time
+                
+                # 记录token使用
+                if response.usage:
+                    token_tracker.track_usage(
+                        provider=self.provider.value,
+                        model=response.model,
+                        prompt_tokens=response.usage.get("prompt_tokens", 0),
+                        completion_tokens=response.usage.get("completion_tokens", 0),
+                        total_tokens=response.usage.get("total_tokens", 0),
+                        duration=duration,
+                        success=True
+                    )
+                
                 logger.info(f"AI API call successful in {duration:.1f}s")
                 return response
             except Exception as e:
@@ -243,6 +259,19 @@ class AIModelManager:
         Returns:
             AI 响应
         """
+        from src.ai.token_tracker import get_token_tracker
+        
+        token_tracker = get_token_tracker()
+        
+        # 检查缓存
+        cached_response = token_tracker.check_cache(
+            prompt=request.prompt,
+            system_prompt=request.system_prompt
+        )
+        if cached_response:
+            logger.info("Using cached AI response")
+            return cached_response
+        
         # 尝试使用指定的提供商或默认提供商
         if provider is None:
             # 使用回退链
@@ -256,6 +285,13 @@ class AIModelManager:
                         
                         # 更新性能统计
                         self._update_performance(fallback_provider, duration, True)
+                        
+                        # 添加到缓存
+                        token_tracker.add_to_cache(
+                            prompt=request.prompt,
+                            system_prompt=request.system_prompt,
+                            result=response
+                        )
                         
                         if fallback_provider != self._fallback_chain[0]:
                             logger.warning(f"Using fallback provider: {fallback_provider}")
@@ -278,6 +314,13 @@ class AIModelManager:
                     
                     # 更新性能统计
                     self._update_performance(provider, duration, True)
+                    
+                    # 添加到缓存
+                    token_tracker.add_to_cache(
+                        prompt=request.prompt,
+                        system_prompt=request.system_prompt,
+                        result=response
+                    )
                     
                     return response
                 except Exception as e:

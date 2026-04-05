@@ -17,7 +17,7 @@ ai:
   enabled: false
   provider: deepseek
   model: deepseek-chat  # 正确的 DeepSeek 模型名称
-  api_key: "${DEEPSEEK_API_KEY}"
+  api_key: "sk-b235bbdc776f47c3bee2e8e8d4ec1232"
   base_url: "https://api.deepseek.com"
   max_tokens: 4096
   temperature: 0.0

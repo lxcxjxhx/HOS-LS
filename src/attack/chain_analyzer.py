@@ -11,7 +11,7 @@ from typing import Dict, List, Optional, Set, Tuple, Any
 from src.ai.client import AIModelManager, get_model_manager
 from src.ai.models import AIRequest, SecurityAnalysisResult, VulnerabilityFinding
 from src.ai.prompts import get_prompt_manager
-from src.learning.knowledge_base import get_knowledge_base
+from src.storage.rag_knowledge_base import get_rag_knowledge_base
 from src.utils.logger import get_logger
 from src.core.config import Config, get_config
 
@@ -77,7 +77,7 @@ class AttackChainAnalyzer:
         self._manager: Optional[AIModelManager] = None
         self._prompt_manager = get_prompt_manager(self.config)
         self._system_prompt = self._load_system_prompt()
-        self._knowledge_base = get_knowledge_base()
+        self._rag_knowledge_base = get_rag_knowledge_base()
 
     def _load_system_prompt(self) -> str:
         """加载攻击链路分析系统提示"""

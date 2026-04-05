@@ -16,7 +16,7 @@ from src.ai.models import (
     AnalysisContext,
 )
 from src.ai.prompts import get_prompt_manager
-from src.learning.knowledge_base import get_knowledge_base
+from src.storage.rag_knowledge_base import get_rag_knowledge_base
 from src.utils.logger import get_logger
 from src.core.config import Config, get_config
 
@@ -73,7 +73,7 @@ class VulnerabilityClassifier:
         self._manager: Optional[AIModelManager] = None
         self._prompt_manager = get_prompt_manager(self.config)
         self._system_prompt = self._load_system_prompt()
-        self._knowledge_base = get_knowledge_base()
+        self._rag_knowledge_base = get_rag_knowledge_base()
         self._classification_rules = self._load_classification_rules()
 
     def _load_classification_rules(self) -> Dict[str, List[Tuple[str, str, float]]]:
@@ -166,8 +166,8 @@ class VulnerabilityClassifier:
                             confidence
                         )
 
-        # 检查知识库
-        knowledge_results = self._knowledge_base.search_knowledge(text)
+        # 检查RAG知识库
+        knowledge_results = self._rag_knowledge_base.search_knowledge(text)
         for knowledge in knowledge_results:
             if knowledge.confidence > highest_confidence:
                 highest_confidence = knowledge.confidence
@@ -231,7 +231,7 @@ class VulnerabilityClassifier:
         return classification
 
     def _add_classification_to_knowledge(self, finding: VulnerabilityFinding, classification: ClassificationResult) -> None:
-        """将分类结果添加到知识库
+        """将分类结果添加到RAG知识库
 
         Args:
             finding: 漏洞发现
@@ -254,8 +254,8 @@ class VulnerabilityClassifier:
             }
         )
 
-        # 添加到知识库
-        self._knowledge_base.add_knowledge(knowledge)
+        # 添加到RAG知识库
+        self._rag_knowledge_base.add_knowledge(knowledge)
 
     def _build_classification_prompt(self, finding: VulnerabilityFinding, context: AnalysisContext) -> str:
         """构建分类提示"""
@@ -302,7 +302,7 @@ class VulnerabilityClassifier:
             confidence = data.get("confidence", 0.5)
 
             return ClassificationResult(
-                severity=severity,
+                severity=severity.lower(),
                 vulnerability_type=vulnerability_type,
                 confidence=confidence,
                 description=description
@@ -497,11 +497,13 @@ class AutoClassifier:
         # 更新漏洞信息
         enhanced_findings = []
         for finding, classification in zip(result.findings, classifications):
+            # 确保严重级别是小写的
+            severity = classification.severity.lower()
             enhanced_finding = VulnerabilityFinding(
                 rule_id=finding.rule_id,
                 rule_name=finding.rule_name,
                 description=classification.description or finding.description,
-                severity=classification.severity,
+                severity=severity,
                 confidence=classification.confidence,
                 location=finding.location,
                 code_snippet=finding.code_snippet,
