@@ -71,13 +71,14 @@ class RulesConfig(BaseModel):
     ruleset: str = Field(default="default", description="规则集")
     severity_threshold: str = Field(default="low", description="严重级别阈值")
     confidence_threshold: float = Field(default=0.5, description="置信度阈值")
+    poc_severity_threshold: str = Field(default="high", description="POC生成的严重级别阈值")
 
-    @field_validator("severity_threshold")
+    @field_validator("severity_threshold", "poc_severity_threshold")
     @classmethod
     def validate_severity(cls, v: str) -> str:
         allowed = ["critical", "high", "medium", "low", "info"]
         if v not in allowed:
-            raise ValueError(f"severity_threshold must be one of {allowed}")
+            raise ValueError(f"severity threshold must be one of {allowed}")
         return v
 
 

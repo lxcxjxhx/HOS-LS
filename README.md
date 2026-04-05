@@ -186,6 +186,7 @@ rules:
   disabled:
     - false-positive-rule
   severity_threshold: medium
+  poc_severity_threshold: high  # POC生成的严重程度阈值，默认为high
 
 # 报告配置
 report:

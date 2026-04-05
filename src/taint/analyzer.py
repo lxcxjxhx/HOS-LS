@@ -9,6 +9,8 @@ from typing import Dict, List, Optional, Set, Tuple
 from tree_sitter import Language, Parser, Node, Tree
 
 from src.analyzers.base import AnalysisContext
+from src.ai.risk_scorer import HybridRiskScorer
+from src.ai.models import VulnerabilityFinding
 
 
 @dataclass
@@ -40,6 +42,65 @@ class TaintPath:
     path: List[str]  # 变量传播链
     confidence: float = 0.0
     poc: Optional[str] = None
+    severity: str = "medium"  # 严重程度: critical, high, medium, low, info
+    
+    def evaluate_severity(self) -> str:
+        """评估漏洞严重程度
+        
+        Returns:
+            严重程度级别
+        """
+        # 基于漏洞类型的基础严重程度
+        severity_map = {
+            "SQL Injection": "high",
+            "Command Injection": "high",
+            "Code Injection": "high",
+            "XSS": "medium",
+        }
+        base_severity = severity_map.get(self.sink.vulnerability_type, "medium")
+        
+        # 创建VulnerabilityFinding对象用于风险评分
+        finding = VulnerabilityFinding(
+            rule_id=self.sink.vulnerability_type,
+            rule_name=self.sink.vulnerability_type,
+            description=f"{self.sink.description} - {self.source.description}",
+            severity=base_severity,  # 使用基于漏洞类型的基础严重程度
+            confidence=self.confidence,
+            location={
+                "file": self.sink.file_path,
+                "line": self.sink.line
+            },
+            code_snippet="",
+            fix_suggestion="",
+            explanation="",
+            references=[]
+        )
+        
+        # 使用HybridRiskScorer计算风险评分
+        scorer = HybridRiskScorer()
+        risk_score = scorer.calculate_score(finding)
+        
+        # 根据风险评分映射到严重程度
+        score = risk_score.overall_score
+        if score >= 8.0:
+            return "critical"
+        elif score >= 6.0:
+            return "high"
+        elif score >= 4.0:
+            return "medium"
+        elif score >= 2.0:
+            return "low"
+        else:
+            return "info"
+    
+    def is_high_risk(self) -> bool:
+        """判断是否为高危及以上漏洞
+        
+        Returns:
+            是否为高危及以上
+        """
+        severity = self.evaluate_severity()
+        return severity in ["critical", "high"]
 
 
 class TaintAnalyzer:

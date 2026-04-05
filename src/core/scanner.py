@@ -91,12 +91,25 @@ class SecurityScanner:
             status=ScanStatus.COMPLETED
         )
         
+        # 漏洞优先级评估
+        prioritized_findings = self._prioritize_findings(findings, files)
+        
         # 汇总结果
-        for finding in findings:
+        for finding in prioritized_findings:
             result.add_finding(finding)
         
         if self.config.debug:
             print(f"[DEBUG] 扫描完成，总计发现 {len(result.findings)} 个问题")
+            # 统计不同优先级的漏洞数量
+            priority_counts = {'high': 0, 'medium': 0, 'low': 0}
+            for finding in result.findings:
+                if finding.severity.name == 'HIGH':
+                    priority_counts['high'] += 1
+                elif finding.severity.name == 'MEDIUM':
+                    priority_counts['medium'] += 1
+                else:
+                    priority_counts['low'] += 1
+            print(f"[DEBUG] 高优先级: {priority_counts['high']}, 中优先级: {priority_counts['medium']}, 低优先级: {priority_counts['low']}")
         
         # 执行攻击链路分析（如果启用了AI）
         if self.config.ai.enabled and hasattr(self, 'attack_chain_builder') and result.findings:
@@ -316,38 +329,118 @@ class SecurityScanner:
             low_count = sum(1 for _, _, p in prioritized_files if p == 'low')
             print(f"[DEBUG] 高优先级: {high_count}, 中优先级: {medium_count}, 低优先级: {low_count}")
         
+        # 文件类型过滤配置
+        file_type_analysis_config = {
+            'python': {
+                'static': True,
+                'rule': True,
+                'semantic': True,
+                'library': True,
+                'web': True,
+                'ai': True
+            },
+            'javascript': {
+                'static': True,
+                'rule': True,
+                'semantic': True,
+                'library': True,
+                'web': True,
+                'ai': True
+            },
+            'html': {
+                'static': True,
+                'rule': True,
+                'semantic': True,
+                'library': False,
+                'web': True,
+                'ai': True
+            },
+            'css': {
+                'static': False,
+                'rule': False,
+                'semantic': False,
+                'library': False,
+                'web': False,
+                'ai': False
+            },
+            'json': {
+                'static': False,
+                'rule': True,
+                'semantic': False,
+                'library': False,
+                'web': False,
+                'ai': False
+            },
+            'markdown': {
+                'static': False,
+                'rule': False,
+                'semantic': False,
+                'library': False,
+                'web': False,
+                'ai': False
+            },
+            'txt': {
+                'static': False,
+                'rule': False,
+                'semantic': False,
+                'library': False,
+                'web': False,
+                'ai': False
+            }
+        }
+        
         for file_info, score, priority in prioritized_files:
             if self.config.debug:
                 print(f"[DEBUG] 分析文件: {file_info.path} (优先级: {priority}, 分数: {score:.2f})")
             
-            # 静态分析
-            static_findings = self._static_analyze(file_info)
-            findings.extend(static_findings)
+            # 获取文件类型配置
+            file_type = file_info.language.value if file_info.language else 'unknown'
+            analysis_config = file_type_analysis_config.get(file_type, file_type_analysis_config['python'])
             
-            # 规则分析
-            rule_findings = self._rule_analyze(file_info)
-            findings.extend(rule_findings)
+            if self.config.debug:
+                print(f"[DEBUG] 文件类型: {file_type}, 分析配置: {analysis_config}")
+            
+            # 静态分析
+            static_findings = []
+            if analysis_config['static']:
+                static_findings = self._static_analyze(file_info)
+                findings.extend(static_findings)
             
             # 本地语义分析（始终启用，轻量级）
-            semantic_findings = self._semantic_analyze(file_info)
-            findings.extend(semantic_findings)
+            semantic_findings = []
+            if analysis_config['semantic']:
+                semantic_findings = self._semantic_analyze(file_info)
+                findings.extend(semantic_findings)
             
             # 库匹配分析
-            library_findings = self._library_analyze(file_info)
-            findings.extend(library_findings)
-            
-            # 网络搜索分析
-            web_findings = await self._web_search_analyze(file_info, library_findings)
-            findings.extend(web_findings)
+            library_findings = []
+            if analysis_config['library']:
+                library_findings = self._library_analyze(file_info)
+                findings.extend(library_findings)
             
             # AI 分析（如果启用 --ai 参数，对所有文件进行分析）
-            if self.ai_analyzer and self.config.ai.enabled:
+            ai_findings = []
+            if self.ai_analyzer and self.config.ai.enabled and analysis_config['ai']:
                 ai_findings = await self._ai_analyze(file_info)
                 findings.extend(ai_findings)
             
+            # 规则分析（结合AI分析结果）
+            rule_findings = []
+            if analysis_config['rule']:
+                rule_findings = self._rule_analyze(file_info, ai_findings)
+                findings.extend(rule_findings)
+            
+            # 网络搜索分析（结合AI分析结果）
+            web_findings = []
+            if analysis_config['web']:
+                web_findings = await self._web_search_analyze(file_info, library_findings)
+                # 利用AI分析结果过滤网络搜索结果
+                if ai_findings:
+                    web_findings = self._filter_web_findings_by_ai(web_findings, ai_findings)
+                findings.extend(web_findings)
+            
             if self.config.debug:
-                ai_findings_count = len(ai_findings) if (self.ai_analyzer and self.config.ai.enabled) else 0
-                total_findings = len(static_findings) + len(rule_findings) + len(semantic_findings) + len(library_findings) + len(web_findings) + ai_findings_count
+                total_findings = len(static_findings) + len(rule_findings) + len(semantic_findings) + len(library_findings) + len(web_findings) + len(ai_findings)
                 print(f"[DEBUG] 文件分析完成，发现 {total_findings} 个问题")
         
         return findings
@@ -426,13 +519,14 @@ class SecurityScanner:
         
         return findings
 
-    def _rule_analyze(self, file_info: FileInfo) -> List:
+    def _rule_analyze(self, file_info: FileInfo, ai_findings: List = None) -> List:
         """基于 RAG 知识库检索的漏洞检测
 
         仅用于 RAG 知识库检索和类似漏洞检测，减少纯 AI 扫描的 token 消耗
 
         Args:
             file_info: 文件信息
+            ai_findings: AI分析结果，用于调整RAG检索策略
 
         Returns:
             发现的安全问题列表
@@ -453,19 +547,54 @@ class SecurityScanner:
             # 获取 RAG 知识库实例
             rag_kb = get_rag_knowledge_base()
             
+            # 基于文件类型和AI分析结果构建更精确的搜索查询
+            search_query = file_content
+            if file_info.language:
+                language = file_info.language.value
+                # 根据文件类型添加前缀，提高检索相关性
+                if language == 'python':
+                    search_query = f"Python code: {file_content}"
+                elif language == 'javascript':
+                    search_query = f"JavaScript code: {file_content}"
+                elif language == 'html':
+                    search_query = f"HTML code: {file_content}"
+            
+            # 如果有AI分析结果，根据AI发现的漏洞类型调整搜索查询
+            if ai_findings:
+                # 提取AI发现的漏洞类型
+                ai_vulnerability_types = []
+                for ai_finding in ai_findings:
+                    for vuln_type in ['sql_injection', 'command_injection', 'ssrf', 'xss', 'csrf', 
+                                     'hardcoded_credentials', 'weak_crypto', 'insecure_random', 'sensitive_data_exposure']:
+                        if vuln_type in ai_finding.rule_name.lower() or vuln_type in ai_finding.description.lower():
+                            ai_vulnerability_types.append(vuln_type)
+                            break
+                
+                # 如果有AI发现的漏洞类型，在搜索查询中添加这些类型
+                if ai_vulnerability_types:
+                    vuln_types_str = ', '.join(ai_vulnerability_types)
+                    search_query = f"{search_query} 相关漏洞: {vuln_types_str}"
+                    if self.config.debug:
+                        print(f"[DEBUG] 根据AI分析结果调整RAG搜索查询，添加漏洞类型: {vuln_types_str}")
+            
             # 搜索 RAG 知识库
-            search_results = rag_kb.search_knowledge(file_content)
+            search_results = rag_kb.search_knowledge(search_query)
             
             if search_results:
                 if self.config.debug:
                     print(f"[DEBUG] RAG 知识库检索发现 {len(search_results)} 个相关结果")
                 
-                # 转换知识库结果为 Finding 对象
-                from src.core.engine import Finding, Location, Severity
+                # 过滤低相关性结果
+                relevant_results = [result for result in search_results if result.confidence >= 0.75]
                 
-                for knowledge in search_results:
-                    # 检查置信度
-                    if knowledge.confidence >= 0.7:
+                if relevant_results:
+                    if self.config.debug:
+                        print(f"[DEBUG] 过滤后保留 {len(relevant_results)} 个高相关性结果")
+                    
+                    # 转换知识库结果为 Finding 对象
+                    from src.core.engine import Finding, Location, Severity
+                    
+                    for knowledge in relevant_results:
                         # 提取严重级别
                         severity_str = None
                         for tag in knowledge.tags:
@@ -474,31 +603,77 @@ class SecurityScanner:
                                 break
                         
                         if not severity_str:
-                            severity_str = 'medium'
+                            # 根据置信度设置默认严重级别
+                            if knowledge.confidence >= 0.9:
+                                severity_str = 'high'
+                            elif knowledge.confidence >= 0.8:
+                                severity_str = 'medium'
+                            else:
+                                severity_str = 'low'
                         
-                        # 创建 Finding 对象
-                        finding = Finding(
-                            rule_id=f"RAG-{knowledge.id[:8]}",
-                            rule_name=knowledge.content[:50],
-                            description=knowledge.content,
-                            severity=Severity(severity_str),
-                            location=Location(
-                                file=str(file_info.path),
-                                line=1,
-                                column=0
-                            ),
-                            confidence=knowledge.confidence,
-                            message=knowledge.content,
-                            code_snippet=file_content[:200] + "..." if len(file_content) > 200 else file_content,
-                            fix_suggestion="根据 RAG 知识库建议进行修复",
-                            references=[],
-                            metadata={
-                                "knowledge_id": knowledge.id,
-                                "knowledge_source": knowledge.source,
-                                "rag_knowledge": True
-                            }
-                        )
-                        findings.append(finding)
+                        # 检查知识内容是否与文件类型相关
+                        is_relevant = True
+                        if file_info.language:
+                            language = file_info.language.value
+                            # 简单的相关性检查
+                            if language == 'python' and 'python' not in knowledge.content.lower():
+                                # 对于Python文件，确保知识内容与Python相关
+                                if not any(keyword in knowledge.content.lower() for keyword in ['python', 'pip', 'django', 'flask']):
+                                    is_relevant = False
+                            elif language == 'javascript' and 'javascript' not in knowledge.content.lower():
+                                # 对于JavaScript文件，确保知识内容与JavaScript相关
+                                if not any(keyword in knowledge.content.lower() for keyword in ['javascript', 'node', 'react', 'vue']):
+                                    is_relevant = False
+                        
+                        # 如果有AI分析结果，检查知识内容是否与AI发现相关
+                        if ai_findings and is_relevant:
+                            is_relevant_to_ai = False
+                            for ai_finding in ai_findings:
+                                if any(keyword in knowledge.content.lower() for keyword in ai_finding.rule_name.lower().split()):
+                                    is_relevant_to_ai = True
+                                    # 提高与AI发现相关的RAG结果的置信度
+                                    knowledge.confidence = min(1.0, knowledge.confidence + 0.1)
+                                    break
+                            if not is_relevant_to_ai:
+                                # 如果知识内容与AI发现无关，降低置信度
+                                knowledge.confidence = max(0.5, knowledge.confidence - 0.1)
+                                # 如果置信度低于阈值，标记为不相关
+                                if knowledge.confidence < 0.7:
+                                    is_relevant = False
+                        
+                        if is_relevant:
+                            # 创建 Finding 对象
+                            finding = Finding(
+                                rule_id=f"RAG-{knowledge.id[:8]}",
+                                rule_name=knowledge.content[:50],
+                                description=knowledge.content,
+                                severity=Severity(severity_str),
+                                location=Location(
+                                    file=str(file_info.path),
+                                    line=1,
+                                    column=0
+                                ),
+                                confidence=knowledge.confidence,
+                                message=knowledge.content,
+                                code_snippet=file_content[:200] + "..." if len(file_content) > 200 else file_content,
+                                fix_suggestion="根据 RAG 知识库建议进行修复",
+                                references=[],
+                                metadata={
+                                    "knowledge_id": knowledge.id,
+                                    "knowledge_source": knowledge.source,
+                                    "rag_knowledge": True
+                                }
+                            )
+                            findings.append(finding)
+            
+            # 限制每个文件的RAG结果数量
+            max_findings = 5
+            if len(findings) > max_findings:
+                # 按置信度排序，保留高置信度的结果
+                findings.sort(key=lambda x: x.confidence, reverse=True)
+                findings = findings[:max_findings]
+                if self.config.debug:
+                    print(f"[DEBUG] 限制RAG知识库结果数量为 {max_findings}")
             
         except Exception as e:
             if self.config.debug:
@@ -827,7 +1002,7 @@ class SecurityScanner:
                 code_content = f.read()
             
             # 分析文件内容，提取可能的漏洞类型
-            potential_vulnerabilities = self._extract_potential_vulnerabilities(code_content)
+            potential_vulnerabilities = self._extract_potential_vulnerabilities(code_content, file_info)
             
             # 对每个潜在漏洞类型进行网络搜索
             for vulnerability_type in potential_vulnerabilities:
@@ -840,33 +1015,48 @@ class SecurityScanner:
                     if self.config.debug:
                         print(f"[DEBUG] 网络搜索发现 {len(search_results)} 个相关结果")
                     
-                    # 转换搜索结果为 Finding 对象
-                    from src.core.engine import Finding, Location, Severity
+                    # 过滤低相关性结果
+                    relevant_results = [result for result in search_results if result.relevance >= 0.7]
                     
-                    for result in search_results:
-                        finding = Finding(
-                            rule_id=f"WEB-SEARCH-{vulnerability_type[:10].upper()}",
-                            rule_name=f"网络搜索: {vulnerability_type}",
-                            description=f"网络搜索发现相关安全信息: {result.title}",
-                            severity=Severity.MEDIUM,
-                            location=Location(
-                                file=str(file_info.path),
-                                line=1,
-                                column=0
-                            ),
-                            confidence=result.relevance,
-                            message=result.snippet,
-                            code_snippet=code_content[:200] + "..." if len(code_content) > 200 else code_content,
-                            fix_suggestion=f"参考: {result.url}",
-                            references=[result.url],
-                            metadata={
-                                "search_query": vulnerability_type,
-                                "search_title": result.title,
-                                "search_url": result.url,
-                                "search_relevance": result.relevance
-                            }
-                        )
-                        findings.append(finding)
+                    if relevant_results:
+                        if self.config.debug:
+                            print(f"[DEBUG] 过滤后保留 {len(relevant_results)} 个高相关性结果")
+                        
+                        # 转换搜索结果为 Finding 对象
+                        from src.core.engine import Finding, Location, Severity
+                        
+                        for result in relevant_results:
+                            # 根据相关性调整严重级别
+                            if result.relevance >= 0.9:
+                                severity = Severity.HIGH
+                            elif result.relevance >= 0.8:
+                                severity = Severity.MEDIUM
+                            else:
+                                severity = Severity.LOW
+                            
+                            finding = Finding(
+                                rule_id=f"WEB-SEARCH-{vulnerability_type[:10].upper()}",
+                                rule_name=f"网络搜索: {vulnerability_type}",
+                                description=f"网络搜索发现相关安全信息: {result.title}",
+                                severity=severity,
+                                location=Location(
+                                    file=str(file_info.path),
+                                    line=1,
+                                    column=0
+                                ),
+                                confidence=result.relevance,
+                                message=result.snippet,
+                                code_snippet=code_content[:200] + "..." if len(code_content) > 200 else code_content,
+                                fix_suggestion=f"参考: {result.url}",
+                                references=[result.url],
+                                metadata={
+                                    "search_query": vulnerability_type,
+                                    "search_title": result.title,
+                                    "search_url": result.url,
+                                    "search_relevance": result.relevance
+                                }
+                            )
+                            findings.append(finding)
             
             # 对库漏洞进行网络搜索
             for library_finding in library_findings:
@@ -881,29 +1071,53 @@ class SecurityScanner:
                         if self.config.debug:
                             print(f"[DEBUG] 网络搜索发现 {len(search_results)} 个库漏洞相关结果")
                         
-                        # 转换搜索结果为 Finding 对象
-                        from src.core.engine import Finding, Location, Severity
+                        # 过滤低相关性结果
+                        relevant_results = [result for result in search_results if result.relevance >= 0.7]
                         
-                        for result in search_results:
-                            finding = Finding(
-                                rule_id=f"WEB-SEARCH-LIBRARY-{library_name[:10].upper()}",
-                                rule_name=f"网络搜索: {library_name} 漏洞",
-                                description=f"网络搜索发现库安全信息: {result.title}",
-                                severity=Severity.MEDIUM,
-                                location=library_finding.location,
-                                confidence=result.relevance,
-                                message=result.snippet,
-                                code_snippet=library_finding.code_snippet,
-                                fix_suggestion=f"参考: {result.url}",
-                                references=[result.url],
-                                metadata={
-                                    "library_name": library_name,
-                                    "search_title": result.title,
-                                    "search_url": result.url,
-                                    "search_relevance": result.relevance
-                                }
-                            )
-                            findings.append(finding)
+                        if relevant_results:
+                            if self.config.debug:
+                                print(f"[DEBUG] 过滤后保留 {len(relevant_results)} 个高相关性结果")
+                            
+                            # 转换搜索结果为 Finding 对象
+                            from src.core.engine import Finding, Location, Severity
+                            
+                            for result in relevant_results:
+                                # 根据相关性调整严重级别
+                                if result.relevance >= 0.9:
+                                    severity = Severity.HIGH
+                                elif result.relevance >= 0.8:
+                                    severity = Severity.MEDIUM
+                                else:
+                                    severity = Severity.LOW
+                                
+                                finding = Finding(
+                                    rule_id=f"WEB-SEARCH-LIBRARY-{library_name[:10].upper()}",
+                                    rule_name=f"网络搜索: {library_name} 漏洞",
+                                    description=f"网络搜索发现库安全信息: {result.title}",
+                                    severity=severity,
+                                    location=library_finding.location,
+                                    confidence=result.relevance,
+                                    message=result.snippet,
+                                    code_snippet=library_finding.code_snippet,
+                                    fix_suggestion=f"参考: {result.url}",
+                                    references=[result.url],
+                                    metadata={
+                                        "library_name": library_name,
+                                        "search_title": result.title,
+                                        "search_url": result.url,
+                                        "search_relevance": result.relevance
+                                    }
+                                )
+                                findings.append(finding)
+            
+            # 限制每个文件的网络搜索结果数量
+            max_findings = 10
+            if len(findings) > max_findings:
+                # 按置信度排序，保留高置信度的结果
+                findings.sort(key=lambda x: x.confidence, reverse=True)
+                findings = findings[:max_findings]
+                if self.config.debug:
+                    print(f"[DEBUG] 限制网络搜索结果数量为 {max_findings}")
             
         except Exception as e:
             if self.config.debug:
@@ -911,39 +1125,78 @@ class SecurityScanner:
         
         return findings
     
-    def _extract_potential_vulnerabilities(self, code: str) -> List[str]:
+    def _extract_potential_vulnerabilities(self, code: str, file_info: Optional[FileInfo] = None) -> List[str]:
         """从代码中提取潜在的漏洞类型
 
         Args:
             code: 代码内容
+            file_info: 文件信息，用于根据文件类型过滤漏洞类型
 
         Returns:
             潜在漏洞类型列表
         """
         potential_vulnerabilities = []
         
-        # 简单的关键词匹配
-        vulnerability_patterns = {
-            'sql_injection': ['sql', 'query', 'execute', 'cursor'],
-            'xss': ['html', 'render', 'template', 'escape'],
-            'command_injection': ['subprocess', 'os.system', 'exec', 'eval'],
-            'hardcoded_credentials': ['password', 'api_key', 'secret', 'token'],
-            'insecure_random': ['random', 'randint', 'randrange'],
-            'weak_crypto': ['md5', 'sha1', 'des', 'rc4'],
-            'sensitive_data_exposure': ['personal', 'credit card', 'ssn', 'pii'],
-            'csrf': ['csrf', 'token', 'session'],
-            'ssrf': ['request', 'url', 'fetch', 'get']
+        # 基于文件类型的漏洞类型映射
+        file_type_vulnerabilities = {
+            'python': ['command_injection', 'hardcoded_credentials', 'insecure_random', 'weak_crypto'],
+            'javascript': ['xss', 'csrf', 'command_injection', 'hardcoded_credentials'],
+            'html': ['xss', 'csrf'],
+            'css': [],
+            'json': ['hardcoded_credentials'],
+            'markdown': [],
+            'txt': []
         }
+        
+        # 基础漏洞类型模式
+        vulnerability_patterns = {
+            'sql_injection': ['sql', 'query', 'execute', 'cursor', 'dbapi', 'psycopg2', 'sqlite3'],
+            'xss': ['html', 'render', 'template', 'escape', 'innerHTML', 'outerHTML', 'document.write'],
+            'command_injection': ['subprocess', 'os.system', 'exec', 'eval', 'popen', 'spawn', 'shell'],
+            'hardcoded_credentials': ['password', 'api_key', 'secret', 'token', 'key', 'auth', 'credential'],
+            'insecure_random': ['random', 'randint', 'randrange', 'rand', 'choice'],
+            'weak_crypto': ['md5', 'sha1', 'des', 'rc4', '3des', 'md4'],
+            'sensitive_data_exposure': ['personal', 'credit card', 'ssn', 'pii', 'private', 'confidential'],
+            'csrf': ['csrf', 'token', 'session', 'anti-forgery', 'xsrf'],
+            'ssrf': ['request', 'url', 'fetch', 'get', 'post', 'http', 'https', 'curl']
+        }
+        
+        # 根据文件类型过滤漏洞类型
+        allowed_vulnerabilities = []
+        if file_info and file_info.language:
+            language = file_info.language.value.lower()
+            allowed_vulnerabilities = file_type_vulnerabilities.get(language, list(vulnerability_patterns.keys()))
+        else:
+            # 默认允许所有漏洞类型
+            allowed_vulnerabilities = list(vulnerability_patterns.keys())
         
         code_lower = code.lower()
         
-        for vuln_type, keywords in vulnerability_patterns.items():
-            for keyword in keywords:
-                if keyword in code_lower:
-                    potential_vulnerabilities.append(vuln_type)
-                    break
+        # 计算代码长度，用于过滤小型文件
+        code_length = len(code)
         
-        return potential_vulnerabilities
+        for vuln_type, keywords in vulnerability_patterns.items():
+            # 检查是否在允许的漏洞类型列表中
+            if vuln_type not in allowed_vulnerabilities:
+                continue
+            
+            # 对于小型文件，增加关键词匹配阈值
+            if code_length < 100:
+                match_count = 0
+                for keyword in keywords:
+                    if keyword in code_lower:
+                        match_count += 1
+                if match_count >= 2:  # 小型文件需要至少2个关键词匹配
+                    potential_vulnerabilities.append(vuln_type)
+            else:
+                # 正常文件只需要1个关键词匹配
+                for keyword in keywords:
+                    if keyword in code_lower:
+                        potential_vulnerabilities.append(vuln_type)
+                        break
+        
+        # 去重
+        return list(set(potential_vulnerabilities))
 
     async def _ai_analyze(self, file_info: FileInfo) -> List:
         """AI 分析文件
@@ -994,6 +1247,131 @@ class SecurityScanner:
                 print(f"[DEBUG] AI 分析失败: {e}")
         
         return findings
+    
+    def _prioritize_findings(self, findings: List, files: List[FileInfo]) -> List:
+        """评估漏洞优先级
+
+        Args:
+            findings: 发现的漏洞列表
+            files: 文件信息列表
+
+        Returns:
+            按优先级排序的漏洞列表
+        """
+        # 创建文件路径到文件信息的映射
+        file_info_map = {file_info.path: file_info for file_info in files}
+        
+        # 漏洞类型优先级映射
+        vulnerability_priority = {
+            'sql_injection': 5,
+            'command_injection': 5,
+            'ssrf': 4,
+            'xss': 3,
+            'csrf': 3,
+            'hardcoded_credentials': 4,
+            'weak_crypto': 4,
+            'insecure_random': 3,
+            'sensitive_data_exposure': 4
+        }
+        
+        # 文件类型优先级映射
+        file_type_priority = {
+            'python': 3,
+            'javascript': 3,
+            'html': 2,
+            'css': 1,
+            'json': 2,
+            'markdown': 0,
+            'txt': 0
+        }
+        
+        # 计算每个漏洞的优先级分数
+        prioritized_findings = []
+        for finding in findings:
+            # 基础分数
+            score = 0
+            
+            # 基于严重级别
+            severity_score = {
+                'CRITICAL': 10,
+                'HIGH': 8,
+                'MEDIUM': 5,
+                'LOW': 3,
+                'INFO': 1
+            }
+            score += severity_score.get(finding.severity.name, 3)
+            
+            # 基于置信度
+            score += finding.confidence * 2
+            
+            # 基于漏洞类型
+            for vuln_type, vuln_score in vulnerability_priority.items():
+                if vuln_type in finding.rule_name.lower() or vuln_type in finding.description.lower():
+                    score += vuln_score
+                    break
+            
+            # 基于文件类型
+            file_path = finding.location.file
+            if file_path in file_info_map:
+                file_info = file_info_map[file_path]
+                if file_info.language:
+                    file_type = file_info.language.value
+                    score += file_type_priority.get(file_type, 2)
+            
+            # 基于分析类型
+            if 'AI' in finding.rule_id:
+                score += 2  # AI 分析结果优先级更高
+            elif 'RAG' in finding.rule_id:
+                score += 1  # RAG 结果优先级次之
+            
+            # 存储分数
+            finding.metadata['priority_score'] = score
+            prioritized_findings.append(finding)
+        
+        # 按优先级分数排序，降序
+        prioritized_findings.sort(key=lambda x: x.metadata.get('priority_score', 0), reverse=True)
+        
+        return prioritized_findings
+    
+    def _filter_web_findings_by_ai(self, web_findings: List, ai_findings: List) -> List:
+        """利用AI分析结果过滤网络搜索结果
+
+        Args:
+            web_findings: 网络搜索结果
+            ai_findings: AI分析结果
+
+        Returns:
+            过滤后的网络搜索结果
+        """
+        if not ai_findings:
+            return web_findings
+        
+        # 提取AI发现的漏洞类型
+        ai_vulnerability_types = set()
+        for ai_finding in ai_findings:
+            # 从AI分析结果中提取漏洞类型
+            for vuln_type in ['sql_injection', 'command_injection', 'ssrf', 'xss', 'csrf', 
+                             'hardcoded_credentials', 'weak_crypto', 'insecure_random', 'sensitive_data_exposure']:
+                if vuln_type in ai_finding.rule_name.lower() or vuln_type in ai_finding.description.lower():
+                    ai_vulnerability_types.add(vuln_type)
+        
+        # 过滤网络搜索结果
+        filtered_findings = []
+        for web_finding in web_findings:
+            # 检查网络搜索结果是否与AI发现的漏洞类型相关
+            is_relevant = False
+            for vuln_type in ai_vulnerability_types:
+                if vuln_type in web_finding.rule_name.lower() or vuln_type in web_finding.description.lower():
+                    is_relevant = True
+                    # 提高与AI发现相关的网络搜索结果的置信度
+                    web_finding.confidence = min(1.0, web_finding.confidence + 0.1)
+                    break
+            
+            # 如果没有AI发现的漏洞类型，保留高置信度的网络搜索结果
+            if is_relevant or web_finding.confidence >= 0.8:
+                filtered_findings.append(web_finding)
+        
+        return filtered_findings
 
 
 def create_scanner(config: Config) -> SecurityScanner:
