@@ -680,16 +680,30 @@ class RAGKnowledgeBase:
         删除所有历史备份文件，只保留当前版本的知识库。
         """
         logger.info("开始清理历史记录")
+        import time
         
         # 删除所有历史备份目录
         if self.history_path.exists():
             for backup_dir in self.history_path.iterdir():
                 if backup_dir.is_dir():
-                    try:
-                        shutil.rmtree(backup_dir)
-                        logger.info(f"删除历史备份: {backup_dir}")
-                    except Exception as e:
-                        logger.error(f"删除历史备份失败: {e}")
+                    # 尝试删除，带有重试机制
+                    max_retries = 3
+                    retry_delay = 1  # 秒
+                    
+                    for attempt in range(max_retries):
+                        try:
+                            shutil.rmtree(backup_dir)
+                            logger.info(f"删除历史备份: {backup_dir}")
+                            break
+                        except PermissionError as e:
+                            if attempt < max_retries - 1:
+                                logger.warning(f"删除历史备份被拒绝，尝试 {attempt + 1}/{max_retries}，等待 {retry_delay} 秒: {backup_dir}")
+                                time.sleep(retry_delay)
+                            else:
+                                logger.error(f"删除历史备份失败（已达最大重试次数）: {backup_dir}, 错误: {e}")
+                        except Exception as e:
+                            logger.error(f"删除历史备份失败: {backup_dir}, 错误: {e}")
+                            break
         
         # 清空历史记录
         self.history = []

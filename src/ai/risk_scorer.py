@@ -114,7 +114,7 @@ class HybridRiskScorer:
             return (finding.confidence + ai_confidence) / 2
         return finding.confidence
 
-    def _get_severity_weight(self, severity: str) -> float:
+    def _get_severity_weight(self, severity) -> float:
         """获取严重级别权重"""
         weights = {
             "critical": 10.0,
@@ -123,4 +123,8 @@ class HybridRiskScorer:
             "low": 2.5,
             "info": 1.0,
         }
-        return weights.get(severity.lower(), 5.0)
+        if hasattr(severity, 'value'):
+            severity_str = severity.value
+        else:
+            severity_str = str(severity)
+        return weights.get(severity_str.lower(), 5.0)
