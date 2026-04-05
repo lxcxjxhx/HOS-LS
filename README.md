@@ -1,5 +1,5 @@
 <div align="center">
-## 🔒 HOS-LS v0.3.0.2
+##  🔒 HOS-LS v0.3.0.2
 
 **AI 生成代码安全扫描工具**
 
