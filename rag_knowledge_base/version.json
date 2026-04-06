@@ -1,0 +1,21 @@
+{
+  "version": 2,
+  "history": [
+    {
+      "timestamp": "2026-04-06T14:35:11.477218",
+      "version": 2,
+      "action": "save",
+      "details": {
+        "backup_path": "rag_knowledge_base\\history\\v1_20260406_143511",
+        "knowledge_count": 100,
+        "pattern_count": 0,
+        "graph_nodes_count": 100,
+        "graph_edges_count": 0,
+        "created_backup": true,
+        "built_index": true
+      }
+    }
+  ],
+  "usage_count": 1,
+  "last_updated": "2026-04-06T14:35:11.477228"
+}

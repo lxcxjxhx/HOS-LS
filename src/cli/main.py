@@ -205,8 +205,9 @@ def nvd() -> None:
 @click.option("--limit", "-l", type=int, default=None, help="限制处理的文件数量 (用于测试)")
 @click.option("--no-rag", is_flag=True, help="不导入到RAG库，仅解析")
 @click.option("--batch-size", "-b", type=int, default=1000, help="批量处理大小 (默认: 1000)")
+@click.option("--resume", type=int, default=0, help="从指定文件开始续传")
 @click.pass_context
-def update(ctx, zip, limit, no_rag, batch_size) -> None:
+def update(ctx, zip, limit, no_rag, batch_size, resume) -> None:
     """更新NVD漏洞库，解压并同步到本地RAG库"""
     config: Config = ctx.obj["config"]
     
@@ -236,7 +237,8 @@ def update(ctx, zip, limit, no_rag, batch_size) -> None:
         str(zip_path),
         rag_base=rag_base,
         limit=limit,
-        batch_size=batch_size
+        batch_size=batch_size,
+        resume_from=resume
     )
     
     console.print("\n" + "=" * 60)
@@ -309,6 +311,22 @@ def _display_result(result) -> None:
 
         if len(result.findings) > 10:
             console.print(f"... 还有 {len(result.findings) - 10} 个问题")
+
+    # 显示攻击链分析结果
+    if hasattr(result, 'metadata') and 'local_attack_chain' in result.metadata:
+        attack_chain_data = result.metadata['local_attack_chain']
+        if attack_chain_data.get('critical_chains'):
+            console.print("\n[bold]攻击链分析:[/bold]")
+            console.print(f"[info]{attack_chain_data.get('summary', '')}[/info]")
+            
+            for i, chain in enumerate(attack_chain_data['critical_chains'][:3], 1):
+                risk_color = "red" if chain['risk_level'] == "high" else "yellow" if chain['risk_level'] == "medium" else "blue"
+                console.print(f"\n{i}. [{risk_color}]攻击路径 (风险: {chain['risk_level']})[/{risk_color}]")
+                console.print(f"   路径: {chain['description']}")
+                console.print("   步骤:")
+                for step in chain['steps']:
+                    console.print(f"     - {step['description']}")
+                console.print(f"   状态: {chain['status']}")
 
 
 def _generate_report(result, output: str, format: str) -> None:

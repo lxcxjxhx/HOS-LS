@@ -62,9 +62,35 @@ class RAGKnowledgeBase:
         self.history = []
         self.usage_count = 0  # 使用次数计数器
         
+        # 内存管理
+        self.memory_limit = 2 * 1024 * 1024 * 1024  # 默认内存限制：2GB
+        self._memory_usage = 0
+        
         # 加载现有数据
         self.load()
         self.load_version_info()
+        
+    def _get_memory_usage(self) -> int:
+        """获取当前内存使用情况
+
+        Returns:
+            当前内存使用量（字节）
+        """
+        try:
+            import psutil
+            process = psutil.Process()
+            return process.memory_info().rss
+        except ImportError:
+            return 0
+    
+    def _check_memory_limit(self) -> bool:
+        """检查内存使用是否超过限制
+
+        Returns:
+            是否超过内存限制
+        """
+        current_memory = self._get_memory_usage()
+        return current_memory < self.memory_limit
 
     def add_knowledge(self, knowledge: Knowledge) -> str:
         """添加知识
@@ -93,6 +119,95 @@ class RAGKnowledgeBase:
         
         self.save()
         return knowledge.id
+    
+    def add_knowledge_batch(self, knowledge_list: List[Knowledge], auto_save: bool = True, build_index: bool = True) -> int:
+        """批量添加知识
+
+        Args:
+            knowledge_list: 知识对象列表
+            auto_save: 是否自动保存
+            build_index: 是否立即构建索引
+
+        Returns:
+            添加的知识数量
+        """
+        if not knowledge_list:
+            return 0
+        
+        self.record_usage()
+        
+        # 检查内存限制
+        if not self._check_memory_limit():
+            logger.warning("内存使用接近限制，将分批处理")
+            # 分批处理
+            batch_size = 100
+            total_added = 0
+            for i in range(0, len(knowledge_list), batch_size):
+                batch = knowledge_list[i:i+batch_size]
+                if not self._check_memory_limit():
+                    logger.warning("内存使用超过限制，暂停处理")
+                    # 清理内存
+                    import gc
+                    gc.collect()
+                    # 再次检查内存
+                    if not self._check_memory_limit():
+                        logger.error("内存使用仍然超过限制，无法继续处理")
+                        break
+                
+                # 批量添加到内存存储
+                for knowledge in batch:
+                    self._knowledge[knowledge.id] = knowledge
+                    self._update_indexes(knowledge)
+                    self._add_to_graph(knowledge)
+                
+                # 批量添加到向量存储
+                documents = []
+                for knowledge in batch:
+                    documents.append({
+                        "document_id": knowledge.id,
+                        "content": knowledge.content,
+                        "metadata": {
+                            "type": knowledge.knowledge_type.value,
+                            "source": knowledge.source,
+                            "tags": knowledge.tags
+                        }
+                    })
+                
+                # 批量添加文档到向量存储
+                self.vector_store.add_documents(documents, build_index=build_index)
+                total_added += len(batch)
+            
+            # 条件性保存
+            if auto_save:
+                self.save()
+            return total_added
+        else:
+            # 批量添加到内存存储
+            for knowledge in knowledge_list:
+                self._knowledge[knowledge.id] = knowledge
+                self._update_indexes(knowledge)
+                self._add_to_graph(knowledge)
+            
+            # 批量添加到向量存储
+            documents = []
+            for knowledge in knowledge_list:
+                documents.append({
+                    "document_id": knowledge.id,
+                    "content": knowledge.content,
+                    "metadata": {
+                        "type": knowledge.knowledge_type.value,
+                        "source": knowledge.source,
+                        "tags": knowledge.tags
+                    }
+                })
+            
+            # 批量添加文档到向量存储
+            self.vector_store.add_documents(documents, build_index=build_index)
+            
+            # 条件性保存
+            if auto_save:
+                self.save()
+            return len(knowledge_list)
 
     def add_pattern(self, pattern: Pattern) -> str:
         """添加模式
@@ -361,10 +476,21 @@ class RAGKnowledgeBase:
         
         self.save()
 
-    def save(self) -> None:
-        """保存知识库"""
-        # 创建备份
-        backup_path = self.create_backup()
+    def save(self, create_backup: bool = True, build_index: bool = True) -> None:
+        """保存知识库
+
+        Args:
+            create_backup: 是否创建备份
+            build_index: 是否构建索引
+        """
+        import psutil
+        process = psutil.Process()
+        start_memory = process.memory_info().rss / 1024 / 1024
+        
+        # 条件性创建备份
+        backup_path = None
+        if create_backup:
+            backup_path = self.create_backup()
         
         # 保存知识
         knowledge_data = [k.to_dict() for k in self._knowledge.values()]
@@ -384,6 +510,10 @@ class RAGKnowledgeBase:
         with open(self.graph_path, "w", encoding="utf-8") as f:
             json.dump(graph_data, f, indent=2, ensure_ascii=False)
         
+        # 条件性构建向量索引
+        if build_index:
+            self.vector_store.save()
+        
         # 更新版本号
         self.version += 1
         
@@ -395,9 +525,14 @@ class RAGKnowledgeBase:
                 "knowledge_count": len(self._knowledge),
                 "pattern_count": len(self._patterns),
                 "graph_nodes_count": len(self._graph_nodes),
-                "graph_edges_count": len(self._graph_edges)
+                "graph_edges_count": len(self._graph_edges),
+                "created_backup": create_backup,
+                "built_index": build_index
             }
         )
+        
+        end_memory = process.memory_info().rss / 1024 / 1024
+        logger.info(f"保存完成，内存使用: {end_memory:.2f} MB (变化: {end_memory - start_memory:.2f} MB)")
 
     def load(self) -> None:
         """加载知识库"""

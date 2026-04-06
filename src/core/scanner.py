@@ -170,6 +170,60 @@ class SecurityScanner:
                 if self.config.debug:
                     print(f"[DEBUG] 攻击链路分析失败: {e}")
         
+        # 执行本地攻击链分析（无论是否启用AI）
+        if result.findings:
+            if self.config.debug:
+                print(f"[DEBUG] 开始执行本地攻击链分析")
+            
+            try:
+                from src.core.attack_chain_analyzer import AttackChainAnalyzer
+                from src.core.result_aggregator import AggregatedFinding
+                
+                # 转换为AggregatedFinding
+                aggregated_findings = []
+                for finding in result.findings:
+                    # 简化的AggregatedFinding创建
+                    agg_finding = AggregatedFinding(
+                        rule_id=finding.rule_id,
+                        rule_name=finding.rule_name,
+                        description=finding.description,
+                        severity=finding.severity,
+                        file_path=finding.location.file,
+                        line=finding.location.line,
+                        column=finding.location.column,
+                        confidence=finding.confidence,
+                        message=finding.message,
+                        code_snippet=finding.code_snippet,
+                        fix_suggestion=finding.fix_suggestion,
+                        references=finding.references,
+                        metadata=finding.metadata
+                    )
+                    aggregated_findings.append(agg_finding)
+                
+                # 执行攻击链分析
+                analyzer = AttackChainAnalyzer()
+                chain_result = analyzer.analyze(aggregated_findings)
+                
+                # 将攻击链分析结果添加到ScanResult中
+                result.metadata['local_attack_chain'] = {
+                    'summary': chain_result.summary,
+                    'critical_chains': [{
+                        'description': chain.description,
+                        'risk_level': chain.risk_level,
+                        'status': chain.status,
+                        'steps': [{
+                            'rule_name': step.finding.rule_name,
+                            'description': step.description
+                        } for step in chain.steps]
+                    } for chain in chain_result.critical_chains]
+                }
+                
+                if self.config.debug:
+                    print(f"[DEBUG] 本地攻击链分析完成，识别出 {len(chain_result.critical_chains)} 条关键攻击链")
+            except Exception as e:
+                if self.config.debug:
+                    print(f"[DEBUG] 本地攻击链分析失败: {e}")
+        
         # 执行漏洞优先级评估（如果启用了AI）
         if self.config.ai.enabled and hasattr(self, 'priority_evaluator') and result.findings:
             if self.config.debug:
@@ -386,6 +440,14 @@ class SecurityScanner:
                 'library': False,
                 'web': False,
                 'ai': False
+            },
+            'unknown': {
+                'static': False,
+                'rule': True,
+                'semantic': False,
+                'library': False,
+                'web': False,
+                'ai': False
             }
         }
         
@@ -395,7 +457,7 @@ class SecurityScanner:
             
             # 获取文件类型配置
             file_type = file_info.language.value if file_info.language else 'unknown'
-            analysis_config = file_type_analysis_config.get(file_type, file_type_analysis_config['python'])
+            analysis_config = file_type_analysis_config.get(file_type, file_type_analysis_config['unknown'])
             
             if self.config.debug:
                 print(f"[DEBUG] 文件类型: {file_type}, 分析配置: {analysis_config}")
@@ -820,6 +882,19 @@ class SecurityScanner:
             else:
                 references = []
             
+            # 处理 metadata 字段
+            metadata = {}
+            if hasattr(issue, 'metadata'):
+                metadata = getattr(issue, 'metadata', {})
+            elif isinstance(issue, dict) and 'metadata' in issue:
+                metadata = issue['metadata']
+            
+            # 处理 exploit_status 字段
+            if hasattr(issue, 'exploit_status'):
+                metadata['exploit_status'] = getattr(issue, 'exploit_status', 'possible')
+            elif isinstance(issue, dict) and 'exploit_status' in issue:
+                metadata['exploit_status'] = issue['exploit_status']
+            
             # 创建 Finding 对象
             finding = Finding(
                 rule_id=rule_id,
@@ -831,7 +906,8 @@ class SecurityScanner:
                 message=description,  # 使用清理后的描述作为消息
                 code_snippet=code_snippet,
                 fix_suggestion=fix_suggestion,
-                references=references
+                references=references,
+                metadata=metadata
             )
             
             return finding
@@ -1167,8 +1243,8 @@ class SecurityScanner:
             language = file_info.language.value.lower()
             allowed_vulnerabilities = file_type_vulnerabilities.get(language, list(vulnerability_patterns.keys()))
         else:
-            # 默认允许所有漏洞类型
-            allowed_vulnerabilities = list(vulnerability_patterns.keys())
+            # 对于未知类型的文件，只检查基本的漏洞类型，避免误报
+            allowed_vulnerabilities = ['hardcoded_credentials']
         
         code_lower = code.lower()
         

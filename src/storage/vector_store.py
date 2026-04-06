@@ -73,6 +73,52 @@ class VectorStore:
         
         # 保存到文件
         self.save()
+    
+    def add_documents(self, documents: List[Dict[str, Any]], build_index: bool = True) -> None:
+        """批量添加文档
+
+        Args:
+            documents: 文档列表，每个文档包含 document_id, content, metadata
+            build_index: 是否立即构建索引并保存
+        """
+        if not documents:
+            return
+        
+        # 批量处理文档
+        new_embeddings = []
+        new_document_ids = []
+        
+        for doc in documents:
+            document_id = doc["document_id"]
+            content = doc["content"]
+            metadata = doc["metadata"]
+            
+            # 生成嵌入
+            embedding = self._generate_embedding(content)
+            new_embeddings.append(embedding)
+            new_document_ids.append(document_id)
+            
+            # 更新文档信息
+            self._documents[document_id] = {
+                "content": content,
+                "metadata": metadata,
+                "embedding": embedding.tolist()
+            }
+            
+            # 添加到文档ID列表（如果不存在）
+            if document_id not in self._document_ids:
+                self._document_ids.append(document_id)
+        
+        # 批量更新嵌入
+        if self._embeddings is None:
+            self._embeddings = np.array(new_embeddings)
+        else:
+            # 只添加新的嵌入，避免重复
+            self._embeddings = np.vstack([self._embeddings, new_embeddings])
+        
+        # 条件性保存
+        if build_index:
+            self.save()
 
     def update_document(self, document_id: str, content: str, metadata: Dict[str, Any]) -> None:
         """更新文档
@@ -165,19 +211,65 @@ class VectorStore:
         self._document_ids.clear()
         self.save()
 
-    def save(self) -> None:
-        """保存向量存储"""
+    def save(self, incremental: bool = False) -> None:
+        """保存向量存储
+
+        Args:
+            incremental: 是否增量保存
+        """
         # 保存嵌入
         if self._embeddings is not None:
-            np.save(self.embeddings_path, self._embeddings)
+            # 增量保存时，只保存新的嵌入
+            if incremental and self.embeddings_path.exists():
+                # 加载现有嵌入
+                try:
+                    existing_embeddings = np.load(self.embeddings_path)
+                    # 只保存新增的嵌入
+                    if len(self._embeddings) > len(existing_embeddings):
+                        new_embeddings = self._embeddings[len(existing_embeddings):]
+                        # 追加到现有文件
+                        # 注意：numpy 不支持直接追加，这里使用临时文件
+                        temp_path = self.embeddings_path.with_suffix(".tmp")
+                        np.save(temp_path, new_embeddings)
+                        # 合并文件
+                        combined_embeddings = np.vstack([existing_embeddings, new_embeddings])
+                        np.save(self.embeddings_path, combined_embeddings)
+                        temp_path.unlink()
+                except Exception as e:
+                    logger.error(f"增量保存嵌入失败: {e}")
+                    # 失败时回退到完整保存
+                    np.save(self.embeddings_path, self._embeddings)
+            else:
+                np.save(self.embeddings_path, self._embeddings)
         
         # 保存文档
-        documents_data = {
-            "document_ids": self._document_ids,
-            "documents": self._documents
-        }
-        with open(self.documents_path, "w", encoding="utf-8") as f:
-            json.dump(documents_data, f, indent=2, ensure_ascii=False)
+        if incremental and self.documents_path.exists():
+            # 加载现有文档
+            try:
+                with open(self.documents_path, "r", encoding="utf-8") as f:
+                    existing_data = json.load(f)
+                # 更新文档数据
+                existing_data["document_ids"] = self._document_ids
+                existing_data["documents"].update(self._documents)
+                # 保存更新后的数据
+                with open(self.documents_path, "w", encoding="utf-8") as f:
+                    json.dump(existing_data, f, indent=2, ensure_ascii=False)
+            except Exception as e:
+                logger.error(f"增量保存文档失败: {e}")
+                # 失败时回退到完整保存
+                documents_data = {
+                    "document_ids": self._document_ids,
+                    "documents": self._documents
+                }
+                with open(self.documents_path, "w", encoding="utf-8") as f:
+                    json.dump(documents_data, f, indent=2, ensure_ascii=False)
+        else:
+            documents_data = {
+                "document_ids": self._document_ids,
+                "documents": self._documents
+            }
+            with open(self.documents_path, "w", encoding="utf-8") as f:
+                json.dump(documents_data, f, indent=2, ensure_ascii=False)
 
     def load(self) -> None:
         """加载向量存储"""

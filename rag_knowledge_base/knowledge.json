@@ -1,0 +1,1423 @@
+[
+  {
+    "id": "a53af30424cc36dd",
+    "knowledge_type": "vulnerability",
+    "content": "CVE ID: CVE-1999-0007\nDescription: Information from SSL-encrypted sessions via PKCS #1.\nCWE: CWE-327\nAttack Vector: NETWORK\nAffected CPEs: cpe:2.3:a:c2net:stonghold_web_server:2.0.1:*:*:*:*:*:*:*, cpe:2.3:a:c2net:stonghold_web_server:2.2:*:*:*:*:*:*:*, cpe:2.3:a:c2net:stonghold_web_server:2.3:*:*:*:*:*:*:*, cpe:2.3:a:hp:open_market_secure_webserver:2.1:*:*:*:*:*:*:*, cpe:2.3:a:microsoft:exchange_server:5.5:-:*:*:*:*:*:*\n... and 17 more",
+    "source": "NVD",
+    "confidence": 0.8,
+    "tags": [
+      "CWE-327",
+      "network",
+      "status:deferred",
+      "nvd"
+    ],
+    "created_at": "2026-04-06T14:35:10.913172",
+    "updated_at": "2026-04-06T14:35:10.913177"
+  },
+  {
+    "id": "3266e91f8f3280e2",
+    "knowledge_type": "vulnerability",
+    "content": "CVE ID: CVE-1999-0017\nDescription: FTP servers can allow an attacker to connect to arbitrary ports on machines other than the FTP client, aka FTP bounce.\nAttack Vector: NETWORK\nAffected CPEs: cpe:2.3:a:gnu:inet:5.01:*:*:*:*:*:*:*, cpe:2.3:a:gnu:inet:6.01:*:*:*:*:*:*:*, cpe:2.3:a:gnu:inet:6.02:*:*:*:*:*:*:*, cpe:2.3:a:washington_university:wu-ftpd:2.4:*:*:*:*:*:*:*, cpe:2.3:o:caldera:openlinux:1.2:*:*:*:*:*:*:*\n... and 27 more",
+    "source": "NVD",
+    "confidence": 0.8,
+    "tags": [
+      "network",
+      "status:deferred",
+      "nvd"
+    ],
+    "created_at": "2026-04-06T14:35:10.913988",
+    "updated_at": "2026-04-06T14:35:10.913990"
+  },
+  {
+    "id": "5f787e41925a0c10",
+    "knowledge_type": "vulnerability",
+    "content": "CVE ID: CVE-1999-0022\nDescription: Local user gains root privileges via buffer overflow in rdist, via expstr() function.\nCVSS v3 Score: 7.8\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:sgi:irix:5.0:*:*:*:*:*:*:*, cpe:2.3:o:sgi:irix:5.0.1:*:*:*:*:*:*:*, cpe:2.3:o:sgi:irix:5.1:*:*:*:*:*:*:*, cpe:2.3:o:sgi:irix:5.1.1:*:*:*:*:*:*:*, cpe:2.3:o:sgi:irix:5.2:*:*:*:*:*:*:*\n... and 34 more",
+    "source": "NVD",
+    "confidence": 0.95,
+    "tags": [
+      "local",
+      "status:deferred",
+      "nvd",
+      "severity:high"
+    ],
+    "created_at": "2026-04-06T14:35:10.915094",
+    "updated_at": "2026-04-06T14:35:10.915096"
+  },
+  {
+    "id": "e62c6c43c32f84b1",
+    "knowledge_type": "vulnerability",
+    "content": "CVE ID: CVE-1999-0003\nDescription: Execute commands as root via buffer overflow in Tooltalk database server (rpc.ttdbserverd).\nAttack Vector: NETWORK\nAffected CPEs: cpe:2.3:a:tritreal:ted_cde:4.3:*:*:*:*:*:*:*, cpe:2.3:o:sgi:irix:5.2:*:*:*:*:*:*:*, cpe:2.3:o:sgi:irix:5.3:*:*:*:*:*:*:*, cpe:2.3:o:sgi:irix:6.0:*:*:*:*:*:*:*, cpe:2.3:o:sgi:irix:6.1:*:*:*:*:*:*:*\n... and 26 more",
+    "source": "NVD",
+    "confidence": 0.8,
+    "tags": [
+      "network",
+      "status:deferred",
+      "nvd"
+    ],
+    "created_at": "2026-04-06T14:35:10.915684",
+    "updated_at": "2026-04-06T14:35:10.915684"
+  },
+  {
+    "id": "f09b27390437daee",
+    "knowledge_type": "vulnerability",
+    "content": "CVE ID: CVE-1999-0034\nDescription: Buffer overflow in suidperl (sperl), Perl 4.x and 5.x.\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:a:larry_wall:perl:5.3:*:*:*:*:*:*:*, cpe:2.3:a:sgi:freeware:1.0:*:*:*:*:*:*:*, cpe:2.3:a:sgi:freeware:2.0:*:*:*:*:*:*:*, cpe:2.3:o:bsdi:bsd_os:2.1:*:*:*:*:*:*:*, cpe:2.3:o:bsdi:bsd_os:3.0:*:*:*:*:*:*:*\n... and 3 more",
+    "source": "NVD",
+    "confidence": 0.8,
+    "tags": [
+      "local",
+      "status:deferred",
+      "nvd"
+    ],
+    "created_at": "2026-04-06T14:35:10.925015",
+    "updated_at": "2026-04-06T14:35:10.925018"
+  },
+  {
+    "id": "ef8c1ad8179442a5",
+    "knowledge_type": "vulnerability",
+    "content": "CVE ID: CVE-1999-0024\nDescription: DNS cache poisoning via BIND, by predictable query IDs.\nAttack Vector: NETWORK\nAffected CPEs: cpe:2.3:a:isc:bind:4.9.5:*:*:*:*:*:*:*, cpe:2.3:a:isc:bind:8.1:*:*:*:*:*:*:*, cpe:2.3:o:bsdi:bsd_os:2.1:*:*:*:*:*:*:*, cpe:2.3:o:bsdi:bsd_os:3.0:*:*:*:*:*:*:*, cpe:2.3:o:ibm:aix:4.1:*:*:*:*:*:*:*\n... and 18 more",
+    "source": "NVD",
+    "confidence": 0.8,
+    "tags": [
+      "network",
+      "status:deferred",
+      "nvd"
+    ],
+    "created_at": "2026-04-06T14:35:10.928434",
+    "updated_at": "2026-04-06T14:35:10.928436"
+  },
+  {
+    "id": "a2f9bd9aa2ca7e4c",
+    "knowledge_type": "vulnerability",
+    "content": "CVE ID: CVE-1999-0026\nDescription: root privileges via buffer overflow in pset command on SGI IRIX systems.\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:sgi:irix:*:*:*:*:*:*:*:*",
+    "source": "NVD",
+    "confidence": 0.8,
+    "tags": [
+      "local",
+      "status:deferred",
+      "nvd"
+    ],
+    "created_at": "2026-04-06T14:35:10.929296",
+    "updated_at": "2026-04-06T14:35:10.929299"
+  },
+  {
+    "id": "54777229bbcc3532",
+    "knowledge_type": "vulnerability",
+    "content": "CVE ID: CVE-1999-0027\nDescription: root privileges via buffer overflow in eject command on SGI IRIX systems.\nCWE: CWE-119\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:sgi:irix:*:*:*:*:*:*:*:*",
+    "source": "NVD",
+    "confidence": 0.8,
+    "tags": [
+      "CWE-119",
+      "local",
+      "status:deferred",
+      "nvd"
+    ],
+    "created_at": "2026-04-06T14:35:10.931804",
+    "updated_at": "2026-04-06T14:35:10.931805"
+  },
+  {
+    "id": "b9af09aa0a08a9fe",
+    "knowledge_type": "vulnerability",
+    "content": "CVE ID: CVE-1999-0031\nDescription: JavaScript in Internet Explorer 3.x and 4.x, and Netscape 2.x, 3.x and 4.x, allows remote attackers to monitor a user's web activities, aka the Bell Labs vulnerability.\nAttack Vector: NETWORK\nAffected CPEs: cpe:2.3:a:microsoft:internet_explorer:3.0:*:*:*:*:*:*:*, cpe:2.3:a:microsoft:internet_explorer:4.0:*:*:*:*:*:*:*, cpe:2.3:a:netscape:communicator:2.0:*:*:*:*:*:*:*, cpe:2.3:a:netscape:communicator:3.0:*:*:*:*:*:*:*, cpe:2.3:a:netscape:communicator:4.0:*:*:*:*:*:*:*",
+    "source": "NVD",
+    "confidence": 0.8,
+    "tags": [
+      "network",
+      "status:deferred",
+      "nvd"
+    ],
+    "created_at": "2026-04-06T14:35:10.935730",
+    "updated_at": "2026-04-06T14:35:10.935732"
+  },
+  {
+    "id": "d9211ec474fb3e79",
+    "knowledge_type": "vulnerability",
+    "content": "CVE ID: CVE-1999-0033\nDescription: Command execution in Sun systems via buffer overflow in the at program.\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:a:ncr:mp-ras:3.0:*:*:*:*:*:*:*, cpe:2.3:o:sgi:irix:*:*:*:*:*:*:*:*, cpe:2.3:o:ibm:aix:*:*:*:*:*:*:*:*, cpe:2.3:o:sco:open_desktop:3.0:*:*:*:*:*:*:*, cpe:2.3:o:sco:openserver:3.0:*:*:*:*:*:*:*\n... and 10 more",
+    "source": "NVD",
+    "confidence": 0.8,
+    "tags": [
+      "local",
+      "status:deferred",
+      "nvd"
+    ],
+    "created_at": "2026-04-06T14:35:10.945961",
+    "updated_at": "2026-04-06T14:35:10.945963"
+  },
+  {
+    "id": "6441c3ae8dcc3e0f",
+    "knowledge_type": "vulnerability",
+    "content": "CVE ID: CVE-1999-0037\nDescription: Arbitrary command execution via metamail package using message headers, when user processes attacker's message using metamail.\nAttack Vector: NETWORK\nAffected CPEs: cpe:2.3:o:freebsd:freebsd:6.2:stable:*:*:*:*:*:*, cpe:2.3:o:redhat:linux:*:*:*:*:*:*:*:*",
+    "source": "NVD",
+    "confidence": 0.8,
+    "tags": [
+      "network",
+      "status:deferred",
+      "nvd"
+    ],
+    "created_at": "2026-04-06T14:35:10.954249",
+    "updated_at": "2026-04-06T14:35:10.954251"
+  },
+  {
+    "id": "b9d7a8513e5d6a65",
+    "knowledge_type": "vulnerability",
+    "content": "CVE ID: CVE-1999-0029\nDescription: root privileges via buffer overflow in ordist command on SGI IRIX systems.\nCVSS v3 Score: 8.4\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:sgi:irix:*:*:*:*:*:*:*:*",
+    "source": "NVD",
+    "confidence": 0.95,
+    "tags": [
+      "local",
+      "status:deferred",
+      "nvd",
+      "severity:high"
+    ],
+    "created_at": "2026-04-06T14:35:10.955887",
+    "updated_at": "2026-04-06T14:35:10.955888"
+  },
+  {
+    "id": "bda8333f760520ed",
+    "knowledge_type": "vulnerability",
+    "content": "CVE ID: CVE-1999-0025\nDescription: root privileges via buffer overflow in df command on SGI IRIX systems.\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:sgi:irix:*:*:*:*:*:*:*:*",
+    "source": "NVD",
+    "confidence": 0.8,
+    "tags": [
+      "local",
+      "status:deferred",
+      "nvd"
+    ],
+    "created_at": "2026-04-06T14:35:10.956705",
+    "updated_at": "2026-04-06T14:35:10.956706"
+  },
+  {
+    "id": "0fc5e5725d2f590d",
+    "knowledge_type": "vulnerability",
+    "content": "CVE ID: CVE-1999-0030\nDescription: root privileges via buffer overflow in xlock command on SGI IRIX systems.\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:sgi:irix:*:*:*:*:*:*:*:*",
+    "source": "NVD",
+    "confidence": 0.8,
+    "tags": [
+      "local",
+      "status:deferred",
+      "nvd"
+    ],
+    "created_at": "2026-04-06T14:35:10.957529",
+    "updated_at": "2026-04-06T14:35:10.957530"
+  },
+  {
+    "id": "d4a60e763a2fa18b",
+    "knowledge_type": "vulnerability",
+    "content": "CVE ID: CVE-1999-0035\nDescription: Race condition in signal handling routine in ftpd, allowing read/write arbitrary files.\nCVSS v3 Score: 5.4\nCVSS v3 Vector: CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:L/I:L/A:N\nAttack Vector: NETWORK\nAffected CPEs: cpe:2.3:a:gnu:inet:5.01:*:*:*:*:*:*:*, cpe:2.3:o:sgi:irix:*:*:*:*:*:*:*:*",
+    "source": "NVD",
+    "confidence": 0.95,
+    "tags": [
+      "network",
+      "status:deferred",
+      "nvd",
+      "severity:medium"
+    ],
+    "created_at": "2026-04-06T14:35:10.958055",
+    "updated_at": "2026-04-06T14:35:10.958055"
+  },
+  {
+    "id": "fc4b37b45af783c0",
+    "knowledge_type": "vulnerability",
+    "content": "CVE ID: CVE-1999-0028\nDescription: root privileges via buffer overflow in login/scheme command on SGI IRIX systems.\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:sgi:irix:*:*:*:*:*:*:*:*",
+    "source": "NVD",
+    "confidence": 0.8,
+    "tags": [
+      "local",
+      "status:deferred",
+      "nvd"
+    ],
+    "created_at": "2026-04-06T14:35:10.961023",
+    "updated_at": "2026-04-06T14:35:10.961025"
+  },
+  {
+    "id": "5e0f257d1d8043b8",
+    "knowledge_type": "vulnerability",
+    "content": "CVE ID: CVE-1999-0020\nDescription: Rejected reason: DO NOT USE THIS CANDIDATE NUMBER.  ConsultIDs: CVE-1999-0032.  Reason: This candidate is a duplicate of CVE-1999-0032.  Notes: All CVE users should reference CVE-1999-0032 instead of this candidate.  All references and descriptions in this candidate have been removed to prevent accidental usage",
+    "source": "NVD",
+    "confidence": 0.8,
+    "tags": [
+      "status:rejected",
+      "nvd"
+    ],
+    "created_at": "2026-04-06T14:35:10.969747",
+    "updated_at": "2026-04-06T14:35:10.969750"
+  },
+  {
+    "id": "b4ba2ecef93c2b99",
+    "knowledge_type": "vulnerability",
+    "content": "CVE ID: CVE-1999-0044\nDescription: fsdump command in IRIX allows local users to obtain root access by modifying sensitive files.\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:sgi:irix:5.1:*:*:*:*:*:*:*, cpe:2.3:o:sgi:irix:5.1.1:*:*:*:*:*:*:*, cpe:2.3:o:sgi:irix:5.2:*:*:*:*:*:*:*, cpe:2.3:o:sgi:irix:5.3:*:*:*:*:*:*:*, cpe:2.3:o:sgi:irix:6.0:*:*:*:*:*:*:*\n... and 3 more",
+    "source": "NVD",
+    "confidence": 0.8,
+    "tags": [
+      "local",
+      "status:deferred",
+      "nvd"
+    ],
+    "created_at": "2026-04-06T14:35:10.971574",
+    "updated_at": "2026-04-06T14:35:10.971575"
+  },
+  {
+    "id": "816456a657b96857",
+    "knowledge_type": "vulnerability",
+    "content": "CVE ID: CVE-1999-0023\nDescription: Local user gains root privileges via buffer overflow in rdist, via lookup() function.\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:a:inet:inet:5.01:*:*:*:*:*:*:*, cpe:2.3:a:inet:inet:6.01:*:*:*:*:*:*:*, cpe:2.3:o:bsdi:bsd_os:*:*:*:*:*:*:*:*, cpe:2.3:o:freebsd:freebsd:2.0:*:*:*:*:*:*:*, cpe:2.3:o:freebsd:freebsd:2.0.5:*:*:*:*:*:*:*\n... and 23 more",
+    "source": "NVD",
+    "confidence": 0.8,
+    "tags": [
+      "local",
+      "status:deferred",
+      "nvd"
+    ],
+    "created_at": "2026-04-06T14:35:10.974795",
+    "updated_at": "2026-04-06T14:35:10.974798"
+  },
+  {
+    "id": "e2cb345b3599ec62",
+    "knowledge_type": "vulnerability",
+    "content": "CVE ID: CVE-1999-0019\nDescription: Delete or create a file via rpc.statd, due to invalid information.\nAttack Vector: NETWORK\nAffected CPEs: cpe:2.3:a:data_general:dg_ux:4.11:*:*:*:*:*:*:*, cpe:2.3:a:ncr:mp-ras:2.03:*:*:*:*:*:*:*, cpe:2.3:a:ncr:mp-ras:3.0:*:*:*:*:*:*:*, cpe:2.3:o:sgi:irix:6.1:*:*:*:*:*:*:*, cpe:2.3:o:ibm:aix:3.2:*:*:*:*:*:*:*\n... and 15 more",
+    "source": "NVD",
+    "confidence": 0.8,
+    "tags": [
+      "network",
+      "status:deferred",
+      "nvd"
+    ],
+    "created_at": "2026-04-06T14:35:10.975526",
+    "updated_at": "2026-04-06T14:35:10.975529"
+  },
+  {
+    "id": "2dedd4b07df76c0e",
+    "knowledge_type": "vulnerability",
+    "content": "CVE ID: CVE-1999-0018\nDescription: Buffer overflow in statd allows root privileges.\nAttack Vector: NETWORK\nAffected CPEs: cpe:2.3:o:sgi:irix:5.0:*:*:*:*:*:*:*, cpe:2.3:o:sgi:irix:5.0.1:*:*:*:*:*:*:*, cpe:2.3:o:sgi:irix:5.1:*:*:*:*:*:*:*, cpe:2.3:o:sgi:irix:5.1.1:*:*:*:*:*:*:*, cpe:2.3:o:sgi:irix:5.2:*:*:*:*:*:*:*\n... and 9 more",
+    "source": "NVD",
+    "confidence": 0.8,
+    "tags": [
+      "network",
+      "status:deferred",
+      "nvd"
+    ],
+    "created_at": "2026-04-06T14:35:10.986660",
+    "updated_at": "2026-04-06T14:35:10.986662"
+  },
+  {
+    "id": "88ffcbac1a706078",
+    "knowledge_type": "vulnerability",
+    "content": "CVE ID: CVE-1999-0049\nDescription: Csetup under IRIX allows arbitrary file creation or overwriting.\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:sgi:irix:5:*:*:*:*:*:*:*, cpe:2.3:o:sgi:irix:6.0:*:*:*:*:*:*:*, cpe:2.3:o:sgi:irix:6.0.1:*:*:*:*:*:*:*, cpe:2.3:o:sgi:irix:6.1:*:*:*:*:*:*:*, cpe:2.3:o:sgi:irix:6.2:*:*:*:*:*:*:*",
+    "source": "NVD",
+    "confidence": 0.8,
+    "tags": [
+      "local",
+      "status:deferred",
+      "nvd"
+    ],
+    "created_at": "2026-04-06T14:35:10.986926",
+    "updated_at": "2026-04-06T14:35:10.986928"
+  },
+  {
+    "id": "cf3952182b558da4",
+    "knowledge_type": "vulnerability",
+    "content": "CVE ID: CVE-1999-0052\nDescription: IP fragmentation denial of service in FreeBSD allows a remote attacker to cause a crash.\nCVSS v3 Score: 7.5\nCVSS v3 Vector: CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H\nAttack Vector: NETWORK\nAffected CPEs: cpe:2.3:o:bsdi:bsd_os:4.0:*:*:*:*:*:*:*, cpe:2.3:o:freebsd:freebsd:1.1.5.1:*:*:*:*:*:*:*, cpe:2.3:o:freebsd:freebsd:2.0:*:*:*:*:*:*:*, cpe:2.3:o:freebsd:freebsd:2.0.5:*:*:*:*:*:*:*, cpe:2.3:o:freebsd:freebsd:2.1.0:*:*:*:*:*:*:*\n... and 8 more",
+    "source": "NVD",
+    "confidence": 0.95,
+    "tags": [
+      "network",
+      "status:deferred",
+      "nvd",
+      "severity:high"
+    ],
+    "created_at": "2026-04-06T14:35:10.990903",
+    "updated_at": "2026-04-06T14:35:10.990905"
+  },
+  {
+    "id": "706808b191968489",
+    "knowledge_type": "vulnerability",
+    "content": "CVE ID: CVE-1999-0004\nDescription: MIME buffer overflow in email clients, e.g. Solaris mailtool and Outlook.\nAttack Vector: NETWORK\nAffected CPEs: cpe:2.3:a:hp:dtmail:*:*:*:*:*:*:*:*, cpe:2.3:a:university_of_washington:pine:4.02:*:*:*:*:*:*:*, cpe:2.3:o:sco:unixware:7.0:*:*:*:*:*:*:*",
+    "source": "NVD",
+    "confidence": 0.8,
+    "tags": [
+      "network",
+      "status:deferred",
+      "nvd"
+    ],
+    "created_at": "2026-04-06T14:35:10.995704",
+    "updated_at": "2026-04-06T14:35:10.995707"
+  },
+  {
+    "id": "4df962d309cc0094",
+    "knowledge_type": "vulnerability",
+    "content": "CVE ID: CVE-1999-0005\nDescription: Arbitrary command execution via IMAP buffer overflow in authenticate command.\nAttack Vector: NETWORK\nAffected CPEs: cpe:2.3:a:netscape:messaging_server:3.55:*:*:*:*:*:*:*, cpe:2.3:a:university_of_washington:imap:10.234:*:*:*:*:*:*:*",
+    "source": "NVD",
+    "confidence": 0.8,
+    "tags": [
+      "network",
+      "status:deferred",
+      "nvd"
+    ],
+    "created_at": "2026-04-06T14:35:11.001514",
+    "updated_at": "2026-04-06T14:35:11.001515"
+  },
+  {
+    "id": "a35944ef3506ac85",
+    "knowledge_type": "vulnerability",
+    "content": "CVE ID: CVE-1999-0053\nDescription: TCP RST denial of service in FreeBSD.\nAttack Vector: NETWORK\nAffected CPEs: cpe:2.3:o:freebsd:freebsd:6.2:stable:*:*:*:*:*:*",
+    "source": "NVD",
+    "confidence": 0.8,
+    "tags": [
+      "network",
+      "status:deferred",
+      "nvd"
+    ],
+    "created_at": "2026-04-06T14:35:11.001861",
+    "updated_at": "2026-04-06T14:35:11.001861"
+  },
+  {
+    "id": "8b08e0c3f86044b3",
+    "knowledge_type": "vulnerability",
+    "content": "CVE ID: CVE-1999-0054\nDescription: Sun's ftpd daemon can be subjected to a denial of service.\nAttack Vector: NETWORK\nAffected CPEs: cpe:2.3:o:sun:solaris:2.4:*:x86:*:*:*:*:*, cpe:2.3:o:sun:solaris:2.5:*:x86:*:*:*:*:*, cpe:2.3:o:sun:solaris:2.5.1:*:ppc:*:*:*:*:*, cpe:2.3:o:sun:solaris:2.5.1:*:x86:*:*:*:*:*, cpe:2.3:o:sun:solaris:2.6:*:*:*:*:*:*:*\n... and 4 more",
+    "source": "NVD",
+    "confidence": 0.8,
+    "tags": [
+      "network",
+      "status:deferred",
+      "nvd"
+    ],
+    "created_at": "2026-04-06T14:35:11.002084",
+    "updated_at": "2026-04-06T14:35:11.002084"
+  },
+  {
+    "id": "d5c0df94e5fbd811",
+    "knowledge_type": "vulnerability",
+    "content": "CVE ID: CVE-1999-0055\nDescription: Buffer overflows in Sun libnsl allow root access.\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:ibm:aix:4.2:*:*:*:*:*:*:*, cpe:2.3:o:ibm:aix:4.2.1:*:*:*:*:*:*:*, cpe:2.3:o:ibm:aix:4.3:*:*:*:*:*:*:*, cpe:2.3:o:ibm:aix:4.3.1:*:*:*:*:*:*:*, cpe:2.3:o:ibm:aix:4.3.2:*:*:*:*:*:*:*\n... and 11 more",
+    "source": "NVD",
+    "confidence": 0.8,
+    "tags": [
+      "local",
+      "status:deferred",
+      "nvd"
+    ],
+    "created_at": "2026-04-06T14:35:11.007587",
+    "updated_at": "2026-04-06T14:35:11.007590"
+  },
+  {
+    "id": "9592b08cb803b407",
+    "knowledge_type": "vulnerability",
+    "content": "CVE ID: CVE-1999-0009\nDescription: Inverse query buffer overflow in BIND 4.9 and BIND 8 Releases.\nAttack Vector: NETWORK\nAffected CPEs: cpe:2.3:a:data_general:dg_ux:5.4_3.0:*:*:*:*:*:*:*, cpe:2.3:a:data_general:dg_ux:5.4_3.1:*:*:*:*:*:*:*, cpe:2.3:a:data_general:dg_ux:5.4_4.1:*:*:*:*:*:*:*, cpe:2.3:a:data_general:dg_ux:5.4_4.11:*:*:*:*:*:*:*, cpe:2.3:a:isc:bind:4.9.6:*:*:*:*:*:*:*\n... and 71 more",
+    "source": "NVD",
+    "confidence": 0.8,
+    "tags": [
+      "network",
+      "status:deferred",
+      "nvd"
+    ],
+    "created_at": "2026-04-06T14:35:11.013965",
+    "updated_at": "2026-04-06T14:35:11.013968"
+  },
+  {
+    "id": "f9a5209165e60011",
+    "knowledge_type": "vulnerability",
+    "content": "CVE ID: CVE-1999-0058\nDescription: Buffer overflow in PHP cgi program, php.cgi allows shell access.\nAttack Vector: NETWORK\nAffected CPEs: cpe:2.3:a:php:php:1.0:*:*:*:*:*:*:*, cpe:2.3:a:php:php:2.0b10:*:*:*:*:*:*:*",
+    "source": "NVD",
+    "confidence": 0.8,
+    "tags": [
+      "network",
+      "status:deferred",
+      "nvd"
+    ],
+    "created_at": "2026-04-06T14:35:11.016771",
+    "updated_at": "2026-04-06T14:35:11.016773"
+  },
+  {
+    "id": "40cfed2096b5e033",
+    "knowledge_type": "vulnerability",
+    "content": "CVE ID: CVE-1999-0059\nDescription: IRIX fam service allows an attacker to obtain a list of all files on the server.\nCVSS v3 Score: 7.3\nCVSS v3 Vector: CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:L/A:L\nAttack Vector: NETWORK\nAffected CPEs: cpe:2.3:o:sgi:irix:5.3:*:*:*:*:*:*:*, cpe:2.3:o:sgi:irix:6.1:*:*:*:*:*:*:*, cpe:2.3:o:sgi:irix:6.2:*:*:*:*:*:*:*, cpe:2.3:o:sgi:irix:6.3:*:*:*:*:*:*:*",
+    "source": "NVD",
+    "confidence": 0.95,
+    "tags": [
+      "network",
+      "status:deferred",
+      "nvd",
+      "severity:high"
+    ],
+    "created_at": "2026-04-06T14:35:11.018127",
+    "updated_at": "2026-04-06T14:35:11.018128"
+  },
+  {
+    "id": "f21a43cf810a91cc",
+    "knowledge_type": "vulnerability",
+    "content": "CVE ID: CVE-1999-0060\nDescription: Attackers can cause a denial of service in Ascend MAX and Pipeline routers with a malformed packet to the discard port, which is used by the Java Configurator tool.\nAttack Vector: NETWORK\nAffected CPEs: cpe:2.3:h:lucent:ascend_max_router:1.0:*:*:*:*:*:*:*, cpe:2.3:h:lucent:ascend_max_router:2.0:*:*:*:*:*:*:*, cpe:2.3:h:lucent:ascend_max_router:3.0:*:*:*:*:*:*:*, cpe:2.3:h:lucent:ascend_max_router:4.0:*:*:*:*:*:*:*, cpe:2.3:h:lucent:ascend_max_router:5.0:*:*:*:*:*:*:*\n... and 8 more",
+    "source": "NVD",
+    "confidence": 0.8,
+    "tags": [
+      "network",
+      "status:deferred",
+      "nvd"
+    ],
+    "created_at": "2026-04-06T14:35:11.024106",
+    "updated_at": "2026-04-06T14:35:11.024108"
+  },
+  {
+    "id": "1ac76b2f6d687725",
+    "knowledge_type": "vulnerability",
+    "content": "CVE ID: CVE-1999-0057\nDescription: Vacation program allows command execution by remote users through a sendmail command.\nAttack Vector: NETWORK\nAffected CPEs: cpe:2.3:a:eric_allman:vacation:*:*:*:*:*:*:*:*, cpe:2.3:o:freebsd:freebsd:6.2:stable:*:*:*:*:*:*, cpe:2.3:o:hp:hp-ux:9:*:*:*:*:*:*:*, cpe:2.3:o:hp:hp-ux:10.00:*:*:*:*:*:*:*, cpe:2.3:o:hp:hp-ux:10.09:*:*:*:*:*:*:*\n... and 5 more",
+    "source": "NVD",
+    "confidence": 0.8,
+    "tags": [
+      "network",
+      "status:deferred",
+      "nvd"
+    ],
+    "created_at": "2026-04-06T14:35:11.025255",
+    "updated_at": "2026-04-06T14:35:11.025256"
+  },
+  {
+    "id": "e1f1f9f562a5ba1f",
+    "knowledge_type": "vulnerability",
+    "content": "CVE ID: CVE-1999-0062\nDescription: The chpass command in OpenBSD allows a local user to gain root access through file descriptor leakage.\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:openbsd:openbsd:2.3:*:*:*:*:*:*:*",
+    "source": "NVD",
+    "confidence": 0.8,
+    "tags": [
+      "local",
+      "status:deferred",
+      "nvd"
+    ],
+    "created_at": "2026-04-06T14:35:11.026330",
+    "updated_at": "2026-04-06T14:35:11.026331"
+  },
+  {
+    "id": "d3e14fae754b0b66",
+    "knowledge_type": "vulnerability",
+    "content": "CVE ID: CVE-1999-0061\nDescription: File creation and deletion, and remote execution, in the BSD line printer daemon (lpd).\nAttack Vector: NETWORK\nAffected CPEs: cpe:2.3:o:bsdi:bsd_os:*:*:*:*:*:*:*:*, cpe:2.3:o:freebsd:freebsd:6.2:stable:*:*:*:*:*:*, cpe:2.3:o:linux:linux_kernel:2.6.20.1:*:*:*:*:*:*:*, cpe:2.3:o:openbsd:openbsd:2.1:*:*:*:*:*:*:*",
+    "source": "NVD",
+    "confidence": 0.8,
+    "tags": [
+      "network",
+      "status:deferred",
+      "nvd"
+    ],
+    "created_at": "2026-04-06T14:35:11.032448",
+    "updated_at": "2026-04-06T14:35:11.032450"
+  },
+  {
+    "id": "1aaa1a6cdb5df40e",
+    "knowledge_type": "vulnerability",
+    "content": "CVE ID: CVE-1999-0063\nDescription: Cisco IOS 12.0 and other versions can be crashed by malicious UDP packets to the syslog port.\nAttack Vector: NETWORK\nAffected CPEs: cpe:2.3:o:cisco:ios:11.3aa:*:*:*:*:*:*:*, cpe:2.3:o:cisco:ios:11.3db:*:*:*:*:*:*:*, cpe:2.3:o:cisco:ios:12.0:*:*:*:*:*:*:*, cpe:2.3:o:cisco:ios:12.0\\(1\\)w:*:*:*:*:*:*:*, cpe:2.3:o:cisco:ios:12.0\\(1\\)xa3:*:*:*:*:*:*:*\n... and 7 more",
+    "source": "NVD",
+    "confidence": 0.8,
+    "tags": [
+      "network",
+      "status:deferred",
+      "nvd"
+    ],
+    "created_at": "2026-04-06T14:35:11.035328",
+    "updated_at": "2026-04-06T14:35:11.035330"
+  },
+  {
+    "id": "6dd2e963bc2ee9cd",
+    "knowledge_type": "vulnerability",
+    "content": "CVE ID: CVE-1999-0064\nDescription: Buffer overflow in AIX lquerylv program gives root access to local users.\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:ibm:aix:3.2:*:*:*:*:*:*:*, cpe:2.3:o:ibm:aix:3.2.4:*:*:*:*:*:*:*, cpe:2.3:o:ibm:aix:3.2.5:*:*:*:*:*:*:*, cpe:2.3:o:ibm:aix:4.1:*:*:*:*:*:*:*, cpe:2.3:o:ibm:aix:4.1.1:*:*:*:*:*:*:*\n... and 5 more",
+    "source": "NVD",
+    "confidence": 0.8,
+    "tags": [
+      "local",
+      "status:deferred",
+      "nvd"
+    ],
+    "created_at": "2026-04-06T14:35:11.037441",
+    "updated_at": "2026-04-06T14:35:11.037443"
+  },
+  {
+    "id": "7979a65d82ce0207",
+    "knowledge_type": "vulnerability",
+    "content": "CVE ID: CVE-1999-0066\nDescription: AnyForm CGI remote execution.\nCVSS v3 Score: 9.8\nCVSS v3 Vector: CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H\nAttack Vector: NETWORK\nAffected CPEs: cpe:2.3:a:john_s._roberts:anyform:1.0:*:*:*:*:*:*:*, cpe:2.3:a:john_s._roberts:anyform:2.0:*:*:*:*:*:*:*",
+    "source": "NVD",
+    "confidence": 0.95,
+    "tags": [
+      "network",
+      "status:deferred",
+      "nvd",
+      "severity:critical"
+    ],
+    "created_at": "2026-04-06T14:35:11.040895",
+    "updated_at": "2026-04-06T14:35:11.040896"
+  },
+  {
+    "id": "de19c7475d7a1117",
+    "knowledge_type": "vulnerability",
+    "content": "CVE ID: CVE-1999-0068\nDescription: CGI PHP mylog script allows an attacker to read any file on the target server.\nAttack Vector: NETWORK\nAffected CPEs: cpe:2.3:a:php:php:1.0:*:*:*:*:*:*:*, cpe:2.3:a:php:php:2.0:*:*:*:*:*:*:*, cpe:2.3:a:php:php:2.0b10:*:*:*:*:*:*:*",
+    "source": "NVD",
+    "confidence": 0.8,
+    "tags": [
+      "network",
+      "status:deferred",
+      "nvd"
+    ],
+    "created_at": "2026-04-06T14:35:11.051280",
+    "updated_at": "2026-04-06T14:35:11.051282"
+  },
+  {
+    "id": "35e51a60721a689d",
+    "knowledge_type": "vulnerability",
+    "content": "CVE ID: CVE-1999-0056\nDescription: Buffer overflow in Sun's ping program can give root access to local users.\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:sun:sunos:*:*:*:*:*:*:*:*, cpe:2.3:o:sun:sunos:5.3:*:*:*:*:*:*:*, cpe:2.3:o:sun:sunos:5.4:*:*:*:*:*:*:*, cpe:2.3:o:sun:sunos:5.5:*:*:*:*:*:*:*, cpe:2.3:o:sun:sunos:5.5.1:*:*:*:*:*:*:*",
+    "source": "NVD",
+    "confidence": 0.8,
+    "tags": [
+      "local",
+      "status:deferred",
+      "nvd"
+    ],
+    "created_at": "2026-04-06T14:35:11.052860",
+    "updated_at": "2026-04-06T14:35:11.052861"
+  },
+  {
+    "id": "3a95a5a3014e4875",
+    "knowledge_type": "vulnerability",
+    "content": "CVE ID: CVE-1999-0069\nDescription: Solaris ufsrestore buffer overflow.\nCVSS v3 Score: 8.4\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:sun:sunos:5.5:*:*:*:*:*:*:*, cpe:2.3:o:sun:sunos:5.5.1:*:*:*:*:*:*:*",
+    "source": "NVD",
+    "confidence": 0.95,
+    "tags": [
+      "local",
+      "status:deferred",
+      "nvd",
+      "severity:high"
+    ],
+    "created_at": "2026-04-06T14:35:11.053395",
+    "updated_at": "2026-04-06T14:35:11.053396"
+  },
+  {
+    "id": "5de7db3095987799",
+    "knowledge_type": "vulnerability",
+    "content": "CVE ID: CVE-1999-0067\nDescription: phf CGI program allows remote command execution through shell metacharacters.\nCWE: CWE-78\nAttack Vector: NETWORK\nAffected CPEs: cpe:2.3:a:apache:http_server:1.0.3:*:*:*:*:*:*:*, cpe:2.3:a:ncsa:ncsa_httpd:1.5a:*:export:*:*:*:*:*",
+    "source": "NVD",
+    "confidence": 0.8,
+    "tags": [
+      "CWE-78",
+      "network",
+      "status:deferred",
+      "nvd"
+    ],
+    "created_at": "2026-04-06T14:35:11.053793",
+    "updated_at": "2026-04-06T14:35:11.053795"
+  },
+  {
+    "id": "c287aa1cc56bac0f",
+    "knowledge_type": "vulnerability",
+    "content": "CVE ID: CVE-1999-0070\nDescription: test-cgi program allows an attacker to list files on the server.\nAttack Vector: NETWORK\nAffected CPEs: cpe:2.3:a:apache:http_server:*:*:*:*:*:*:*:*",
+    "source": "NVD",
+    "confidence": 0.8,
+    "tags": [
+      "network",
+      "status:deferred",
+      "nvd"
+    ],
+    "created_at": "2026-04-06T14:35:11.057076",
+    "updated_at": "2026-04-06T14:35:11.057077"
+  },
+  {
+    "id": "267b8bf71fa614c5",
+    "knowledge_type": "vulnerability",
+    "content": "CVE ID: CVE-1999-0071\nDescription: Apache httpd cookie buffer overflow for versions 1.1.1 and earlier.\nAttack Vector: NETWORK\nAffected CPEs: cpe:2.3:a:apache:http_server:1.1.1:*:*:*:*:*:*:*",
+    "source": "NVD",
+    "confidence": 0.8,
+    "tags": [
+      "network",
+      "status:deferred",
+      "nvd"
+    ],
+    "created_at": "2026-04-06T14:35:11.070422",
+    "updated_at": "2026-04-06T14:35:11.070425"
+  },
+  {
+    "id": "f0b1d185bc565b46",
+    "knowledge_type": "vulnerability",
+    "content": "CVE ID: CVE-1999-0074\nDescription: Listening TCP ports are sequentially allocated, allowing spoofing attacks.\nAttack Vector: NETWORK\nAffected CPEs: cpe:2.3:o:freebsd:freebsd:6.2:stable:*:*:*:*:*:*, cpe:2.3:o:linux:linux_kernel:2.6.20.1:*:*:*:*:*:*:*, cpe:2.3:o:microsoft:windows_nt:*:*:*:*:*:*:*:*, cpe:2.3:o:netbsd:netbsd:2.0.4:*:*:*:*:*:*:*",
+    "source": "NVD",
+    "confidence": 0.8,
+    "tags": [
+      "network",
+      "status:deferred",
+      "nvd"
+    ],
+    "created_at": "2026-04-06T14:35:11.071585",
+    "updated_at": "2026-04-06T14:35:11.071587"
+  },
+  {
+    "id": "0df6f361d12bdd88",
+    "knowledge_type": "vulnerability",
+    "content": "CVE ID: CVE-1999-0050\nDescription: Buffer overflow in HP-UX newgrp program.\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:hp:hp-ux:9.00:*:*:*:*:*:*:*, cpe:2.3:o:hp:hp-ux:9.01:*:*:*:*:*:*:*, cpe:2.3:o:hp:hp-ux:9.03:*:*:*:*:*:*:*, cpe:2.3:o:hp:hp-ux:9.04:*:*:*:*:*:*:*, cpe:2.3:o:hp:hp-ux:9.05:*:*:*:*:*:*:*\n... and 9 more",
+    "source": "NVD",
+    "confidence": 0.8,
+    "tags": [
+      "local",
+      "status:deferred",
+      "nvd"
+    ],
+    "created_at": "2026-04-06T14:35:11.071789",
+    "updated_at": "2026-04-06T14:35:11.071790"
+  },
+  {
+    "id": "8e64caa8bd475c3e",
+    "knowledge_type": "vulnerability",
+    "content": "CVE ID: CVE-1999-0073\nDescription: Telnet allows a remote client to specify environment variables including LD_LIBRARY_PATH, allowing an attacker to bypass the normal system libraries and gain root access.\nAttack Vector: NETWORK\nAffected CPEs: cpe:2.3:o:sgi:irix:5.0:*:*:*:*:*:*:*, cpe:2.3:o:sgi:irix:5.0.1:*:*:*:*:*:*:*, cpe:2.3:o:sgi:irix:5.1:*:*:*:*:*:*:*, cpe:2.3:o:sgi:irix:5.1.1:*:*:*:*:*:*:*, cpe:2.3:o:sgi:irix:5.2:*:*:*:*:*:*:*\n... and 15 more",
+    "source": "NVD",
+    "confidence": 0.8,
+    "tags": [
+      "network",
+      "status:deferred",
+      "nvd"
+    ],
+    "created_at": "2026-04-06T14:35:11.072243",
+    "updated_at": "2026-04-06T14:35:11.072244"
+  },
+  {
+    "id": "4a6bd692f6267681",
+    "knowledge_type": "vulnerability",
+    "content": "CVE ID: CVE-1999-0075\nDescription: PASV core dump in wu-ftpd daemon when attacker uses a QUOTE PASV command after specifying a username and password.\nAttack Vector: NETWORK\nAffected CPEs: cpe:2.3:a:washington_university:wu-ftpd:*:*:*:*:*:*:*:*",
+    "source": "NVD",
+    "confidence": 0.8,
+    "tags": [
+      "network",
+      "status:deferred",
+      "nvd"
+    ],
+    "created_at": "2026-04-06T14:35:11.072711",
+    "updated_at": "2026-04-06T14:35:11.072712"
+  },
+  {
+    "id": "e26ff211ec5649c9",
+    "knowledge_type": "vulnerability",
+    "content": "CVE ID: CVE-1999-0080\nDescription: Certain configurations of wu-ftp FTP server 2.4 use a _PATH_EXECPATH setting to a directory with dangerous commands, such as /bin, which allows remote authenticated users to gain root access via the \"site exec\" command.\nAttack Vector: NETWORK\nAffected CPEs: cpe:2.3:a:washington_university:wu-ftpd:2.4:*:*:*:*:*:*:*",
+    "source": "NVD",
+    "confidence": 0.8,
+    "tags": [
+      "network",
+      "status:deferred",
+      "nvd"
+    ],
+    "created_at": "2026-04-06T14:35:11.085043",
+    "updated_at": "2026-04-06T14:35:11.085046"
+  },
+  {
+    "id": "c592ae14c25ba0a3",
+    "knowledge_type": "vulnerability",
+    "content": "CVE ID: CVE-1999-0077\nDescription: Predictable TCP sequence numbers allow spoofing.\nAttack Vector: NETWORK\nAffected CPEs: cpe:2.3:o:microsoft:windows_nt:4.0:*:*:*:*:*:*:*",
+    "source": "NVD",
+    "confidence": 0.8,
+    "tags": [
+      "network",
+      "status:deferred",
+      "nvd"
+    ],
+    "created_at": "2026-04-06T14:35:11.085743",
+    "updated_at": "2026-04-06T14:35:11.085745"
+  },
+  {
+    "id": "db02ea2c43d8bd6c",
+    "knowledge_type": "vulnerability",
+    "content": "CVE ID: CVE-1999-0079\nDescription: Remote attackers can cause a denial of service in FTP by issuing multiple PASV commands, causing the server to run out of available ports.\nAttack Vector: NETWORK\nAffected CPEs: cpe:2.3:a:bisonware:bisonware_ftp_server:3.5:*:*:*:*:*:*:*",
+    "source": "NVD",
+    "confidence": 0.8,
+    "tags": [
+      "network",
+      "status:deferred",
+      "nvd"
+    ],
+    "created_at": "2026-04-06T14:35:11.087210",
+    "updated_at": "2026-04-06T14:35:11.087211"
+  },
+  {
+    "id": "33dd94c31bfd743c",
+    "knowledge_type": "vulnerability",
+    "content": "CVE ID: CVE-1999-0076\nDescription: Buffer overflow in wu-ftp from PASV command causes a core dump.\nAttack Vector: NETWORK\nAffected CPEs: cpe:2.3:a:washington_university:wu-ftpd:*:*:*:*:*:*:*:*",
+    "source": "NVD",
+    "confidence": 0.8,
+    "tags": [
+      "network",
+      "status:deferred",
+      "nvd"
+    ],
+    "created_at": "2026-04-06T14:35:11.087418",
+    "updated_at": "2026-04-06T14:35:11.087418"
+  },
+  {
+    "id": "c19126dbdc5c6419",
+    "knowledge_type": "vulnerability",
+    "content": "CVE ID: CVE-1999-0078\nDescription: pcnfsd (aka rpc.pcnfsd) allows local users to change file permissions, or execute arbitrary commands through arguments in the RPC call.\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:a:ncr:mp-ras:2.03:*:*:*:*:*:*:*, cpe:2.3:a:ncr:mp-ras:3.0:*:*:*:*:*:*:*, cpe:2.3:a:ncr:mp-ras:3.01:*:*:*:*:*:*:*, cpe:2.3:o:sgi:irix:5.3:*:*:*:*:*:*:*, cpe:2.3:o:bsdi:bsd_os:*:*:*:*:*:*:*:*\n... and 12 more",
+    "source": "NVD",
+    "confidence": 0.8,
+    "tags": [
+      "local",
+      "status:deferred",
+      "nvd"
+    ],
+    "created_at": "2026-04-06T14:35:11.095999",
+    "updated_at": "2026-04-06T14:35:11.096000"
+  },
+  {
+    "id": "506130b43acdbd2d",
+    "knowledge_type": "vulnerability",
+    "content": "CVE ID: CVE-1999-0082\nDescription: CWD ~root command in ftpd allows root access.\nAttack Vector: NETWORK\nAffected CPEs: cpe:2.3:a:ftp:ftp:*:*:*:*:*:*:*:*, cpe:2.3:a:ftpcd:ftpcd:*:*:*:*:*:*:*:*",
+    "source": "NVD",
+    "confidence": 0.8,
+    "tags": [
+      "network",
+      "status:deferred",
+      "nvd"
+    ],
+    "created_at": "2026-04-06T14:35:11.098584",
+    "updated_at": "2026-04-06T14:35:11.098587"
+  },
+  {
+    "id": "36de4267fbab99ed",
+    "knowledge_type": "vulnerability",
+    "content": "CVE ID: CVE-1999-0081\nDescription: wu-ftp allows files to be overwritten via the rnfr command.\nAttack Vector: NETWORK\nAffected CPEs: cpe:2.3:a:washington_university:wu-ftpd:*:*:*:*:*:*:*:*",
+    "source": "NVD",
+    "confidence": 0.8,
+    "tags": [
+      "network",
+      "status:deferred",
+      "nvd"
+    ],
+    "created_at": "2026-04-06T14:35:11.102119",
+    "updated_at": "2026-04-06T14:35:11.102124"
+  },
+  {
+    "id": "46f8f6099d6428d5",
+    "knowledge_type": "vulnerability",
+    "content": "CVE ID: CVE-1999-0083\nDescription: getcwd() file descriptor leak in FTP.\nAttack Vector: NETWORK\nAffected CPEs: cpe:2.3:o:sgi:irix:*:*:*:*:*:*:*:*",
+    "source": "NVD",
+    "confidence": 0.8,
+    "tags": [
+      "network",
+      "status:deferred",
+      "nvd"
+    ],
+    "created_at": "2026-04-06T14:35:11.102608",
+    "updated_at": "2026-04-06T14:35:11.102609"
+  },
+  {
+    "id": "86ee89c9672c846c",
+    "knowledge_type": "vulnerability",
+    "content": "CVE ID: CVE-1999-0084\nDescription: Certain NFS servers allow users to use mknod to gain privileges by creating a writable kmem device and setting the UID to 0.\nCVSS v3 Score: 8.4\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:a:sun:nfs:*:*:*:*:*:*:*:*",
+    "source": "NVD",
+    "confidence": 0.95,
+    "tags": [
+      "local",
+      "status:deferred",
+      "nvd",
+      "severity:high"
+    ],
+    "created_at": "2026-04-06T14:35:11.102807",
+    "updated_at": "2026-04-06T14:35:11.102807"
+  },
+  {
+    "id": "9372b60f0ae1101c",
+    "knowledge_type": "vulnerability",
+    "content": "CVE ID: CVE-1999-0087\nDescription: Denial of service in AIX telnet can freeze a system and prevent users from accessing the server.\nAttack Vector: NETWORK\nAffected CPEs: cpe:2.3:o:ibm:aix:4.1:*:*:*:*:*:*:*, cpe:2.3:o:ibm:aix:4.2:*:*:*:*:*:*:*, cpe:2.3:o:ibm:aix:4.3:*:*:*:*:*:*:*",
+    "source": "NVD",
+    "confidence": 0.8,
+    "tags": [
+      "network",
+      "status:deferred",
+      "nvd"
+    ],
+    "created_at": "2026-04-06T14:35:11.116124",
+    "updated_at": "2026-04-06T14:35:11.116125"
+  },
+  {
+    "id": "54277cf3a9623238",
+    "knowledge_type": "vulnerability",
+    "content": "CVE ID: CVE-1999-0085\nDescription: Buffer overflow in rwhod on AIX and other operating systems allows remote attackers to execute arbitrary code via a UDP packet with a long hostname.\nAttack Vector: NETWORK\nAffected CPEs: cpe:2.3:o:freebsd:freebsd:6.2:stable:*:*:*:*:*:*, cpe:2.3:o:ibm:aix:4.2:*:*:*:*:*:*:*, cpe:2.3:o:netbsd:netbsd:2.0.4:*:*:*:*:*:*:*",
+    "source": "NVD",
+    "confidence": 0.8,
+    "tags": [
+      "network",
+      "status:deferred",
+      "nvd"
+    ],
+    "created_at": "2026-04-06T14:35:11.116462",
+    "updated_at": "2026-04-06T14:35:11.116463"
+  },
+  {
+    "id": "ff0c3d05793c5667",
+    "knowledge_type": "vulnerability",
+    "content": "CVE ID: CVE-1999-0086\nDescription: AIX routed allows remote users to modify sensitive files.\nAttack Vector: NETWORK\nAffected CPEs: cpe:2.3:o:ibm:aix:3.2:*:*:*:*:*:*:*, cpe:2.3:o:ibm:aix:4.1:*:*:*:*:*:*:*, cpe:2.3:o:ibm:aix:4.2:*:*:*:*:*:*:*, cpe:2.3:o:ibm:aix:4.3:*:*:*:*:*:*:*",
+    "source": "NVD",
+    "confidence": 0.8,
+    "tags": [
+      "network",
+      "status:deferred",
+      "nvd"
+    ],
+    "created_at": "2026-04-06T14:35:11.116554",
+    "updated_at": "2026-04-06T14:35:11.116555"
+  },
+  {
+    "id": "34cebbf86cbc469f",
+    "knowledge_type": "vulnerability",
+    "content": "CVE ID: CVE-1999-0088\nDescription: IRIX and AIX automountd services (autofsd) allow remote users to execute root commands.\nAttack Vector: NETWORK\nAffected CPEs: cpe:2.3:o:ibm:aix:4.3:*:*:*:*:*:*:*",
+    "source": "NVD",
+    "confidence": 0.8,
+    "tags": [
+      "network",
+      "status:deferred",
+      "nvd"
+    ],
+    "created_at": "2026-04-06T14:35:11.116719",
+    "updated_at": "2026-04-06T14:35:11.116720"
+  },
+  {
+    "id": "0b4264fd01b557cd",
+    "knowledge_type": "vulnerability",
+    "content": "CVE ID: CVE-1999-0089\nDescription: Buffer overflow in AIX libDtSvc library can allow local users to gain root access.\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:ibm:aix:4.3:*:*:*:*:*:*:*",
+    "source": "NVD",
+    "confidence": 0.8,
+    "tags": [
+      "local",
+      "status:deferred",
+      "nvd"
+    ],
+    "created_at": "2026-04-06T14:35:11.116898",
+    "updated_at": "2026-04-06T14:35:11.116898"
+  },
+  {
+    "id": "7c85cab377ddbb3e",
+    "knowledge_type": "vulnerability",
+    "content": "CVE ID: CVE-1999-0014\nDescription: Unauthorized privileged access or denial of service via dtappgather program in CDE.\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:a:cde:cde:1.01:*:*:*:*:*:*:*, cpe:2.3:a:cde:cde:1.01_x86:*:*:*:*:*:*:*, cpe:2.3:a:cde:cde:1.02:*:*:*:*:*:*:*, cpe:2.3:a:cde:cde:1.2:*:*:*:*:*:*:*, cpe:2.3:a:cde:cde:1.02_x86:*:*:*:*:*:*:*\n... and 8 more",
+    "source": "NVD",
+    "confidence": 0.8,
+    "tags": [
+      "local",
+      "status:deferred",
+      "nvd"
+    ],
+    "created_at": "2026-04-06T14:35:11.130230",
+    "updated_at": "2026-04-06T14:35:11.130232"
+  },
+  {
+    "id": "d8f50371ca56e424",
+    "knowledge_type": "vulnerability",
+    "content": "CVE ID: CVE-1999-0090\nDescription: Buffer overflow in AIX rcp command allows local users to obtain root access.\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:ibm:aix:4.1:*:*:*:*:*:*:*, cpe:2.3:o:ibm:aix:4.1.1:*:*:*:*:*:*:*, cpe:2.3:o:ibm:aix:4.1.3:*:*:*:*:*:*:*, cpe:2.3:o:ibm:aix:4.1.4:*:*:*:*:*:*:*, cpe:2.3:o:ibm:aix:4.1.5:*:*:*:*:*:*:*\n... and 1 more",
+    "source": "NVD",
+    "confidence": 0.8,
+    "tags": [
+      "local",
+      "status:deferred",
+      "nvd"
+    ],
+    "created_at": "2026-04-06T14:35:11.130436",
+    "updated_at": "2026-04-06T14:35:11.130437"
+  },
+  {
+    "id": "863fe73f894a9465",
+    "knowledge_type": "vulnerability",
+    "content": "CVE ID: CVE-1999-0091\nDescription: Buffer overflow in AIX writesrv command allows local users to obtain root access.\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:ibm:aix:4.1:*:*:*:*:*:*:*, cpe:2.3:o:ibm:aix:4.1.1:*:*:*:*:*:*:*, cpe:2.3:o:ibm:aix:4.1.2:*:*:*:*:*:*:*, cpe:2.3:o:ibm:aix:4.1.3:*:*:*:*:*:*:*, cpe:2.3:o:ibm:aix:4.1.4:*:*:*:*:*:*:*\n... and 3 more",
+    "source": "NVD",
+    "confidence": 0.8,
+    "tags": [
+      "local",
+      "status:deferred",
+      "nvd"
+    ],
+    "created_at": "2026-04-06T14:35:11.130582",
+    "updated_at": "2026-04-06T14:35:11.130582"
+  },
+  {
+    "id": "d3d80aeae8d8550a",
+    "knowledge_type": "vulnerability",
+    "content": "CVE ID: CVE-1999-0094\nDescription: AIX piodmgrsu command allows local users to gain additional group privileges.\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:ibm:aix:4.1:*:*:*:*:*:*:*, cpe:2.3:o:ibm:aix:4.1.1:*:*:*:*:*:*:*, cpe:2.3:o:ibm:aix:4.1.2:*:*:*:*:*:*:*, cpe:2.3:o:ibm:aix:4.1.3:*:*:*:*:*:*:*, cpe:2.3:o:ibm:aix:4.1.4:*:*:*:*:*:*:*\n... and 2 more",
+    "source": "NVD",
+    "confidence": 0.8,
+    "tags": [
+      "local",
+      "status:deferred",
+      "nvd"
+    ],
+    "created_at": "2026-04-06T14:35:11.130740",
+    "updated_at": "2026-04-06T14:35:11.130741"
+  },
+  {
+    "id": "9f90d892c7a6e5c2",
+    "knowledge_type": "vulnerability",
+    "content": "CVE ID: CVE-1999-0092\nDescription: Various vulnerabilities in the AIX portmir command allows local users to obtain root access.\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:ibm:aix:4.2.1:*:*:*:*:*:*:*",
+    "source": "NVD",
+    "confidence": 0.8,
+    "tags": [
+      "local",
+      "status:deferred",
+      "nvd"
+    ],
+    "created_at": "2026-04-06T14:35:11.130862",
+    "updated_at": "2026-04-06T14:35:11.130862"
+  },
+  {
+    "id": "22bc924cfa696552",
+    "knowledge_type": "vulnerability",
+    "content": "CVE ID: CVE-1999-0093\nDescription: AIX nslookup command allows local users to obtain root access by not dropping privileges correctly.\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:ibm:aix:4.1:*:*:*:*:*:*:*, cpe:2.3:o:ibm:aix:4.1.1:*:*:*:*:*:*:*, cpe:2.3:o:ibm:aix:4.1.2:*:*:*:*:*:*:*, cpe:2.3:o:ibm:aix:4.1.3:*:*:*:*:*:*:*, cpe:2.3:o:ibm:aix:4.1.4:*:*:*:*:*:*:*\n... and 2 more",
+    "source": "NVD",
+    "confidence": 0.8,
+    "tags": [
+      "local",
+      "status:deferred",
+      "nvd"
+    ],
+    "created_at": "2026-04-06T14:35:11.138640",
+    "updated_at": "2026-04-06T14:35:11.138643"
+  },
+  {
+    "id": "ef31d1fed77c3144",
+    "knowledge_type": "vulnerability",
+    "content": "CVE ID: CVE-1999-0097\nDescription: The AIX FTP client can be forced to execute commands from a malicious server through shell metacharacters (e.g. a pipe character).\nAttack Vector: NETWORK\nAffected CPEs: cpe:2.3:o:hp:hp-ux:9.00:*:*:*:*:*:*:*, cpe:2.3:o:hp:hp-ux:9.01:*:*:*:*:*:*:*, cpe:2.3:o:hp:hp-ux:9.03:*:*:*:*:*:*:*, cpe:2.3:o:hp:hp-ux:9.04:*:*:*:*:*:*:*, cpe:2.3:o:hp:hp-ux:9.05:*:*:*:*:*:*:*\n... and 35 more",
+    "source": "NVD",
+    "confidence": 0.8,
+    "tags": [
+      "network",
+      "status:deferred",
+      "nvd"
+    ],
+    "created_at": "2026-04-06T14:35:11.142551",
+    "updated_at": "2026-04-06T14:35:11.142554"
+  },
+  {
+    "id": "441b0a604a10ea7d",
+    "knowledge_type": "vulnerability",
+    "content": "CVE ID: CVE-1999-0098\nDescription: Buffer overflow in SMTP HELO command in Sendmail allows a remote attacker to hide activities.\nAttack Vector: NETWORK\nAffected CPEs: cpe:2.3:a:apple:appleshare:-:*:*:ja:*:*:*:*, cpe:2.3:a:pmail:mercury_mail_server:-:*:*:*:*:*:*:*, cpe:2.3:a:seattlelab:slmail:2.6:*:*:*:*:*:*:*",
+    "source": "NVD",
+    "confidence": 0.8,
+    "tags": [
+      "network",
+      "status:deferred",
+      "nvd"
+    ],
+    "created_at": "2026-04-06T14:35:11.143347",
+    "updated_at": "2026-04-06T14:35:11.143348"
+  },
+  {
+    "id": "3fa95e140f22d8f3",
+    "knowledge_type": "vulnerability",
+    "content": "CVE ID: CVE-1999-0096\nDescription: Sendmail decode alias can be used to overwrite sensitive files.\nAttack Vector: NETWORK\nAffected CPEs: cpe:2.3:o:bsdi:bsd_os:*:*:*:*:*:*:*:*, cpe:2.3:o:freebsd:freebsd:2.1.5:*:*:*:*:*:*:*, cpe:2.3:o:freebsd:freebsd:2.1.6:*:*:*:*:*:*:*, cpe:2.3:o:freebsd:freebsd:2.1.6.1:*:*:*:*:*:*:*, cpe:2.3:o:sco:internet_faststart:1.0:*:*:*:*:*:*:*\n... and 3 more",
+    "source": "NVD",
+    "confidence": 0.8,
+    "tags": [
+      "network",
+      "status:deferred",
+      "nvd"
+    ],
+    "created_at": "2026-04-06T14:35:11.144984",
+    "updated_at": "2026-04-06T14:35:11.144987"
+  },
+  {
+    "id": "80be8f912ff70b35",
+    "knowledge_type": "vulnerability",
+    "content": "CVE ID: CVE-1999-0099\nDescription: Buffer overflow in syslog utility allows local or remote attackers to gain root privileges.\nAttack Vector: NETWORK\nAffected CPEs: cpe:2.3:o:bsdi:bsd_os:2.0:*:*:*:*:*:*:*, cpe:2.3:o:bsdi:bsd_os:2.0.1:*:*:*:*:*:*:*, cpe:2.3:o:convex:convexos:10.1:*:*:*:*:*:*:*, cpe:2.3:o:convex:convexos:10.2:*:*:*:*:*:*:*, cpe:2.3:o:convex:convexos:11.0:*:*:*:*:*:*:*\n... and 13 more",
+    "source": "NVD",
+    "confidence": 0.8,
+    "tags": [
+      "network",
+      "status:deferred",
+      "nvd"
+    ],
+    "created_at": "2026-04-06T14:35:11.147939",
+    "updated_at": "2026-04-06T14:35:11.147941"
+  },
+  {
+    "id": "2e883caeb78e79b1",
+    "knowledge_type": "vulnerability",
+    "content": "CVE ID: CVE-1999-0065\nDescription: Multiple buffer overflows in how dtmail handles attachments allows a remote attacker to execute commands.\nAttack Vector: NETWORK\nAffected CPEs: cpe:2.3:o:sun:solaris:2.4:*:x86:*:*:*:*:*, cpe:2.3:o:sun:solaris:2.5:*:x86:*:*:*:*:*, cpe:2.3:o:sun:solaris:2.5.1:*:x86:*:*:*:*:*, cpe:2.3:o:sun:solaris:2.6:*:*:*:*:*:*:*, cpe:2.3:o:sun:sunos:-:*:*:*:*:*:*:*\n... and 3 more",
+    "source": "NVD",
+    "confidence": 0.8,
+    "tags": [
+      "network",
+      "status:deferred",
+      "nvd"
+    ],
+    "created_at": "2026-04-06T14:35:11.151464",
+    "updated_at": "2026-04-06T14:35:11.151465"
+  },
+  {
+    "id": "20d65f37b3543bbf",
+    "knowledge_type": "vulnerability",
+    "content": "CVE ID: CVE-1999-0072\nDescription: Buffer overflow in AIX xdat gives root access to local users.\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:ibm:aix:4.1:*:*:*:*:*:*:*, cpe:2.3:o:ibm:aix:4.1.1:*:*:*:*:*:*:*, cpe:2.3:o:ibm:aix:4.1.2:*:*:*:*:*:*:*, cpe:2.3:o:ibm:aix:4.1.3:*:*:*:*:*:*:*, cpe:2.3:o:ibm:aix:4.1.4:*:*:*:*:*:*:*\n... and 3 more",
+    "source": "NVD",
+    "confidence": 0.8,
+    "tags": [
+      "local",
+      "status:deferred",
+      "nvd"
+    ],
+    "created_at": "2026-04-06T14:35:11.153840",
+    "updated_at": "2026-04-06T14:35:11.153842"
+  },
+  {
+    "id": "3e5db145e9bc386e",
+    "knowledge_type": "vulnerability",
+    "content": "CVE ID: CVE-1999-0100\nDescription: Remote access in AIX innd 1.5.1, using control messages.\nAttack Vector: NETWORK\nAffected CPEs: cpe:2.3:a:isc:inn:1.5.1:*:*:*:*:*:*:*",
+    "source": "NVD",
+    "confidence": 0.8,
+    "tags": [
+      "network",
+      "status:deferred",
+      "nvd"
+    ],
+    "created_at": "2026-04-06T14:35:11.154241",
+    "updated_at": "2026-04-06T14:35:11.154242"
+  },
+  {
+    "id": "fa218955f460bd8c",
+    "knowledge_type": "vulnerability",
+    "content": "CVE ID: CVE-1999-0095\nDescription: The debug command in Sendmail is enabled, allowing attackers to execute commands as root.\nAttack Vector: NETWORK\nAffected CPEs: cpe:2.3:a:eric_allman:sendmail:5.58:*:*:*:*:*:*:*",
+    "source": "NVD",
+    "confidence": 0.8,
+    "tags": [
+      "network",
+      "status:deferred",
+      "nvd"
+    ],
+    "created_at": "2026-04-06T14:35:11.160576",
+    "updated_at": "2026-04-06T14:35:11.160578"
+  },
+  {
+    "id": "a9886e4867d2a897",
+    "knowledge_type": "vulnerability",
+    "content": "CVE ID: CVE-1999-0008\nDescription: Buffer overflow in NIS+, in Sun's rpc.nisd program.\nAttack Vector: NETWORK\nAffected CPEs: cpe:2.3:o:hp:hp-ux:10.34:*:*:*:*:*:*:*, cpe:2.3:o:hp:hp-ux:11.00:*:*:*:*:*:*:*, cpe:2.3:o:sun:solaris:2.6:*:*:*:*:*:*:*, cpe:2.3:o:sun:sunos:5.3:*:*:*:*:*:*:*, cpe:2.3:o:sun:sunos:5.4:*:*:*:*:*:*:*\n... and 2 more",
+    "source": "NVD",
+    "confidence": 0.8,
+    "tags": [
+      "network",
+      "status:deferred",
+      "nvd"
+    ],
+    "created_at": "2026-04-06T14:35:11.162540",
+    "updated_at": "2026-04-06T14:35:11.162542"
+  },
+  {
+    "id": "a207dcffbc72610f",
+    "knowledge_type": "vulnerability",
+    "content": "CVE ID: CVE-1999-0013\nDescription: Stolen credentials from SSH clients via ssh-agent program, allowing other local users to access remote accounts belonging to the ssh-agent user.\nCVSS v3 Score: 8.4\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:a:ssh:ssh:1.2.0:*:*:*:*:*:*:*, cpe:2.3:a:ssh:ssh:1.2.1:*:*:*:*:*:*:*, cpe:2.3:a:ssh:ssh:1.2.2:*:*:*:*:*:*:*, cpe:2.3:a:ssh:ssh:1.2.3:*:*:*:*:*:*:*, cpe:2.3:a:ssh:ssh:1.2.4:*:*:*:*:*:*:*\n... and 10 more",
+    "source": "NVD",
+    "confidence": 0.95,
+    "tags": [
+      "local",
+      "status:deferred",
+      "nvd",
+      "severity:high"
+    ],
+    "created_at": "2026-04-06T14:35:11.168109",
+    "updated_at": "2026-04-06T14:35:11.168111"
+  },
+  {
+    "id": "f8b253bf928cba5e",
+    "knowledge_type": "vulnerability",
+    "content": "CVE ID: CVE-1999-0012\nDescription: Some web servers under Microsoft Windows allow remote attackers to bypass access restrictions for files with long file names.\nCVSS v3 Score: 7.0\nCVSS v3 Vector: CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:L/I:H/A:L\nAttack Vector: NETWORK\nAffected CPEs: cpe:2.3:a:microsoft:frontpage:*:*:*:*:*:*:*:*, cpe:2.3:a:microsoft:internet_information_server:4.0:*:*:*:*:*:*:*, cpe:2.3:a:microsoft:personal_web_server:4.0:*:*:*:*:*:*:*, cpe:2.3:a:netscape:enterprise_server:3.0:*:*:*:*:*:*:*, cpe:2.3:a:netscape:fasttrack_server:2.01:*:*:*:*:*:*:*\n... and 1 more",
+    "source": "NVD",
+    "confidence": 0.95,
+    "tags": [
+      "network",
+      "status:deferred",
+      "nvd",
+      "severity:high"
+    ],
+    "created_at": "2026-04-06T14:35:11.168210",
+    "updated_at": "2026-04-06T14:35:11.168211"
+  },
+  {
+    "id": "bb6a282ca4b8283a",
+    "knowledge_type": "vulnerability",
+    "content": "CVE ID: CVE-1999-0015\nDescription: Teardrop IP denial of service.\nAttack Vector: NETWORK\nAffected CPEs: cpe:2.3:o:hp:hp-ux:9.00:*:*:*:*:*:*:*, cpe:2.3:o:hp:hp-ux:9.01:*:*:*:*:*:*:*, cpe:2.3:o:hp:hp-ux:9.03:*:*:*:*:*:*:*, cpe:2.3:o:hp:hp-ux:9.04:*:*:*:*:*:*:*, cpe:2.3:o:hp:hp-ux:9.05:*:*:*:*:*:*:*\n... and 21 more",
+    "source": "NVD",
+    "confidence": 0.8,
+    "tags": [
+      "network",
+      "status:deferred",
+      "nvd"
+    ],
+    "created_at": "2026-04-06T14:35:11.168398",
+    "updated_at": "2026-04-06T14:35:11.168398"
+  },
+  {
+    "id": "317d1aabcc2cb465",
+    "knowledge_type": "vulnerability",
+    "content": "CVE ID: CVE-1999-0002\nDescription: Buffer overflow in NFS mountd gives root access to remote attackers, mostly in Linux systems.\nCWE: CWE-119\nAttack Vector: NETWORK\nAffected CPEs: cpe:2.3:o:bsdi:bsd_os:1.1:*:*:*:*:*:*:*, cpe:2.3:o:caldera:openlinux:1.2:*:*:*:*:*:*:*, cpe:2.3:o:redhat:linux:2.0:*:*:*:*:*:*:*, cpe:2.3:o:redhat:linux:2.1:*:*:*:*:*:*:*, cpe:2.3:o:redhat:linux:3.0.3:*:*:*:*:*:*:*\n... and 5 more",
+    "source": "NVD",
+    "confidence": 0.8,
+    "tags": [
+      "CWE-119",
+      "network",
+      "status:deferred",
+      "nvd"
+    ],
+    "created_at": "2026-04-06T14:35:11.168602",
+    "updated_at": "2026-04-06T14:35:11.168602"
+  },
+  {
+    "id": "9654f9c5429e55eb",
+    "knowledge_type": "vulnerability",
+    "content": "CVE ID: CVE-1999-0001\nDescription: ip_input.c in BSD-derived TCP/IP implementations allows remote attackers to cause a denial of service (crash or hang) via crafted packets.\nCWE: CWE-20\nAttack Vector: NETWORK\nAffected CPEs: cpe:2.3:o:bsdi:bsd_os:3.1:*:*:*:*:*:*:*, cpe:2.3:o:freebsd:freebsd:1.0:*:*:*:*:*:*:*, cpe:2.3:o:freebsd:freebsd:1.1:*:*:*:*:*:*:*, cpe:2.3:o:freebsd:freebsd:1.1.5.1:*:*:*:*:*:*:*, cpe:2.3:o:freebsd:freebsd:1.2:*:*:*:*:*:*:*\n... and 18 more",
+    "source": "NVD",
+    "confidence": 0.8,
+    "tags": [
+      "CWE-20",
+      "network",
+      "status:deferred",
+      "nvd"
+    ],
+    "created_at": "2026-04-06T14:35:11.168736",
+    "updated_at": "2026-04-06T14:35:11.168737"
+  },
+  {
+    "id": "dbdb817d3e83e98e",
+    "knowledge_type": "vulnerability",
+    "content": "CVE ID: CVE-1999-0016\nDescription: Land IP denial of service.\nAttack Vector: NETWORK\nAffected CPEs: cpe:2.3:o:cisco:ios:7000:*:*:*:*:*:*:*, cpe:2.3:a:gnu:inet:5.01:*:*:*:*:*:*:*, cpe:2.3:a:microsoft:winsock:2.0:*:*:*:*:*:*:*, cpe:2.3:o:hp:hp-ux:9.00:*:*:*:*:*:*:*, cpe:2.3:o:hp:hp-ux:9.01:*:*:*:*:*:*:*\n... and 18 more",
+    "source": "NVD",
+    "confidence": 0.8,
+    "tags": [
+      "network",
+      "status:deferred",
+      "nvd"
+    ],
+    "created_at": "2026-04-06T14:35:11.170057",
+    "updated_at": "2026-04-06T14:35:11.170058"
+  },
+  {
+    "id": "213334647eb3a700",
+    "knowledge_type": "vulnerability",
+    "content": "CVE ID: CVE-1999-0011\nDescription: Denial of Service vulnerabilities in BIND 4.9 and BIND 8 Releases via CNAME record and zone transfer.\nCVSS v3 Score: 5.4\nCVSS v3 Vector: CVSS:3.1/AV:A/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:L\nAttack Vector: ADJACENT_NETWORK\nAffected CPEs: cpe:2.3:a:data_general:dg_ux:y2k_patchr4.11mu05:*:*:*:*:*:*:*, cpe:2.3:a:data_general:dg_ux:y2k_patchr4.12mu03:*:*:*:*:*:*:*, cpe:2.3:a:data_general:dg_ux:y2k_patchr4.20mu01:*:*:*:*:*:*:*, cpe:2.3:a:data_general:dg_ux:y2k_patchr4.20mu02:*:*:*:*:*:*:*, cpe:2.3:a:data_general:dg_ux:y2k_patchr4.20mu03:*:*:*:*:*:*:*\n... and 21 more",
+    "source": "NVD",
+    "confidence": 0.95,
+    "tags": [
+      "adjacent_network",
+      "status:deferred",
+      "nvd",
+      "severity:medium"
+    ],
+    "created_at": "2026-04-06T14:35:11.173438",
+    "updated_at": "2026-04-06T14:35:11.173440"
+  },
+  {
+    "id": "76e0479e5ae21c45",
+    "knowledge_type": "vulnerability",
+    "content": "CVE ID: CVE-1999-0006\nDescription: Buffer overflow in POP servers based on BSD/Qualcomm's qpopper allows remote attackers to gain root access using a long PASS command.\nCVSS v3 Score: 9.8\nCVSS v3 Vector: CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H\nAttack Vector: NETWORK\nAffected CPEs: cpe:2.3:a:qualcomm:qpopper:2.4:*:*:*:*:*:*:*",
+    "source": "NVD",
+    "confidence": 0.95,
+    "tags": [
+      "network",
+      "status:deferred",
+      "nvd",
+      "severity:critical"
+    ],
+    "created_at": "2026-04-06T14:35:11.173908",
+    "updated_at": "2026-04-06T14:35:11.173909"
+  },
+  {
+    "id": "ca9a98449b3a1786",
+    "knowledge_type": "vulnerability",
+    "content": "CVE ID: CVE-1999-0010\nDescription: Denial of Service vulnerability in BIND 8 Releases via maliciously formatted DNS messages.\nAttack Vector: NETWORK\nAffected CPEs: cpe:2.3:a:data_general:dg_ux:y2k_patchr4.11mu05:*:*:*:*:*:*:*, cpe:2.3:a:data_general:dg_ux:y2k_patchr4.12mu03:*:*:*:*:*:*:*, cpe:2.3:a:data_general:dg_ux:y2k_patchr4.20mu01:*:*:*:*:*:*:*, cpe:2.3:a:data_general:dg_ux:y2k_patchr4.20mu02:*:*:*:*:*:*:*, cpe:2.3:a:data_general:dg_ux:y2k_patchr4.20mu03:*:*:*:*:*:*:*\n... and 21 more",
+    "source": "NVD",
+    "confidence": 0.8,
+    "tags": [
+      "network",
+      "status:deferred",
+      "nvd"
+    ],
+    "created_at": "2026-04-06T14:35:11.182830",
+    "updated_at": "2026-04-06T14:35:11.182832"
+  },
+  {
+    "id": "800c3ce8feaf1cc1",
+    "knowledge_type": "vulnerability",
+    "content": "CVE ID: CVE-1999-0021\nDescription: Arbitrary command execution via buffer overflow in Count.cgi (wwwcount) cgi-bin program.\nAttack Vector: NETWORK\nAffected CPEs: cpe:2.3:a:muhammad_a._muquit:wwwcount:2.3:*:*:*:*:*:*:*",
+    "source": "NVD",
+    "confidence": 0.8,
+    "tags": [
+      "network",
+      "status:deferred",
+      "nvd"
+    ],
+    "created_at": "2026-04-06T14:35:11.184923",
+    "updated_at": "2026-04-06T14:35:11.184925"
+  },
+  {
+    "id": "986fdfbae1f463a5",
+    "knowledge_type": "vulnerability",
+    "content": "CVE ID: CVE-1999-0036\nDescription: IRIX login program with a nonzero LOCKOUT parameter allows creation or damage to files.\nCVSS v3 Score: 8.4\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:sgi:irix:5.1:*:*:*:*:*:*:*, cpe:2.3:o:sgi:irix:5.2:*:*:*:*:*:*:*, cpe:2.3:o:sgi:irix:5.3:*:*:*:*:*:*:*, cpe:2.3:o:sgi:irix:6.0:*:*:*:*:*:*:*, cpe:2.3:o:sgi:irix:6.1:*:*:*:*:*:*:*\n... and 3 more",
+    "source": "NVD",
+    "confidence": 0.95,
+    "tags": [
+      "local",
+      "status:deferred",
+      "nvd",
+      "severity:high"
+    ],
+    "created_at": "2026-04-06T14:35:11.186726",
+    "updated_at": "2026-04-06T14:35:11.186728"
+  },
+  {
+    "id": "f496755048e21fe5",
+    "knowledge_type": "vulnerability",
+    "content": "CVE ID: CVE-1999-0038\nDescription: Buffer overflow in xlock program allows local users to execute commands as root.\nCVSS v3 Score: 8.4\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:a:data_general:dg_ux:1.0:*:*:*:*:*:*:*, cpe:2.3:a:data_general:dg_ux:2.0:*:*:*:*:*:*:*, cpe:2.3:a:data_general:dg_ux:3.0:*:*:*:*:*:*:*, cpe:2.3:a:data_general:dg_ux:4.0:*:*:*:*:*:*:*, cpe:2.3:a:data_general:dg_ux:5.0:*:*:*:*:*:*:*\n... and 40 more",
+    "source": "NVD",
+    "confidence": 0.95,
+    "tags": [
+      "local",
+      "status:deferred",
+      "nvd",
+      "severity:high"
+    ],
+    "created_at": "2026-04-06T14:35:11.191996",
+    "updated_at": "2026-04-06T14:35:11.191998"
+  },
+  {
+    "id": "76973889b46658a8",
+    "knowledge_type": "vulnerability",
+    "content": "CVE ID: CVE-1999-0032\nDescription: Buffer overflow in lpr, as used in BSD-based systems including Linux, allows local users to execute arbitrary code as root via a long -C (classification) command line option.\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:sgi:irix:5.0:*:*:*:*:*:*:*, cpe:2.3:o:sgi:irix:5.0.1:*:*:*:*:*:*:*, cpe:2.3:o:sgi:irix:5.1:*:*:*:*:*:*:*, cpe:2.3:o:sgi:irix:5.1.1:*:*:*:*:*:*:*, cpe:2.3:o:sgi:irix:5.2:*:*:*:*:*:*:*\n... and 16 more",
+    "source": "NVD",
+    "confidence": 0.8,
+    "tags": [
+      "local",
+      "status:deferred",
+      "nvd"
+    ],
+    "created_at": "2026-04-06T14:35:11.193854",
+    "updated_at": "2026-04-06T14:35:11.193856"
+  },
+  {
+    "id": "2a5eb33bc32be43e",
+    "knowledge_type": "vulnerability",
+    "content": "CVE ID: CVE-1999-0040\nDescription: Buffer overflow in Xt library of X Windowing System allows local users to execute commands with root privileges.\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:sgi:irix:4.0:*:*:*:*:*:*:*, cpe:2.3:o:sgi:irix:5.0:*:*:*:*:*:*:*, cpe:2.3:o:sgi:irix:5.3:*:*:*:*:*:*:*, cpe:2.3:o:sgi:irix:6.0:*:*:*:*:*:*:*, cpe:2.3:o:sgi:irix:6.1:*:*:*:*:*:*:*\n... and 38 more",
+    "source": "NVD",
+    "confidence": 0.8,
+    "tags": [
+      "local",
+      "status:deferred",
+      "nvd"
+    ],
+    "created_at": "2026-04-06T14:35:11.198728",
+    "updated_at": "2026-04-06T14:35:11.198730"
+  },
+  {
+    "id": "ba5d79cefd0aa3fd",
+    "knowledge_type": "vulnerability",
+    "content": "CVE ID: CVE-1999-0051\nDescription: Arbitrary file creation and program execution using FLEXlm LicenseManager, from versions 4.0 to 5.0, in IRIX.\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:a:globetrotter:flexlm:4.0:*:*:*:*:*:*:*, cpe:2.3:a:globetrotter:flexlm:4.1:*:*:*:*:*:*:*, cpe:2.3:a:globetrotter:flexlm:5.0:*:*:*:*:*:*:*, cpe:2.3:a:sgi:license_oeo:3.0:*:*:*:*:*:*:*, cpe:2.3:a:sgi:license_oeo:3.1:*:*:*:*:*:*:*\n... and 45 more",
+    "source": "NVD",
+    "confidence": 0.8,
+    "tags": [
+      "local",
+      "status:deferred",
+      "nvd"
+    ],
+    "created_at": "2026-04-06T14:35:11.201476",
+    "updated_at": "2026-04-06T14:35:11.201478"
+  },
+  {
+    "id": "610e2a7b9665e76a",
+    "knowledge_type": "vulnerability",
+    "content": "CVE ID: CVE-1999-0048\nDescription: Talkd, when given corrupt DNS information, can be used to execute arbitrary commands with root privileges.\nAttack Vector: NETWORK\nAffected CPEs: cpe:2.3:a:debian:netkit:0.07:*:*:*:*:*:*:*, cpe:2.3:o:ibm:aix:3.1:*:*:*:*:*:*:*, cpe:2.3:o:ibm:aix:4.1:*:*:*:*:*:*:*, cpe:2.3:o:ibm:aix:4.2:*:*:*:*:*:*:*, cpe:2.3:o:nec:asl_ux_4800:*:*:*:*:*:*:*:*\n... and 2 more",
+    "source": "NVD",
+    "confidence": 0.8,
+    "tags": [
+      "network",
+      "status:deferred",
+      "nvd"
+    ],
+    "created_at": "2026-04-06T14:35:11.203068",
+    "updated_at": "2026-04-06T14:35:11.203070"
+  },
+  {
+    "id": "b9273c373ea7cb34",
+    "knowledge_type": "vulnerability",
+    "content": "CVE ID: CVE-1999-0047\nDescription: MIME conversion buffer overflow in sendmail versions 8.8.3 and 8.8.4.\nAttack Vector: NETWORK\nAffected CPEs: cpe:2.3:a:eric_allman:sendmail:8.8.3:*:*:*:*:*:*:*, cpe:2.3:a:eric_allman:sendmail:8.8.4:*:*:*:*:*:*:*, cpe:2.3:o:bsdi:bsd_os:2.1:*:*:*:*:*:*:*, cpe:2.3:o:caldera:openlinux:1.0:*:*:*:*:*:*:*",
+    "source": "NVD",
+    "confidence": 0.8,
+    "tags": [
+      "network",
+      "status:deferred",
+      "nvd"
+    ],
+    "created_at": "2026-04-06T14:35:11.206635",
+    "updated_at": "2026-04-06T14:35:11.206636"
+  },
+  {
+    "id": "99e7fe3e3d440c09",
+    "knowledge_type": "vulnerability",
+    "content": "CVE ID: CVE-1999-0045\nDescription: List of arbitrary files on Web host via nph-test-cgi script.\nAttack Vector: NETWORK\nAffected CPEs: cpe:2.3:a:apache:http_server:0.8.11:*:*:*:*:*:*:*, cpe:2.3:a:apache:http_server:0.8.14:*:*:*:*:*:*:*, cpe:2.3:a:apache:http_server:1.0:*:*:*:*:*:*:*, cpe:2.3:a:apache:http_server:1.0.2:*:*:*:*:*:*:*, cpe:2.3:a:apache:http_server:1.0.3:*:*:*:*:*:*:*\n... and 6 more",
+    "source": "NVD",
+    "confidence": 0.8,
+    "tags": [
+      "network",
+      "status:deferred",
+      "nvd"
+    ],
+    "created_at": "2026-04-06T14:35:11.212300",
+    "updated_at": "2026-04-06T14:35:11.212300"
+  },
+  {
+    "id": "ae7e75eef46805b2",
+    "knowledge_type": "vulnerability",
+    "content": "CVE ID: CVE-1999-0046\nDescription: Buffer overflow of rlogin program using TERM environmental variable.\nCWE: CWE-120\nAttack Vector: NETWORK\nAffected CPEs: cpe:2.3:o:bsdi:bsd_os:1.1:*:*:*:*:*:*:*, cpe:2.3:o:bsdi:bsd_os:2.0:*:*:*:*:*:*:*, cpe:2.3:o:bsdi:bsd_os:2.0.1:*:*:*:*:*:*:*, cpe:2.3:o:bsdi:bsd_os:2.1:*:*:*:*:*:*:*, cpe:2.3:o:debian:debian_linux:0.93:*:*:*:*:*:*:*\n... and 37 more",
+    "source": "NVD",
+    "confidence": 0.8,
+    "tags": [
+      "CWE-120",
+      "network",
+      "status:deferred",
+      "nvd"
+    ],
+    "created_at": "2026-04-06T14:35:11.214775",
+    "updated_at": "2026-04-06T14:35:11.214776"
+  },
+  {
+    "id": "6717e35fe5d1aa33",
+    "knowledge_type": "vulnerability",
+    "content": "CVE ID: CVE-1999-0043\nDescription: Command execution via shell metachars in INN daemon (innd) 1.5 using \"newgroup\" and \"rmgroup\" control messages, and others.\nCVSS v3 Score: 9.8\nCVSS v3 Vector: CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H\nAttack Vector: NETWORK\nAffected CPEs: cpe:2.3:a:isc:inn:1.4sec:*:*:*:*:*:*:*, cpe:2.3:a:isc:inn:1.4sec2:*:*:*:*:*:*:*, cpe:2.3:a:isc:inn:1.4unoff3:*:*:*:*:*:*:*, cpe:2.3:a:isc:inn:1.4unoff4:*:*:*:*:*:*:*, cpe:2.3:a:isc:inn:1.5:*:*:*:*:*:*:*\n... and 9 more",
+    "source": "NVD",
+    "confidence": 0.95,
+    "tags": [
+      "network",
+      "status:deferred",
+      "nvd",
+      "severity:critical"
+    ],
+    "created_at": "2026-04-06T14:35:11.215616",
+    "updated_at": "2026-04-06T14:35:11.215618"
+  },
+  {
+    "id": "5e54acdbd3eb66fd",
+    "knowledge_type": "vulnerability",
+    "content": "CVE ID: CVE-1999-0042\nDescription: Buffer overflow in University of Washington's implementation of IMAP and POP servers.\nAttack Vector: NETWORK\nAffected CPEs: cpe:2.3:a:university_of_washington:imap:4:*:*:*:*:*:*:*, cpe:2.3:a:university_of_washington:pop:3:*:*:*:*:*:*:*, cpe:2.3:o:bsdi:bsd_os:2.1:*:*:*:*:*:*:*, cpe:2.3:o:bsdi:bsd_os:3.0:*:*:*:*:*:*:*, cpe:2.3:o:caldera:openlinux:1.0:*:*:*:*:*:*:*\n... and 3 more",
+    "source": "NVD",
+    "confidence": 0.8,
+    "tags": [
+      "network",
+      "status:deferred",
+      "nvd"
+    ],
+    "created_at": "2026-04-06T14:35:11.219610",
+    "updated_at": "2026-04-06T14:35:11.219612"
+  },
+  {
+    "id": "c9727e590ce87c4d",
+    "knowledge_type": "vulnerability",
+    "content": "CVE ID: CVE-1999-0041\nDescription: Buffer overflow in NLS (Natural Language Service).\nAttack Vector: NETWORK\nAffected CPEs: cpe:2.3:a:gnu:libc:5.0.9:*:*:*:*:*:*:*, cpe:2.3:a:gnu:libc:5.2.18:*:*:*:*:*:*:*, cpe:2.3:a:gnu:libc:5.3.12:*:*:*:*:*:*:*, cpe:2.3:o:cray:unicos:1.5:*:mk:*:*:*:*:*, cpe:2.3:o:cray:unicos:9.0:*:*:*:*:*:*:*\n... and 7 more",
+    "source": "NVD",
+    "confidence": 0.8,
+    "tags": [
+      "network",
+      "status:deferred",
+      "nvd"
+    ],
+    "created_at": "2026-04-06T14:35:11.227742",
+    "updated_at": "2026-04-06T14:35:11.227745"
+  },
+  {
+    "id": "44c7785aa9df4068",
+    "knowledge_type": "vulnerability",
+    "content": "CVE ID: CVE-1999-0039\nDescription: webdist CGI program (webdist.cgi) in SGI IRIX allows remote attackers to execute arbitrary commands via shell metacharacters in the distloc parameter.\nCVSS v3 Score: 7.3\nCVSS v3 Vector: CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:L/A:L\nAttack Vector: NETWORK\nAffected CPEs: cpe:2.3:o:sgi:irix:5.0:*:*:*:*:*:*:*, cpe:2.3:o:sgi:irix:5.1:*:*:*:*:*:*:*, cpe:2.3:o:sgi:irix:5.2:*:*:*:*:*:*:*, cpe:2.3:o:sgi:irix:5.3:*:*:*:*:*:*:*, cpe:2.3:o:sgi:irix:6.1:*:*:*:*:*:*:*\n... and 2 more",
+    "source": "NVD",
+    "confidence": 0.95,
+    "tags": [
+      "network",
+      "status:deferred",
+      "nvd",
+      "severity:high"
+    ],
+    "created_at": "2026-04-06T14:35:11.228640",
+    "updated_at": "2026-04-06T14:35:11.228642"
+  }
+]
