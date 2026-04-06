@@ -4,7 +4,7 @@
 """
 
 from pathlib import Path
-from typing import Dict, Optional, Union
+from typing import Dict, List, Optional, Union
 
 from src.core.config import Config, get_config
 from src.utils.logger import get_logger

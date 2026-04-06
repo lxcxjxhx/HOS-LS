@@ -15,6 +15,8 @@ from rich.table import Table
 from src import __version__
 from src.core.config import Config, ConfigManager
 from src.core.scanner import SecurityScanner, create_scanner
+from src.integration.nvd_update import run_update
+from src.storage.rag_knowledge_base import get_rag_knowledge_base
 
 console = Console()
 
@@ -190,6 +192,58 @@ def init() -> None:
     config_manager.save_to_file(config_path)
 
     console.print(f"[bold green]配置文件已创建: {config_path}[/bold green]")
+
+
+@cli.group()
+def nvd() -> None:
+    """NVD漏洞库管理命令"""
+    pass
+
+
+@nvd.command()
+@click.option("--zip", "-z", type=click.Path(exists=True), default="nvd-json-data-feeds-main.zip", help="NVD压缩包路径 (默认: nvd-json-data-feeds-main.zip)")
+@click.option("--limit", "-l", type=int, default=None, help="限制处理的文件数量 (用于测试)")
+@click.option("--no-rag", is_flag=True, help="不导入到RAG库，仅解析")
+@click.option("--batch-size", "-b", type=int, default=1000, help="批量处理大小 (默认: 1000)")
+@click.pass_context
+def update(ctx, zip, limit, no_rag, batch_size) -> None:
+    """更新NVD漏洞库，解压并同步到本地RAG库"""
+    config: Config = ctx.obj["config"]
+    
+    zip_path = Path(zip)
+    if not zip_path.exists():
+        script_dir = Path(__file__).parent.parent.parent
+        script_zip = script_dir / zip
+        if script_zip.exists():
+            zip_path = script_zip
+        else:
+            console.print(f"[bold red]错误: 找不到压缩包: {zip}[/bold red]")
+            console.print(f"请确保文件存在于: {zip_path.absolute()}")
+            return
+    
+    rag_base = None
+    if not no_rag:
+        try:
+            rag_base = get_rag_knowledge_base()
+            console.print("[bold green]已连接到RAG知识库[/bold green]")
+        except Exception as e:
+            console.print(f"[bold yellow]警告: 无法初始化RAG知识库: {e}[/bold yellow]")
+            console.print("[bold yellow]将仅解析数据，不导入RAG[/bold yellow]")
+    
+    console.print("[bold blue]开始更新NVD漏洞库...[/bold blue]")
+    
+    stats = run_update(
+        str(zip_path),
+        rag_base=rag_base,
+        limit=limit,
+        batch_size=batch_size
+    )
+    
+    console.print("\n" + "=" * 60)
+    console.print("[bold]统计摘要[/bold]")
+    console.print("=" * 60)
+    for key, value in stats.items():
+        console.print(f"  {key}: {value}")
 
 
 def _display_result(result) -> None:

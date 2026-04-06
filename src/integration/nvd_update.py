@@ -1,56 +1,30 @@
-#!/usr/bin/env python3
-"""
-NVD手动更新脚本
+"""NVD漏洞库更新模块
+
 用于手动更新NVD漏洞库，解压nvd-json-data-feeds-main.zip并同步到本地RAG库
 """
 
 import hashlib
 import json
-import os
 import shutil
-import sys
 import tempfile
 import zipfile
 from datetime import datetime
 from pathlib import Path
 from dataclasses import dataclass, field
-from enum import Enum
+from typing import Dict, Optional, List
 
+from src.learning.self_learning import Knowledge, KnowledgeType
+from src.utils.logger import get_logger
 
-class KnowledgeType(Enum):
-    PATTERN = "pattern"
-    RULE = "rule"
-    CONTEXT = "context"
-    EXCEPTION = "exception"
-    CORRELATION = "correlation"
-    AI_LEARNING = "ai_learning"
-    ai_learning = "ai_learning"
-    VULNERABILITY = "vulnerability"
+logger = get_logger(__name__)
 
-
-@dataclass
-class Knowledge:
-    id: str
-    knowledge_type: KnowledgeType
-    content: str
-    source: str
-    confidence: float
-    tags: list = field(default_factory=list)
-    created_at: datetime = field(default_factory=datetime.now)
-    updated_at: datetime = field(default_factory=datetime.now)
-    metadata: dict = field(default_factory=dict)
-    
-    def to_dict(self):
-        return {
-            "id": self.id,
-            "knowledge_type": self.knowledge_type.value,
-            "content": self.content,
-            "source": self.source,
-            "confidence": self.confidence,
-            "tags": self.tags,
-            "created_at": self.created_at.isoformat(),
-            "updated_at": self.updated_at.isoformat(),
-        }
+FILTERED_PATHS = {
+    '.github/workflows',
+    'LICENSES',
+    '_scripts',
+    'README.md',
+    '_state.csv'
+}
 
 
 @dataclass
@@ -95,32 +69,6 @@ class CVE:
             "references": self.references,
             "metadata": self.metadata,
         }
-
-
-def get_logger(name):
-    import logging
-    logger = logging.getLogger(name)
-    if not logger.handlers:
-        handler = logging.StreamHandler()
-        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-        handler.setFormatter(formatter)
-        logger.addHandler(handler)
-        logger.setLevel(logging.INFO)
-    return logger
-
-
-logger = get_logger(__name__)
-
-script_dir = Path(__file__).parent
-sys.path.insert(0, str(script_dir))
-
-FILTERED_PATHS = {
-    '.github/workflows',
-    'LICENSES',
-    '_scripts',
-    'README.md',
-    '_state.csv'
-}
 
 
 def detect_format(data):
@@ -407,7 +355,7 @@ def cve_to_knowledge(cve):
     
     return Knowledge(
         id=knowledge_id,
-        knowledge_type=KnowledgeType.VULNERABILITY if hasattr(KnowledgeType, 'VULNERABILITY') else KnowledgeType.CONTEXT,
+        knowledge_type=KnowledgeType.VULNERABILITY,
         content=content,
         source='NVD',
         confidence=confidence,
@@ -515,76 +463,3 @@ def run_update(zip_path, rag_base=None, limit=None, batch_size=1000):
                 logger.info(f"已清理临时目录: {temp_dir}")
             except Exception as e:
                 logger.warning(f"清理临时目录失败: {e}")
-
-
-def main():
-    import argparse
-    
-    parser = argparse.ArgumentParser(
-        description='NVD手动更新脚本 - 解压nvd-json-data-feeds-main.zip并同步到本地RAG库'
-    )
-    parser.add_argument(
-        '--zip',
-        type=str,
-        default='nvd-json-data-feeds-main.zip',
-        help='NVD压缩包路径 (默认: nvd-json-data-feeds-main.zip)'
-    )
-    parser.add_argument(
-        '--limit',
-        type=int,
-        default=None,
-        help='限制处理的文件数量 (用于测试)'
-    )
-    parser.add_argument(
-        '--no-rag',
-        action='store_true',
-        help='不导入到RAG库，仅解析'
-    )
-    parser.add_argument(
-        '--batch-size',
-        type=int,
-        default=1000,
-        help='批量处理大小 (默认: 1000)'
-    )
-    
-    args = parser.parse_args()
-    
-    zip_path = Path(args.zip)
-    if not zip_path.exists():
-        script_zip = script_dir / args.zip
-        if script_zip.exists():
-            zip_path = script_zip
-        else:
-            print(f"错误: 找不到压缩包: {args.zip}")
-            print(f"请确保文件存在于: {zip_path.absolute()}")
-            sys.exit(1)
-    
-    rag_base = None
-    if not args.no_rag:
-        try:
-            sys.path.insert(0, str(script_dir))
-            from src.storage.rag_knowledge_base import get_rag_knowledge_base
-            rag_base = get_rag_knowledge_base()
-            print("已连接到RAG知识库")
-        except Exception as e:
-            print(f"警告: 无法初始化RAG知识库: {e}")
-            print("将仅解析数据，不导入RAG")
-    
-    stats = run_update(
-        str(zip_path),
-        rag_base=rag_base,
-        limit=args.limit,
-        batch_size=args.batch_size
-    )
-    
-    print("\n" + "=" * 60)
-    print("统计摘要")
-    print("=" * 60)
-    for key, value in stats.items():
-        print(f"  {key}: {value}")
-    
-    return 0
-
-
-if __name__ == '__main__':
-    sys.exit(main())

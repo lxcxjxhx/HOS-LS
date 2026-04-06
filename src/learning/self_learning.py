@@ -41,6 +41,7 @@ class KnowledgeType(Enum):
     CORRELATION = "correlation"
     AI_LEARNING = "ai_learning"
     ai_learning = "ai_learning"
+    VULNERABILITY = "vulnerability"
 
 
 @dataclass
