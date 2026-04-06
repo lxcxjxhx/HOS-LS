@@ -1,5 +1,5 @@
 from langgraph.graph import StateGraph, END
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 from pathlib import Path
 import hashlib
 import functools
@@ -10,6 +10,10 @@ from src.analyzers.ast_analyzer import ASTAnalyzer
 from src.storage.rag_knowledge_base import RAGKnowledgeBase
 from src.db.neo4j_connection import Neo4jManager
 from src.cache.manager import CacheManager
+from src.core.rag_graph_integrator import get_rag_graph_integrator
+from src.core.crewai_team import get_crewai_team
+from src.ai.evaluation import get_evaluator
+from src.security.security_checker import get_security_checker
 
 # 缓存管理器
 cache_manager = CacheManager()
@@ -386,22 +390,39 @@ async def retrieval_node(state: AgentState) -> AgentState:
     集成FAISS和Neo4j检索功能，返回Top-K CVE列表
     """
     try:
-        # 使用RAG知识库检索
-        rag_base = RAGKnowledgeBase()
+        # 安全检查
+        security_checker = get_security_checker()
+        security_result = security_checker.run_all_checks(state['input_code'])
+        
+        # 如果安全风险高，拒绝处理
+        if security_result['overall_risk'] == 'high':
+            return {
+                **state,
+                'cve_candidates': [],
+                'security_alert': {
+                    'risk': security_result['overall_risk'],
+                    'message': '输入代码存在高安全风险，拒绝处理',
+                    'details': security_checker.generate_security_report(state['input_code'])
+                }
+            }
+        
+        # 使用RAG Graph Integrator进行混合检索
+        rag_integrator = get_rag_graph_integrator()
         
         # 构建检索查询
         query = f"分析以下代码的安全漏洞: {state['input_code']}"
         
-        # 执行检索
-        results = rag_base.search_knowledge(query, top_k=5)
+        # 执行混合检索
+        results = rag_integrator.search_vulnerabilities(query, top_k=10)
         
         # 处理检索结果
         cve_candidates = []
         for result in results:
             cve_candidates.append({
-                'title': result.content[:100] + '...' if len(result.content) > 100 else result.content,
-                'content': result.content,
-                'score': result.confidence
+                'title': result.get('metadata', {}).get('title', '') or result.get('content', '')[:100] + '...' if len(result.get('content', '')) > 100 else result.get('content', ''),
+                'content': result.get('content', ''),
+                'score': result.get('similarity', 0.0),
+                'metadata': result.get('metadata', {})
             })
         
         return {
@@ -447,35 +468,46 @@ async def graph_node(state: AgentState) -> AgentState:
         from src.db import get_neo4j_manager
         neo4j_manager = get_neo4j_manager({})
         
-        # 构建查询
-        queries = []
+        # 构建攻击链
+        attack_chain = {
+            'chains': [],
+            'statistics': {}
+        }
+        
         if state.get('cve_candidates'):
             for candidate in state['cve_candidates']:
-                if 'CVE' in candidate.get('title', ''):
-                    # 提取CVE ID
-                    cve_id = candidate['title'].split(' ')[0]
-                    queries.append(f"MATCH (c:CVE {{id: '{cve_id}'}})-[r]->(s) RETURN c, r, s")
+                metadata = candidate.get('metadata', {})
+                cve_id = metadata.get('cve_id') or candidate.get('title', '').split(' ')[0]
+                
+                if 'CVE' in cve_id:
+                    # 生成攻击链
+                    try:
+                        chain_info = neo4j_manager.generate_attack_chain(cve_id)
+                        if chain_info and 'attack_chain' in chain_info:
+                            attack_chain['chains'].append({
+                                'cve_id': cve_id,
+                                'chain': chain_info['attack_chain'],
+                                'score': candidate.get('score', 0.0)
+                            })
+                    except Exception:
+                        pass
         
-        # 执行查询
-        graph_subgraph = {}
-        for query in queries:
-            try:
-                result = neo4j_manager.execute_cypher(query)
-                if result:
-                    graph_subgraph[query] = result
-            except Exception:
-                pass
+        # 统计攻击链信息
+        attack_chain['statistics'] = {
+            'total_chains': len(attack_chain['chains']),
+            'average_score': sum(chain['score'] for chain in attack_chain['chains']) / len(attack_chain['chains']) if attack_chain['chains'] else 0
+        }
         
         return {
             **state,
-            'graph_subgraph': graph_subgraph
+            'graph_subgraph': attack_chain
         }
         
     except Exception as e:
         # 出错时返回空字典
         return {
             **state,
-            'graph_subgraph': {}
+            'graph_subgraph': {'chains': [], 'statistics': {'total_chains': 0, 'average_score': 0}}
         }
 
 
@@ -485,9 +517,40 @@ async def reasoning_node(state: AgentState) -> AgentState:
     核心漏洞分析和利用方式分析
     """
     try:
+        # 评估代码复杂度
+        complexity = evaluate_complexity(state['input_code'])
+        
+        # 如果代码复杂度高，使用CrewAI团队进行深入分析
+        if complexity >= 0.7:
+            crewai_team = get_crewai_team()
+            crew_result = crewai_team.run_crew(state['input_code'])
+            
+            # 构建基于CrewAI的分析结果
+            analysis_result = f"# 漏洞分析结果 (CrewAI团队分析)\n\n"
+            analysis_result += f"## 基础信息\n"
+            analysis_result += f"- 代码复杂度: {complexity:.2f}\n"
+            analysis_result += f"- CVE候选数量: {len(state.get('cve_candidates', []))}\n"
+            analysis_result += f"- 攻击链数量: {state.get('graph_subgraph', {}).get('statistics', {}).get('total_chains', 0)}\n\n"
+            analysis_result += f"## CrewAI分析结果\n"
+            analysis_result += f"{crew_result['crew_result']}\n"
+            
+            return {
+                **state,
+                'analysis_result': analysis_result,
+                'crewai_result': crew_result
+            }
+        
+        # 否则使用常规分析
         # 构建分析输入
         cve_context = "\n".join([candidate['content'] for candidate in state.get('cve_candidates', [])])
-        attack_chain = str(state.get('graph_subgraph', {}))
+        
+        # 处理攻击链信息
+        graph_subgraph = state.get('graph_subgraph', {})
+        attack_chain_info = []
+        if 'chains' in graph_subgraph:
+            for chain in graph_subgraph['chains'][:3]:  # 只使用前3条攻击链
+                attack_chain_info.append(f"CVE: {chain['cve_id']}\n{chain['chain'][:200]}...")
+        attack_chain = "\n".join(attack_chain_info) or str(graph_subgraph)
         
         # 集成DSPy优化
         from src.ai.dspy_optimization import get_dspy_programs
@@ -501,12 +564,21 @@ async def reasoning_node(state: AgentState) -> AgentState:
         )
         
         # 构建分析结果
-        analysis_result = f"漏洞分析结果:\n"
-        analysis_result += f"CVE候选数量: {len(state.get('cve_candidates', []))}\n"
-        analysis_result += f"攻击链长度: {len(state.get('graph_subgraph', {}))}\n"
-        analysis_result += f"漏洞: {result.vulnerabilities}\n"
-        analysis_result += f"利用方式: {result.exploitation}\n"
-        analysis_result += f"修复建议: {result.fix_suggestions}"
+        analysis_result = f"# 漏洞分析结果\n\n"
+        analysis_result += f"## 基础信息\n"
+        analysis_result += f"- 代码复杂度: {complexity:.2f}\n"
+        analysis_result += f"- CVE候选数量: {len(state.get('cve_candidates', []))}\n"
+        analysis_result += f"- 攻击链数量: {graph_subgraph.get('statistics', {}).get('total_chains', 0)}\n"
+        analysis_result += f"- 平均相似度: {graph_subgraph.get('statistics', {}).get('average_score', 0):.2f}\n\n"
+        
+        analysis_result += f"## 漏洞分析\n"
+        analysis_result += f"{result.vulnerabilities}\n\n"
+        
+        analysis_result += f"## 利用方式\n"
+        analysis_result += f"{result.exploitation}\n\n"
+        
+        analysis_result += f"## 修复建议\n"
+        analysis_result += f"{result.fix_suggestions}\n"
         
         return {
             **state,
@@ -515,10 +587,13 @@ async def reasoning_node(state: AgentState) -> AgentState:
         
     except Exception as e:
         # 出错时使用默认逻辑
-        analysis_result = f"漏洞分析结果:\n"
-        analysis_result += f"CVE候选数量: {len(state.get('cve_candidates', []))}\n"
-        analysis_result += f"攻击链长度: {len(state.get('graph_subgraph', {}))}\n"
-        analysis_result += "详细分析: 基于检索结果和攻击链，发现潜在的安全漏洞"
+        analysis_result = f"# 漏洞分析结果\n\n"
+        analysis_result += f"## 基础信息\n"
+        analysis_result += f"- CVE候选数量: {len(state.get('cve_candidates', []))}\n"
+        analysis_result += f"- 攻击链数量: {state.get('graph_subgraph', {}).get('statistics', {}).get('total_chains', 0)}\n\n"
+        analysis_result += "## 详细分析\n"
+        analysis_result += "基于检索结果和攻击链分析，发现潜在的安全漏洞\n"
+        analysis_result += "建议进一步深入分析以确定具体的漏洞类型和修复方案\n"
         
         return {
             **state,
@@ -541,25 +616,64 @@ async def critic_node(state: AgentState) -> AgentState:
             analysis_result=state.get('analysis_result', '')
         )
         
-        # 简单的质量评估
+        # 质量评估
         iteration = state.get('iteration', 0)
+        analysis_result = state.get('analysis_result', '')
         
-        # 检查分析结果长度和DSPy评估
-        if len(state.get('analysis_result', '')) < 100 or result.quality != 'pass':
+        # 综合评估质量
+        quality_score = 0
+        
+        # 1. 分析结果长度
+        if len(analysis_result) > 500:
+            quality_score += 30
+        elif len(analysis_result) > 200:
+            quality_score += 20
+        elif len(analysis_result) > 100:
+            quality_score += 10
+        
+        # 2. DSPy评估结果
+        if result.quality == 'pass':
+            quality_score += 40
+        elif result.quality == 'warning':
+            quality_score += 20
+        
+        # 3. 内容完整性
+        if '漏洞分析' in analysis_result and '利用方式' in analysis_result and '修复建议' in analysis_result:
+            quality_score += 30
+        
+        # 4. 使用LangSmith + DeepEval进行评估
+        evaluator = get_evaluator()
+        evaluation_report = evaluator.evaluate_analysis(
+            state.get('input_code', ''),
+            analysis_result
+        )
+        
+        # 生成反馈
+        feedback = evaluator.generate_feedback(evaluation_report['evaluation'])
+        
+        # 判断是否需要重试
+        if quality_score < 60 or evaluation_report['evaluation']['overall'] < 0.6:
             # 质量不达标，需要重试
             if iteration < 3:
                 return {
                     **state,
-                    'iteration': iteration + 1
+                    'iteration': iteration + 1,
+                    'quality_score': quality_score,
+                    'evaluation': evaluation_report['evaluation'],
+                    'feedback': feedback,
+                    'improvement_suggestions': result.improvements if hasattr(result, 'improvements') else "分析结果不够详细，请提供更全面的漏洞分析"
                 }
         
         # 质量达标，生成最终报告
         final_report = {
-            'analysis': state.get('analysis_result', ''),
+            'analysis': analysis_result,
             'cve_candidates': state.get('cve_candidates', []),
             'attack_chain': state.get('graph_subgraph', {}),
             'quality': result.quality,
-            'improvements': result.improvements,
+            'quality_score': quality_score,
+            'evaluation': evaluation_report['evaluation'],
+            'feedback': feedback,
+            'improvements': result.improvements if hasattr(result, 'improvements') else [],
             'iteration': iteration
         }
         
@@ -571,22 +685,50 @@ async def critic_node(state: AgentState) -> AgentState:
     except Exception as e:
         # 出错时使用默认逻辑
         iteration = state.get('iteration', 0)
+        analysis_result = state.get('analysis_result', '')
         
-        # 检查分析结果长度
-        if len(state.get('analysis_result', '')) < 100:
+        # 简单的质量评估
+        quality_score = 0
+        if len(analysis_result) > 300:
+            quality_score = 70
+        elif len(analysis_result) > 100:
+            quality_score = 50
+        
+        # 尝试使用评估器
+        evaluation = {'overall': 0.5}
+        feedback = "分析结果需要改进"
+        try:
+            evaluator = get_evaluator()
+            evaluation_report = evaluator.evaluate_analysis(
+                state.get('input_code', ''),
+                analysis_result
+            )
+            evaluation = evaluation_report['evaluation']
+            feedback = evaluator.generate_feedback(evaluation)
+        except Exception:
+            pass
+        
+        if quality_score < 60 or evaluation['overall'] < 0.6:
             # 质量不达标，需要重试
             if iteration < 3:
                 return {
                     **state,
-                    'iteration': iteration + 1
+                    'iteration': iteration + 1,
+                    'quality_score': quality_score,
+                    'evaluation': evaluation,
+                    'feedback': feedback,
+                    'improvement_suggestions': "分析结果不够详细，请提供更全面的漏洞分析"
                 }
         
         # 质量达标，生成最终报告
         final_report = {
-            'analysis': state.get('analysis_result', ''),
+            'analysis': analysis_result,
             'cve_candidates': state.get('cve_candidates', []),
             'attack_chain': state.get('graph_subgraph', {}),
             'quality': 'pass',
+            'quality_score': quality_score,
+            'evaluation': evaluation,
+            'feedback': feedback,
             'iteration': iteration
         }
         
@@ -613,7 +755,29 @@ async def repair_node(state: AgentState) -> AgentState:
         
         # 更新最终报告
         final_report = state.get('final_report', {})
-        final_report['fix_suggestions'] = result.fix_suggestions
+        
+        # 生成详细的修复建议
+        fix_suggestions = f"# 详细修复建议\n\n"
+        fix_suggestions += f"## 具体修复方案\n"
+        fix_suggestions += f"{result.fix_suggestions}\n\n"
+        
+        # 添加代码示例（如果可能）
+        fix_suggestions += "## 代码修复示例\n"
+        fix_suggestions += "```python\n"
+        fix_suggestions += "# 修复前\n"
+        fix_suggestions += state.get('input_code', '')[:200] + '...\n\n'
+        fix_suggestions += "# 修复后\n"
+        fix_suggestions += "# TODO: 根据具体漏洞类型生成修复后的代码示例\n"
+        fix_suggestions += "```\n\n"
+        
+        # 添加修复注意事项
+        fix_suggestions += "## 修复注意事项\n"
+        fix_suggestions += "1. 修复时请确保不破坏现有功能\n"
+        fix_suggestions += "2. 修复后请进行充分的测试\n"
+        fix_suggestions += "3. 定期更新依赖库以避免已知漏洞\n"
+        fix_suggestions += "4. 考虑添加安全测试用例\n"
+        
+        final_report['fix_suggestions'] = fix_suggestions
         
         return {
             **state,
@@ -623,7 +787,26 @@ async def repair_node(state: AgentState) -> AgentState:
     except Exception as e:
         # 出错时使用默认逻辑
         final_report = state.get('final_report', {})
-        final_report['fix_suggestions'] = "建议：根据漏洞分析结果进行修复"
+        
+        # 生成默认修复建议
+        fix_suggestions = "# 详细修复建议\n\n"
+        fix_suggestions += "## 具体修复方案\n"
+        fix_suggestions += "根据漏洞分析结果进行修复\n\n"
+        
+        fix_suggestions += "## 代码修复示例\n"
+        fix_suggestions += "```python\n"
+        fix_suggestions += "# 修复前\n"
+        fix_suggestions += state.get('input_code', '')[:200] + '...\n\n'
+        fix_suggestions += "# 修复后\n"
+        fix_suggestions += "# TODO: 根据具体漏洞类型生成修复后的代码示例\n"
+        fix_suggestions += "```\n\n"
+        
+        fix_suggestions += "## 修复注意事项\n"
+        fix_suggestions += "1. 修复时请确保不破坏现有功能\n"
+        fix_suggestions += "2. 修复后请进行充分的测试\n"
+        fix_suggestions += "3. 定期更新依赖库以避免已知漏洞\n"
+        
+        final_report['fix_suggestions'] = fix_suggestions
         
         return {
             **state,
@@ -658,6 +841,7 @@ def create_agent_graph():
     )
     
     graph.add_edge("build_graph", "reason")
+    graph.add_edge("reason", "critic")
     
     # Critic循环
     graph.add_conditional_edges(

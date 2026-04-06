@@ -529,7 +529,7 @@ def cve_to_knowledge(cve):
     )
 
 
-def run_update(zip_path, rag_base=None, limit=None, batch_size=1000, resume_from=0):
+def run_update(zip_path, rag_base=None, limit=None, batch_size=1000, resume_from=0, progress_callback=None):
     global temp_dir_path, interrupted, interrupt_signal
     temp_dir = None
     stats = {
@@ -612,7 +612,8 @@ def run_update(zip_path, rag_base=None, limit=None, batch_size=1000, resume_from
                 # 显示解压进度条
                 if tqdm:
                     # 使用tqdm进度条
-                    for member in tqdm(members_to_extract, desc="解压NVD文件", unit="file"):
+                    total_members = len(members_to_extract)
+                    for i, member in enumerate(tqdm(members_to_extract, desc="解压NVD文件", unit="file")):
                         try:
                             zf.extract(member, temp_dir)
                             extracted_path = temp_dir / member.filename
@@ -623,6 +624,9 @@ def run_update(zip_path, rag_base=None, limit=None, batch_size=1000, resume_from
                                 logger.warning(f"跳过空文件或不完整文件: {member.filename}")
                                 if extracted_path.exists():
                                     extracted_path.unlink()
+                            # 调用进度回调
+                            if progress_callback:
+                                progress_callback("extract", i + 1, total_members)
                         except Exception as e:
                             logger.error(f"解压文件失败: {member.filename} -> {e}")
                 else:
@@ -641,6 +645,9 @@ def run_update(zip_path, rag_base=None, limit=None, batch_size=1000, resume_from
                                 logger.warning(f"跳过空文件或不完整文件: {member.filename}")
                                 if extracted_path.exists():
                                     extracted_path.unlink()
+                            # 调用进度回调
+                            if progress_callback:
+                                progress_callback("extract", i + 1, total_members)
                         except Exception as e:
                             logger.error(f"解压文件失败: {member.filename} -> {e}")
         
@@ -786,6 +793,10 @@ def run_update(zip_path, rag_base=None, limit=None, batch_size=1000, resume_from
                             processed_files += 1
                             batch_processed += 1
                             total_pbar.update(1)
+                            
+                            # 调用进度回调 - 嵌入阶段
+                            if progress_callback:
+                                progress_callback("embed", processed_files, total_files)
                             
                             # 每处理100个文件更新一次断点
                             if processed_files % 100 == 0:
@@ -1035,13 +1046,22 @@ def run_update(zip_path, rag_base=None, limit=None, batch_size=1000, resume_from
                         logger.info(f"开始保存前内存使用: {current_memory:.2f} MB")
                         
                         # 构建向量索引
+                        logger.info("构建向量索引...")
+                        if progress_callback:
+                            progress_callback("graph", 1, 3)
                         rag_base.vector_store.save()
                         pbar.update(1)
                         
                         # 保存知识库，创建备份
+                        logger.info("保存知识库...")
+                        if progress_callback:
+                            progress_callback("graph", 2, 3)
                         rag_base.save(create_backup=True)
                         pbar.update(1)
                         
+                        # 完成
+                        if progress_callback:
+                            progress_callback("graph", 3, 3)
                         # 内存监控
                         current_memory = process.memory_info().rss / 1024 / 1024
                         logger.info(f"保存完成后内存使用: {current_memory:.2f} MB")
@@ -1056,13 +1076,22 @@ def run_update(zip_path, rag_base=None, limit=None, batch_size=1000, resume_from
                     logger.info(f"开始保存前内存使用: {current_memory:.2f} MB")
                     
                     # 构建向量索引
+                    logger.info("构建向量索引...")
+                    if progress_callback:
+                        progress_callback("graph", 1, 3)
                     rag_base.vector_store.save()
                     logger.info("✅ 完成索引构建")
                     
                     # 保存知识库，创建备份
+                    logger.info("保存知识库...")
+                    if progress_callback:
+                        progress_callback("graph", 2, 3)
                     rag_base.save(create_backup=True)
                     logger.info("✅ 完成知识库保存")
                     
+                    # 完成
+                    if progress_callback:
+                        progress_callback("graph", 3, 3)
                     # 内存监控
                     current_memory = process.memory_info().rss / 1024 / 1024
                     logger.info(f"保存完成后内存使用: {current_memory:.2f} MB")

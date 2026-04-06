@@ -53,11 +53,12 @@ class EmbedConfig:
     """嵌入配置"""
 
     model_name: str = "all-MiniLM-L6-v2"
-    batch_size: int = 32
+    batch_size: int = 64
     max_length: int = 512
     use_cache: bool = True
     cache_dir: Optional[str] = None
     device: str = "auto"
+    use_blockify: bool = True
 
 
 class CodeEmbedder:
@@ -75,6 +76,7 @@ class CodeEmbedder:
         self.config = config or EmbedConfig()
         self._model: Optional[Any] = None
         self._cache: Dict[str, List[float]] = {}
+        self._block_cache: Dict[str, str] = {}
         self._initialized = False
 
         if SENTENCE_TRANSFORMERS_AVAILABLE:
@@ -191,6 +193,7 @@ class CodeEmbedder:
     def clear_cache(self) -> None:
         """清除缓存"""
         self._cache.clear()
+        self._block_cache.clear()
 
     def save_cache(self, path: Union[str, Path]) -> bool:
         """保存缓存
@@ -256,8 +259,10 @@ class CodeEmbedder:
             return self._fallback_embedding(code)
 
         try:
+            # 使用Blockify压缩
+            compressed_code = self._blockify(code)
             embedding = self._model.encode(
-                code,
+                compressed_code,
                 batch_size=self.config.batch_size,
                 max_length=self.config.max_length,
                 show_progress_bar=False,
@@ -286,11 +291,14 @@ class CodeEmbedder:
             return [self._fallback_embedding(code) for code in codes]
 
         try:
+            # 使用Blockify压缩
+            compressed_codes = [self._blockify(code) for code in codes]
+            
             # 优化批处理大小以充分利用 GPU
             batch_size = min(self.config.batch_size, 128)  # 增加批处理大小以提高 GPU 利用率
             
             embeddings = self._model.encode(
-                codes,
+                compressed_codes,
                 batch_size=batch_size,
                 max_length=self.config.max_length,
                 show_progress_bar=False,
@@ -331,6 +339,49 @@ class CodeEmbedder:
                 embedding.append(0.0)
 
         return embedding
+
+    def _blockify(self, text: str) -> str:
+        """Blockify压缩：去重和压缩文本
+
+        Args:
+            text: 原始文本
+
+        Returns:
+            压缩后的文本
+        """
+        if not self.config.use_blockify:
+            return text
+
+        # 生成缓存键
+        block_key = hashlib.sha256(text.encode()).hexdigest()
+        if block_key in self._block_cache:
+            return self._block_cache[block_key]
+
+        # 去重和压缩逻辑
+        lines = text.strip().split('\n')
+        seen_lines = set()
+        unique_lines = []
+
+        for line in lines:
+            line = line.strip()
+            if line and line not in seen_lines:
+                seen_lines.add(line)
+                unique_lines.append(line)
+
+        # 压缩连续的空行
+        compressed_lines = []
+        prev_empty = False
+        for line in unique_lines:
+            if line.strip():
+                compressed_lines.append(line)
+                prev_empty = False
+            elif not prev_empty:
+                compressed_lines.append('')
+                prev_empty = True
+
+        compressed_text = '\n'.join(compressed_lines)
+        self._block_cache[block_key] = compressed_text
+        return compressed_text
 
     def _generate_cache_key(self, code: str) -> str:
         """生成缓存键
@@ -404,6 +455,7 @@ class InMemoryEmbedder:
     def clear_cache(self) -> None:
         """清除缓存"""
         self._cache.clear()
+        self._block_cache.clear()
 
     def is_available(self) -> bool:
         """检查是否可用

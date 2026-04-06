@@ -4,13 +4,17 @@ HOS-LS 的命令行入口。
 """
 
 import sys
+import asyncio
 from pathlib import Path
-from typing import Optional
+from typing import Optional, List, Dict, Any
+from concurrent.futures import ThreadPoolExecutor
+from queue import Queue
 
 import click
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
+from rich.progress import Progress, SpinnerColumn, BarColumn, TextColumn
 
 from src import __version__
 from src.core.config import Config, ConfigManager
@@ -19,6 +23,42 @@ from src.integration.nvd_update import run_update
 from src.storage.rag_knowledge_base import get_rag_knowledge_base
 
 console = Console()
+
+
+class AsyncWorker:
+    """异步Worker类，用于处理后台任务"""
+    
+    def __init__(self, max_workers: int = 4):
+        self.executor = ThreadPoolExecutor(max_workers=max_workers)
+        self.queue = Queue()
+        self.running = False
+    
+    def start(self):
+        """启动Worker"""
+        self.running = True
+        asyncio.create_task(self._process_queue())
+    
+    def stop(self):
+        """停止Worker"""
+        self.running = False
+        self.executor.shutdown()
+    
+    def add_task(self, task, *args, **kwargs):
+        """添加任务到队列"""
+        self.queue.put((task, args, kwargs))
+    
+    async def _process_queue(self):
+        """处理队列中的任务"""
+        while self.running:
+            if not self.queue.empty():
+                task, args, kwargs = self.queue.get()
+                try:
+                    await asyncio.to_thread(task, *args, **kwargs)
+                except Exception as e:
+                    console.print(f"[bold red]任务执行失败: {e}[/bold red]")
+                finally:
+                    self.queue.task_done()
+            await asyncio.sleep(0.1)
 
 
 def print_banner() -> None:
@@ -273,13 +313,54 @@ def update(ctx, zip, limit, no_rag, batch_size, resume) -> None:
     
     console.print("[bold blue]开始更新NVD漏洞库...[/bold blue]")
     
-    stats = run_update(
-        str(zip_path),
-        rag_base=rag_base,
-        limit=limit,
-        batch_size=batch_size,
-        resume_from=resume
-    )
+    # 三阶段进度条
+    with Progress(
+        SpinnerColumn(),
+        BarColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
+        TextColumn("[progress.completed]{task.completed}/{task.total}"),
+        console=console
+    ) as progress:
+        # 第一阶段：解压和解析
+        phase1 = progress.add_task("[cyan]1/3: 解压和解析数据...", total=100)
+        
+        # 第二阶段：嵌入生成
+        phase2 = progress.add_task("[green]2/3: 生成嵌入向量...", total=100)
+        
+        # 第三阶段：图构建
+        phase3 = progress.add_task("[blue]3/3: 构建知识图谱...", total=100)
+        
+        # 创建异步Worker
+        worker = AsyncWorker(max_workers=4)
+        worker.start()
+        
+        try:
+            # 包装run_update函数以支持进度更新
+            def progress_callback(phase: str, current: int, total: int):
+                if phase == "extract":
+                    progress.update(phase1, completed=current, total=total)
+                elif phase == "embed":
+                    progress.update(phase2, completed=current, total=total)
+                elif phase == "graph":
+                    progress.update(phase3, completed=current, total=total)
+            
+            stats = run_update(
+                str(zip_path),
+                rag_base=rag_base,
+                limit=limit,
+                batch_size=batch_size,
+                resume_from=resume,
+                progress_callback=progress_callback
+            )
+            
+            # 完成所有进度
+            progress.update(phase1, completed=100, total=100)
+            progress.update(phase2, completed=100, total=100)
+            progress.update(phase3, completed=100, total=100)
+            
+        finally:
+            worker.stop()
     
     console.print("\n" + "=" * 60)
     console.print("[bold]统计摘要[/bold]")

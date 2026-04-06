@@ -1,6 +1,6 @@
 """FAISS 向量存储模块
 
-实现基于 FAISS 的向量存储，支持 GPU 加速的相似度搜索。
+实现基于 FAISS 的向量存储，支持 GPU 加速的相似度搜索和 LlamaIndex 混合检索。
 """
 
 import json
@@ -10,6 +10,16 @@ from typing import Dict, List, Optional, Any
 
 from src.storage.code_embedder import CodeEmbedder, EmbedConfig
 from src.utils.logger import get_logger
+
+try:
+    from llama_index.core import VectorStoreIndex, Document
+    from llama_index.core.storage.index_store import SimpleIndexStore
+    from llama_index.core.storage.docstore import SimpleDocumentStore
+    from llama_index.core.graph_stores import SimpleGraphStore
+    from llama_index.graph_stores.neo4j import Neo4jGraphStore
+    LLAMA_INDEX_AVAILABLE = True
+except ImportError:
+    LLAMA_INDEX_AVAILABLE = False
 
 logger = get_logger(__name__)
 
@@ -35,12 +45,13 @@ class FAISSVectorStore:
     实现基于 FAISS 的向量存储，支持 GPU 加速的相似度搜索。
     """
 
-    def __init__(self, storage_path: Path, embed_config: Optional[EmbedConfig] = None):
+    def __init__(self, storage_path: Path, embed_config: Optional[EmbedConfig] = None, neo4j_config: Optional[Dict] = None):
         """初始化 FAISS 向量存储
 
         Args:
             storage_path: 存储路径
             embed_config: 嵌入配置
+            neo4j_config: Neo4j 配置，用于 LlamaIndex Property Graph Index
         """
         self.storage_path = storage_path
         self.storage_path.mkdir(parents=True, exist_ok=True)
@@ -48,6 +59,7 @@ class FAISSVectorStore:
         # 存储文件
         self.index_path = self.storage_path / "faiss_index.bin"
         self.documents_path = self.storage_path / "documents.json"
+        self.llama_index_path = self.storage_path / "llama_index"
         
         # 内存存储
         self._index = None
@@ -55,9 +67,16 @@ class FAISSVectorStore:
         self._document_ids: List[str] = []
         self._embedder = CodeEmbedder(embed_config or EmbedConfig())
         self._embedding_dim = self._embedder.get_embedding_dimension()
+        self._neo4j_config = neo4j_config
+        self._llama_index = None
+        self._graph_store = None
         
         # 加载现有数据
         self.load()
+        
+        # 初始化 LlamaIndex
+        if LLAMA_INDEX_AVAILABLE:
+            self._initialize_llama_index()
 
     def add_document(self, document_id: str, content: str, metadata: Dict[str, Any]) -> None:
         """添加文档
@@ -97,6 +116,22 @@ class FAISSVectorStore:
             "embedding": embedding
         }
         
+        # 更新 LlamaIndex
+        if LLAMA_INDEX_AVAILABLE and self._llama_index:
+            try:
+                # 创建 LlamaIndex Document
+                doc = Document(
+                    text=content,
+                    id_=document_id,
+                    metadata=metadata
+                )
+                # 添加到 LlamaIndex
+                self._llama_index.insert(doc)
+                # 保存 LlamaIndex
+                self._llama_index.storage_context.persist(persist_dir=str(self.llama_index_path))
+            except Exception as e:
+                logger.error(f"Failed to update LlamaIndex: {e}")
+        
         # 保存到文件
         self.save()
     
@@ -113,6 +148,7 @@ class FAISSVectorStore:
         # 批量处理文档
         new_embeddings = []
         new_document_ids = []
+        llama_documents = []
         
         for doc in documents:
             document_id = doc["document_id"]
@@ -134,6 +170,15 @@ class FAISSVectorStore:
             # 添加到文档ID列表（如果不存在）
             if document_id not in self._document_ids:
                 self._document_ids.append(document_id)
+            
+            # 创建 LlamaIndex Document
+            if LLAMA_INDEX_AVAILABLE and self._llama_index:
+                llama_doc = Document(
+                    text=content,
+                    id_=document_id,
+                    metadata=metadata
+                )
+                llama_documents.append(llama_doc)
         
         # 批量更新索引
         if new_embeddings:
@@ -141,6 +186,16 @@ class FAISSVectorStore:
                 self._create_index()
             embeddings_np = np.array(new_embeddings, dtype=np.float32)
             self._index.add(embeddings_np)
+        
+        # 批量更新 LlamaIndex
+        if LLAMA_INDEX_AVAILABLE and self._llama_index and llama_documents:
+            try:
+                for doc in llama_documents:
+                    self._llama_index.insert(doc)
+                # 保存 LlamaIndex
+                self._llama_index.storage_context.persist(persist_dir=str(self.llama_index_path))
+            except Exception as e:
+                logger.error(f"Failed to update LlamaIndex: {e}")
         
         # 条件性保存
         if build_index:
@@ -210,6 +265,77 @@ class FAISSVectorStore:
                 })
         
         return results
+
+    def hybrid_search(self, query: str, top_k: int = 10, filter_metadata: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
+        """混合检索（FAISS + LlamaIndex）
+
+        Args:
+            query: 查询文本
+            top_k: 返回结果数量
+            filter_metadata: 元数据过滤条件
+
+        Returns:
+            搜索结果列表
+        """
+        # 1. 使用 FAISS 进行向量搜索
+        faiss_results = self.search(query, top_k)
+        
+        # 2. 使用 LlamaIndex 进行混合检索（如果可用）
+        llama_results = []
+        if LLAMA_INDEX_AVAILABLE and self._llama_index:
+            try:
+                # 构建查询引擎
+                query_engine = self._llama_index.as_query_engine(
+                    similarity_top_k=top_k,
+                    vector_store_query_mode="hybrid"
+                )
+                # 执行查询
+                response = query_engine.query(query)
+                # 处理结果
+                for node in response.source_nodes:
+                    llama_results.append({
+                        "document_id": node.node.id,
+                        "content": node.node.text,
+                        "metadata": node.node.metadata or {},
+                        "similarity": node.score
+                    })
+            except Exception as e:
+                logger.error(f"LlamaIndex search failed: {e}")
+        
+        # 3. 合并结果（去重并排序）
+        combined_results = {}
+        
+        # 添加 FAISS 结果
+        for result in faiss_results:
+            combined_results[result["document_id"]] = result
+        
+        # 添加 LlamaIndex 结果（如果相似度更高）
+        for result in llama_results:
+            doc_id = result["document_id"]
+            if doc_id not in combined_results or result["similarity"] > combined_results[doc_id]["similarity"]:
+                combined_results[doc_id] = result
+        
+        # 4. 应用元数据过滤
+        if filter_metadata:
+            filtered_results = []
+            for result in combined_results.values():
+                match = True
+                for key, value in filter_metadata.items():
+                    if key not in result["metadata"] or result["metadata"][key] != value:
+                        match = False
+                        break
+                if match:
+                    filtered_results.append(result)
+            combined_results = {r["document_id"]: r for r in filtered_results}
+        
+        # 5. 按相似度排序并返回前 top_k 个结果
+        sorted_results = sorted(
+            combined_results.values(),
+            key=lambda x: x["similarity"],
+            reverse=True
+        )
+        
+        return sorted_results[:top_k]
 
     def get_document(self, document_id: str) -> Optional[Dict[str, Any]]:
         """获取文档
@@ -320,6 +446,52 @@ class FAISSVectorStore:
         else:
             self._index = index
             logger.info("✅ FAISS CPU index created")
+
+    def _initialize_llama_index(self) -> None:
+        """初始化 LlamaIndex"""
+        try:
+            # 创建存储目录
+            self.llama_index_path.mkdir(parents=True, exist_ok=True)
+            
+            # 初始化文档存储
+            docstore = SimpleDocumentStore.from_persist_dir(str(self.llama_index_path))
+            
+            # 初始化索引存储
+            index_store = SimpleIndexStore.from_persist_dir(str(self.llama_index_path))
+            
+            # 初始化图存储
+            if self._neo4j_config:
+                # 使用 Neo4j 图存储
+                self._graph_store = Neo4jGraphStore(
+                    url=self._neo4j_config.get("uri", "bolt://localhost:7687"),
+                    username=self._neo4j_config.get("username", "neo4j"),
+                    password=self._neo4j_config.get("password", "password")
+                )
+            else:
+                # 使用简单图存储
+                self._graph_store = SimpleGraphStore.from_persist_dir(str(self.llama_index_path))
+            
+            # 从存储加载索引
+            try:
+                self._llama_index = VectorStoreIndex.from_persist_dir(
+                    persist_dir=str(self.llama_index_path),
+                    docstore=docstore,
+                    index_store=index_store,
+                    graph_store=self._graph_store
+                )
+                logger.info("✅ LlamaIndex loaded from storage")
+            except Exception:
+                # 如果没有现有索引，创建新的
+                self._llama_index = VectorStoreIndex(
+                    documents=[],
+                    docstore=docstore,
+                    index_store=index_store,
+                    graph_store=self._graph_store
+                )
+                logger.info("✅ New LlamaIndex created")
+        except Exception as e:
+            logger.error(f"LlamaIndex initialization failed: {e}")
+            self._llama_index = None
 
     def _rebuild_index(self) -> None:
         """重建索引"""

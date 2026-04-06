@@ -20,11 +20,12 @@ class RAGGraphIntegrator:
     集成 RAG、Neo4j 图数据库和 GPU 加速功能。
     """
 
-    def __init__(self, vector_store_path: Optional[Path] = None):
+    def __init__(self, vector_store_path: Optional[Path] = None, use_lazy_graph: bool = True):
         """初始化 RAG + 图融合集成器
 
         Args:
             vector_store_path: 向量存储路径
+            use_lazy_graph: 是否使用 LazyGraphRAG 模式
         """
         # 初始化 Neo4j 管理器
         self._neo4j_manager = get_neo4j_manager()
@@ -41,7 +42,10 @@ class RAGGraphIntegrator:
             )
             self._vector_store = FAISSVectorStore(vector_store_path, embed_config)
         
-        logger.info("✅ RAG + Graph integrator initialized")
+        # LazyGraphRAG 模式
+        self._use_lazy_graph = use_lazy_graph
+        
+        logger.info(f"✅ RAG + Graph integrator initialized (LazyGraph: {use_lazy_graph})")
 
     def add_vulnerability_to_graph(self, vulnerability: Dict[str, Any]) -> bool:
         """添加漏洞到图数据库
@@ -133,27 +137,45 @@ class RAGGraphIntegrator:
             logger.error(f"批量添加漏洞失败: {e}")
             return False
 
-    def search_vulnerabilities(self, query: str, top_k: int = 5) -> List[Dict[str, Any]]:
+    def search_vulnerabilities(self, query: str, top_k: int = 10, filter_metadata: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
         """搜索漏洞
 
         Args:
             query: 查询文本
             top_k: 返回结果数量
+            filter_metadata: 元数据过滤条件
 
         Returns:
             搜索结果列表
         """
         results = []
         
-        # 向量搜索
+        # 1. 使用混合检索（FAISS + LlamaIndex）
         if self._vector_store:
-            vector_results = self._vector_store.search(query, top_k)
+            if hasattr(self._vector_store, 'hybrid_search'):
+                vector_results = self._vector_store.hybrid_search(query, top_k, filter_metadata)
+            else:
+                vector_results = self._vector_store.search(query, top_k)
             results.extend(vector_results)
         
-        # 图数据库搜索（可选）
-        # 这里可以添加基于图的搜索逻辑
+        # 2. 如果启用 LazyGraphRAG，动态构建局部子图
+        if self._use_lazy_graph:
+            self._build_local_subgraph(results, top_k=5)
         
-        return results
+        # 3. 去重并排序
+        unique_results = {}
+        for result in results:
+            doc_id = result.get("document_id")
+            if doc_id and doc_id not in unique_results:
+                unique_results[doc_id] = result
+        
+        sorted_results = sorted(
+            unique_results.values(),
+            key=lambda x: x.get("similarity", 0),
+            reverse=True
+        )
+        
+        return sorted_results[:top_k]
 
     def find_attack_chains(self, chain_type: str = "all", limit: int = 10) -> List[Dict[str, Any]]:
         """查找攻击链
@@ -249,6 +271,56 @@ class RAGGraphIntegrator:
         """
         return self._attack_chain_analyzer.export_attack_chains(chain_type, file_path)
 
+    def _build_local_subgraph(self, search_results: List[Dict[str, Any]], top_k: int = 5) -> None:
+        """动态构建局部子图（LazyGraphRAG 核心功能）
+
+        Args:
+            search_results: 搜索结果列表
+            top_k: 为每个结果构建的相似节点数量
+        """
+        try:
+            # 获取搜索结果中的 CVE ID
+            cve_ids = [result.get("document_id") for result in search_results if result.get("document_id")]
+            
+            if not cve_ids:
+                return
+            
+            # 为每个 CVE 构建局部子图
+            for cve_id in cve_ids[:5]:  # 只处理前 5 个结果，避免过度构建
+                # 1. 查找相似 CVE
+                similar_cves = self._neo4j_manager.find_similar_cves(cve_id, limit=top_k)
+                
+                # 2. 构建相似性连接
+                for similar_cve in similar_cves:
+                    similar_cve_id = similar_cve.get("cve_id")
+                    if similar_cve_id:
+                        # 创建相似性连接
+                        query = """
+                        MATCH (c1:CVE {id: $cve_id})
+                        MATCH (c2:CVE {id: $similar_cve_id})
+                        MERGE (c1)-[:SIMILAR_TO {score: $similarity}]->(c2)
+                        """
+                        self._neo4j_manager.execute_cypher(
+                            query,
+                            {
+                                "cve_id": cve_id,
+                                "similar_cve_id": similar_cve_id,
+                                "similarity": similar_cve.get("similarity", 0.8)
+                            }
+                        )
+                
+                # 3. 构建攻击路径连接
+                # 查找与当前 CVE 相关的 Source 和 Sink
+                query = """
+                MATCH (c:CVE {id: $cve_id})-[:HAS_SINK]->(s:Sink)
+                MATCH (src:Source)-[:TRIGGERS]->(s)
+                MERGE (src)-[:RELATED_TO]->(c)
+                """
+                self._neo4j_manager.execute_cypher(query, {"cve_id": cve_id})
+                
+        except Exception as e:
+            logger.error(f"构建局部子图失败: {e}")
+
     def close(self) -> None:
         """关闭资源"""
         # 关闭 Neo4j 连接
@@ -261,16 +333,17 @@ class RAGGraphIntegrator:
 _rag_graph_integrator: Optional[RAGGraphIntegrator] = None
 
 
-def get_rag_graph_integrator(vector_store_path: Optional[Path] = None) -> RAGGraphIntegrator:
+def get_rag_graph_integrator(vector_store_path: Optional[Path] = None, use_lazy_graph: bool = True) -> RAGGraphIntegrator:
     """获取 RAG + 图融合集成器实例
 
     Args:
         vector_store_path: 向量存储路径
+        use_lazy_graph: 是否使用 LazyGraphRAG 模式
 
     Returns:
         RAG + 图融合集成器实例
     """
     global _rag_graph_integrator
     if _rag_graph_integrator is None:
-        _rag_graph_integrator = RAGGraphIntegrator(vector_store_path)
+        _rag_graph_integrator = RAGGraphIntegrator(vector_store_path, use_lazy_graph)
     return _rag_graph_integrator
