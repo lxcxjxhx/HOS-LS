@@ -72,6 +72,7 @@ def cli(ctx: click.Context, config: Optional[str], verbose: bool, quiet: bool, d
 @click.option("--ai", is_flag=True, help="启用 AI 分析")
 @click.option("--ai-provider", help="AI 提供商 (anthropic, openai, deepseek, local)")
 @click.option("--incremental", is_flag=True, help="启用增量扫描")
+@click.option("--langgraph", is_flag=True, help="使用 LangGraph 流程")
 @click.pass_context
 def scan(
     ctx: click.Context,
@@ -84,6 +85,7 @@ def scan(
     ai: bool,
     ai_provider: Optional[str],
     incremental: bool,
+    langgraph: bool,
 ) -> None:
     """扫描代码安全漏洞"""
     config: Config = ctx.obj["config"]
@@ -103,24 +105,62 @@ def scan(
     if ai_provider:
         config.ai.provider = ai_provider
 
-    # 创建扫描器
-    scanner = create_scanner(config)
-
     # 执行扫描
     try:
-        result = scanner.scan_sync(target)
+        if langgraph:
+            # 使用 LangGraph 多Agent流程
+            from src.core.langgraph_flow import analyze_code
+            import asyncio
+            # 读取目标文件内容
+            target_path = Path(target)
+            if target_path.is_file():
+                with open(target_path, 'r', encoding='utf-8') as f:
+                    code = f.read()
+            else:
+                code = f"目录扫描: {target}"
+            # 运行多Agent分析
+            result = asyncio.run(analyze_code(code))
+            # 显示结果
+            if not config.quiet:
+                console.print(Panel("[bold]LangGraph 多Agent分析结果[/bold]"))
+                if 'final_report' in result:
+                    report = result['final_report']
+                    console.print(f"[green]分析状态: {report.get('quality', 'unknown')}[/green]")
+                    console.print(f"[green]迭代次数: {report.get('iteration', 0)}[/green]")
+                    console.print(f"[green]CVE候选数量: {len(report.get('cve_candidates', []))}[/green]")
+                    console.print(f"[green]攻击链长度: {len(report.get('attack_chain', {}))}[/green]")
+                    console.print("[bold]分析结果:[/bold]")
+                    console.print(report.get('analysis', ''))
+                    if 'fix_suggestions' in report:
+                        console.print("[bold]修复建议:[/bold]")
+                        console.print(report.get('fix_suggestions', ''))
+                else:
+                    console.print(f"[red]分析失败: {result.get('error', '未知错误')}[/red]")
+            # 生成报告
+            if output:
+                import json
+                with open(output, 'w', encoding='utf-8') as f:
+                    json.dump(result, f, ensure_ascii=False, indent=2)
+                console.print(f"[bold green]报告已生成: {output}[/bold green]")
+            # 根据结果设置退出码
+            if result.get('final_report', {}).get('quality') != 'pass':
+                sys.exit(1)
+        else:
+            # 使用传统扫描器
+            scanner = create_scanner(config)
+            result = scanner.scan_sync(target)
 
-        # 显示结果
-        if not config.quiet:
-            _display_result(result)
+            # 显示结果
+            if not config.quiet:
+                _display_result(result)
 
-        # 生成报告
-        if output:
-            _generate_report(result, output, output_format)
+            # 生成报告
+            if output:
+                _generate_report(result, output, output_format)
 
-        # 根据结果设置退出码
-        if result.findings:
-            sys.exit(1)
+            # 根据结果设置退出码
+            if result.findings:
+                sys.exit(1)
 
     except Exception as e:
         console.print(f"[bold red]扫描失败: {e}[/bold red]")

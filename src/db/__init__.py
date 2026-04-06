@@ -4,11 +4,14 @@
 """
 
 from src.db.connection import DatabaseManager, get_db_manager
+from src.db.neo4j_connection import Neo4jManager, get_neo4j_manager
 from src.db.models import Base, Finding, Scan, ScanResult
 
 __all__ = [
     "DatabaseManager",
     "get_db_manager",
+    "Neo4jManager",
+    "get_neo4j_manager",
     "Base",
     "Finding",
     "Scan",

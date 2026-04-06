@@ -1,5 +1,5 @@
 {
-  "version": 2,
+  "version": 5,
   "history": [
     {
       "timestamp": "2026-04-06T14:35:11.477218",
@@ -14,8 +14,50 @@
         "created_backup": true,
         "built_index": true
       }
+    },
+    {
+      "timestamp": "2026-04-06T15:00:58.722940",
+      "version": 3,
+      "action": "save",
+      "details": {
+        "backup_path": null,
+        "knowledge_count": 1000,
+        "pattern_count": 0,
+        "graph_nodes_count": 1000,
+        "graph_edges_count": 0,
+        "created_backup": false,
+        "built_index": false
+      }
+    },
+    {
+      "timestamp": "2026-04-06T15:01:01.946372",
+      "version": 4,
+      "action": "save",
+      "details": {
+        "backup_path": null,
+        "knowledge_count": 2000,
+        "pattern_count": 0,
+        "graph_nodes_count": 2000,
+        "graph_edges_count": 0,
+        "created_backup": false,
+        "built_index": false
+      }
+    },
+    {
+      "timestamp": "2026-04-06T15:01:05.404908",
+      "version": 5,
+      "action": "save",
+      "details": {
+        "backup_path": null,
+        "knowledge_count": 3000,
+        "pattern_count": 0,
+        "graph_nodes_count": 3000,
+        "graph_edges_count": 0,
+        "created_backup": false,
+        "built_index": false
+      }
     }
   ],
-  "usage_count": 1,
-  "last_updated": "2026-04-06T14:35:11.477228"
+  "usage_count": 4,
+  "last_updated": "2026-04-06T15:01:05.404917"
 }

@@ -10,6 +10,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
+from enum import Enum
 
 try:
     from sentence_transformers import SentenceTransformer
@@ -41,6 +42,9 @@ class ModelType(Enum):
     ALL_MPNET_BASE_V2 = "all-mpnet-base-v2"
     CODE_BERT_BASE = "microsoft/codebert-base"
     ROBERTA_BASE = "roberta-base"
+    BGE_BASE = "BAAI/bge-base-en-v1.5"
+    BGE_SMALL = "BAAI/bge-small-en-v1.5"
+    E5_BASE = "intfloat/e5-base-v2"
     CUSTOM = "custom"
 
 
@@ -86,8 +90,18 @@ class CodeEmbedder:
             if self.config.cache_dir:
                 model_kwargs["cache_folder"] = self.config.cache_dir
 
-            if self.config.device != "auto":
-                model_kwargs["device"] = self.config.device
+            # 自动检测 GPU
+            if self.config.device == "auto":
+                if TORCH_AVAILABLE and torch.cuda.is_available():
+                    device = "cuda"
+                    print(f"✅ Using GPU: {torch.cuda.get_device_name(0)}")
+                else:
+                    device = "cpu"
+                    print("ℹ️ Using CPU (GPU not available)")
+            else:
+                device = self.config.device
+
+            model_kwargs["device"] = device
 
             self._model = SentenceTransformer(
                 self.config.model_name,
@@ -95,7 +109,8 @@ class CodeEmbedder:
             )
 
             self._initialized = True
-        except Exception:
+        except Exception as e:
+            print(f"❌ Model initialization failed: {e}")
             self._initialized = False
 
     def embed_code(self, code: str) -> List[float]:
@@ -271,12 +286,20 @@ class CodeEmbedder:
             return [self._fallback_embedding(code) for code in codes]
 
         try:
+            # 优化批处理大小以充分利用 GPU
+            batch_size = min(self.config.batch_size, 128)  # 增加批处理大小以提高 GPU 利用率
+            
             embeddings = self._model.encode(
                 codes,
-                batch_size=self.config.batch_size,
+                batch_size=batch_size,
                 max_length=self.config.max_length,
                 show_progress_bar=False,
+                convert_to_tensor=TORCH_AVAILABLE,  # 使用张量输出以提高性能
             )
+
+            if TORCH_AVAILABLE and isinstance(embeddings, torch.Tensor):
+                # 确保在 CPU 上转换为 numpy 数组
+                embeddings = embeddings.cpu().numpy()
 
             if NUMPY_AVAILABLE and isinstance(embeddings, np.ndarray):
                 return embeddings.tolist()
@@ -285,7 +308,8 @@ class CodeEmbedder:
             else:
                 return [self._fallback_embedding(code) for code in codes]
 
-        except Exception:
+        except Exception as e:
+            print(f"❌ Batch embedding failed: {e}")
             return [self._fallback_embedding(code) for code in codes]
 
     def _fallback_embedding(self, code: str) -> List[float]:

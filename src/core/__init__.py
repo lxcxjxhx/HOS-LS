@@ -7,6 +7,7 @@ from src.core.config import Config, ConfigManager
 from src.core.engine import ScanEngine
 from src.core.scanner import SecurityScanner
 from src.core.registry import ModuleRegistry, DependencyInjector
+from src.core.rag_graph_integrator import RAGGraphIntegrator, get_rag_graph_integrator
 
 __all__ = [
     "Config",
@@ -15,4 +16,6 @@ __all__ = [
     "SecurityScanner",
     "ModuleRegistry",
     "DependencyInjector",
+    "RAGGraphIntegrator",
+    "get_rag_graph_integrator",
 ]
