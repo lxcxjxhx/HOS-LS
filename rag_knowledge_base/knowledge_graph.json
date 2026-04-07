@@ -1,0 +1,2105 @@
+{
+  "nodes": [
+    {
+      "id": "eb39afd7c1765f77",
+      "type": "knowledge",
+      "content": "CVE ID: CVE-2026-0024\nDescription: In isRedactionNeededForOpenViaContentResolver of MediaProvider.java, there is a possible way to reveal the location of media due to a missing permission check. This could lead to local information disclosure with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 4.0\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:google:android:14.0:*:*:*:*:*:*:*, cpe:2.3:o:google:android:15.0:*:*:*:*:*:*:*, cpe:2.3:o:google:android:16.0:-:*:*:*:*:*:*, cpe:2.3:o:google:android:16.0:qpr2_beta_1:*:*:*:*:*:*, cpe:2.3:o:google:android:16.0:qpr2_beta_2:*:*:*:*:*:*\n... and 1 more CVE ID: CVE-2026-0012\nDescription: In setHideSensitive of ExpandableNotificationRow.java, there is a possible contact name leak due due to a logic error in the code. This could lead to local information disclosure with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 6.2\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:google:android:14.0:*:*:*:*:*:*:*, cpe:2.3:o:google:android:15.0:*:*:*:*:*:*:*, cpe:2.3:o:google:android:16.0:-:*:*:*:*:*:* CVE ID: CVE-2026-0010\nDescription: In onTransact of IDrmManagerService.cpp, there is a possible out of bounds write due to a missing bounds check. This could lead to local escalation of privilege with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 8.4\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H\nCWE: CWE-787\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:google:android:14.0:*:*:*:*:*:*:*, cpe:2.3:o:google:android:15.0:*:*:*:*:*:*:*, cpe:2.3:o:google:android:16.0:-:*:*:*:*:*:* CVE ID: CVE-2026-0023\nDescription: In createSessionInternal of PackageInstallerService.java, there is a possible way for an app to update its ownership due to a missing permission check. This could lead to local escalation of privilege with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 7.8\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:google:android:14.0:*:*:*:*:*:*:*, cpe:2.3:o:google:android:15.0:*:*:*:*:*:*:*, cpe:2.3:o:google:android:16.0:-:*:*:*:*:*:*, cpe:2.3:o:google:android:16.0:qpr2_beta_1:*:*:*:*:*:*, cpe:2.3:o:google:android:16.0:qpr2_beta_2:*:*:*:*:*:*\n... and 1 more CVE ID: CVE-2026-0014\nDescription: In isPackageNullOrSystem of AppOpsService.java, there is a possible persistent denial of service due to improper input validation. This could lead to local denial of service with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 6.2\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:google:android:14.0:*:*:*:*:*:*:*, cpe:2.3:o:google:android:15.0:*:*:*:*:*:*:*, cpe:2.3:o:google:android:16.0:-:*:*:*:*:*:*, cpe:2.3:o:google:android:16.0:qpr2_beta_1:*:*:*:*:*:*, cpe:2.3:o:google:android:16.0:qpr2_beta_2:*:*:*:*:*:*\n... and 1 more CVE ID: CVE-2026-0035\nDescription: In createRequest of MediaProvider.java, there is a possible way for an app to gain read/write access to non-existing files due to a logic error in the code. This could lead to local escalation of privilege with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 8.4\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:google:android:14.0:*:*:*:*:*:*:*, cpe:2.3:o:google:android:15.0:*:*:*:*:*:*:*, cpe:2.3:o:google:android:16.0:-:*:*:*:*:*:*, cpe:2.3:o:google:android:16.0:qpr2_beta_1:*:*:*:*:*:*, cpe:2.3:o:google:android:16.0:qpr2_beta_2:*:*:*:*:*:*\n... and 1 more CVE ID: CVE-2026-0034\nDescription: In setPackageOrComponentEnabled of ManagedServices.java, there is a possible notification policy desync due to improper input validation. This could lead to local escalation of privilege with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 8.4\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:google:android:14.0:*:*:*:*:*:*:*, cpe:2.3:o:google:android:15.0:*:*:*:*:*:*:*, cpe:2.3:o:google:android:16.0:-:*:*:*:*:*:*, cpe:2.3:o:google:android:16.0:qpr2_beta_1:*:*:*:*:*:*, cpe:2.3:o:google:android:16.0:qpr2_beta_2:*:*:*:*:*:*\n... and 1 more CVE ID: CVE-2026-0107\nDescription: In gmc_ddr_handle_mba_mr_req of gmc_mba_ddr.c, there is a possible escalation of privileges due to a confused deputy. This could lead to local escalation of privilege with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 8.4\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:google:android:-:*:*:*:*:*:*:* CVE ID: CVE-2026-0026\nDescription: In removePermission of PermissionManagerServiceImpl.java, there is a possible way to override any system permission  due to a logic error in the code. This could lead to local escalation of privilege with no additional execution privileges needed. User interaction is needed for exploitation.\nCVSS v3 Score: 7.8\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:H\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:google:android:14.0:*:*:*:*:*:*:* CVE ID: CVE-2026-0020\nDescription: In parsePermissionGroup of ParsedPermissionUtils.java, there is a possible way to bypass a consent dialog to obtain permissions due to a permissions bypass. This could lead to local escalation of privilege with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 8.4\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:google:android:14.0:*:*:*:*:*:*:*, cpe:2.3:o:google:android:15.0:*:*:*:*:*:*:*, cpe:2.3:o:google:android:16.0:-:*:*:*:*:*:*, cpe:2.3:o:google:android:16.0:qpr2_beta_1:*:*:*:*:*:*, cpe:2.3:o:google:android:16.0:qpr2_beta_2:*:*:*:*:*:*\n... and 1 more CVE ID: CVE-2026-0015\nDescription: In multiple locations of AppOpsService.java, there is a possible persistent denial of service due to improper input validation. This could lead to local denial of service with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 6.2\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:google:android:14.0:*:*:*:*:*:*:*, cpe:2.3:o:google:android:15.0:*:*:*:*:*:*:*, cpe:2.3:o:google:android:16.0:-:*:*:*:*:*:*, cpe:2.3:o:google:android:16.0:qpr2_beta_1:*:*:*:*:*:*, cpe:2.3:o:google:android:16.0:qpr2_beta_2:*:*:*:*:*:*\n... and 1 more CVE ID: CVE-2026-0005\nDescription: In onServiceDisconnected of KeyguardServiceDelegate.java, there is a possible partial bypass of app pinning allowing limited interaction with other apps without knowing the LSKF due to a missing permission check. This could lead to local information disclosure where the extent of interaction and impact is app-dependent with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 6.2\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:google:android:14.0:*:*:*:*:*:*:*, cpe:2.3:o:google:android:15.0:*:*:*:*:*:*:*, cpe:2.3:o:google:android:16.0:-:*:*:*:*:*:* CVE ID: CVE-2026-0029\nDescription: In __pkvm_init_vm of pkvm.c, there is a possible memory corruption due to a logic error in the code. This could lead to local escalation of privilege with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 8.4\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:google:android:-:*:*:*:*:*:*:* CVE ID: CVE-2026-0123\nDescription: In EfwApTransport::ProcessRxRing of efw_ap_transport.cc, there is a possible out of bounds write due to a missing bounds check. This could lead to local escalation of privilege with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 8.4\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:google:android:-:*:*:*:*:*:*:* CVE ID: CVE-2026-0108\nDescription: The register protection of the PowerVR GPU is incorrectly configured. This could lead to local information disclosure with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 4.0\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:google:android:-:*:*:*:*:*:*:* CVE ID: CVE-2026-0121\nDescription: In VPU, there is a possible use-after-free read due to a race condition. This could lead to local information disclosure with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 2.9\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:H/PR:N/UI:N/S:U/C:L/I:N/A:N\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:google:android:-:*:*:*:*:*:*:* CVE ID: CVE-2026-0116\nDescription: In __mfc_handle_released_buf of mfc_core_isr.c, there is a possible out of bounds write due to a missing bounds check. This could lead to remote code execution with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 9.8\nCVSS v3 Vector: CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H\nAttack Vector: NETWORK\nAffected CPEs: cpe:2.3:o:google:android:-:*:*:*:*:*:*:* CVE ID: CVE-2026-0112\nDescription: In vpu_open_inst of vpu_ioctl.c, there is a possible use after free due to a race condition. This could lead to local escalation of privilege with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 7.4\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:H/PR:N/UI:N/S:U/C:H/I:H/A:H\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:google:android:-:*:*:*:*:*:*:* CVE ID: CVE-2026-0007\nDescription: In writeToParcel of WindowInfo.cpp, there is a possible way to trick a user into accepting a permission due to a tapjacking/overlay attack. This could lead to local escalation of privilege with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 8.6\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:L/PR:N/UI:R/S:C/C:H/I:H/A:H\nCWE: CWE-1021\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:google:android:14.0:*:*:*:*:*:*:*, cpe:2.3:o:google:android:15.0:*:*:*:*:*:*:*, cpe:2.3:o:google:android:16.0:-:*:*:*:*:*:* CVE ID: CVE-2026-0025\nDescription: In hasImage of Notification.java, there is a possible way to reveal information across users due to a permissions bypass. This could lead to local escalation of privilege with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 8.4\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:google:android:14.0:*:*:*:*:*:*:*, cpe:2.3:o:google:android:15.0:*:*:*:*:*:*:*, cpe:2.3:o:google:android:16.0:-:*:*:*:*:*:*, cpe:2.3:o:google:android:16.0:qpr2_beta_1:*:*:*:*:*:*, cpe:2.3:o:google:android:16.0:qpr2_beta_2:*:*:*:*:*:*\n... and 1 more CVE ID: CVE-2026-0008\nDescription: In  multiple locations, there is a possible privilege escalation due to a confused deputy. This could lead to local escalation of privilege with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 8.4\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:google:android:16.0:-:*:*:*:*:*:* CVE ID: CVE-2026-0117\nDescription: In mfc_dec_dqbuf of mfc_dec_v4l2.c, there is a possible out of bounds write due to an incorrect bounds check. This could lead to local escalation of privilege with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 8.4\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:google:android:-:*:*:*:*:*:*:* CVE ID: CVE-2026-0030\nDescription: In __host_check_page_state_range of mem_protect.c, there is a possible out of bounds write due to an incorrect bounds check. This could lead to local escalation of privilege with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 8.4\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:google:android:-:*:*:*:*:*:*:* CVE ID: CVE-2026-0106\nDescription: In vpu_mmap of vpu_ioctl, there is a possible arbitrary address mmap due to a missing bounds check. This could lead to local escalation of privilege with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 9.3\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:C/C:H/I:H/A:H\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:google:android:-:*:*:*:*:*:*:* CVE ID: CVE-2026-0118\nDescription: In oobconfig, there is a possible bypass of carrier restrictions due to a logic error. This could lead to local escalation of privilege with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 8.4\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:google:android:-:*:*:*:*:*:*:* CVE ID: CVE-2026-0047\nDescription: In dumpBitmapsProto of ActivityManagerService.java, there is a possible way for an app to access private information due to a missing permission check. This could lead to local escalation of privilege with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 8.4\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:google:android:16.0:qpr2_beta_1:*:*:*:*:*:*, cpe:2.3:o:google:android:16.0:qpr2_beta_2:*:*:*:*:*:*, cpe:2.3:o:google:android:16.0:qpr2_beta_3:*:*:*:*:*:* CVE ID: CVE-2026-0124\nDescription: There is a possible out of bounds write due to a missing bounds check. This could lead to local escalation of privilege with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 7.8\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:google:android:-:*:*:*:*:*:*:* CVE ID: CVE-2026-0122\nDescription: In multiple places, there is a possible out of bounds write due to memory corruption. This could lead to remote code execution with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 8.4\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:google:android:-:*:*:*:*:*:*:* CVE ID: CVE-2026-0038\nDescription: In multiple functions of mem_protect.c, there is a possible way to execute arbitrary code due to a logic error in the code. This could lead to local escalation of privilege with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 8.4\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:google:android:-:*:*:*:*:*:*:* CVE ID: CVE-2026-0021\nDescription: In hasInteractAcrossUsersFullPermission of AppInfoBase.java, there is a possible cross-user permission bypass due to a confused deputy. This could lead to local escalation of privilege with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 8.4\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:google:android:14.0:*:*:*:*:*:*:*, cpe:2.3:o:google:android:15.0:*:*:*:*:*:*:*, cpe:2.3:o:google:android:16.0:-:*:*:*:*:*:*, cpe:2.3:o:google:android:16.0:qpr2_beta_1:*:*:*:*:*:*, cpe:2.3:o:google:android:16.0:qpr2_beta_2:*:*:*:*:*:*\n... and 1 more CVE ID: CVE-2026-0017\nDescription: In onChange of BiometricService.java, there is a possible way to enable fingerprint unlock due to a logic error in the code. This could lead to local escalation of privilege with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 7.7\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:N\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:google:android:16.0:-:*:*:*:*:*:*, cpe:2.3:o:google:android:16.0:qpr2_beta_1:*:*:*:*:*:*, cpe:2.3:o:google:android:16.0:qpr2_beta_2:*:*:*:*:*:*, cpe:2.3:o:google:android:16.0:qpr2_beta_3:*:*:*:*:*:* CVE ID: CVE-2026-0013\nDescription: In setupLayout of PickActivity.java, there is a possible way to start any activity as a DocumentsUI app due to a confused deputy. This could lead to local escalation of privilege with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 8.4\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:google:android:14.0:*:*:*:*:*:*:*, cpe:2.3:o:google:android:15.0:*:*:*:*:*:*:*, cpe:2.3:o:google:android:16.0:-:*:*:*:*:*:* CVE ID: CVE-2026-0011\nDescription: In enableSystemPackageLPw of Settings.java, there is a possible way to prevent location access from working due to a logic error in the code. This could lead to local escalation of privilege with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 8.4\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:google:android:14.0:*:*:*:*:*:*:*, cpe:2.3:o:google:android:15.0:*:*:*:*:*:*:*, cpe:2.3:o:google:android:16.0:-:*:*:*:*:*:*, cpe:2.3:o:google:android:16.0:qpr2_beta_1:*:*:*:*:*:*, cpe:2.3:o:google:android:16.0:qpr2_beta_2:*:*:*:*:*:*\n... and 1 more",
+      "metadata": {
+        "type": "vulnerability",
+        "source": "merged_learning",
+        "confidence": 0.95,
+        "tags": [
+          "severity:high",
+          "status:analyzed",
+          "severity:low",
+          "CWE-1021",
+          "local",
+          "severity:medium",
+          "severity:critical",
+          "network",
+          "status:modified",
+          "CWE-787",
+          "nvd"
+        ],
+        "created_at": "2026-04-07T15:03:31.987930",
+        "updated_at": "2026-04-07T15:03:31.987932"
+      }
+    },
+    {
+      "id": "f5e16ba9c2234e87",
+      "type": "knowledge",
+      "content": "CVE ID: CVE-2026-0110\nDescription: In MM_DATA_IND of cn_NrSmMsgHdlrFromMM.cpp, there is a possible EoP due to memory corruption. This could lead to remote escalation of privilege with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 9.8\nCVSS v3 Vector: CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H\nAttack Vector: NETWORK\nAffected CPEs: cpe:2.3:o:google:android:-:*:*:*:*:*:*:* CVE ID: CVE-2026-0006\nDescription: In multiple locations, there is a possible out of bounds read and write due to a heap buffer overflow. This could lead to remote code execution with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 9.8\nCVSS v3 Vector: CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H\nAttack Vector: NETWORK\nAffected CPEs: cpe:2.3:o:google:android:16.0:-:*:*:*:*:*:* CVE ID: CVE-2026-0109\nDescription: In dhd_tcpdata_info_get of dhd_ip.c, there is a possible Denial of Service due to a precondition check failure. This could lead to remote denial of service with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 7.5\nCVSS v3 Vector: CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H\nCWE: CWE-754\nAttack Vector: NETWORK\nAffected CPEs: cpe:2.3:o:google:android:-:*:*:*:*:*:*:* CVE ID: CVE-2026-0031\nDescription: In multiple functions of mem_protect.c, there is a possible out of bounds write due to an integer overflow. This could lead to local escalation of privilege with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 8.4\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:google:android:-:*:*:*:*:*:*:* CVE ID: CVE-2026-0027\nDescription: In smmu_detach_dev of arm-smmu-v3.c, there is a possible out of bounds write due to a use after free. This could lead to local escalation of privilege with System execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 6.7\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:L/PR:H/UI:N/S:U/C:H/I:H/A:H\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:google:android:-:*:*:*:*:*:*:* CVE ID: CVE-2026-0111\nDescription: In ns_GetUserData of ns_SmscbUtilities.c, there is a possible out of bounds write due to an incorrect bounds check. This could lead to remote escalation of privilege with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 9.8\nCVSS v3 Vector: CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H\nAttack Vector: NETWORK\nAffected CPEs: cpe:2.3:o:google:android:-:*:*:*:*:*:*:* CVE ID: CVE-2026-0028\nDescription: In __pkvm_host_share_guest of mem_protect.c, there is a possible out of bounds write due to an integer overflow. This could lead to local escalation of privilege with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 8.4\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:google:android:-:*:*:*:*:*:*:* CVE ID: CVE-2026-0037\nDescription: In multiple functions of ffa.c, there is a possible memory corruption due to a logic error in the code. This could lead to local escalation of privilege with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 8.4\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H\nCWE: CWE-787\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:google:android:-:*:*:*:*:*:*:* CVE ID: CVE-2026-0114\nDescription: In Modem, there is a possible out of bounds write due to an incorrect bounds check. This could lead to remote code execution with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 9.8\nCVSS v3 Vector: CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H\nAttack Vector: NETWORK\nAffected CPEs: cpe:2.3:o:google:android:-:*:*:*:*:*:*:* CVE ID: CVE-2026-0115\nDescription: In Trusted Execution Environment, there is a possible key leak due to side channel information disclosure. This could lead to physical information disclosure with no additional execution privileges needed. User interaction is needed for exploitation.\nCVSS v3 Score: 2.1\nCVSS v3 Vector: CVSS:3.1/AV:P/AC:L/PR:N/UI:R/S:U/C:L/I:N/A:N\nAttack Vector: PHYSICAL\nAffected CPEs: cpe:2.3:o:google:android:-:*:*:*:*:*:*:* CVE ID: CVE-2026-0113\nDescription: In ns_GetUserData of ns_SmscbUtilities.c, there is a possible out of bounds write due to an incorrect bounds check. This could lead to remote escalation of privilege with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 9.8\nCVSS v3 Vector: CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H\nAttack Vector: NETWORK\nAffected CPEs: cpe:2.3:o:google:android:-:*:*:*:*:*:*:* CVE ID: CVE-2026-0120\nDescription: In modem, there is a possible out of bounds write due to an incorrect bounds check. This could lead to remote code execution with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 9.8\nCVSS v3 Vector: CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H\nAttack Vector: NETWORK\nAffected CPEs: cpe:2.3:o:google:android:-:*:*:*:*:*:*:* CVE ID: CVE-2026-0032\nDescription: In multiple functions of mem_protect.c, there is a possible out-of-bounds write due to a logic error in the code. This could lead to local escalation of privilege with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 7.8\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H\nCWE: CWE-787\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:google:android:-:*:*:*:*:*:*:* CVE ID: CVE-2026-0119\nDescription: In usim_SendMCCMNCIndMsg of usim_Registration.c, there is a possible out of bounds write due to memory corruption. This could lead to physical escalation of privilege with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 6.8\nCVSS v3 Vector: CVSS:3.1/AV:P/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H\nAttack Vector: PHYSICAL\nAffected CPEs: cpe:2.3:o:google:android:-:*:*:*:*:*:*:*",
+      "metadata": {
+        "type": "vulnerability",
+        "source": "merged_learning",
+        "confidence": 0.95,
+        "tags": [
+          "status:analyzed",
+          "CWE-754",
+          "severity:low",
+          "local",
+          "severity:medium",
+          "severity:critical",
+          "physical",
+          "CWE-787",
+          "network",
+          "status:modified",
+          "severity:high",
+          "nvd"
+        ],
+        "created_at": "2026-04-07T15:03:32.019876",
+        "updated_at": "2026-04-07T15:03:32.019878"
+      }
+    },
+    {
+      "id": "091d2e75e7ed5d3b",
+      "type": "knowledge",
+      "content": "CVE ID: CVE-2026-0227\nDescription: A vulnerability in Palo Alto Networks PAN-OS software enables an unauthenticated attacker to cause a denial of service (DoS) to the firewall. Repeated attempts to trigger this issue results in the firewall entering into maintenance mode.\nCVSS v3 Score: 7.5\nCVSS v3 Vector: CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H\nAttack Vector: NETWORK\nAffected CPEs: cpe:2.3:o:paloaltonetworks:pan-os:*:*:*:*:*:*:*:*, cpe:2.3:o:paloaltonetworks:pan-os:*:*:*:*:*:*:*:*, cpe:2.3:o:paloaltonetworks:pan-os:*:*:*:*:*:*:*:*, cpe:2.3:o:paloaltonetworks:pan-os:*:*:*:*:*:*:*:*, cpe:2.3:o:paloaltonetworks:pan-os:*:*:*:*:*:*:*:*\n... and 135 more",
+      "metadata": {
+        "type": "vulnerability",
+        "source": "NVD",
+        "confidence": 0.95,
+        "tags": [
+          "network",
+          "status:analyzed",
+          "nvd",
+          "severity:high"
+        ],
+        "created_at": "2026-04-07T15:04:55.381702",
+        "updated_at": "2026-04-07T15:04:55.381703"
+      }
+    },
+    {
+      "id": "f349f04378cf9e81",
+      "type": "knowledge",
+      "content": "CVE ID: CVE-2026-0228\nDescription: An improper certificate validation vulnerability in PAN-OS allows users to connect Terminal Server Agents on Windows to PAN-OS using expired certificates even if the PAN-OS configuration would not normally permit them to do so.",
+      "metadata": {
+        "type": "vulnerability",
+        "source": "NVD",
+        "confidence": 0.8,
+        "tags": [
+          "status:awaiting analysis",
+          "nvd"
+        ],
+        "created_at": "2026-04-07T15:04:55.382752",
+        "updated_at": "2026-04-07T15:04:55.382753"
+      }
+    },
+    {
+      "id": "ad24a79eb494cc6b",
+      "type": "knowledge",
+      "content": "CVE ID: CVE-2026-0229\nDescription: A denial-of-service (DoS) vulnerability in the Advanced DNS Security (ADNS) feature of Palo Alto Networks PAN-OS® software enables an unauthenticated attacker to initiate system reboots using a maliciously crafted packet. Repeated attempts to initiate a reboot causes the firewall to enter maintenance mode.\n\nCloud NGFW and Prisma Access® are not impacted by this vulnerability.",
+      "metadata": {
+        "type": "vulnerability",
+        "source": "NVD",
+        "confidence": 0.8,
+        "tags": [
+          "status:awaiting analysis",
+          "nvd"
+        ],
+        "created_at": "2026-04-07T15:04:55.383242",
+        "updated_at": "2026-04-07T15:04:55.383243"
+      }
+    },
+    {
+      "id": "e265fccbd2d326e0",
+      "type": "knowledge",
+      "content": "CVE ID: CVE-2026-0230\nDescription: A problem with a protection mechanism in the Palo Alto Networks Cortex XDR agent on macOS allows a local administrator to disable the agent. This issue could be leveraged by malware to perform malicious activity without detection.",
+      "metadata": {
+        "type": "vulnerability",
+        "source": "NVD",
+        "confidence": 0.8,
+        "tags": [
+          "status:awaiting analysis",
+          "nvd"
+        ],
+        "created_at": "2026-04-07T15:04:55.384252",
+        "updated_at": "2026-04-07T15:04:55.384253"
+      }
+    },
+    {
+      "id": "9c7cd9bbe148b78e",
+      "type": "knowledge",
+      "content": "CVE ID: CVE-2026-0203\nDescription: An Improper Handling of Exceptional Conditions vulnerability in packet processing of Juniper Networks Junos OS allows an unauthenticated, network-adjacent attacker sending a specifically malformed ICMP packet to cause an FPC to crash and restart, resulting in a Denial of Service (DoS).\n\n\n\nWhen an ICMP packet is received with a specifically malformed IP header value, the FPC receiving the packet crashes and restarts. Due to the specific type of malformed packet, adjacent upstream routers would not forward the packet, limiting the attack surface to adjacent networks.\n\nThis issue only affects ICMPv4. ICMPv6 is not vulnerable to this issue.\n\nThis issue does not affect AFT-based line cards such as the MPC10, MPC11, LC4800, LC9600, and MX304.\n\nThis issue affects Junos OS: \n\n\n\n  *  all versions before 21.2R3-S9, \n  *  from 21.4 before 21.4R3-S10, \n  *  from 22.2 before 22.2R3-S7, \n  *  from 22.3 before 22.3R3-S4, \n  *  from 22.4 before 22.4R3-S5, \n  *  from 23.2 before 23.2R2-S3, \n  *  from 23.4 before 23.4R2-S3, \n  *  from 24.2 before 24.2R1-S2, 24.2R2.\nCVSS v3 Score: 6.5\nCVSS v3 Vector: CVSS:3.1/AV:A/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H\nAttack Vector: ADJACENT_NETWORK\nAffected CPEs: cpe:2.3:o:juniper:junos:*:*:*:*:*:*:*:*, cpe:2.3:o:juniper:junos:21.2:-:*:*:*:*:*:*, cpe:2.3:o:juniper:junos:21.2:r1:*:*:*:*:*:*, cpe:2.3:o:juniper:junos:21.2:r1-s1:*:*:*:*:*:*, cpe:2.3:o:juniper:junos:21.2:r1-s2:*:*:*:*:*:*\n... and 84 more",
+      "metadata": {
+        "type": "vulnerability",
+        "source": "NVD",
+        "confidence": 0.95,
+        "tags": [
+          "adjacent_network",
+          "status:modified",
+          "nvd",
+          "severity:medium"
+        ],
+        "created_at": "2026-04-07T15:04:55.429987",
+        "updated_at": "2026-04-07T15:04:55.429987"
+      }
+    },
+    {
+      "id": "d03ffbd0ba7deb75",
+      "type": "knowledge",
+      "content": "CVE ID: CVE-2026-0102\nDescription: Under specific conditions, a malicious webpage may trigger autofill population after two consecutive taps, potentially without clear or intentional user consent. This could result in disclosure of stored autofill data such as addresses, email, or phone number metadata.\nCVSS v3 Score: 3.1\nCVSS v3 Vector: CVSS:3.1/AV:N/AC:H/PR:N/UI:R/S:U/C:L/I:N/A:N\nCWE: CWE-359\nAttack Vector: NETWORK\nAffected CPEs: cpe:2.3:a:microsoft:edge_chromium:*:*:*:*:*:*:*:*",
+      "metadata": {
+        "type": "vulnerability",
+        "source": "NVD",
+        "confidence": 0.95,
+        "tags": [
+          "CWE-359",
+          "network",
+          "status:analyzed",
+          "nvd",
+          "severity:low"
+        ],
+        "created_at": "2026-04-07T15:04:55.395999",
+        "updated_at": "2026-04-07T15:04:55.396000"
+      }
+    },
+    {
+      "id": "b3498791e43d5dd9",
+      "type": "knowledge",
+      "content": "CVE ID: CVE-2026-0391\nDescription: User interface (ui) misrepresentation of critical information in Microsoft Edge for Android allows an unauthorized attacker to perform spoofing over a network.\nCVSS v3 Score: 6.5\nCVSS v3 Vector: CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:H/I:L/A:N\nCWE: CWE-451\nAttack Vector: NETWORK\nAffected CPEs: cpe:2.3:a:microsoft:edge_chromium:*:*:*:*:*:android:*:*",
+      "metadata": {
+        "type": "vulnerability",
+        "source": "NVD",
+        "confidence": 0.95,
+        "tags": [
+          "CWE-451",
+          "network",
+          "status:analyzed",
+          "nvd",
+          "severity:medium"
+        ],
+        "created_at": "2026-04-07T15:04:55.413284",
+        "updated_at": "2026-04-07T15:04:55.413285"
+      }
+    },
+    {
+      "id": "17dbdba992667385",
+      "type": "knowledge",
+      "content": "CVE ID: CVE-2026-0394\nDescription: When dovecot has been configured to use per-domain passwd files, and they are placed one path component above /etc, or slash has been added to allowed characters, path traversal can happen if the domain component is directory partial. This allows inadvertently reading /etc/passwd (or some other path which ends with passwd). If this file contains passwords, it can be used to authenticate wrongly, or if this is userdb, it can unexpectly make system users appear valid users.  Upgrade to fixed version, or use different authentication scheme that does not rely on paths. Alternatively you can also ensure that the per-domain passwd files are in some other location, such as /etc/dovecot/auth/%d. No publicly available exploits are known.\nCVSS v3 Score: 5.3\nCVSS v3 Vector: CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N\nAttack Vector: NETWORK",
+      "metadata": {
+        "type": "vulnerability",
+        "source": "NVD",
+        "confidence": 0.95,
+        "tags": [
+          "network",
+          "status:undergoing analysis",
+          "nvd",
+          "severity:medium"
+        ],
+        "created_at": "2026-04-07T15:04:55.393449",
+        "updated_at": "2026-04-07T15:04:55.393450"
+      }
+    },
+    {
+      "id": "95fa4e5c68b9d65b",
+      "type": "knowledge",
+      "content": "CVE ID: CVE-2026-0383\nDescription: A vulnerability in Brocade Fabric OS could allow an authenticated, local attacker with privileges to access the Bash shell to access insecurely stored file contents including the history command.\nCVSS v3 Score: 7.8\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:broadcom:fabric_operating_system:*:*:*:*:*:*:*:*, cpe:2.3:o:broadcom:fabric_operating_system:*:*:*:*:*:*:*:*, cpe:2.3:o:broadcom:fabric_operating_system:10.0.0:*:*:*:*:*:*:*",
+      "metadata": {
+        "type": "vulnerability",
+        "source": "NVD",
+        "confidence": 0.95,
+        "tags": [
+          "local",
+          "status:analyzed",
+          "nvd",
+          "severity:high"
+        ],
+        "created_at": "2026-04-07T15:04:55.422553",
+        "updated_at": "2026-04-07T15:04:55.422554"
+      }
+    },
+    {
+      "id": "a0a4e2be8a91cd52",
+      "type": "knowledge",
+      "content": "CVE ID: CVE-2026-0398\nDescription: Crafted zones can lead to increased resource usage and crafted CNAME chains can lead to cache poisoning in Recursor.\nCVSS v3 Score: 5.3\nCVSS v3 Vector: CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:L\nAttack Vector: NETWORK",
+      "metadata": {
+        "type": "vulnerability",
+        "source": "NVD",
+        "confidence": 0.95,
+        "tags": [
+          "network",
+          "status:undergoing analysis",
+          "nvd",
+          "severity:medium"
+        ],
+        "created_at": "2026-04-07T15:04:55.397683",
+        "updated_at": "2026-04-07T15:04:55.397683"
+      }
+    },
+    {
+      "id": "fa69425ea6e05fdc",
+      "type": "knowledge",
+      "content": "CVE ID: CVE-2026-0400\nDescription: A post-authentication Format String vulnerability in SonicOS allows a remote attacker to crash a firewall.\nCVSS v3 Score: 4.9\nCVSS v3 Vector: CVSS:3.1/AV:N/AC:L/PR:H/UI:N/S:U/C:N/I:N/A:H\nAttack Vector: NETWORK\nAffected CPEs: cpe:2.3:o:sonicwall:sonicos:*:*:*:*:*:*:*:*, cpe:2.3:h:sonicwall:nsa_2700:-:*:*:*:*:*:*:*, cpe:2.3:h:sonicwall:nsa_3700:-:*:*:*:*:*:*:*, cpe:2.3:h:sonicwall:nsa_4700:-:*:*:*:*:*:*:*, cpe:2.3:h:sonicwall:nsa_5700:-:*:*:*:*:*:*:*\n... and 29 more CVE ID: CVE-2026-0402\nDescription: A post-authentication Out-of-bounds Read vulnerability in SonicOS allows a remote attacker to crash a firewall.\nCVSS v3 Score: 4.9\nCVSS v3 Vector: CVSS:3.1/AV:N/AC:L/PR:H/UI:N/S:U/C:N/I:N/A:H\nAttack Vector: NETWORK\nAffected CPEs: cpe:2.3:o:sonicwall:sonicos:*:*:*:*:*:*:*:*, cpe:2.3:h:sonicwall:nsa_2700:-:*:*:*:*:*:*:*, cpe:2.3:h:sonicwall:nsa_3700:-:*:*:*:*:*:*:*, cpe:2.3:h:sonicwall:nsa_4700:-:*:*:*:*:*:*:*, cpe:2.3:h:sonicwall:nsa_5700:-:*:*:*:*:*:*:*\n... and 29 more CVE ID: CVE-2026-0401\nDescription: A post-authentication NULL Pointer Dereference vulnerability in SonicOS allows a remote attacker to crash a firewall.\nCVSS v3 Score: 4.9\nCVSS v3 Vector: CVSS:3.1/AV:N/AC:L/PR:H/UI:N/S:U/C:N/I:N/A:H\nAttack Vector: NETWORK\nAffected CPEs: cpe:2.3:o:sonicwall:sonicos:*:*:*:*:*:*:*:*, cpe:2.3:h:sonicwall:nsa_2700:-:*:*:*:*:*:*:*, cpe:2.3:h:sonicwall:nsa_3700:-:*:*:*:*:*:*:*, cpe:2.3:h:sonicwall:nsa_4700:-:*:*:*:*:*:*:*, cpe:2.3:h:sonicwall:nsa_5700:-:*:*:*:*:*:*:*\n... and 29 more CVE ID: CVE-2026-0399\nDescription: Multiple post-authentication stack-based buffer overflow vulnerabilities in the SonicOS management interface due to improper bounds checking in a API endpoint.\nCVSS v3 Score: 4.9\nCVSS v3 Vector: CVSS:3.1/AV:N/AC:L/PR:H/UI:N/S:U/C:N/I:N/A:H\nAttack Vector: NETWORK\nAffected CPEs: cpe:2.3:o:sonicwall:sonicos:*:*:*:*:*:*:*:*, cpe:2.3:h:sonicwall:nsa_2700:-:*:*:*:*:*:*:*, cpe:2.3:h:sonicwall:nsa_3700:-:*:*:*:*:*:*:*, cpe:2.3:h:sonicwall:nsa_4700:-:*:*:*:*:*:*:*, cpe:2.3:h:sonicwall:nsa_5700:-:*:*:*:*:*:*:*\n... and 29 more CVE ID: CVE-2026-0402\nDescription: A post-authentication Out-of-bounds Read vulnerability in SonicOS allows a remote attacker to crash a firewall.\nCVSS v3 Score: 4.9\nCVSS v3 Vector: CVSS:3.1/AV:N/AC:L/PR:H/UI:N/S:U/C:N/I:N/A:H\nAttack Vector: NETWORK\nAffected CPEs: cpe:2.3:o:sonicwall:sonicos:*:*:*:*:*:*:*:*, cpe:2.3:h:sonicwall:nsa_2700:-:*:*:*:*:*:*:*, cpe:2.3:h:sonicwall:nsa_3700:-:*:*:*:*:*:*:*, cpe:2.3:h:sonicwall:nsa_4700:-:*:*:*:*:*:*:*, cpe:2.3:h:sonicwall:nsa_5700:-:*:*:*:*:*:*:*\n... and 29 more CVE ID: CVE-2026-0400\nDescription: A post-authentication Format String vulnerability in SonicOS allows a remote attacker to crash a firewall.\nCVSS v3 Score: 4.9\nCVSS v3 Vector: CVSS:3.1/AV:N/AC:L/PR:H/UI:N/S:U/C:N/I:N/A:H\nAttack Vector: NETWORK\nAffected CPEs: cpe:2.3:o:sonicwall:sonicos:*:*:*:*:*:*:*:*, cpe:2.3:h:sonicwall:nsa_2700:-:*:*:*:*:*:*:*, cpe:2.3:h:sonicwall:nsa_3700:-:*:*:*:*:*:*:*, cpe:2.3:h:sonicwall:nsa_4700:-:*:*:*:*:*:*:*, cpe:2.3:h:sonicwall:nsa_5700:-:*:*:*:*:*:*:*\n... and 29 more CVE ID: CVE-2026-0401\nDescription: A post-authentication NULL Pointer Dereference vulnerability in SonicOS allows a remote attacker to crash a firewall.\nCVSS v3 Score: 4.9\nCVSS v3 Vector: CVSS:3.1/AV:N/AC:L/PR:H/UI:N/S:U/C:N/I:N/A:H\nAttack Vector: NETWORK\nAffected CPEs: cpe:2.3:o:sonicwall:sonicos:*:*:*:*:*:*:*:*, cpe:2.3:h:sonicwall:nsa_2700:-:*:*:*:*:*:*:*, cpe:2.3:h:sonicwall:nsa_3700:-:*:*:*:*:*:*:*, cpe:2.3:h:sonicwall:nsa_4700:-:*:*:*:*:*:*:*, cpe:2.3:h:sonicwall:nsa_5700:-:*:*:*:*:*:*:*\n... and 29 more CVE ID: CVE-2026-0399\nDescription: Multiple post-authentication stack-based buffer overflow vulnerabilities in the SonicOS management interface due to improper bounds checking in a API endpoint.\nCVSS v3 Score: 4.9\nCVSS v3 Vector: CVSS:3.1/AV:N/AC:L/PR:H/UI:N/S:U/C:N/I:N/A:H\nAttack Vector: NETWORK\nAffected CPEs: cpe:2.3:o:sonicwall:sonicos:*:*:*:*:*:*:*:*, cpe:2.3:h:sonicwall:nsa_2700:-:*:*:*:*:*:*:*, cpe:2.3:h:sonicwall:nsa_3700:-:*:*:*:*:*:*:*, cpe:2.3:h:sonicwall:nsa_4700:-:*:*:*:*:*:*:*, cpe:2.3:h:sonicwall:nsa_5700:-:*:*:*:*:*:*:*\n... and 29 more",
+      "metadata": {
+        "type": "vulnerability",
+        "source": "merged_learning",
+        "confidence": 0.95,
+        "tags": [
+          "status:analyzed",
+          "nvd",
+          "severity:medium",
+          "network"
+        ],
+        "created_at": "2026-04-07T15:03:51.608850",
+        "updated_at": "2026-04-07T15:03:51.608852"
+      }
+    },
+    {
+      "id": "835df998c65e3add",
+      "type": "knowledge",
+      "content": "CVE ID: CVE-2026-0396\nDescription: An attacker might be able to inject HTML content into the internal web dashboard by sending crafted DNS queries to a DNSdist instance where domain-based dynamic rules have been enabled via either DynBlockRulesGroup:setSuffixMatchRule or DynBlockRulesGroup:setSuffixMatchRuleFFI.\nCVSS v3 Score: 3.1\nCVSS v3 Vector: CVSS:3.1/AV:N/AC:H/PR:N/UI:R/S:U/C:N/I:L/A:N\nAttack Vector: NETWORK",
+      "metadata": {
+        "type": "vulnerability",
+        "source": "NVD",
+        "confidence": 0.95,
+        "tags": [
+          "network",
+          "status:undergoing analysis",
+          "nvd",
+          "severity:low"
+        ],
+        "created_at": "2026-04-07T15:04:55.392196",
+        "updated_at": "2026-04-07T15:04:55.392197"
+      }
+    },
+    {
+      "id": "b2c0d74ebd47584d",
+      "type": "knowledge",
+      "content": "CVE ID: CVE-2026-0405\nDescription: An authentication bypass vulnerability in NETGEAR Orbi devices allows \nusers connected to the local network to access the router web interface \nas an admin.\nCVSS v3 Score: 7.8\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:netgear:cbr750_firmware:*:*:*:*:*:*:*:*, cpe:2.3:h:netgear:cbr750:-:*:*:*:*:*:*:*, cpe:2.3:o:netgear:nbr750_firmware:*:*:*:*:*:*:*:*, cpe:2.3:h:netgear:nbr750:-:*:*:*:*:*:*:*, cpe:2.3:o:netgear:rbe370_firmware:*:*:*:*:*:*:*:*\n... and 45 more",
+      "metadata": {
+        "type": "vulnerability",
+        "source": "NVD",
+        "confidence": 0.95,
+        "tags": [
+          "local",
+          "status:analyzed",
+          "nvd",
+          "severity:high"
+        ],
+        "created_at": "2026-04-07T15:04:55.394236",
+        "updated_at": "2026-04-07T15:04:55.394237"
+      }
+    },
+    {
+      "id": "97a8b3e7aaf3e139",
+      "type": "knowledge",
+      "content": "CVE ID: CVE-2026-0406\nDescription: An insufficient input validation vulnerability in the NETGEAR XR1000v2 \nallows attackers connected to the router's LAN to execute OS command \ninjections.\nCVSS v3 Score: 8.0\nCVSS v3 Vector: CVSS:3.1/AV:A/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H\nAttack Vector: ADJACENT_NETWORK\nAffected CPEs: cpe:2.3:o:netgear:xr1000v2_firmware:*:*:*:*:*:*:*:*, cpe:2.3:h:netgear:xr1000v2:-:*:*:*:*:*:*:* CVE ID: CVE-2026-0403\nDescription: An insufficient input validation vulnerability in NETGEAR Orbi routers \nallows attackers connected to the router's LAN to execute OS command \ninjections.\nCVSS v3 Score: 8.0\nCVSS v3 Vector: CVSS:3.1/AV:A/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H\nAttack Vector: ADJACENT_NETWORK\nAffected CPEs: cpe:2.3:o:netgear:rbe971_firmware:*:*:*:*:*:*:*:*, cpe:2.3:h:netgear:rbe971:-:*:*:*:*:*:*:*, cpe:2.3:o:netgear:rbe970_firmware:*:*:*:*:*:*:*:*, cpe:2.3:h:netgear:rbe970:-:*:*:*:*:*:*:*, cpe:2.3:o:netgear:rbr750_firmware:*:*:*:*:*:*:*:*\n... and 15 more CVE ID: CVE-2026-0404\nDescription: An insufficient input validation vulnerability in NETGEAR Orbi devices' \nDHCPv6 functionality allows network adjacent attackers authenticated \nover WiFi or on LAN to execute OS command injections on the router. \nDHCPv6 is not enabled by default.\nCVSS v3 Score: 8.0\nCVSS v3 Vector: CVSS:3.1/AV:A/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H\nAttack Vector: ADJACENT_NETWORK\nAffected CPEs: cpe:2.3:o:netgear:rbr750_firmware:*:*:*:*:*:*:*:*, cpe:2.3:h:netgear:rbr750:-:*:*:*:*:*:*:*, cpe:2.3:o:netgear:rbr840_firmware:*:*:*:*:*:*:*:*, cpe:2.3:h:netgear:rbr840:-:*:*:*:*:*:*:*, cpe:2.3:o:netgear:rbr850_firmware:*:*:*:*:*:*:*:*\n... and 19 more CVE ID: CVE-2026-0406\nDescription: An insufficient input validation vulnerability in the NETGEAR XR1000v2 \nallows attackers connected to the router's LAN to execute OS command \ninjections.\nCVSS v3 Score: 8.0\nCVSS v3 Vector: CVSS:3.1/AV:A/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H\nAttack Vector: ADJACENT_NETWORK\nAffected CPEs: cpe:2.3:o:netgear:xr1000v2_firmware:*:*:*:*:*:*:*:*, cpe:2.3:h:netgear:xr1000v2:-:*:*:*:*:*:*:* CVE ID: CVE-2026-0403\nDescription: An insufficient input validation vulnerability in NETGEAR Orbi routers \nallows attackers connected to the router's LAN to execute OS command \ninjections.\nCVSS v3 Score: 8.0\nCVSS v3 Vector: CVSS:3.1/AV:A/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H\nAttack Vector: ADJACENT_NETWORK\nAffected CPEs: cpe:2.3:o:netgear:rbe971_firmware:*:*:*:*:*:*:*:*, cpe:2.3:h:netgear:rbe971:-:*:*:*:*:*:*:*, cpe:2.3:o:netgear:rbe970_firmware:*:*:*:*:*:*:*:*, cpe:2.3:h:netgear:rbe970:-:*:*:*:*:*:*:*, cpe:2.3:o:netgear:rbr750_firmware:*:*:*:*:*:*:*:*\n... and 15 more CVE ID: CVE-2026-0404\nDescription: An insufficient input validation vulnerability in NETGEAR Orbi devices' \nDHCPv6 functionality allows network adjacent attackers authenticated \nover WiFi or on LAN to execute OS command injections on the router. \nDHCPv6 is not enabled by default.\nCVSS v3 Score: 8.0\nCVSS v3 Vector: CVSS:3.1/AV:A/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H\nAttack Vector: ADJACENT_NETWORK\nAffected CPEs: cpe:2.3:o:netgear:rbr750_firmware:*:*:*:*:*:*:*:*, cpe:2.3:h:netgear:rbr750:-:*:*:*:*:*:*:*, cpe:2.3:o:netgear:rbr840_firmware:*:*:*:*:*:*:*:*, cpe:2.3:h:netgear:rbr840:-:*:*:*:*:*:*:*, cpe:2.3:o:netgear:rbr850_firmware:*:*:*:*:*:*:*:*\n... and 19 more",
+      "metadata": {
+        "type": "vulnerability",
+        "source": "merged_learning",
+        "confidence": 0.95,
+        "tags": [
+          "status:analyzed",
+          "severity:high",
+          "nvd",
+          "adjacent_network"
+        ],
+        "created_at": "2026-04-07T15:03:51.625717",
+        "updated_at": "2026-04-07T15:03:51.625719"
+      }
+    },
+    {
+      "id": "696be612b8735398",
+      "type": "knowledge",
+      "content": "CVE ID: CVE-2026-0421\nDescription: A potential vulnerability was reported in the BIOS of L13 Gen 6, L13 Gen 6 2-in-1, L14 Gen 6, and L16 Gen 2 ThinkPads which could result in Secure Boot being disabled even when configured as “On” in the BIOS setup menu. This issue only affects systems where Secure Boot is set to User Mode.\nCVSS v3 Score: 6.5\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:L/PR:H/UI:R/S:U/C:H/I:H/A:H\nAttack Vector: LOCAL",
+      "metadata": {
+        "type": "vulnerability",
+        "source": "NVD",
+        "confidence": 0.95,
+        "tags": [
+          "local",
+          "status:awaiting analysis",
+          "nvd",
+          "severity:medium"
+        ],
+        "created_at": "2026-04-07T15:04:55.422055",
+        "updated_at": "2026-04-07T15:04:55.422055"
+      }
+    },
+    {
+      "id": "1657977b7fd15c1b",
+      "type": "knowledge",
+      "content": "CVE ID: CVE-2026-0484\nDescription: Due to missing authorization check in SAP NetWeaver Application Server ABAP and SAP S/4HANA, an authenticated attacker could access a specific transaction code and modify the text data in the system. This vulnerability has a high impact on integrity of the application with no effect on the confidentiality and availability.\nCVSS v3 Score: 6.5\nCVSS v3 Vector: CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:N/I:H/A:N\nCWE: CWE-601\nAttack Vector: NETWORK\nAffected CPEs: cpe:2.3:a:sap:sap_basis:700:*:*:*:*:*:*:*, cpe:2.3:a:sap:sap_basis:701:*:*:*:*:*:*:*, cpe:2.3:a:sap:sap_basis:702:*:*:*:*:*:*:*, cpe:2.3:a:sap:sap_basis:731:*:*:*:*:*:*:*, cpe:2.3:a:sap:sap_basis:740:*:*:*:*:*:*:*\n... and 10 more",
+      "metadata": {
+        "type": "vulnerability",
+        "source": "NVD",
+        "confidence": 0.95,
+        "tags": [
+          "CWE-601",
+          "network",
+          "status:analyzed",
+          "nvd",
+          "severity:medium"
+        ],
+        "created_at": "2026-04-07T15:04:55.399139",
+        "updated_at": "2026-04-07T15:04:55.399139"
+      }
+    },
+    {
+      "id": "0b9888a0399ef1d2",
+      "type": "knowledge",
+      "content": "CVE ID: CVE-2026-0488\nDescription: An authenticated attacker in SAP CRM and SAP S/4HANA (Scripting Editor) could exploit a flaw in a generic function module call and execute unauthorized critical functionalities, which includes the ability to execute an arbitrary SQL statement. This leads to a full database compromise with high impact on confidentiality, integrity, and availability.\nCVSS v3 Score: 9.9\nCVSS v3 Vector: CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:C/C:H/I:H/A:H\nCWE: CWE-862\nAttack Vector: NETWORK\nAffected CPEs: cpe:2.3:a:sap:netweaver_application_server_abap:700:*:*:*:*:*:*:*, cpe:2.3:a:sap:s\\/4hana:102:*:*:*:*:*:*:*, cpe:2.3:a:sap:s\\/4hana:103:*:*:*:*:*:*:*, cpe:2.3:a:sap:s\\/4hana:104:*:*:*:*:*:*:*, cpe:2.3:a:sap:s\\/4hana:105:*:*:*:*:*:*:*\n... and 13 more",
+      "metadata": {
+        "type": "vulnerability",
+        "source": "NVD",
+        "confidence": 0.95,
+        "tags": [
+          "CWE-862",
+          "network",
+          "status:analyzed",
+          "nvd",
+          "severity:critical"
+        ],
+        "created_at": "2026-04-07T15:04:55.424677",
+        "updated_at": "2026-04-07T15:04:55.424677"
+      }
+    },
+    {
+      "id": "8a3e627c923872b4",
+      "type": "knowledge",
+      "content": "CVE ID: CVE-2026-0407\nDescription: An insufficient authentication vulnerability in NETGEAR WiFi range \nextenders allows a network adjacent attacker with WiFi authentication or\n a physical Ethernet port connection to bypass the authentication \nprocess and access the admin panel.\nCVSS v3 Score: 8.0\nCVSS v3 Vector: CVSS:3.1/AV:A/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H\nAttack Vector: ADJACENT_NETWORK\nAffected CPEs: cpe:2.3:o:netgear:ex5000_firmware:*:*:*:*:*:*:*:*, cpe:2.3:h:netgear:ex5000:-:*:*:*:*:*:*:*, cpe:2.3:o:netgear:ex3110_firmware:*:*:*:*:*:*:*:*, cpe:2.3:h:netgear:ex3110:-:*:*:*:*:*:*:*, cpe:2.3:o:netgear:ex6110_firmware:*:*:*:*:*:*:*:*\n... and 3 more",
+      "metadata": {
+        "type": "vulnerability",
+        "source": "NVD",
+        "confidence": 0.95,
+        "tags": [
+          "adjacent_network",
+          "status:analyzed",
+          "nvd",
+          "severity:high"
+        ],
+        "created_at": "2026-04-07T15:04:55.423807",
+        "updated_at": "2026-04-07T15:04:55.423808"
+      }
+    },
+    {
+      "id": "4e2f96cb5e74dded",
+      "type": "knowledge",
+      "content": "CVE ID: CVE-2026-0491\nDescription: SAP Landscape Transformation allows an attacker with admin privileges to exploit a vulnerability in the function module exposed via RFC. This flaw enables the injection of arbitrary ABAP code/OS commands into the system, bypassing essential authorization checks. This vulnerability effectively functions as a backdoor, creating the risk of full system compromise, undermining the confidentiality, integrity and availability of the system.\nCVSS v3 Score: 9.1\nCVSS v3 Vector: CVSS:3.1/AV:N/AC:L/PR:H/UI:N/S:C/C:H/I:H/A:H\nCWE: CWE-94\nAttack Vector: NETWORK CVE ID: CVE-2026-0498\nDescription: SAP S/4HANA (Private Cloud and On-Premise) allows an attacker with admin privileges to exploit a vulnerability in the function module exposed via RFC. This flaw enables the injection of arbitrary ABAP code/OS commands into the system, bypassing essential authorization checks. This vulnerability effectively functions as a backdoor, creating the risk of full system compromise, undermining the confidentiality, integrity and availability of the system.\nCVSS v3 Score: 9.1\nCVSS v3 Vector: CVSS:3.1/AV:N/AC:L/PR:H/UI:N/S:C/C:H/I:H/A:H\nCWE: CWE-94\nAttack Vector: NETWORK\nAffected CPEs: cpe:2.3:a:sap:s\\/4_hana:102:*:*:*:*:*:*:*, cpe:2.3:a:sap:s\\/4_hana:103:*:*:*:*:*:*:*, cpe:2.3:a:sap:s\\/4_hana:104:*:*:*:*:*:*:*, cpe:2.3:a:sap:s\\/4_hana:105:*:*:*:*:*:*:*, cpe:2.3:a:sap:s\\/4_hana:106:*:*:*:*:*:*:*\n... and 3 more CVE ID: CVE-2026-0491\nDescription: SAP Landscape Transformation allows an attacker with admin privileges to exploit a vulnerability in the function module exposed via RFC. This flaw enables the injection of arbitrary ABAP code/OS commands into the system, bypassing essential authorization checks. This vulnerability effectively functions as a backdoor, creating the risk of full system compromise, undermining the confidentiality, integrity and availability of the system.\nCVSS v3 Score: 9.1\nCVSS v3 Vector: CVSS:3.1/AV:N/AC:L/PR:H/UI:N/S:C/C:H/I:H/A:H\nCWE: CWE-94\nAttack Vector: NETWORK CVE ID: CVE-2026-0498\nDescription: SAP S/4HANA (Private Cloud and On-Premise) allows an attacker with admin privileges to exploit a vulnerability in the function module exposed via RFC. This flaw enables the injection of arbitrary ABAP code/OS commands into the system, bypassing essential authorization checks. This vulnerability effectively functions as a backdoor, creating the risk of full system compromise, undermining the confidentiality, integrity and availability of the system.\nCVSS v3 Score: 9.1\nCVSS v3 Vector: CVSS:3.1/AV:N/AC:L/PR:H/UI:N/S:C/C:H/I:H/A:H\nCWE: CWE-94\nAttack Vector: NETWORK\nAffected CPEs: cpe:2.3:a:sap:s\\/4_hana:102:*:*:*:*:*:*:*, cpe:2.3:a:sap:s\\/4_hana:103:*:*:*:*:*:*:*, cpe:2.3:a:sap:s\\/4_hana:104:*:*:*:*:*:*:*, cpe:2.3:a:sap:s\\/4_hana:105:*:*:*:*:*:*:*, cpe:2.3:a:sap:s\\/4_hana:106:*:*:*:*:*:*:*\n... and 3 more",
+      "metadata": {
+        "type": "vulnerability",
+        "source": "merged_learning",
+        "confidence": 0.9499999999999998,
+        "tags": [
+          "status:analyzed",
+          "CWE-94",
+          "nvd",
+          "severity:critical",
+          "status:awaiting analysis",
+          "network"
+        ],
+        "created_at": "2026-04-07T15:03:51.649499",
+        "updated_at": "2026-04-07T15:03:51.649501"
+      }
+    },
+    {
+      "id": "49329c1a39c0aa0f",
+      "type": "knowledge",
+      "content": "CVE ID: CVE-2026-0490\nDescription: SAP BusinessObjects BI Platform allows an unauthenticated attacker to craft a specific network request to the trusted endpoint that breaks the authentication, which prevents the legitimate users from accessing the platform. As a result, it has a high impact on the availability but no impact on the confidentiality and integrity.\nCVSS v3 Score: 7.5\nCVSS v3 Vector: CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H\nCWE: CWE-862\nAttack Vector: NETWORK\nAffected CPEs: cpe:2.3:a:sap:businessobjects_business_intelligence_platform:430:*:*:*:enterprise:*:*:*, cpe:2.3:a:sap:businessobjects_business_intelligence_platform:2025:*:*:*:enterprise:*:*:*, cpe:2.3:a:sap:businessobjects_business_intelligence_platform:2027:*:*:*:enterprise:*:*:*",
+      "metadata": {
+        "type": "vulnerability",
+        "source": "NVD",
+        "confidence": 0.95,
+        "tags": [
+          "CWE-862",
+          "network",
+          "status:analyzed",
+          "nvd",
+          "severity:high"
+        ],
+        "created_at": "2026-04-07T15:04:55.409226",
+        "updated_at": "2026-04-07T15:04:55.409226"
+      }
+    },
+    {
+      "id": "950c0cf2d0e1c353",
+      "type": "knowledge",
+      "content": "CVE ID: CVE-2026-0492\nDescription: SAP HANA database is vulnerable to privilege escalation allowing an attacker with valid credentials of any user to switch to another user potentially gaining administrative access. This exploit could result in a total compromise of the system�s confidentiality, integrity, and availability.\nCVSS v3 Score: 8.8\nCVSS v3 Vector: CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H\nCWE: CWE-306\nAttack Vector: NETWORK\nAffected CPEs: cpe:2.3:a:sap:hana_database:2.00:*:*:*:*:*:*:*",
+      "metadata": {
+        "type": "vulnerability",
+        "source": "NVD",
+        "confidence": 0.95,
+        "tags": [
+          "CWE-306",
+          "network",
+          "status:analyzed",
+          "nvd",
+          "severity:high"
+        ],
+        "created_at": "2026-04-07T15:04:55.407220",
+        "updated_at": "2026-04-07T15:04:55.407221"
+      }
+    },
+    {
+      "id": "522424d91196437d",
+      "type": "knowledge",
+      "content": "CVE ID: CVE-2026-0485\nDescription: SAP BusinessObjects BI Platform allows an unauthenticated attacker to send specially crafted requests that could cause the Content Management Server (CMS) to crash and automatically restart. By repeatedly submitting these requests, the attacker could induce a persistent service disruption, rendering the CMS completely unavailable. Successful exploitation results in a high impact on availability, while confidentiality and integrity remain unaffected.\nCVSS v3 Score: 7.5\nCVSS v3 Vector: CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H\nCWE: CWE-405\nAttack Vector: NETWORK\nAffected CPEs: cpe:2.3:a:sap:businessobjects_business_intelligence_platform:430:*:*:*:enterprise:*:*:*, cpe:2.3:a:sap:businessobjects_business_intelligence_platform:2025:*:*:*:enterprise:*:*:*, cpe:2.3:a:sap:businessobjects_business_intelligence_platform:2027:*:*:*:enterprise:*:*:*",
+      "metadata": {
+        "type": "vulnerability",
+        "source": "NVD",
+        "confidence": 0.95,
+        "tags": [
+          "CWE-405",
+          "network",
+          "status:analyzed",
+          "nvd",
+          "severity:high"
+        ],
+        "created_at": "2026-04-07T15:04:55.399764",
+        "updated_at": "2026-04-07T15:04:55.399765"
+      }
+    },
+    {
+      "id": "7451c6d7427c26d0",
+      "type": "knowledge",
+      "content": "CVE ID: CVE-2026-0497\nDescription: SAP Product Designer Web UI of Business Server Pages allows authenticated non-administrative users to access non-sensitive information. This results in a low impact on confidentiality, with no impact on integrity or availability of the application.\nCVSS v3 Score: 4.3\nCVSS v3 Vector: CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:L/I:N/A:N\nCWE: CWE-862\nAttack Vector: NETWORK",
+      "metadata": {
+        "type": "vulnerability",
+        "source": "NVD",
+        "confidence": 0.95,
+        "tags": [
+          "CWE-862",
+          "network",
+          "status:awaiting analysis",
+          "nvd",
+          "severity:medium"
+        ],
+        "created_at": "2026-04-07T15:04:55.426820",
+        "updated_at": "2026-04-07T15:04:55.426822"
+      }
+    },
+    {
+      "id": "93341e781d70ffdb",
+      "type": "knowledge",
+      "content": "CVE ID: CVE-2026-0499\nDescription: SAP NetWeaver Enterprise Portal allows an unauthenticated attacker to inject malicious scripts into a URL parameter. The scripts are reflected in the server response and executed in a user's browser when the crafted URL is visited, leading to theft of session information, manipulation of portal content, or user redirection, resulting in a low impact on the application's confidentiality and integrity, with no impact on availability.\nCVSS v3 Score: 6.1\nCVSS v3 Vector: CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:C/C:L/I:L/A:N\nCWE: CWE-79\nAttack Vector: NETWORK",
+      "metadata": {
+        "type": "vulnerability",
+        "source": "NVD",
+        "confidence": 0.95,
+        "tags": [
+          "CWE-79",
+          "network",
+          "status:awaiting analysis",
+          "nvd",
+          "severity:medium"
+        ],
+        "created_at": "2026-04-07T15:04:55.429072",
+        "updated_at": "2026-04-07T15:04:55.429074"
+      }
+    },
+    {
+      "id": "ac9523dc74f9047a",
+      "type": "knowledge",
+      "content": "CVE ID: CVE-2026-0483\nDescription: Stored Cross-Site Scripting (XSS) vulnerability in the PDF file upload functionality of Live Helper Chat, versions prior to 4.72. An attacker can upload a malicious PDF file containing an XSS payload, which will be executed in the user's context when they download and open the file via the link generated by the application. The vulnerability allows arbitrary JavaScript code to be executed in the user's local context.\nCWE: CWE-79",
+      "metadata": {
+        "type": "vulnerability",
+        "source": "NVD",
+        "confidence": 0.8,
+        "tags": [
+          "CWE-79",
+          "status:awaiting analysis",
+          "nvd"
+        ],
+        "created_at": "2026-04-07T15:04:55.410519",
+        "updated_at": "2026-04-07T15:04:55.410519"
+      }
+    },
+    {
+      "id": "49f100a7b0b7a0af",
+      "type": "knowledge",
+      "content": "CVE ID: CVE-2026-0500\nDescription: Due to the usage of vulnerable third party component in SAP Wily Introscope Enterprise Manager (WorkStation), an unauthenticated attacker could create a malicious JNLP (Java Network Launch Protocol) file accessible by a public facing URL. When a victim clicks on the URL the accessed Wily Introscope Server could execute OS commands on the victim's machine. This could completely compromising confidentiality, integrity and availability of the system.\nCVSS v3 Score: 9.6\nCVSS v3 Vector: CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:C/C:H/I:H/A:H\nCWE: CWE-94\nAttack Vector: NETWORK\nAffected CPEs: cpe:2.3:a:sap:introscope_enterprise_manager:10.8:*:*:*:*:*:*:*",
+      "metadata": {
+        "type": "vulnerability",
+        "source": "NVD",
+        "confidence": 0.95,
+        "tags": [
+          "CWE-94",
+          "network",
+          "status:analyzed",
+          "nvd",
+          "severity:critical"
+        ],
+        "created_at": "2026-04-07T15:04:55.419311",
+        "updated_at": "2026-04-07T15:04:55.419311"
+      }
+    },
+    {
+      "id": "b6076bb694326888",
+      "type": "knowledge",
+      "content": "CVE ID: CVE-2026-0486\nDescription: In ABAP based SAP systems a remote enabled function module does not perform necessary authorization checks for an authenticated user resulting in disclosure of system information.This has low impact on confidentiality. Integrity and availability are not impacted.\nCVSS v3 Score: 5.0\nCVSS v3 Vector: CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:C/C:L/I:N/A:N\nCWE: CWE-862\nAttack Vector: NETWORK\nAffected CPEs: cpe:2.3:a:sap:solution_tools_plug-in:740:*:*:*:*:*:*:*, cpe:2.3:a:sap:solution_tools_plug-in:758:*:*:*:*:*:*:*, cpe:2.3:a:sap:solution_tools_plug-in:2005_1_700:*:*:*:*:*:*:*, cpe:2.3:a:sap:solution_tools_plug-in:2008_1_710:*:*:*:*:*:*:*",
+      "metadata": {
+        "type": "vulnerability",
+        "source": "NVD",
+        "confidence": 0.95,
+        "tags": [
+          "CWE-862",
+          "network",
+          "status:analyzed",
+          "nvd",
+          "severity:medium"
+        ],
+        "created_at": "2026-04-07T15:04:55.400852",
+        "updated_at": "2026-04-07T15:04:55.400853"
+      }
+    },
+    {
+      "id": "9b2bc9faa1fc6b77",
+      "type": "knowledge",
+      "content": "CVE ID: CVE-2026-0495\nDescription: SAP Fiori App Intercompany Balance Reconciliation allows an attacker with high privileges  to send uploaded files to arbitrary emails which could enable effective phishing campaigns. This has low impact on confidentiality, integrity and availability of the application.\nCVSS v3 Score: 5.1\nCVSS v3 Vector: CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:C/C:L/I:L/A:L\nCWE: CWE-15\nAttack Vector: NETWORK CVE ID: CVE-2026-0496\nDescription: SAP Fiori App Intercompany Balance Reconciliation allows an attacker with high privileges  to upload any file (including script files) without proper file format validation. This has low impact on confidentiality, integrity and availability of the application.\nCVSS v3 Score: 6.6\nCVSS v3 Vector: CVSS:3.1/AV:N/AC:L/PR:H/UI:N/S:C/C:L/I:L/A:L\nCWE: CWE-434\nAttack Vector: NETWORK CVE ID: CVE-2026-0495\nDescription: SAP Fiori App Intercompany Balance Reconciliation allows an attacker with high privileges  to send uploaded files to arbitrary emails which could enable effective phishing campaigns. This has low impact on confidentiality, integrity and availability of the application.\nCVSS v3 Score: 5.1\nCVSS v3 Vector: CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:C/C:L/I:L/A:L\nCWE: CWE-15\nAttack Vector: NETWORK CVE ID: CVE-2026-0496\nDescription: SAP Fiori App Intercompany Balance Reconciliation allows an attacker with high privileges  to upload any file (including script files) without proper file format validation. This has low impact on confidentiality, integrity and availability of the application.\nCVSS v3 Score: 6.6\nCVSS v3 Vector: CVSS:3.1/AV:N/AC:L/PR:H/UI:N/S:C/C:L/I:L/A:L\nCWE: CWE-434\nAttack Vector: NETWORK",
+      "metadata": {
+        "type": "vulnerability",
+        "source": "merged_learning",
+        "confidence": 0.9499999999999998,
+        "tags": [
+          "CWE-15",
+          "severity:medium",
+          "nvd",
+          "CWE-434",
+          "status:awaiting analysis",
+          "network"
+        ],
+        "created_at": "2026-04-07T15:03:51.678509",
+        "updated_at": "2026-04-07T15:03:51.678511"
+      }
+    },
+    {
+      "id": "894b393f01ed37ec",
+      "type": "knowledge",
+      "content": "CVE ID: CVE-2026-0494\nDescription: Under certain conditions SAP Fiori App Intercompany Balance Reconciliation application allows an attacker to access information which would otherwise be restricted. This has low impact on confidentiality of the application, integrity and availability are not impacted.\nCVSS v3 Score: 4.3\nCVSS v3 Vector: CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:L/I:N/A:N\nCWE: CWE-497\nAttack Vector: NETWORK",
+      "metadata": {
+        "type": "vulnerability",
+        "source": "NVD",
+        "confidence": 0.95,
+        "tags": [
+          "CWE-497",
+          "network",
+          "status:awaiting analysis",
+          "nvd",
+          "severity:medium"
+        ],
+        "created_at": "2026-04-07T15:04:55.421085",
+        "updated_at": "2026-04-07T15:04:55.421085"
+      }
+    },
+    {
+      "id": "0a67f3b532b8b219",
+      "type": "knowledge",
+      "content": "CVE ID: CVE-2026-0408\nDescription: A path traversal vulnerability in NETGEAR WiFi range extenders allows\n an attacker with LAN authentication to access the router's IP and \nreview the contents of the dynamically generated webproc file, which \nrecords the username and password submitted to the router GUI.\nCVSS v3 Score: 8.0\nCVSS v3 Vector: CVSS:3.1/AV:A/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H\nAttack Vector: ADJACENT_NETWORK\nAffected CPEs: cpe:2.3:o:netgear:ex2800_firmware:*:*:*:*:*:*:*:*, cpe:2.3:h:netgear:ex2800:-:*:*:*:*:*:*:*, cpe:2.3:o:netgear:ex3110_firmware:*:*:*:*:*:*:*:*, cpe:2.3:h:netgear:ex3110:-:*:*:*:*:*:*:*, cpe:2.3:o:netgear:ex5000_firmware:*:*:*:*:*:*:*:*\n... and 3 more",
+      "metadata": {
+        "type": "vulnerability",
+        "source": "NVD",
+        "confidence": 0.95,
+        "tags": [
+          "adjacent_network",
+          "status:analyzed",
+          "nvd",
+          "severity:high"
+        ],
+        "created_at": "2026-04-07T15:04:55.408779",
+        "updated_at": "2026-04-07T15:04:55.408779"
+      }
+    },
+    {
+      "id": "d925cc599cbbdbc4",
+      "type": "knowledge",
+      "content": "CVE ID: CVE-2026-0397\nDescription: When the internal webserver is enabled (default is disabled), an attacker might be able to trick an administrator logged to the dashboard into visiting a malicious website and extract information about the running configuration from the dashboard. The root cause of the issue is a misconfiguration of the Cross-Origin Resource Sharing (CORS) policy.\nCVSS v3 Score: 3.1\nCVSS v3 Vector: CVSS:3.1/AV:N/AC:H/PR:N/UI:R/S:U/C:L/I:N/A:N\nAttack Vector: NETWORK",
+      "metadata": {
+        "type": "vulnerability",
+        "source": "NVD",
+        "confidence": 0.95,
+        "tags": [
+          "network",
+          "status:undergoing analysis",
+          "nvd",
+          "severity:low"
+        ],
+        "created_at": "2026-04-07T15:04:55.420336",
+        "updated_at": "2026-04-07T15:04:55.420336"
+      }
+    },
+    {
+      "id": "7c5921212ca05662",
+      "type": "knowledge",
+      "content": "CVE ID: CVE-2026-0385\nDescription: Microsoft Edge (Chromium-based) for Android Spoofing Vulnerability\nCVSS v3 Score: 5.0\nCVSS v3 Vector: CVSS:3.1/AV:N/AC:H/PR:N/UI:R/S:U/C:L/I:L/A:L\nAttack Vector: NETWORK\nAffected CPEs: cpe:2.3:a:microsoft:edge_chromium:*:*:*:*:*:android:*:*",
+      "metadata": {
+        "type": "vulnerability",
+        "source": "NVD",
+        "confidence": 0.95,
+        "tags": [
+          "network",
+          "status:analyzed",
+          "nvd",
+          "severity:medium"
+        ],
+        "created_at": "2026-04-07T15:04:55.414017",
+        "updated_at": "2026-04-07T15:04:55.414018"
+      }
+    },
+    {
+      "id": "56d226d446ff84f2",
+      "type": "knowledge",
+      "content": "CVE ID: CVE-2026-0501\nDescription: Due to insufficient input validation in SAP S/4HANA Private Cloud and On-Premise (Financials General Ledger), an authenticated user could execute crafted SQL queries to read, modify, and delete backend database data. This leads to a high impact on the confidentiality, integrity, and availability of the application.\nCVSS v3 Score: 9.9\nCVSS v3 Vector: CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:C/C:H/I:H/A:H\nCWE: CWE-89\nAttack Vector: NETWORK",
+      "metadata": {
+        "type": "vulnerability",
+        "source": "NVD",
+        "confidence": 0.95,
+        "tags": [
+          "CWE-89",
+          "network",
+          "status:awaiting analysis",
+          "nvd",
+          "severity:critical"
+        ],
+        "created_at": "2026-04-07T15:04:55.431199",
+        "updated_at": "2026-04-07T15:04:55.431200"
+      }
+    },
+    {
+      "id": "1056a290f20a2d94",
+      "type": "knowledge",
+      "content": "CVE ID: CVE-2026-0503\nDescription: Due to missing authorization check in the SAP ERP Central Component (SAP ECC) and SAP S/4HANA (SAP EHS Management), an attacker could extract hardcoded clear-text credentials and bypass the password authentication check by manipulating user parameters. Upon successful exploitation, the attacker can access, modify or delete certain change pointer information within EHS objects in the application which might further affect the subsequent systems. This vulnerability leads to a low impact on confidentiality and integrity of the application with no affect on the availability.\nCVSS v3 Score: 6.4\nCVSS v3 Vector: CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:C/C:L/I:L/A:N\nCWE: CWE-862\nAttack Vector: NETWORK",
+      "metadata": {
+        "type": "vulnerability",
+        "source": "NVD",
+        "confidence": 0.95,
+        "tags": [
+          "CWE-862",
+          "network",
+          "status:awaiting analysis",
+          "nvd",
+          "severity:medium"
+        ],
+        "created_at": "2026-04-07T15:04:55.412028",
+        "updated_at": "2026-04-07T15:04:55.412029"
+      }
+    },
+    {
+      "id": "107204ed37a3a823",
+      "type": "knowledge",
+      "content": "CVE ID: CVE-2026-0493\nDescription: Due to a Cross-Site Request Forgery (CSRF) vulnerability in SAP Fiori App Intercompany Balance Reconciliation an attacker could execute state?changing actions using an inappropriate request type, this deviation from expected request semantics may allow an attacker to trigger unintended actions on behalf of an authenticated user causing low impact on integrity of the system. This has no impact on confidentiality and availability.\nCVSS v3 Score: 4.3\nCVSS v3 Vector: CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:N/I:L/A:N\nCWE: CWE-352\nAttack Vector: NETWORK",
+      "metadata": {
+        "type": "vulnerability",
+        "source": "NVD",
+        "confidence": 0.95,
+        "tags": [
+          "CWE-352",
+          "network",
+          "status:awaiting analysis",
+          "nvd",
+          "severity:medium"
+        ],
+        "created_at": "2026-04-07T15:04:55.405251",
+        "updated_at": "2026-04-07T15:04:55.405252"
+      }
+    },
+    {
+      "id": "fcda432f71e7369f",
+      "type": "knowledge",
+      "content": "CVE ID: CVE-2026-0386\nDescription: Improper access control in Windows Deployment Services allows an unauthorized attacker to execute code over an adjacent network.\nCVSS v3 Score: 7.5\nCVSS v3 Vector: CVSS:3.1/AV:A/AC:H/PR:N/UI:N/S:U/C:H/I:H/A:H\nAttack Vector: ADJACENT_NETWORK\nAffected CPEs: cpe:2.3:o:microsoft:windows_server_2008:-:sp2:*:*:*:*:x64:*, cpe:2.3:o:microsoft:windows_server_2008:-:sp2:*:*:*:*:x86:*, cpe:2.3:o:microsoft:windows_server_2008:r2:sp1:*:*:*:*:x64:*, cpe:2.3:o:microsoft:windows_server_2012:-:*:*:*:*:*:*:*, cpe:2.3:o:microsoft:windows_server_2012:r2:*:*:*:*:*:*:*\n... and 5 more",
+      "metadata": {
+        "type": "vulnerability",
+        "source": "NVD",
+        "confidence": 0.95,
+        "tags": [
+          "adjacent_network",
+          "status:analyzed",
+          "nvd",
+          "severity:high"
+        ],
+        "created_at": "2026-04-07T15:04:55.389908",
+        "updated_at": "2026-04-07T15:04:55.389908"
+      }
+    },
+    {
+      "id": "626321ab9e7b92df",
+      "type": "knowledge",
+      "content": "CVE ID: CVE-2026-0231\nDescription: An information disclosure vulnerability in Palo Alto Networks Cortex XDR® Broker VM allows an authenticated user to obtain and modify sensitive information by triggering live terminal session via Cortex UI and modifying any configuration setting. \nThe attacker must have network access to the Broker VM to exploit this issue.",
+      "metadata": {
+        "type": "vulnerability",
+        "source": "NVD",
+        "confidence": 0.8,
+        "tags": [
+          "status:awaiting analysis",
+          "nvd"
+        ],
+        "created_at": "2026-04-07T15:04:55.425421",
+        "updated_at": "2026-04-07T15:04:55.425422"
+      }
+    },
+    {
+      "id": "03331905958210fc",
+      "type": "knowledge",
+      "content": "CVE ID: CVE-2026-0489\nDescription: Due to insufficient validation of user-controlled input in the URLs query parameter. SAP Business One Job Service could allow an unauthenticated attacker to inject specially crafted input which upon user interaction could result in a DOM-based Cross-Site Scripting (XSS) vulnerability. This issue had a low impact on the confidentiality and integrity of the application with no impact on availability.\nCVSS v3 Score: 6.1\nCVSS v3 Vector: CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:C/C:L/I:L/A:N\nCWE: CWE-79\nAttack Vector: NETWORK",
+      "metadata": {
+        "type": "vulnerability",
+        "source": "NVD",
+        "confidence": 0.95,
+        "tags": [
+          "CWE-79",
+          "network",
+          "status:awaiting analysis",
+          "nvd",
+          "severity:medium"
+        ],
+        "created_at": "2026-04-07T15:04:55.427353",
+        "updated_at": "2026-04-07T15:04:55.427354"
+      }
+    },
+    {
+      "id": "8ce24fc12defb6da",
+      "type": "knowledge",
+      "content": "CVE ID: CVE-2026-0020\nDescription: In parsePermissionGroup of ParsedPermissionUtils.java, there is a possible way to bypass a consent dialog to obtain permissions due to a permissions bypass. This could lead to local escalation of privilege with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 8.4\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:google:android:14.0:*:*:*:*:*:*:*, cpe:2.3:o:google:android:15.0:*:*:*:*:*:*:*, cpe:2.3:o:google:android:16.0:-:*:*:*:*:*:*, cpe:2.3:o:google:android:16.0:qpr2_beta_1:*:*:*:*:*:*, cpe:2.3:o:google:android:16.0:qpr2_beta_2:*:*:*:*:*:*\n... and 1 more CVE ID: CVE-2026-0010\nDescription: In onTransact of IDrmManagerService.cpp, there is a possible out of bounds write due to a missing bounds check. This could lead to local escalation of privilege with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 8.4\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H\nCWE: CWE-787\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:google:android:14.0:*:*:*:*:*:*:*, cpe:2.3:o:google:android:15.0:*:*:*:*:*:*:*, cpe:2.3:o:google:android:16.0:-:*:*:*:*:*:* CVE ID: CVE-2026-0007\nDescription: In writeToParcel of WindowInfo.cpp, there is a possible way to trick a user into accepting a permission due to a tapjacking/overlay attack. This could lead to local escalation of privilege with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 8.6\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:L/PR:N/UI:R/S:C/C:H/I:H/A:H\nCWE: CWE-1021\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:google:android:14.0:*:*:*:*:*:*:*, cpe:2.3:o:google:android:15.0:*:*:*:*:*:*:*, cpe:2.3:o:google:android:16.0:-:*:*:*:*:*:* CVE ID: CVE-2026-0025\nDescription: In hasImage of Notification.java, there is a possible way to reveal information across users due to a permissions bypass. This could lead to local escalation of privilege with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 8.4\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:google:android:14.0:*:*:*:*:*:*:*, cpe:2.3:o:google:android:15.0:*:*:*:*:*:*:*, cpe:2.3:o:google:android:16.0:-:*:*:*:*:*:*, cpe:2.3:o:google:android:16.0:qpr2_beta_1:*:*:*:*:*:*, cpe:2.3:o:google:android:16.0:qpr2_beta_2:*:*:*:*:*:*\n... and 1 more CVE ID: CVE-2026-0011\nDescription: In enableSystemPackageLPw of Settings.java, there is a possible way to prevent location access from working due to a logic error in the code. This could lead to local escalation of privilege with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 8.4\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:google:android:14.0:*:*:*:*:*:*:*, cpe:2.3:o:google:android:15.0:*:*:*:*:*:*:*, cpe:2.3:o:google:android:16.0:-:*:*:*:*:*:*, cpe:2.3:o:google:android:16.0:qpr2_beta_1:*:*:*:*:*:*, cpe:2.3:o:google:android:16.0:qpr2_beta_2:*:*:*:*:*:*\n... and 1 more CVE ID: CVE-2026-0005\nDescription: In onServiceDisconnected of KeyguardServiceDelegate.java, there is a possible partial bypass of app pinning allowing limited interaction with other apps without knowing the LSKF due to a missing permission check. This could lead to local information disclosure where the extent of interaction and impact is app-dependent with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 6.2\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:google:android:14.0:*:*:*:*:*:*:*, cpe:2.3:o:google:android:15.0:*:*:*:*:*:*:*, cpe:2.3:o:google:android:16.0:-:*:*:*:*:*:* CVE ID: CVE-2026-0017\nDescription: In onChange of BiometricService.java, there is a possible way to enable fingerprint unlock due to a logic error in the code. This could lead to local escalation of privilege with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 7.7\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:N\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:google:android:16.0:-:*:*:*:*:*:*, cpe:2.3:o:google:android:16.0:qpr2_beta_1:*:*:*:*:*:*, cpe:2.3:o:google:android:16.0:qpr2_beta_2:*:*:*:*:*:*, cpe:2.3:o:google:android:16.0:qpr2_beta_3:*:*:*:*:*:* CVE ID: CVE-2026-0013\nDescription: In setupLayout of PickActivity.java, there is a possible way to start any activity as a DocumentsUI app due to a confused deputy. This could lead to local escalation of privilege with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 8.4\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:google:android:14.0:*:*:*:*:*:*:*, cpe:2.3:o:google:android:15.0:*:*:*:*:*:*:*, cpe:2.3:o:google:android:16.0:-:*:*:*:*:*:* CVE ID: CVE-2026-0023\nDescription: In createSessionInternal of PackageInstallerService.java, there is a possible way for an app to update its ownership due to a missing permission check. This could lead to local escalation of privilege with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 7.8\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:google:android:14.0:*:*:*:*:*:*:*, cpe:2.3:o:google:android:15.0:*:*:*:*:*:*:*, cpe:2.3:o:google:android:16.0:-:*:*:*:*:*:*, cpe:2.3:o:google:android:16.0:qpr2_beta_1:*:*:*:*:*:*, cpe:2.3:o:google:android:16.0:qpr2_beta_2:*:*:*:*:*:*\n... and 1 more CVE ID: CVE-2026-0006\nDescription: In multiple locations, there is a possible out of bounds read and write due to a heap buffer overflow. This could lead to remote code execution with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 9.8\nCVSS v3 Vector: CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H\nAttack Vector: NETWORK\nAffected CPEs: cpe:2.3:o:google:android:16.0:-:*:*:*:*:*:* CVE ID: CVE-2026-0106\nDescription: In vpu_mmap of vpu_ioctl, there is a possible arbitrary address mmap due to a missing bounds check. This could lead to local escalation of privilege with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 9.3\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:C/C:H/I:H/A:H\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:google:android:-:*:*:*:*:*:*:* CVE ID: CVE-2026-0012\nDescription: In setHideSensitive of ExpandableNotificationRow.java, there is a possible contact name leak due due to a logic error in the code. This could lead to local information disclosure with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 6.2\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:google:android:14.0:*:*:*:*:*:*:*, cpe:2.3:o:google:android:15.0:*:*:*:*:*:*:*, cpe:2.3:o:google:android:16.0:-:*:*:*:*:*:* CVE ID: CVE-2026-0021\nDescription: In hasInteractAcrossUsersFullPermission of AppInfoBase.java, there is a possible cross-user permission bypass due to a confused deputy. This could lead to local escalation of privilege with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 8.4\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:google:android:14.0:*:*:*:*:*:*:*, cpe:2.3:o:google:android:15.0:*:*:*:*:*:*:*, cpe:2.3:o:google:android:16.0:-:*:*:*:*:*:*, cpe:2.3:o:google:android:16.0:qpr2_beta_1:*:*:*:*:*:*, cpe:2.3:o:google:android:16.0:qpr2_beta_2:*:*:*:*:*:*\n... and 1 more CVE ID: CVE-2026-0113\nDescription: In ns_GetUserData of ns_SmscbUtilities.c, there is a possible out of bounds write due to an incorrect bounds check. This could lead to remote escalation of privilege with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 9.8\nCVSS v3 Vector: CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H\nAttack Vector: NETWORK\nAffected CPEs: cpe:2.3:o:google:android:-:*:*:*:*:*:*:* CVE ID: CVE-2026-0030\nDescription: In __host_check_page_state_range of mem_protect.c, there is a possible out of bounds write due to an incorrect bounds check. This could lead to local escalation of privilege with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 8.4\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:google:android:-:*:*:*:*:*:*:* CVE ID: CVE-2026-0015\nDescription: In multiple locations of AppOpsService.java, there is a possible persistent denial of service due to improper input validation. This could lead to local denial of service with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 6.2\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:google:android:14.0:*:*:*:*:*:*:*, cpe:2.3:o:google:android:15.0:*:*:*:*:*:*:*, cpe:2.3:o:google:android:16.0:-:*:*:*:*:*:*, cpe:2.3:o:google:android:16.0:qpr2_beta_1:*:*:*:*:*:*, cpe:2.3:o:google:android:16.0:qpr2_beta_2:*:*:*:*:*:*\n... and 1 more CVE ID: CVE-2026-0014\nDescription: In isPackageNullOrSystem of AppOpsService.java, there is a possible persistent denial of service due to improper input validation. This could lead to local denial of service with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 6.2\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:google:android:14.0:*:*:*:*:*:*:*, cpe:2.3:o:google:android:15.0:*:*:*:*:*:*:*, cpe:2.3:o:google:android:16.0:-:*:*:*:*:*:*, cpe:2.3:o:google:android:16.0:qpr2_beta_1:*:*:*:*:*:*, cpe:2.3:o:google:android:16.0:qpr2_beta_2:*:*:*:*:*:*\n... and 1 more CVE ID: CVE-2026-0028\nDescription: In __pkvm_host_share_guest of mem_protect.c, there is a possible out of bounds write due to an integer overflow. This could lead to local escalation of privilege with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 8.4\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:google:android:-:*:*:*:*:*:*:* CVE ID: CVE-2026-0008\nDescription: In  multiple locations, there is a possible privilege escalation due to a confused deputy. This could lead to local escalation of privilege with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 8.4\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:google:android:16.0:-:*:*:*:*:*:* CVE ID: CVE-2026-0038\nDescription: In multiple functions of mem_protect.c, there is a possible way to execute arbitrary code due to a logic error in the code. This could lead to local escalation of privilege with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 8.4\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:google:android:-:*:*:*:*:*:*:* CVE ID: CVE-2026-0029\nDescription: In __pkvm_init_vm of pkvm.c, there is a possible memory corruption due to a logic error in the code. This could lead to local escalation of privilege with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 8.4\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:google:android:-:*:*:*:*:*:*:* CVE ID: CVE-2026-0112\nDescription: In vpu_open_inst of vpu_ioctl.c, there is a possible use after free due to a race condition. This could lead to local escalation of privilege with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 7.4\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:H/PR:N/UI:N/S:U/C:H/I:H/A:H\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:google:android:-:*:*:*:*:*:*:* CVE ID: CVE-2026-0111\nDescription: In ns_GetUserData of ns_SmscbUtilities.c, there is a possible out of bounds write due to an incorrect bounds check. This could lead to remote escalation of privilege with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 9.8\nCVSS v3 Vector: CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H\nAttack Vector: NETWORK\nAffected CPEs: cpe:2.3:o:google:android:-:*:*:*:*:*:*:* CVE ID: CVE-2026-0124\nDescription: There is a possible out of bounds write due to a missing bounds check. This could lead to local escalation of privilege with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 7.8\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:google:android:-:*:*:*:*:*:*:* CVE ID: CVE-2026-0120\nDescription: In modem, there is a possible out of bounds write due to an incorrect bounds check. This could lead to remote code execution with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 9.8\nCVSS v3 Vector: CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H\nAttack Vector: NETWORK\nAffected CPEs: cpe:2.3:o:google:android:-:*:*:*:*:*:*:* CVE ID: CVE-2026-0026\nDescription: In removePermission of PermissionManagerServiceImpl.java, there is a possible way to override any system permission  due to a logic error in the code. This could lead to local escalation of privilege with no additional execution privileges needed. User interaction is needed for exploitation.\nCVSS v3 Score: 7.8\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:H\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:google:android:14.0:*:*:*:*:*:*:* CVE ID: CVE-2026-0031\nDescription: In multiple functions of mem_protect.c, there is a possible out of bounds write due to an integer overflow. This could lead to local escalation of privilege with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 8.4\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:google:android:-:*:*:*:*:*:*:* CVE ID: CVE-2026-0107\nDescription: In gmc_ddr_handle_mba_mr_req of gmc_mba_ddr.c, there is a possible escalation of privileges due to a confused deputy. This could lead to local escalation of privilege with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 8.4\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:google:android:-:*:*:*:*:*:*:* CVE ID: CVE-2026-0117\nDescription: In mfc_dec_dqbuf of mfc_dec_v4l2.c, there is a possible out of bounds write due to an incorrect bounds check. This could lead to local escalation of privilege with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 8.4\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:google:android:-:*:*:*:*:*:*:* CVE ID: CVE-2026-0122\nDescription: In multiple places, there is a possible out of bounds write due to memory corruption. This could lead to remote code execution with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 8.4\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:google:android:-:*:*:*:*:*:*:* CVE ID: CVE-2026-0123\nDescription: In EfwApTransport::ProcessRxRing of efw_ap_transport.cc, there is a possible out of bounds write due to a missing bounds check. This could lead to local escalation of privilege with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 8.4\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:google:android:-:*:*:*:*:*:*:* CVE ID: CVE-2026-0024\nDescription: In isRedactionNeededForOpenViaContentResolver of MediaProvider.java, there is a possible way to reveal the location of media due to a missing permission check. This could lead to local information disclosure with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 4.0\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:google:android:14.0:*:*:*:*:*:*:*, cpe:2.3:o:google:android:15.0:*:*:*:*:*:*:*, cpe:2.3:o:google:android:16.0:-:*:*:*:*:*:*, cpe:2.3:o:google:android:16.0:qpr2_beta_1:*:*:*:*:*:*, cpe:2.3:o:google:android:16.0:qpr2_beta_2:*:*:*:*:*:*\n... and 1 more CVE ID: CVE-2026-0114\nDescription: In Modem, there is a possible out of bounds write due to an incorrect bounds check. This could lead to remote code execution with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 9.8\nCVSS v3 Vector: CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H\nAttack Vector: NETWORK\nAffected CPEs: cpe:2.3:o:google:android:-:*:*:*:*:*:*:* CVE ID: CVE-2026-0034\nDescription: In setPackageOrComponentEnabled of ManagedServices.java, there is a possible notification policy desync due to improper input validation. This could lead to local escalation of privilege with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 8.4\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:google:android:14.0:*:*:*:*:*:*:*, cpe:2.3:o:google:android:15.0:*:*:*:*:*:*:*, cpe:2.3:o:google:android:16.0:-:*:*:*:*:*:*, cpe:2.3:o:google:android:16.0:qpr2_beta_1:*:*:*:*:*:*, cpe:2.3:o:google:android:16.0:qpr2_beta_2:*:*:*:*:*:*\n... and 1 more CVE ID: CVE-2026-0118\nDescription: In oobconfig, there is a possible bypass of carrier restrictions due to a logic error. This could lead to local escalation of privilege with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 8.4\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:google:android:-:*:*:*:*:*:*:* CVE ID: CVE-2026-0116\nDescription: In __mfc_handle_released_buf of mfc_core_isr.c, there is a possible out of bounds write due to a missing bounds check. This could lead to remote code execution with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 9.8\nCVSS v3 Vector: CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H\nAttack Vector: NETWORK\nAffected CPEs: cpe:2.3:o:google:android:-:*:*:*:*:*:*:* CVE ID: CVE-2026-0110\nDescription: In MM_DATA_IND of cn_NrSmMsgHdlrFromMM.cpp, there is a possible EoP due to memory corruption. This could lead to remote escalation of privilege with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 9.8\nCVSS v3 Vector: CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H\nAttack Vector: NETWORK\nAffected CPEs: cpe:2.3:o:google:android:-:*:*:*:*:*:*:* CVE ID: CVE-2026-0032\nDescription: In multiple functions of mem_protect.c, there is a possible out-of-bounds write due to a logic error in the code. This could lead to local escalation of privilege with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 7.8\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H\nCWE: CWE-787\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:google:android:-:*:*:*:*:*:*:* CVE ID: CVE-2026-0037\nDescription: In multiple functions of ffa.c, there is a possible memory corruption due to a logic error in the code. This could lead to local escalation of privilege with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 8.4\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H\nCWE: CWE-787\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:google:android:-:*:*:*:*:*:*:* CVE ID: CVE-2026-0119\nDescription: In usim_SendMCCMNCIndMsg of usim_Registration.c, there is a possible out of bounds write due to memory corruption. This could lead to physical escalation of privilege with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 6.8\nCVSS v3 Vector: CVSS:3.1/AV:P/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H\nAttack Vector: PHYSICAL\nAffected CPEs: cpe:2.3:o:google:android:-:*:*:*:*:*:*:* CVE ID: CVE-2026-0047\nDescription: In dumpBitmapsProto of ActivityManagerService.java, there is a possible way for an app to access private information due to a missing permission check. This could lead to local escalation of privilege with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 8.4\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:google:android:16.0:qpr2_beta_1:*:*:*:*:*:*, cpe:2.3:o:google:android:16.0:qpr2_beta_2:*:*:*:*:*:*, cpe:2.3:o:google:android:16.0:qpr2_beta_3:*:*:*:*:*:* CVE ID: CVE-2026-0035\nDescription: In createRequest of MediaProvider.java, there is a possible way for an app to gain read/write access to non-existing files due to a logic error in the code. This could lead to local escalation of privilege with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 8.4\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:google:android:14.0:*:*:*:*:*:*:*, cpe:2.3:o:google:android:15.0:*:*:*:*:*:*:*, cpe:2.3:o:google:android:16.0:-:*:*:*:*:*:*, cpe:2.3:o:google:android:16.0:qpr2_beta_1:*:*:*:*:*:*, cpe:2.3:o:google:android:16.0:qpr2_beta_2:*:*:*:*:*:*\n... and 1 more",
+      "metadata": {
+        "type": "vulnerability",
+        "source": "merged_learning",
+        "confidence": 0.95,
+        "tags": [
+          "status:analyzed",
+          "CWE-1021",
+          "CWE-787",
+          "severity:medium",
+          "status:modified",
+          "nvd",
+          "severity:high",
+          "severity:critical",
+          "physical",
+          "local",
+          "network"
+        ],
+        "created_at": "2026-04-07T15:03:51.707715",
+        "updated_at": "2026-04-07T15:03:51.707717"
+      }
+    },
+    {
+      "id": "0849a518caaf7787",
+      "type": "knowledge",
+      "content": "CVE ID: CVE-2026-0027\nDescription: In smmu_detach_dev of arm-smmu-v3.c, there is a possible out of bounds write due to a use after free. This could lead to local escalation of privilege with System execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 6.7\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:L/PR:H/UI:N/S:U/C:H/I:H/A:H\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:google:android:-:*:*:*:*:*:*:* CVE ID: CVE-2026-0121\nDescription: In VPU, there is a possible use-after-free read due to a race condition. This could lead to local information disclosure with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 2.9\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:H/PR:N/UI:N/S:U/C:L/I:N/A:N\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:google:android:-:*:*:*:*:*:*:* CVE ID: CVE-2026-0109\nDescription: In dhd_tcpdata_info_get of dhd_ip.c, there is a possible Denial of Service due to a precondition check failure. This could lead to remote denial of service with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 7.5\nCVSS v3 Vector: CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H\nCWE: CWE-754\nAttack Vector: NETWORK\nAffected CPEs: cpe:2.3:o:google:android:-:*:*:*:*:*:*:*",
+      "metadata": {
+        "type": "vulnerability",
+        "source": "merged_learning",
+        "confidence": 0.9499999999999998,
+        "tags": [
+          "status:analyzed",
+          "severity:medium",
+          "status:modified",
+          "nvd",
+          "severity:high",
+          "severity:low",
+          "local",
+          "CWE-754",
+          "network"
+        ],
+        "created_at": "2026-04-07T15:03:51.707933",
+        "updated_at": "2026-04-07T15:03:51.707933"
+      }
+    },
+    {
+      "id": "8af654858a456aad",
+      "type": "knowledge",
+      "content": "CVE ID: CVE-2026-0108\nDescription: The register protection of the PowerVR GPU is incorrectly configured. This could lead to local information disclosure with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 4.0\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:google:android:-:*:*:*:*:*:*:* CVE ID: CVE-2026-0115\nDescription: In Trusted Execution Environment, there is a possible key leak due to side channel information disclosure. This could lead to physical information disclosure with no additional execution privileges needed. User interaction is needed for exploitation.\nCVSS v3 Score: 2.1\nCVSS v3 Vector: CVSS:3.1/AV:P/AC:L/PR:N/UI:R/S:U/C:L/I:N/A:N\nAttack Vector: PHYSICAL\nAffected CPEs: cpe:2.3:o:google:android:-:*:*:*:*:*:*:*",
+      "metadata": {
+        "type": "vulnerability",
+        "source": "merged_learning",
+        "confidence": 0.95,
+        "tags": [
+          "status:analyzed",
+          "severity:medium",
+          "nvd",
+          "physical",
+          "severity:low",
+          "local"
+        ],
+        "created_at": "2026-04-07T15:03:51.708000",
+        "updated_at": "2026-04-07T15:03:51.708001"
+      }
+    },
+    {
+      "id": "24fe1cba5cbe6713",
+      "type": "knowledge",
+      "content": "CVE ID: CVE-2026-0404\nDescription: An insufficient input validation vulnerability in NETGEAR Orbi devices' \nDHCPv6 functionality allows network adjacent attackers authenticated \nover WiFi or on LAN to execute OS command injections on the router. \nDHCPv6 is not enabled by default.\nCVSS v3 Score: 8.0\nCVSS v3 Vector: CVSS:3.1/AV:A/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H\nAttack Vector: ADJACENT_NETWORK\nAffected CPEs: cpe:2.3:o:netgear:rbr750_firmware:*:*:*:*:*:*:*:*, cpe:2.3:h:netgear:rbr750:-:*:*:*:*:*:*:*, cpe:2.3:o:netgear:rbr840_firmware:*:*:*:*:*:*:*:*, cpe:2.3:h:netgear:rbr840:-:*:*:*:*:*:*:*, cpe:2.3:o:netgear:rbr850_firmware:*:*:*:*:*:*:*:*\n... and 19 more",
+      "metadata": {
+        "type": "vulnerability",
+        "source": "NVD",
+        "confidence": 0.95,
+        "tags": [
+          "adjacent_network",
+          "status:analyzed",
+          "nvd",
+          "severity:high"
+        ],
+        "created_at": "2026-04-07T15:04:55.411460",
+        "updated_at": "2026-04-07T15:04:55.411460"
+      }
+    },
+    {
+      "id": "6393195a42686cf3",
+      "type": "knowledge",
+      "content": "CVE ID: CVE-2026-0403\nDescription: An insufficient input validation vulnerability in NETGEAR Orbi routers \nallows attackers connected to the router's LAN to execute OS command \ninjections.\nCVSS v3 Score: 8.0\nCVSS v3 Vector: CVSS:3.1/AV:A/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H\nAttack Vector: ADJACENT_NETWORK\nAffected CPEs: cpe:2.3:o:netgear:rbe971_firmware:*:*:*:*:*:*:*:*, cpe:2.3:h:netgear:rbe971:-:*:*:*:*:*:*:*, cpe:2.3:o:netgear:rbe970_firmware:*:*:*:*:*:*:*:*, cpe:2.3:h:netgear:rbe970:-:*:*:*:*:*:*:*, cpe:2.3:o:netgear:rbr750_firmware:*:*:*:*:*:*:*:*\n... and 15 more",
+      "metadata": {
+        "type": "vulnerability",
+        "source": "NVD",
+        "confidence": 0.95,
+        "tags": [
+          "adjacent_network",
+          "status:analyzed",
+          "nvd",
+          "severity:high"
+        ],
+        "created_at": "2026-04-07T15:04:55.402830",
+        "updated_at": "2026-04-07T15:04:55.402831"
+      }
+    },
+    {
+      "id": "23dbeecebf2d2a26",
+      "type": "knowledge",
+      "content": "CVE ID: CVE-2026-0400\nDescription: A post-authentication Format String vulnerability in SonicOS allows a remote attacker to crash a firewall.\nCVSS v3 Score: 4.9\nCVSS v3 Vector: CVSS:3.1/AV:N/AC:L/PR:H/UI:N/S:U/C:N/I:N/A:H\nAttack Vector: NETWORK\nAffected CPEs: cpe:2.3:o:sonicwall:sonicos:*:*:*:*:*:*:*:*, cpe:2.3:h:sonicwall:nsa_2700:-:*:*:*:*:*:*:*, cpe:2.3:h:sonicwall:nsa_3700:-:*:*:*:*:*:*:*, cpe:2.3:h:sonicwall:nsa_4700:-:*:*:*:*:*:*:*, cpe:2.3:h:sonicwall:nsa_5700:-:*:*:*:*:*:*:*\n... and 29 more",
+      "metadata": {
+        "type": "vulnerability",
+        "source": "NVD",
+        "confidence": 0.95,
+        "tags": [
+          "network",
+          "status:analyzed",
+          "nvd",
+          "severity:medium"
+        ],
+        "created_at": "2026-04-07T15:04:55.391277",
+        "updated_at": "2026-04-07T15:04:55.391277"
+      }
+    },
+    {
+      "id": "56efa8c3db8c03f4",
+      "type": "knowledge",
+      "content": "CVE ID: CVE-2026-0034\nDescription: In setPackageOrComponentEnabled of ManagedServices.java, there is a possible notification policy desync due to improper input validation. This could lead to local escalation of privilege with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 8.4\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:google:android:14.0:*:*:*:*:*:*:*, cpe:2.3:o:google:android:15.0:*:*:*:*:*:*:*, cpe:2.3:o:google:android:16.0:-:*:*:*:*:*:*, cpe:2.3:o:google:android:16.0:qpr2_beta_1:*:*:*:*:*:*, cpe:2.3:o:google:android:16.0:qpr2_beta_2:*:*:*:*:*:*\n... and 1 more",
+      "metadata": {
+        "type": "vulnerability",
+        "source": "NVD",
+        "confidence": 0.95,
+        "tags": [
+          "local",
+          "status:modified",
+          "nvd",
+          "severity:high"
+        ],
+        "created_at": "2026-04-07T15:04:55.387394",
+        "updated_at": "2026-04-07T15:04:55.387394"
+      }
+    },
+    {
+      "id": "943e48e2e4175b45",
+      "type": "knowledge",
+      "content": "CVE ID: CVE-2026-0496\nDescription: SAP Fiori App Intercompany Balance Reconciliation allows an attacker with high privileges  to upload any file (including script files) without proper file format validation. This has low impact on confidentiality, integrity and availability of the application.\nCVSS v3 Score: 6.6\nCVSS v3 Vector: CVSS:3.1/AV:N/AC:L/PR:H/UI:N/S:C/C:L/I:L/A:L\nCWE: CWE-434\nAttack Vector: NETWORK",
+      "metadata": {
+        "type": "vulnerability",
+        "source": "NVD",
+        "confidence": 0.95,
+        "tags": [
+          "CWE-434",
+          "network",
+          "status:awaiting analysis",
+          "nvd",
+          "severity:medium"
+        ],
+        "created_at": "2026-04-07T15:04:55.408117",
+        "updated_at": "2026-04-07T15:04:55.408117"
+      }
+    },
+    {
+      "id": "d37a63307a18a9aa",
+      "type": "knowledge",
+      "content": "CVE ID: CVE-2026-0123\nDescription: In EfwApTransport::ProcessRxRing of efw_ap_transport.cc, there is a possible out of bounds write due to a missing bounds check. This could lead to local escalation of privilege with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 8.4\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:google:android:-:*:*:*:*:*:*:*",
+      "metadata": {
+        "type": "vulnerability",
+        "source": "NVD",
+        "confidence": 0.95,
+        "tags": [
+          "local",
+          "status:analyzed",
+          "nvd",
+          "severity:high"
+        ],
+        "created_at": "2026-04-07T15:04:55.412554",
+        "updated_at": "2026-04-07T15:04:55.412555"
+      }
+    },
+    {
+      "id": "b866b5b2c38a4be0",
+      "type": "knowledge",
+      "content": "CVE ID: CVE-2026-0119\nDescription: In usim_SendMCCMNCIndMsg of usim_Registration.c, there is a possible out of bounds write due to memory corruption. This could lead to physical escalation of privilege with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 6.8\nCVSS v3 Vector: CVSS:3.1/AV:P/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H\nAttack Vector: PHYSICAL\nAffected CPEs: cpe:2.3:o:google:android:-:*:*:*:*:*:*:*",
+      "metadata": {
+        "type": "vulnerability",
+        "source": "NVD",
+        "confidence": 0.95,
+        "tags": [
+          "physical",
+          "status:analyzed",
+          "nvd",
+          "severity:medium"
+        ],
+        "created_at": "2026-04-07T15:04:55.414505",
+        "updated_at": "2026-04-07T15:04:55.414506"
+      }
+    },
+    {
+      "id": "e77221e1e8b405ce",
+      "type": "knowledge",
+      "content": "CVE ID: CVE-2026-0122\nDescription: In multiple places, there is a possible out of bounds write due to memory corruption. This could lead to remote code execution with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 8.4\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:google:android:-:*:*:*:*:*:*:*",
+      "metadata": {
+        "type": "vulnerability",
+        "source": "NVD",
+        "confidence": 0.95,
+        "tags": [
+          "local",
+          "status:analyzed",
+          "nvd",
+          "severity:high"
+        ],
+        "created_at": "2026-04-07T15:04:55.392881",
+        "updated_at": "2026-04-07T15:04:55.392881"
+      }
+    },
+    {
+      "id": "a0fed42b8561fd68",
+      "type": "knowledge",
+      "content": "CVE ID: CVE-2026-0491\nDescription: SAP Landscape Transformation allows an attacker with admin privileges to exploit a vulnerability in the function module exposed via RFC. This flaw enables the injection of arbitrary ABAP code/OS commands into the system, bypassing essential authorization checks. This vulnerability effectively functions as a backdoor, creating the risk of full system compromise, undermining the confidentiality, integrity and availability of the system.\nCVSS v3 Score: 9.1\nCVSS v3 Vector: CVSS:3.1/AV:N/AC:L/PR:H/UI:N/S:C/C:H/I:H/A:H\nCWE: CWE-94\nAttack Vector: NETWORK",
+      "metadata": {
+        "type": "vulnerability",
+        "source": "NVD",
+        "confidence": 0.95,
+        "tags": [
+          "CWE-94",
+          "network",
+          "status:awaiting analysis",
+          "nvd",
+          "severity:critical"
+        ],
+        "created_at": "2026-04-07T15:04:55.429437",
+        "updated_at": "2026-04-07T15:04:55.429438"
+      }
+    },
+    {
+      "id": "9c0415b0fbf52dda",
+      "type": "knowledge",
+      "content": "CVE ID: CVE-2026-0023\nDescription: In createSessionInternal of PackageInstallerService.java, there is a possible way for an app to update its ownership due to a missing permission check. This could lead to local escalation of privilege with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 7.8\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:google:android:14.0:*:*:*:*:*:*:*, cpe:2.3:o:google:android:15.0:*:*:*:*:*:*:*, cpe:2.3:o:google:android:16.0:-:*:*:*:*:*:*, cpe:2.3:o:google:android:16.0:qpr2_beta_1:*:*:*:*:*:*, cpe:2.3:o:google:android:16.0:qpr2_beta_2:*:*:*:*:*:*\n... and 1 more",
+      "metadata": {
+        "type": "vulnerability",
+        "source": "NVD",
+        "confidence": 0.95,
+        "tags": [
+          "local",
+          "status:modified",
+          "nvd",
+          "severity:high"
+        ],
+        "created_at": "2026-04-07T15:04:55.424170",
+        "updated_at": "2026-04-07T15:04:55.424170"
+      }
+    },
+    {
+      "id": "2a47184d39e608f4",
+      "type": "knowledge",
+      "content": "CVE ID: CVE-2026-0032\nDescription: In multiple functions of mem_protect.c, there is a possible out-of-bounds write due to a logic error in the code. This could lead to local escalation of privilege with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 7.8\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H\nCWE: CWE-787\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:google:android:-:*:*:*:*:*:*:*",
+      "metadata": {
+        "type": "vulnerability",
+        "source": "NVD",
+        "confidence": 0.95,
+        "tags": [
+          "CWE-787",
+          "local",
+          "status:modified",
+          "nvd",
+          "severity:high"
+        ],
+        "created_at": "2026-04-07T15:04:55.364158",
+        "updated_at": "2026-04-07T15:04:55.364159"
+      }
+    },
+    {
+      "id": "29c5302424f6a786",
+      "type": "knowledge",
+      "content": "CVE ID: CVE-2026-0025\nDescription: In hasImage of Notification.java, there is a possible way to reveal information across users due to a permissions bypass. This could lead to local escalation of privilege with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 8.4\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:google:android:14.0:*:*:*:*:*:*:*, cpe:2.3:o:google:android:15.0:*:*:*:*:*:*:*, cpe:2.3:o:google:android:16.0:-:*:*:*:*:*:*, cpe:2.3:o:google:android:16.0:qpr2_beta_1:*:*:*:*:*:*, cpe:2.3:o:google:android:16.0:qpr2_beta_2:*:*:*:*:*:*\n... and 1 more",
+      "metadata": {
+        "type": "vulnerability",
+        "source": "NVD",
+        "confidence": 0.95,
+        "tags": [
+          "local",
+          "status:modified",
+          "nvd",
+          "severity:high"
+        ],
+        "created_at": "2026-04-07T15:04:55.359273",
+        "updated_at": "2026-04-07T15:04:55.359274"
+      }
+    },
+    {
+      "id": "c8c1d44e8a14cbec",
+      "type": "knowledge",
+      "content": "CVE ID: CVE-2026-0495\nDescription: SAP Fiori App Intercompany Balance Reconciliation allows an attacker with high privileges  to send uploaded files to arbitrary emails which could enable effective phishing campaigns. This has low impact on confidentiality, integrity and availability of the application.\nCVSS v3 Score: 5.1\nCVSS v3 Vector: CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:C/C:L/I:L/A:L\nCWE: CWE-15\nAttack Vector: NETWORK",
+      "metadata": {
+        "type": "vulnerability",
+        "source": "NVD",
+        "confidence": 0.95,
+        "tags": [
+          "CWE-15",
+          "network",
+          "status:awaiting analysis",
+          "nvd",
+          "severity:medium"
+        ],
+        "created_at": "2026-04-07T15:04:55.421549",
+        "updated_at": "2026-04-07T15:04:55.421549"
+      }
+    },
+    {
+      "id": "30d640b99f9b8c39",
+      "type": "knowledge",
+      "content": "CVE ID: CVE-2026-0038\nDescription: In multiple functions of mem_protect.c, there is a possible way to execute arbitrary code due to a logic error in the code. This could lead to local escalation of privilege with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 8.4\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:google:android:-:*:*:*:*:*:*:*",
+      "metadata": {
+        "type": "vulnerability",
+        "source": "NVD",
+        "confidence": 0.95,
+        "tags": [
+          "local",
+          "status:modified",
+          "nvd",
+          "severity:high"
+        ],
+        "created_at": "2026-04-07T15:04:55.371004",
+        "updated_at": "2026-04-07T15:04:55.371005"
+      }
+    },
+    {
+      "id": "3a86971ae93a130e",
+      "type": "knowledge",
+      "content": "CVE ID: CVE-2026-0017\nDescription: In onChange of BiometricService.java, there is a possible way to enable fingerprint unlock due to a logic error in the code. This could lead to local escalation of privilege with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 7.7\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:N\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:google:android:16.0:-:*:*:*:*:*:*, cpe:2.3:o:google:android:16.0:qpr2_beta_1:*:*:*:*:*:*, cpe:2.3:o:google:android:16.0:qpr2_beta_2:*:*:*:*:*:*, cpe:2.3:o:google:android:16.0:qpr2_beta_3:*:*:*:*:*:*",
+      "metadata": {
+        "type": "vulnerability",
+        "source": "NVD",
+        "confidence": 0.95,
+        "tags": [
+          "local",
+          "status:modified",
+          "nvd",
+          "severity:high"
+        ],
+        "created_at": "2026-04-07T15:04:55.357792",
+        "updated_at": "2026-04-07T15:04:55.357793"
+      }
+    },
+    {
+      "id": "161536b9ae05d008",
+      "type": "knowledge",
+      "content": "CVE ID: CVE-2026-0006\nDescription: In multiple locations, there is a possible out of bounds read and write due to a heap buffer overflow. This could lead to remote code execution with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 9.8\nCVSS v3 Vector: CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H\nAttack Vector: NETWORK\nAffected CPEs: cpe:2.3:o:google:android:16.0:-:*:*:*:*:*:*",
+      "metadata": {
+        "type": "vulnerability",
+        "source": "NVD",
+        "confidence": 0.95,
+        "tags": [
+          "network",
+          "status:modified",
+          "nvd",
+          "severity:critical"
+        ],
+        "created_at": "2026-04-07T15:04:55.353050",
+        "updated_at": "2026-04-07T15:04:55.353051"
+      }
+    },
+    {
+      "id": "c7b9f7ab2038d643",
+      "type": "knowledge",
+      "content": "CVE ID: CVE-2026-0007\nDescription: In writeToParcel of WindowInfo.cpp, there is a possible way to trick a user into accepting a permission due to a tapjacking/overlay attack. This could lead to local escalation of privilege with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 8.6\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:L/PR:N/UI:R/S:C/C:H/I:H/A:H\nCWE: CWE-1021\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:google:android:14.0:*:*:*:*:*:*:*, cpe:2.3:o:google:android:15.0:*:*:*:*:*:*:*, cpe:2.3:o:google:android:16.0:-:*:*:*:*:*:*",
+      "metadata": {
+        "type": "vulnerability",
+        "source": "NVD",
+        "confidence": 0.95,
+        "tags": [
+          "CWE-1021",
+          "local",
+          "status:modified",
+          "nvd",
+          "severity:high"
+        ],
+        "created_at": "2026-04-07T15:04:55.352535",
+        "updated_at": "2026-04-07T15:04:55.352537"
+      }
+    },
+    {
+      "id": "38c9b9156a242fda",
+      "type": "knowledge",
+      "content": "CVE ID: CVE-2026-0005\nDescription: In onServiceDisconnected of KeyguardServiceDelegate.java, there is a possible partial bypass of app pinning allowing limited interaction with other apps without knowing the LSKF due to a missing permission check. This could lead to local information disclosure where the extent of interaction and impact is app-dependent with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 6.2\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:google:android:14.0:*:*:*:*:*:*:*, cpe:2.3:o:google:android:15.0:*:*:*:*:*:*:*, cpe:2.3:o:google:android:16.0:-:*:*:*:*:*:*",
+      "metadata": {
+        "type": "vulnerability",
+        "source": "NVD",
+        "confidence": 0.95,
+        "tags": [
+          "local",
+          "status:modified",
+          "nvd",
+          "severity:medium"
+        ],
+        "created_at": "2026-04-07T15:04:55.351063",
+        "updated_at": "2026-04-07T15:04:55.351065"
+      }
+    },
+    {
+      "id": "e9ce5a68a345775e",
+      "type": "knowledge",
+      "content": "CVE ID: CVE-2026-0028\nDescription: In __pkvm_host_share_guest of mem_protect.c, there is a possible out of bounds write due to an integer overflow. This could lead to local escalation of privilege with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 8.4\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:google:android:-:*:*:*:*:*:*:*",
+      "metadata": {
+        "type": "vulnerability",
+        "source": "NVD",
+        "confidence": 0.95,
+        "tags": [
+          "local",
+          "status:modified",
+          "nvd",
+          "severity:high"
+        ],
+        "created_at": "2026-04-07T15:04:55.367422",
+        "updated_at": "2026-04-07T15:04:55.367424"
+      }
+    },
+    {
+      "id": "2e4de08fd754bebc",
+      "type": "knowledge",
+      "content": "CVE ID: CVE-2026-0014\nDescription: In isPackageNullOrSystem of AppOpsService.java, there is a possible persistent denial of service due to improper input validation. This could lead to local denial of service with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 6.2\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:google:android:14.0:*:*:*:*:*:*:*, cpe:2.3:o:google:android:15.0:*:*:*:*:*:*:*, cpe:2.3:o:google:android:16.0:-:*:*:*:*:*:*, cpe:2.3:o:google:android:16.0:qpr2_beta_1:*:*:*:*:*:*, cpe:2.3:o:google:android:16.0:qpr2_beta_2:*:*:*:*:*:*\n... and 1 more",
+      "metadata": {
+        "type": "vulnerability",
+        "source": "NVD",
+        "confidence": 0.95,
+        "tags": [
+          "local",
+          "status:modified",
+          "nvd",
+          "severity:medium"
+        ],
+        "created_at": "2026-04-07T15:04:55.356312",
+        "updated_at": "2026-04-07T15:04:55.356314"
+      }
+    },
+    {
+      "id": "e6f15d4f50c9ab8d",
+      "type": "knowledge",
+      "content": "CVE ID: CVE-2026-0021\nDescription: In hasInteractAcrossUsersFullPermission of AppInfoBase.java, there is a possible cross-user permission bypass due to a confused deputy. This could lead to local escalation of privilege with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 8.4\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:google:android:14.0:*:*:*:*:*:*:*, cpe:2.3:o:google:android:15.0:*:*:*:*:*:*:*, cpe:2.3:o:google:android:16.0:-:*:*:*:*:*:*, cpe:2.3:o:google:android:16.0:qpr2_beta_1:*:*:*:*:*:*, cpe:2.3:o:google:android:16.0:qpr2_beta_2:*:*:*:*:*:*\n... and 1 more",
+      "metadata": {
+        "type": "vulnerability",
+        "source": "NVD",
+        "confidence": 0.95,
+        "tags": [
+          "local",
+          "status:modified",
+          "nvd",
+          "severity:high"
+        ],
+        "created_at": "2026-04-07T15:04:55.360607",
+        "updated_at": "2026-04-07T15:04:55.360608"
+      }
+    },
+    {
+      "id": "379ba46b69abcda9",
+      "type": "knowledge",
+      "content": "CVE ID: CVE-2026-0015\nDescription: In multiple locations of AppOpsService.java, there is a possible persistent denial of service due to improper input validation. This could lead to local denial of service with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 6.2\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:google:android:14.0:*:*:*:*:*:*:*, cpe:2.3:o:google:android:15.0:*:*:*:*:*:*:*, cpe:2.3:o:google:android:16.0:-:*:*:*:*:*:*, cpe:2.3:o:google:android:16.0:qpr2_beta_1:*:*:*:*:*:*, cpe:2.3:o:google:android:16.0:qpr2_beta_2:*:*:*:*:*:*\n... and 1 more",
+      "metadata": {
+        "type": "vulnerability",
+        "source": "NVD",
+        "confidence": 0.95,
+        "tags": [
+          "local",
+          "status:modified",
+          "nvd",
+          "severity:medium"
+        ],
+        "created_at": "2026-04-07T15:04:55.361958",
+        "updated_at": "2026-04-07T15:04:55.361960"
+      }
+    },
+    {
+      "id": "9895377ff1698f61",
+      "type": "knowledge",
+      "content": "CVE ID: CVE-2026-0008\nDescription: In  multiple locations, there is a possible privilege escalation due to a confused deputy. This could lead to local escalation of privilege with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 8.4\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:google:android:16.0:-:*:*:*:*:*:*",
+      "metadata": {
+        "type": "vulnerability",
+        "source": "NVD",
+        "confidence": 0.95,
+        "tags": [
+          "local",
+          "status:analyzed",
+          "nvd",
+          "severity:high"
+        ],
+        "created_at": "2026-04-07T15:04:55.354889",
+        "updated_at": "2026-04-07T15:04:55.354890"
+      }
+    },
+    {
+      "id": "a1fd439dbff016a0",
+      "type": "knowledge",
+      "content": "CVE ID: CVE-2026-0024\nDescription: In isRedactionNeededForOpenViaContentResolver of MediaProvider.java, there is a possible way to reveal the location of media due to a missing permission check. This could lead to local information disclosure with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 4.0\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:google:android:14.0:*:*:*:*:*:*:*, cpe:2.3:o:google:android:15.0:*:*:*:*:*:*:*, cpe:2.3:o:google:android:16.0:-:*:*:*:*:*:*, cpe:2.3:o:google:android:16.0:qpr2_beta_1:*:*:*:*:*:*, cpe:2.3:o:google:android:16.0:qpr2_beta_2:*:*:*:*:*:*\n... and 1 more",
+      "metadata": {
+        "type": "vulnerability",
+        "source": "NVD",
+        "confidence": 0.95,
+        "tags": [
+          "local",
+          "status:modified",
+          "nvd",
+          "severity:medium"
+        ],
+        "created_at": "2026-04-07T15:04:55.372435",
+        "updated_at": "2026-04-07T15:04:55.372436"
+      }
+    },
+    {
+      "id": "575e4c990719c788",
+      "type": "knowledge",
+      "content": "CVE ID: CVE-2026-0027\nDescription: In smmu_detach_dev of arm-smmu-v3.c, there is a possible out of bounds write due to a use after free. This could lead to local escalation of privilege with System execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 6.7\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:L/PR:H/UI:N/S:U/C:H/I:H/A:H\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:google:android:-:*:*:*:*:*:*:*",
+      "metadata": {
+        "type": "vulnerability",
+        "source": "NVD",
+        "confidence": 0.95,
+        "tags": [
+          "local",
+          "status:modified",
+          "nvd",
+          "severity:medium"
+        ],
+        "created_at": "2026-04-07T15:04:55.373764",
+        "updated_at": "2026-04-07T15:04:55.373765"
+      }
+    },
+    {
+      "id": "e4ff914fa29080f6",
+      "type": "knowledge",
+      "content": "CVE ID: CVE-2026-0117\nDescription: In mfc_dec_dqbuf of mfc_dec_v4l2.c, there is a possible out of bounds write due to an incorrect bounds check. This could lead to local escalation of privilege with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 8.4\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:google:android:-:*:*:*:*:*:*:*",
+      "metadata": {
+        "type": "vulnerability",
+        "source": "NVD",
+        "confidence": 0.95,
+        "tags": [
+          "local",
+          "status:analyzed",
+          "nvd",
+          "severity:high"
+        ],
+        "created_at": "2026-04-07T15:04:55.377531",
+        "updated_at": "2026-04-07T15:04:55.377533"
+      }
+    },
+    {
+      "id": "550ac0649c6b7b9a",
+      "type": "knowledge",
+      "content": "CVE ID: CVE-2026-0011\nDescription: In enableSystemPackageLPw of Settings.java, there is a possible way to prevent location access from working due to a logic error in the code. This could lead to local escalation of privilege with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 8.4\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:google:android:14.0:*:*:*:*:*:*:*, cpe:2.3:o:google:android:15.0:*:*:*:*:*:*:*, cpe:2.3:o:google:android:16.0:-:*:*:*:*:*:*, cpe:2.3:o:google:android:16.0:qpr2_beta_1:*:*:*:*:*:*, cpe:2.3:o:google:android:16.0:qpr2_beta_2:*:*:*:*:*:*\n... and 1 more",
+      "metadata": {
+        "type": "vulnerability",
+        "source": "NVD",
+        "confidence": 0.95,
+        "tags": [
+          "local",
+          "status:modified",
+          "nvd",
+          "severity:high"
+        ],
+        "created_at": "2026-04-07T15:04:55.378495",
+        "updated_at": "2026-04-07T15:04:55.378496"
+      }
+    },
+    {
+      "id": "be7d39d92fcdfbc0",
+      "type": "knowledge",
+      "content": "CVE ID: CVE-2026-0047\nDescription: In dumpBitmapsProto of ActivityManagerService.java, there is a possible way for an app to access private information due to a missing permission check. This could lead to local escalation of privilege with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 8.4\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:google:android:16.0:qpr2_beta_1:*:*:*:*:*:*, cpe:2.3:o:google:android:16.0:qpr2_beta_2:*:*:*:*:*:*, cpe:2.3:o:google:android:16.0:qpr2_beta_3:*:*:*:*:*:*",
+      "metadata": {
+        "type": "vulnerability",
+        "source": "NVD",
+        "confidence": 0.95,
+        "tags": [
+          "local",
+          "status:modified",
+          "nvd",
+          "severity:high"
+        ],
+        "created_at": "2026-04-07T15:04:55.379275",
+        "updated_at": "2026-04-07T15:04:55.379276"
+      }
+    },
+    {
+      "id": "c98e5ffdb0652519",
+      "type": "knowledge",
+      "content": "CVE ID: CVE-2026-0013\nDescription: In setupLayout of PickActivity.java, there is a possible way to start any activity as a DocumentsUI app due to a confused deputy. This could lead to local escalation of privilege with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 8.4\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:google:android:14.0:*:*:*:*:*:*:*, cpe:2.3:o:google:android:15.0:*:*:*:*:*:*:*, cpe:2.3:o:google:android:16.0:-:*:*:*:*:*:*",
+      "metadata": {
+        "type": "vulnerability",
+        "source": "NVD",
+        "confidence": 0.95,
+        "tags": [
+          "local",
+          "status:modified",
+          "nvd",
+          "severity:high"
+        ],
+        "created_at": "2026-04-07T15:04:55.380232",
+        "updated_at": "2026-04-07T15:04:55.380233"
+      }
+    },
+    {
+      "id": "c76cd9c252658978",
+      "type": "knowledge",
+      "content": "CVE ID: CVE-2026-0012\nDescription: In setHideSensitive of ExpandableNotificationRow.java, there is a possible contact name leak due due to a logic error in the code. This could lead to local information disclosure with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 6.2\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:google:android:14.0:*:*:*:*:*:*:*, cpe:2.3:o:google:android:15.0:*:*:*:*:*:*:*, cpe:2.3:o:google:android:16.0:-:*:*:*:*:*:*",
+      "metadata": {
+        "type": "vulnerability",
+        "source": "NVD",
+        "confidence": 0.95,
+        "tags": [
+          "local",
+          "status:modified",
+          "nvd",
+          "severity:medium"
+        ],
+        "created_at": "2026-04-07T15:04:55.381151",
+        "updated_at": "2026-04-07T15:04:55.381151"
+      }
+    },
+    {
+      "id": "613721a887f83571",
+      "type": "knowledge",
+      "content": "CVE ID: CVE-2026-0120\nDescription: In modem, there is a possible out of bounds write due to an incorrect bounds check. This could lead to remote code execution with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 9.8\nCVSS v3 Vector: CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H\nAttack Vector: NETWORK\nAffected CPEs: cpe:2.3:o:google:android:-:*:*:*:*:*:*:*",
+      "metadata": {
+        "type": "vulnerability",
+        "source": "NVD",
+        "confidence": 0.95,
+        "tags": [
+          "network",
+          "status:analyzed",
+          "nvd",
+          "severity:critical"
+        ],
+        "created_at": "2026-04-07T15:04:55.383522",
+        "updated_at": "2026-04-07T15:04:55.383523"
+      }
+    },
+    {
+      "id": "d687fbbdb9fa6da7",
+      "type": "knowledge",
+      "content": "CVE ID: CVE-2026-0037\nDescription: In multiple functions of ffa.c, there is a possible memory corruption due to a logic error in the code. This could lead to local escalation of privilege with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 8.4\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H\nCWE: CWE-787\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:google:android:-:*:*:*:*:*:*:*",
+      "metadata": {
+        "type": "vulnerability",
+        "source": "NVD",
+        "confidence": 0.95,
+        "tags": [
+          "CWE-787",
+          "local",
+          "status:modified",
+          "nvd",
+          "severity:high"
+        ],
+        "created_at": "2026-04-07T15:04:55.384888",
+        "updated_at": "2026-04-07T15:04:55.384888"
+      }
+    },
+    {
+      "id": "4cdc7c7fc5c5eb19",
+      "type": "knowledge",
+      "content": "CVE ID: CVE-2026-0026\nDescription: In removePermission of PermissionManagerServiceImpl.java, there is a possible way to override any system permission  due to a logic error in the code. This could lead to local escalation of privilege with no additional execution privileges needed. User interaction is needed for exploitation.\nCVSS v3 Score: 7.8\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:H\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:google:android:14.0:*:*:*:*:*:*:*",
+      "metadata": {
+        "type": "vulnerability",
+        "source": "NVD",
+        "confidence": 0.95,
+        "tags": [
+          "local",
+          "status:modified",
+          "nvd",
+          "severity:high"
+        ],
+        "created_at": "2026-04-07T15:04:55.385444",
+        "updated_at": "2026-04-07T15:04:55.385445"
+      }
+    },
+    {
+      "id": "b0e82af8ef677157",
+      "type": "knowledge",
+      "content": "CVE ID: CVE-2026-0031\nDescription: In multiple functions of mem_protect.c, there is a possible out of bounds write due to an integer overflow. This could lead to local escalation of privilege with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 8.4\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:google:android:-:*:*:*:*:*:*:*",
+      "metadata": {
+        "type": "vulnerability",
+        "source": "NVD",
+        "confidence": 0.95,
+        "tags": [
+          "local",
+          "status:modified",
+          "nvd",
+          "severity:high"
+        ],
+        "created_at": "2026-04-07T15:04:55.386252",
+        "updated_at": "2026-04-07T15:04:55.386252"
+      }
+    },
+    {
+      "id": "a289c459e7c4a8e7",
+      "type": "knowledge",
+      "content": "CVE ID: CVE-2026-0124\nDescription: There is a possible out of bounds write due to a missing bounds check. This could lead to local escalation of privilege with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 7.8\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:google:android:-:*:*:*:*:*:*:*",
+      "metadata": {
+        "type": "vulnerability",
+        "source": "NVD",
+        "confidence": 0.95,
+        "tags": [
+          "local",
+          "status:analyzed",
+          "nvd",
+          "severity:high"
+        ],
+        "created_at": "2026-04-07T15:04:55.386620",
+        "updated_at": "2026-04-07T15:04:55.386621"
+      }
+    },
+    {
+      "id": "fb001e2a31cdbac0",
+      "type": "knowledge",
+      "content": "CVE ID: CVE-2026-0115\nDescription: In Trusted Execution Environment, there is a possible key leak due to side channel information disclosure. This could lead to physical information disclosure with no additional execution privileges needed. User interaction is needed for exploitation.\nCVSS v3 Score: 2.1\nCVSS v3 Vector: CVSS:3.1/AV:P/AC:L/PR:N/UI:R/S:U/C:L/I:N/A:N\nAttack Vector: PHYSICAL\nAffected CPEs: cpe:2.3:o:google:android:-:*:*:*:*:*:*:*",
+      "metadata": {
+        "type": "vulnerability",
+        "source": "NVD",
+        "confidence": 0.95,
+        "tags": [
+          "physical",
+          "status:analyzed",
+          "nvd",
+          "severity:low"
+        ],
+        "created_at": "2026-04-07T15:04:55.388039",
+        "updated_at": "2026-04-07T15:04:55.388039"
+      }
+    },
+    {
+      "id": "42e1502d6216554c",
+      "type": "knowledge",
+      "content": "CVE ID: CVE-2026-0106\nDescription: In vpu_mmap of vpu_ioctl, there is a possible arbitrary address mmap due to a missing bounds check. This could lead to local escalation of privilege with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 9.3\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:C/C:H/I:H/A:H\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:google:android:-:*:*:*:*:*:*:*",
+      "metadata": {
+        "type": "vulnerability",
+        "source": "NVD",
+        "confidence": 0.95,
+        "tags": [
+          "local",
+          "status:modified",
+          "nvd",
+          "severity:critical"
+        ],
+        "created_at": "2026-04-07T15:04:55.388903",
+        "updated_at": "2026-04-07T15:04:55.388903"
+      }
+    },
+    {
+      "id": "8c483fb5e2c1ff9a",
+      "type": "knowledge",
+      "content": "CVE ID: CVE-2026-0112\nDescription: In vpu_open_inst of vpu_ioctl.c, there is a possible use after free due to a race condition. This could lead to local escalation of privilege with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 7.4\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:H/PR:N/UI:N/S:U/C:H/I:H/A:H\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:google:android:-:*:*:*:*:*:*:*",
+      "metadata": {
+        "type": "vulnerability",
+        "source": "NVD",
+        "confidence": 0.95,
+        "tags": [
+          "local",
+          "status:analyzed",
+          "nvd",
+          "severity:high"
+        ],
+        "created_at": "2026-04-07T15:04:55.390430",
+        "updated_at": "2026-04-07T15:04:55.390431"
+      }
+    },
+    {
+      "id": "1b5356069578e629",
+      "type": "knowledge",
+      "content": "CVE ID: CVE-2026-0401\nDescription: A post-authentication NULL Pointer Dereference vulnerability in SonicOS allows a remote attacker to crash a firewall.\nCVSS v3 Score: 4.9\nCVSS v3 Vector: CVSS:3.1/AV:N/AC:L/PR:H/UI:N/S:U/C:N/I:N/A:H\nAttack Vector: NETWORK\nAffected CPEs: cpe:2.3:o:sonicwall:sonicos:*:*:*:*:*:*:*:*, cpe:2.3:h:sonicwall:nsa_2700:-:*:*:*:*:*:*:*, cpe:2.3:h:sonicwall:nsa_3700:-:*:*:*:*:*:*:*, cpe:2.3:h:sonicwall:nsa_4700:-:*:*:*:*:*:*:*, cpe:2.3:h:sonicwall:nsa_5700:-:*:*:*:*:*:*:*\n... and 29 more",
+      "metadata": {
+        "type": "vulnerability",
+        "source": "NVD",
+        "confidence": 0.95,
+        "tags": [
+          "network",
+          "status:analyzed",
+          "nvd",
+          "severity:medium"
+        ],
+        "created_at": "2026-04-07T15:04:55.391843",
+        "updated_at": "2026-04-07T15:04:55.391844"
+      }
+    },
+    {
+      "id": "adf44081ec55927b",
+      "type": "knowledge",
+      "content": "CVE ID: CVE-2026-0406\nDescription: An insufficient input validation vulnerability in the NETGEAR XR1000v2 \nallows attackers connected to the router's LAN to execute OS command \ninjections.\nCVSS v3 Score: 8.0\nCVSS v3 Vector: CVSS:3.1/AV:A/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H\nAttack Vector: ADJACENT_NETWORK\nAffected CPEs: cpe:2.3:o:netgear:xr1000v2_firmware:*:*:*:*:*:*:*:*, cpe:2.3:h:netgear:xr1000v2:-:*:*:*:*:*:*:*",
+      "metadata": {
+        "type": "vulnerability",
+        "source": "NVD",
+        "confidence": 0.95,
+        "tags": [
+          "adjacent_network",
+          "status:analyzed",
+          "nvd",
+          "severity:high"
+        ],
+        "created_at": "2026-04-07T15:04:55.395016",
+        "updated_at": "2026-04-07T15:04:55.395017"
+      }
+    },
+    {
+      "id": "c9a0e55805d75fa7",
+      "type": "knowledge",
+      "content": "CVE ID: CVE-2026-0030\nDescription: In __host_check_page_state_range of mem_protect.c, there is a possible out of bounds write due to an incorrect bounds check. This could lead to local escalation of privilege with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 8.4\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:google:android:-:*:*:*:*:*:*:*",
+      "metadata": {
+        "type": "vulnerability",
+        "source": "NVD",
+        "confidence": 0.95,
+        "tags": [
+          "local",
+          "status:modified",
+          "nvd",
+          "severity:high"
+        ],
+        "created_at": "2026-04-07T15:04:55.396865",
+        "updated_at": "2026-04-07T15:04:55.396866"
+      }
+    },
+    {
+      "id": "9f387aa948ad9699",
+      "type": "knowledge",
+      "content": "CVE ID: CVE-2026-0020\nDescription: In parsePermissionGroup of ParsedPermissionUtils.java, there is a possible way to bypass a consent dialog to obtain permissions due to a permissions bypass. This could lead to local escalation of privilege with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 8.4\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:google:android:14.0:*:*:*:*:*:*:*, cpe:2.3:o:google:android:15.0:*:*:*:*:*:*:*, cpe:2.3:o:google:android:16.0:-:*:*:*:*:*:*, cpe:2.3:o:google:android:16.0:qpr2_beta_1:*:*:*:*:*:*, cpe:2.3:o:google:android:16.0:qpr2_beta_2:*:*:*:*:*:*\n... and 1 more",
+      "metadata": {
+        "type": "vulnerability",
+        "source": "NVD",
+        "confidence": 0.95,
+        "tags": [
+          "local",
+          "status:modified",
+          "nvd",
+          "severity:high"
+        ],
+        "created_at": "2026-04-07T15:04:55.398437",
+        "updated_at": "2026-04-07T15:04:55.398437"
+      }
+    },
+    {
+      "id": "2f9242ad6e53771a",
+      "type": "knowledge",
+      "content": "CVE ID: CVE-2026-0402\nDescription: A post-authentication Out-of-bounds Read vulnerability in SonicOS allows a remote attacker to crash a firewall.\nCVSS v3 Score: 4.9\nCVSS v3 Vector: CVSS:3.1/AV:N/AC:L/PR:H/UI:N/S:U/C:N/I:N/A:H\nAttack Vector: NETWORK\nAffected CPEs: cpe:2.3:o:sonicwall:sonicos:*:*:*:*:*:*:*:*, cpe:2.3:h:sonicwall:nsa_2700:-:*:*:*:*:*:*:*, cpe:2.3:h:sonicwall:nsa_3700:-:*:*:*:*:*:*:*, cpe:2.3:h:sonicwall:nsa_4700:-:*:*:*:*:*:*:*, cpe:2.3:h:sonicwall:nsa_5700:-:*:*:*:*:*:*:*\n... and 29 more",
+      "metadata": {
+        "type": "vulnerability",
+        "source": "NVD",
+        "confidence": 0.95,
+        "tags": [
+          "network",
+          "status:analyzed",
+          "nvd",
+          "severity:medium"
+        ],
+        "created_at": "2026-04-07T15:04:55.401880",
+        "updated_at": "2026-04-07T15:04:55.401880"
+      }
+    },
+    {
+      "id": "b3d1c208ae6c54fd",
+      "type": "knowledge",
+      "content": "CVE ID: CVE-2026-0114\nDescription: In Modem, there is a possible out of bounds write due to an incorrect bounds check. This could lead to remote code execution with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 9.8\nCVSS v3 Vector: CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H\nAttack Vector: NETWORK\nAffected CPEs: cpe:2.3:o:google:android:-:*:*:*:*:*:*:*",
+      "metadata": {
+        "type": "vulnerability",
+        "source": "NVD",
+        "confidence": 0.95,
+        "tags": [
+          "network",
+          "status:analyzed",
+          "nvd",
+          "severity:critical"
+        ],
+        "created_at": "2026-04-07T15:04:55.402407",
+        "updated_at": "2026-04-07T15:04:55.402408"
+      }
+    },
+    {
+      "id": "5ead6c4a4b4cf735",
+      "type": "knowledge",
+      "content": "CVE ID: CVE-2026-0010\nDescription: In onTransact of IDrmManagerService.cpp, there is a possible out of bounds write due to a missing bounds check. This could lead to local escalation of privilege with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 8.4\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H\nCWE: CWE-787\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:google:android:14.0:*:*:*:*:*:*:*, cpe:2.3:o:google:android:15.0:*:*:*:*:*:*:*, cpe:2.3:o:google:android:16.0:-:*:*:*:*:*:*",
+      "metadata": {
+        "type": "vulnerability",
+        "source": "NVD",
+        "confidence": 0.95,
+        "tags": [
+          "CWE-787",
+          "local",
+          "status:modified",
+          "nvd",
+          "severity:high"
+        ],
+        "created_at": "2026-04-07T15:04:55.403869",
+        "updated_at": "2026-04-07T15:04:55.403870"
+      }
+    },
+    {
+      "id": "ee939919f39dead7",
+      "type": "knowledge",
+      "content": "CVE ID: CVE-2026-0108\nDescription: The register protection of the PowerVR GPU is incorrectly configured. This could lead to local information disclosure with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 4.0\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:google:android:-:*:*:*:*:*:*:*",
+      "metadata": {
+        "type": "vulnerability",
+        "source": "NVD",
+        "confidence": 0.95,
+        "tags": [
+          "local",
+          "status:analyzed",
+          "nvd",
+          "severity:medium"
+        ],
+        "created_at": "2026-04-07T15:04:55.403991",
+        "updated_at": "2026-04-07T15:04:55.403991"
+      }
+    },
+    {
+      "id": "dfcabb8d035ed537",
+      "type": "knowledge",
+      "content": "CVE ID: CVE-2026-0121\nDescription: In VPU, there is a possible use-after-free read due to a race condition. This could lead to local information disclosure with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 2.9\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:H/PR:N/UI:N/S:U/C:L/I:N/A:N\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:google:android:-:*:*:*:*:*:*:*",
+      "metadata": {
+        "type": "vulnerability",
+        "source": "NVD",
+        "confidence": 0.95,
+        "tags": [
+          "local",
+          "status:modified",
+          "nvd",
+          "severity:low"
+        ],
+        "created_at": "2026-04-07T15:04:55.404857",
+        "updated_at": "2026-04-07T15:04:55.404857"
+      }
+    },
+    {
+      "id": "f2dac8534d749bbb",
+      "type": "knowledge",
+      "content": "CVE ID: CVE-2026-0116\nDescription: In __mfc_handle_released_buf of mfc_core_isr.c, there is a possible out of bounds write due to a missing bounds check. This could lead to remote code execution with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 9.8\nCVSS v3 Vector: CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H\nAttack Vector: NETWORK\nAffected CPEs: cpe:2.3:o:google:android:-:*:*:*:*:*:*:*",
+      "metadata": {
+        "type": "vulnerability",
+        "source": "NVD",
+        "confidence": 0.95,
+        "tags": [
+          "network",
+          "status:analyzed",
+          "nvd",
+          "severity:critical"
+        ],
+        "created_at": "2026-04-07T15:04:55.406150",
+        "updated_at": "2026-04-07T15:04:55.406151"
+      }
+    },
+    {
+      "id": "1ce806fa76d4143d",
+      "type": "knowledge",
+      "content": "CVE ID: CVE-2026-0118\nDescription: In oobconfig, there is a possible bypass of carrier restrictions due to a logic error. This could lead to local escalation of privilege with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 8.4\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:google:android:-:*:*:*:*:*:*:*",
+      "metadata": {
+        "type": "vulnerability",
+        "source": "NVD",
+        "confidence": 0.95,
+        "tags": [
+          "local",
+          "status:analyzed",
+          "nvd",
+          "severity:high"
+        ],
+        "created_at": "2026-04-07T15:04:55.409982",
+        "updated_at": "2026-04-07T15:04:55.409983"
+      }
+    },
+    {
+      "id": "a2c479b9550127d5",
+      "type": "knowledge",
+      "content": "CVE ID: CVE-2026-0110\nDescription: In MM_DATA_IND of cn_NrSmMsgHdlrFromMM.cpp, there is a possible EoP due to memory corruption. This could lead to remote escalation of privilege with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 9.8\nCVSS v3 Vector: CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H\nAttack Vector: NETWORK\nAffected CPEs: cpe:2.3:o:google:android:-:*:*:*:*:*:*:*",
+      "metadata": {
+        "type": "vulnerability",
+        "source": "NVD",
+        "confidence": 0.95,
+        "tags": [
+          "network",
+          "status:analyzed",
+          "nvd",
+          "severity:critical"
+        ],
+        "created_at": "2026-04-07T15:04:55.415460",
+        "updated_at": "2026-04-07T15:04:55.415461"
+      }
+    },
+    {
+      "id": "3691ed583b951991",
+      "type": "knowledge",
+      "content": "CVE ID: CVE-2026-0109\nDescription: In dhd_tcpdata_info_get of dhd_ip.c, there is a possible Denial of Service due to a precondition check failure. This could lead to remote denial of service with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 7.5\nCVSS v3 Vector: CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H\nCWE: CWE-754\nAttack Vector: NETWORK\nAffected CPEs: cpe:2.3:o:google:android:-:*:*:*:*:*:*:*",
+      "metadata": {
+        "type": "vulnerability",
+        "source": "NVD",
+        "confidence": 0.95,
+        "tags": [
+          "CWE-754",
+          "network",
+          "status:analyzed",
+          "nvd",
+          "severity:high"
+        ],
+        "created_at": "2026-04-07T15:04:55.416196",
+        "updated_at": "2026-04-07T15:04:55.416197"
+      }
+    },
+    {
+      "id": "4c1e6c7df88e5e08",
+      "type": "knowledge",
+      "content": "CVE ID: CVE-2026-0111\nDescription: In ns_GetUserData of ns_SmscbUtilities.c, there is a possible out of bounds write due to an incorrect bounds check. This could lead to remote escalation of privilege with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 9.8\nCVSS v3 Vector: CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H\nAttack Vector: NETWORK\nAffected CPEs: cpe:2.3:o:google:android:-:*:*:*:*:*:*:*",
+      "metadata": {
+        "type": "vulnerability",
+        "source": "NVD",
+        "confidence": 0.95,
+        "tags": [
+          "network",
+          "status:analyzed",
+          "nvd",
+          "severity:critical"
+        ],
+        "created_at": "2026-04-07T15:04:55.417855",
+        "updated_at": "2026-04-07T15:04:55.417856"
+      }
+    },
+    {
+      "id": "35481867f010e489",
+      "type": "knowledge",
+      "content": "CVE ID: CVE-2026-0498\nDescription: SAP S/4HANA (Private Cloud and On-Premise) allows an attacker with admin privileges to exploit a vulnerability in the function module exposed via RFC. This flaw enables the injection of arbitrary ABAP code/OS commands into the system, bypassing essential authorization checks. This vulnerability effectively functions as a backdoor, creating the risk of full system compromise, undermining the confidentiality, integrity and availability of the system.\nCVSS v3 Score: 9.1\nCVSS v3 Vector: CVSS:3.1/AV:N/AC:L/PR:H/UI:N/S:C/C:H/I:H/A:H\nCWE: CWE-94\nAttack Vector: NETWORK\nAffected CPEs: cpe:2.3:a:sap:s\\/4_hana:102:*:*:*:*:*:*:*, cpe:2.3:a:sap:s\\/4_hana:103:*:*:*:*:*:*:*, cpe:2.3:a:sap:s\\/4_hana:104:*:*:*:*:*:*:*, cpe:2.3:a:sap:s\\/4_hana:105:*:*:*:*:*:*:*, cpe:2.3:a:sap:s\\/4_hana:106:*:*:*:*:*:*:*\n... and 3 more",
+      "metadata": {
+        "type": "vulnerability",
+        "source": "NVD",
+        "confidence": 0.95,
+        "tags": [
+          "CWE-94",
+          "network",
+          "status:analyzed",
+          "nvd",
+          "severity:critical"
+        ],
+        "created_at": "2026-04-07T15:04:55.418688",
+        "updated_at": "2026-04-07T15:04:55.418689"
+      }
+    },
+    {
+      "id": "ac8e8ea8142005dd",
+      "type": "knowledge",
+      "content": "CVE ID: CVE-2026-0399\nDescription: Multiple post-authentication stack-based buffer overflow vulnerabilities in the SonicOS management interface due to improper bounds checking in a API endpoint.\nCVSS v3 Score: 4.9\nCVSS v3 Vector: CVSS:3.1/AV:N/AC:L/PR:H/UI:N/S:U/C:N/I:N/A:H\nAttack Vector: NETWORK\nAffected CPEs: cpe:2.3:o:sonicwall:sonicos:*:*:*:*:*:*:*:*, cpe:2.3:h:sonicwall:nsa_2700:-:*:*:*:*:*:*:*, cpe:2.3:h:sonicwall:nsa_3700:-:*:*:*:*:*:*:*, cpe:2.3:h:sonicwall:nsa_4700:-:*:*:*:*:*:*:*, cpe:2.3:h:sonicwall:nsa_5700:-:*:*:*:*:*:*:*\n... and 29 more",
+      "metadata": {
+        "type": "vulnerability",
+        "source": "NVD",
+        "confidence": 0.95,
+        "tags": [
+          "network",
+          "status:analyzed",
+          "nvd",
+          "severity:medium"
+        ],
+        "created_at": "2026-04-07T15:04:55.423141",
+        "updated_at": "2026-04-07T15:04:55.423142"
+      }
+    },
+    {
+      "id": "17a229c1066aff56",
+      "type": "knowledge",
+      "content": "CVE ID: CVE-2026-0035\nDescription: In createRequest of MediaProvider.java, there is a possible way for an app to gain read/write access to non-existing files due to a logic error in the code. This could lead to local escalation of privilege with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 8.4\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:google:android:14.0:*:*:*:*:*:*:*, cpe:2.3:o:google:android:15.0:*:*:*:*:*:*:*, cpe:2.3:o:google:android:16.0:-:*:*:*:*:*:*, cpe:2.3:o:google:android:16.0:qpr2_beta_1:*:*:*:*:*:*, cpe:2.3:o:google:android:16.0:qpr2_beta_2:*:*:*:*:*:*\n... and 1 more",
+      "metadata": {
+        "type": "vulnerability",
+        "source": "NVD",
+        "confidence": 0.95,
+        "tags": [
+          "local",
+          "status:modified",
+          "nvd",
+          "severity:high"
+        ],
+        "created_at": "2026-04-07T15:04:55.425010",
+        "updated_at": "2026-04-07T15:04:55.425011"
+      }
+    },
+    {
+      "id": "29fdea1733b68f32",
+      "type": "knowledge",
+      "content": "CVE ID: CVE-2026-0029\nDescription: In __pkvm_init_vm of pkvm.c, there is a possible memory corruption due to a logic error in the code. This could lead to local escalation of privilege with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 8.4\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:google:android:-:*:*:*:*:*:*:*",
+      "metadata": {
+        "type": "vulnerability",
+        "source": "NVD",
+        "confidence": 0.95,
+        "tags": [
+          "local",
+          "status:modified",
+          "nvd",
+          "severity:high"
+        ],
+        "created_at": "2026-04-07T15:04:55.425803",
+        "updated_at": "2026-04-07T15:04:55.425804"
+      }
+    },
+    {
+      "id": "4a9fdcae127affe2",
+      "type": "knowledge",
+      "content": "CVE ID: CVE-2026-0107\nDescription: In gmc_ddr_handle_mba_mr_req of gmc_mba_ddr.c, there is a possible escalation of privileges due to a confused deputy. This could lead to local escalation of privilege with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 8.4\nCVSS v3 Vector: CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H\nAttack Vector: LOCAL\nAffected CPEs: cpe:2.3:o:google:android:-:*:*:*:*:*:*:*",
+      "metadata": {
+        "type": "vulnerability",
+        "source": "NVD",
+        "confidence": 0.95,
+        "tags": [
+          "local",
+          "status:analyzed",
+          "nvd",
+          "severity:high"
+        ],
+        "created_at": "2026-04-07T15:04:55.428279",
+        "updated_at": "2026-04-07T15:04:55.428281"
+      }
+    },
+    {
+      "id": "2f60c606ebb6c359",
+      "type": "knowledge",
+      "content": "CVE ID: CVE-2026-0511\nDescription: SAP Fiori App Intercompany Balance Reconciliation does not perform necessary authorization checks for an authenticated user, resulting in escalation of privileges. This has high impact on confidentiality and integrity of the application ,availability is not impacted.\nCVSS v3 Score: 8.1\nCVSS v3 Vector: CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:N\nCWE: CWE-862\nAttack Vector: NETWORK",
+      "metadata": {
+        "type": "vulnerability",
+        "source": "NVD",
+        "confidence": 0.95,
+        "tags": [
+          "CWE-862",
+          "network",
+          "status:awaiting analysis",
+          "nvd",
+          "severity:high"
+        ],
+        "created_at": "2026-04-07T15:04:55.430366",
+        "updated_at": "2026-04-07T15:04:55.430366"
+      }
+    },
+    {
+      "id": "9365396dcffd76de",
+      "type": "knowledge",
+      "content": "CVE ID: CVE-2026-0504\nDescription: Due to insufficient input handling, the SAP Identity Management REST interface allows an authenticated administrator to submit specially crafted malicious REST requests that are processed by JNDI operations without adequate input neutralization. This may lead to limited disclosure or modification of data, resulting in low impact on confidentiality and integrity, with no impact on application availability.\nCVSS v3 Score: 3.8\nCVSS v3 Vector: CVSS:3.1/AV:N/AC:L/PR:H/UI:N/S:U/C:L/I:L/A:N\nCWE: CWE-943\nAttack Vector: NETWORK",
+      "metadata": {
+        "type": "vulnerability",
+        "source": "NVD",
+        "confidence": 0.95,
+        "tags": [
+          "CWE-943",
+          "network",
+          "status:awaiting analysis",
+          "nvd",
+          "severity:low"
+        ],
+        "created_at": "2026-04-07T15:04:55.430502",
+        "updated_at": "2026-04-07T15:04:55.430503"
+      }
+    },
+    {
+      "id": "523f08f39f75e3b8",
+      "type": "knowledge",
+      "content": "CVE ID: CVE-2026-0113\nDescription: In ns_GetUserData of ns_SmscbUtilities.c, there is a possible out of bounds write due to an incorrect bounds check. This could lead to remote escalation of privilege with no additional execution privileges needed. User interaction is not needed for exploitation.\nCVSS v3 Score: 9.8\nCVSS v3 Vector: CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H\nAttack Vector: NETWORK\nAffected CPEs: cpe:2.3:o:google:android:-:*:*:*:*:*:*:*",
+      "metadata": {
+        "type": "vulnerability",
+        "source": "NVD",
+        "confidence": 0.95,
+        "tags": [
+          "network",
+          "status:analyzed",
+          "nvd",
+          "severity:critical"
+        ],
+        "created_at": "2026-04-07T15:04:55.430957",
+        "updated_at": "2026-04-07T15:04:55.430958"
+      }
+    },
+    {
+      "id": "57ea1e41ea215302",
+      "type": "knowledge",
+      "content": "CVE ID: CVE-2026-0506\nDescription: Due to a Missing Authorization Check vulnerability in Application Server ABAP and ABAP Platform, an authenticated attacker could misuse an RFC function to execute form routines (FORMs) in the ABAP system. Successful exploitation could allow the attacker to write or modify data accessible via FORMs and invoke system functionality exposed via FORMs, resulting in a high impact on integrity and availability, while confidentiality remains unaffected.\nCVSS v3 Score: 8.1\nCVSS v3 Vector: CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:N/I:H/A:H\nCWE: CWE-862\nAttack Vector: NETWORK\nAffected CPEs: cpe:2.3:a:sap:netweaver_application_server_abap:700:*:*:*:sap_basis:*:*:*, cpe:2.3:a:sap:netweaver_application_server_abap:701:*:*:*:sap_basis:*:*:*, cpe:2.3:a:sap:netweaver_application_server_abap:702:*:*:*:sap_basis:*:*:*, cpe:2.3:a:sap:netweaver_application_server_abap:731:*:*:*:sap_basis:*:*:*, cpe:2.3:a:sap:netweaver_application_server_abap:740:*:*:*:sap_basis:*:*:*\n... and 10 more",
+      "metadata": {
+        "type": "vulnerability",
+        "source": "NVD",
+        "confidence": 0.95,
+        "tags": [
+          "CWE-862",
+          "network",
+          "status:analyzed",
+          "nvd",
+          "severity:high"
+        ],
+        "created_at": "2026-04-07T15:04:55.434728",
+        "updated_at": "2026-04-07T15:04:55.434729"
+      }
+    },
+    {
+      "id": "8afb3f9635a8cd84",
+      "type": "knowledge",
+      "content": "CVE ID: CVE-2026-0505\nDescription: The BSP applications allow an unauthenticated user to manipulate user-controlled URL parameters that are not sufficiently validated. This could result in unvalidated redirection to attacker-controlled websites, leading to a low impact on confidentiality and integrity, and no impact on the availability of the application.\nCVSS v3 Score: 6.1\nCVSS v3 Vector: CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:C/C:L/I:L/A:N\nCWE: CWE-79\nAttack Vector: NETWORK\nAffected CPEs: cpe:2.3:a:sap:document_management_system:600:*:*:*:*:*:*:*, cpe:2.3:a:sap:document_management_system:602:*:*:*:*:*:*:*, cpe:2.3:a:sap:document_management_system:603:*:*:*:*:*:*:*, cpe:2.3:a:sap:document_management_system:604:*:*:*:*:*:*:*, cpe:2.3:a:sap:document_management_system:605:*:*:*:*:*:*:*\n... and 10 more",
+      "metadata": {
+        "type": "vulnerability",
+        "source": "NVD",
+        "confidence": 0.95,
+        "tags": [
+          "CWE-79",
+          "network",
+          "status:analyzed",
+          "nvd",
+          "severity:medium"
+        ],
+        "created_at": "2026-04-07T15:04:55.436834",
+        "updated_at": "2026-04-07T15:04:55.436835"
+      }
+    },
+    {
+      "id": "244d4a7c672961cd",
+      "type": "knowledge",
+      "content": "CVE ID: CVE-2026-0507\nDescription: Due to an OS Command Injection vulnerability in SAP Application Server for ABAP and SAP NetWeaver RFCSDK, an authenticated attacker with administrative access and adjacent network access could upload specially crafted content to the server. If processed by the application, this content enables execution of arbitrary operating system commands. Successful exploitation could lead to full compromise of the system�s confidentiality, integrity, and availability.\nCVSS v3 Score: 8.4\nCVSS v3 Vector: CVSS:3.1/AV:A/AC:L/PR:H/UI:N/S:C/C:H/I:H/A:H\nCWE: CWE-78\nAttack Vector: ADJACENT_NETWORK",
+      "metadata": {
+        "type": "vulnerability",
+        "source": "NVD",
+        "confidence": 0.95,
+        "tags": [
+          "CWE-78",
+          "adjacent_network",
+          "status:awaiting analysis",
+          "nvd",
+          "severity:high"
+        ],
+        "created_at": "2026-04-07T15:04:55.437439",
+        "updated_at": "2026-04-07T15:04:55.437440"
+      }
+    },
+    {
+      "id": "027be1f98d69c2e3",
+      "type": "knowledge",
+      "content": "CVE ID: CVE-2026-0509\nDescription: SAP NetWeaver Application Server ABAP and ABAP Platform allows an authenticated, low-privileged user to perform background Remote Function Calls without the required S_RFC authorization in certain cases. This can result in a high impact on integrity and availability, and no impact on the confidentiality of the application.\nCVSS v3 Score: 9.6\nCVSS v3 Vector: CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:C/C:N/I:H/A:H\nCWE: CWE-862\nAttack Vector: NETWORK\nAffected CPEs: cpe:2.3:a:sap:netweaver_as_abap_kernel:7.22:*:*:*:*:*:*:*, cpe:2.3:a:sap:netweaver_as_abap_kernel:7.53:*:*:*:*:*:*:*, cpe:2.3:a:sap:netweaver_as_abap_kernel:7.54:*:*:*:*:*:*:*, cpe:2.3:a:sap:netweaver_as_abap_kernel:7.77:*:*:*:*:*:*:*, cpe:2.3:a:sap:netweaver_as_abap_kernel:7.89:*:*:*:*:*:*:*\n... and 9 more",
+      "metadata": {
+        "type": "vulnerability",
+        "source": "NVD",
+        "confidence": 0.95,
+        "tags": [
+          "CWE-862",
+          "network",
+          "status:analyzed",
+          "nvd",
+          "severity:critical"
+        ],
+        "created_at": "2026-04-07T15:04:55.438530",
+        "updated_at": "2026-04-07T15:04:55.438531"
+      }
+    },
+    {
+      "id": "5a3f1c457c6cb5b1",
+      "type": "knowledge",
+      "content": "CVE ID: CVE-2026-0508\nDescription: The SAP BusinessObjects Business Intelligence Platform allows an authenticated attacker with high privileges to insert malicious URL within the application. Upon successful exploitation, the victim may click on this malicious URL, resulting in an unvalidated redirect to the attacker-controlled domain and subsequently download the malicious content. This vulnerability has a high impact on the confidentiality and integrity of the application, with no effect on the availability of the application.\nCVSS v3 Score: 7.3\nCVSS v3 Vector: CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:C/C:H/I:H/A:N\nCWE: CWE-601\nAttack Vector: NETWORK\nAffected CPEs: cpe:2.3:a:sap:businessobjects_business_intelligence_platform:430:*:*:*:enterprise:*:*:*, cpe:2.3:a:sap:businessobjects_business_intelligence_platform:2025:*:*:*:enterprise:*:*:*, cpe:2.3:a:sap:businessobjects_business_intelligence_platform:2027:*:*:*:enterprise:*:*:*",
+      "metadata": {
+        "type": "vulnerability",
+        "source": "NVD",
+        "confidence": 0.95,
+        "tags": [
+          "CWE-601",
+          "network",
+          "status:analyzed",
+          "nvd",
+          "severity:high"
+        ],
+        "created_at": "2026-04-07T15:04:55.444030",
+        "updated_at": "2026-04-07T15:04:55.444031"
+      }
+    },
+    {
+      "id": "aed3542542768848",
+      "type": "knowledge",
+      "content": "CVE ID: CVE-2026-0510\nDescription: The User Management Engine (UME) in NetWeaver Application Server for Java (NW AS Java) utilizes an obsolete cryptographic algorithm for encrypting User Mapping data. This weakness could allow an attacker with high-privileged access to exploit the vulnerability under specific conditions potentially leading to partial disclosure of sensitive information.This has low impact on confidentiality with no impact on integrity and availability of the application.\nCVSS v3 Score: 3.0\nCVSS v3 Vector: CVSS:3.1/AV:N/AC:H/PR:H/UI:N/S:C/C:L/I:N/A:N\nCWE: CWE-326\nAttack Vector: NETWORK",
+      "metadata": {
+        "type": "vulnerability",
+        "source": "NVD",
+        "confidence": 0.95,
+        "tags": [
+          "CWE-326",
+          "network",
+          "status:awaiting analysis",
+          "nvd",
+          "severity:low"
+        ],
+        "created_at": "2026-04-07T15:04:55.444318",
+        "updated_at": "2026-04-07T15:04:55.444319"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "76b82740557fc2cd",
+      "source": "eb39afd7c1765f77",
+      "target": "8ce24fc12defb6da",
+      "relationship": "related_to",
+      "weight": 0.8767123287671232,
+      "created_at": "2026-04-07T15:03:51.736046"
+    },
+    {
+      "id": "c9838a6486b904e7",
+      "source": "f5e16ba9c2234e87",
+      "target": "0849a518caaf7787",
+      "relationship": "related_to",
+      "weight": 0.5915492957746479,
+      "created_at": "2026-04-07T15:03:51.748189"
+    },
+    {
+      "id": "bca769cc55f33617",
+      "source": "b3498791e43d5dd9",
+      "target": "7c5921212ca05662",
+      "relationship": "related_to",
+      "weight": 0.5932203389830508,
+      "created_at": "2026-04-07T15:03:51.775886"
+    },
+    {
+      "id": "470813f9c859a7b7",
+      "source": "b2c0d74ebd47584d",
+      "target": "8a3e627c923872b4",
+      "relationship": "related_to",
+      "weight": 0.524390243902439,
+      "created_at": "2026-04-07T15:03:51.802078"
+    },
+    {
+      "id": "59e48d450e0c631a",
+      "source": "8a3e627c923872b4",
+      "target": "b2c0d74ebd47584d",
+      "relationship": "related_to",
+      "weight": 0.524390243902439,
+      "created_at": "2026-04-07T15:03:51.831243"
+    },
+    {
+      "id": "60bc76bff50917f6",
+      "source": "8a3e627c923872b4",
+      "target": "0a67f3b532b8b219",
+      "relationship": "related_to",
+      "weight": 0.5813953488372093,
+      "created_at": "2026-04-07T15:03:51.832413"
+    },
+    {
+      "id": "8add147a63fb51ac",
+      "source": "0a67f3b532b8b219",
+      "target": "8a3e627c923872b4",
+      "relationship": "related_to",
+      "weight": 0.5813953488372093,
+      "created_at": "2026-04-07T15:03:51.888075"
+    },
+    {
+      "id": "4b2453e9a02892df",
+      "source": "7c5921212ca05662",
+      "target": "b3498791e43d5dd9",
+      "relationship": "related_to",
+      "weight": 0.5932203389830508,
+      "created_at": "2026-04-07T15:03:51.895001"
+    },
+    {
+      "id": "d36b701a082acb85",
+      "source": "8ce24fc12defb6da",
+      "target": "eb39afd7c1765f77",
+      "relationship": "related_to",
+      "weight": 0.8767123287671232,
+      "created_at": "2026-04-07T15:03:51.923140"
+    },
+    {
+      "id": "a772d64c3558b420",
+      "source": "0849a518caaf7787",
+      "target": "f5e16ba9c2234e87",
+      "relationship": "related_to",
+      "weight": 0.5915492957746479,
+      "created_at": "2026-04-07T15:03:51.953394"
+    }
+  ]
+}

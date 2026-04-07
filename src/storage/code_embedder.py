@@ -178,13 +178,9 @@ class CodeEmbedder:
                 # 设置 padding_side 为 "left"
                 tokenizer_kwargs["padding_side"] = "left"
                 # Qwen3-Embedding-0.6B 官方推荐配置
-                try:
-                    # 尝试使用 flash_attention_2
-                    model_kwargs["attn_implementation"] = "flash_attention_2"  # 加速+省显存
-                    print("✅ 启用 flash_attention_2 加速")
-                except Exception:
-                    # 回退到常规注意力机制
-                    print("ℹ️ flash_attention_2 不可用，使用常规注意力机制")
+                # 默认禁用 flash_attention_2，以提高兼容性
+                print("ℹ️ 默认禁用 flash_attention_2，以提高系统兼容性")
+                # 如需启用 flash_attention_2，请在配置中设置 use_flash_attention=True
                 model_kwargs["torch_dtype"] = torch.float16  # fp16 省内存
                 model_kwargs["device_map"] = "auto"
                 # Matryoshka 压缩维度将在 encode 方法中设置

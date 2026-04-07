@@ -58,10 +58,28 @@ class NVDProcessor:
         Returns:
             格式类型: v1.1, v2.0, unknown
         """
-        if 'cve' in data and 'CVE_data_meta' in data.get('cve', {}):
-            return 'v1.1'
-        elif 'id' in data and 'descriptions' in data:
+        # 检测 v1.1 格式
+        if 'cve' in data:
+            cve_data = data.get('cve', {})
+            if 'CVE_data_meta' in cve_data:
+                return 'v1.1'
+        
+        # 检测 v2.0 格式
+        if 'id' in data and 'descriptions' in data:
             return 'v2.0'
+        
+        # 检测 CVE_Items 格式（包含多个CVE的集合）
+        if 'CVE_Items' in data:
+            return 'v1.1_collection'
+        
+        # 检测其他可能的NVD格式
+        if 'CVE_data_type' in data or 'CVE_data_format' in data:
+            return 'v1.1'
+        
+        # 检测单个CVE的其他格式
+        if any(key in data for key in ['cveMetadata', 'containers', 'references']):
+            return 'v2.0'
+        
         return 'unknown'
 
     def parse_nvd_v2(self, data: Dict[str, Any]) -> Optional[Tuple[CVEStructuredData, List[CVEChunk]]]:
@@ -389,22 +407,51 @@ class NVDProcessor:
             logger.error(f"解析NVD v1.1数据失败: {e}")
             return None
 
-    def parse_nvd(self, data: Dict[str, Any]) -> Optional[Tuple[CVEStructuredData, List[CVEChunk]]]:
+    def parse_nvd(self, data: Dict[str, Any], file_path: Optional[str] = None) -> Optional[Tuple[CVEStructuredData, List[CVEChunk]]]:
         """解析NVD数据
 
         Args:
             data: NVD数据
+            file_path: 文件路径，用于日志记录
 
         Returns:
             (结构化数据, 数据块列表) 或 None
         """
         format_type = self.detect_format(data)
+        file_info = f" (文件: {file_path})" if file_path else ""
+        
         if format_type == 'v2.0':
+            logger.debug(f"检测到v2.0格式{file_info}")
             return self.parse_nvd_v2(data)
         elif format_type == 'v1.1':
+            logger.debug(f"检测到v1.1格式{file_info}")
             return self.parse_nvd_v1(data)
+        elif format_type == 'v1.1_collection':
+            # 对于CVE_Items集合，我们不在这里处理，而是在process_zip_file和process_directory中处理
+            logger.debug(f"检测到CVE_Items集合格式{file_info}，将在外部处理")
+            return None
         else:
-            logger.warning(f"未知的NVD数据格式")
+            # 尝试所有可能的格式解析
+            logger.warning(f"未知的NVD数据格式{file_info}，尝试所有可能的解析方法")
+            
+            # 记录数据的前几个键，便于分析格式
+            if data:
+                first_keys = list(data.keys())[:5]  # 只取前5个键
+                logger.warning(f"数据前几个键: {first_keys}{file_info}")
+            
+            # 尝试v2.0解析
+            result = self.parse_nvd_v2(data)
+            if result:
+                logger.info(f"使用v2.0解析成功{file_info}")
+                return result
+            
+            # 尝试v1.1解析
+            result = self.parse_nvd_v1(data)
+            if result:
+                logger.info(f"使用v1.1解析成功{file_info}")
+                return result
+            
+            logger.error(f"所有解析方法都失败{file_info}")
             return None
 
     def process_zip_file(self, zip_path: Path) -> List[Tuple[CVEStructuredData, List[CVEChunk]]]:
@@ -437,12 +484,12 @@ class NVDProcessor:
                                 logger.info(f"处理文件 {member.filename}，包含 {len(cve_items)} 个CVE")
                                 
                                 for item in cve_items:
-                                    result = self.parse_nvd(item)
+                                    result = self.parse_nvd(item, str(member.filename))
                                     if result:
                                         results.append(result)
                             else:
                                 # 单个CVE文件
-                                result = self.parse_nvd(data)
+                                result = self.parse_nvd(data, str(member.filename))
                                 if result:
                                     results.append(result)
                     except Exception as e:
@@ -480,12 +527,12 @@ class NVDProcessor:
                             logger.info(f"处理文件 {json_file.name}，包含 {len(cve_items)} 个CVE")
                             
                             for item in cve_items:
-                                result = self.parse_nvd(item)
+                                result = self.parse_nvd(item, str(json_file))
                                 if result:
                                     results.append(result)
                         else:
                             # 单个CVE文件
-                            result = self.parse_nvd(data)
+                            result = self.parse_nvd(data, str(json_file))
                             if result:
                                 results.append(result)
                 except Exception as e:

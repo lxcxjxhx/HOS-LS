@@ -291,27 +291,34 @@ def nvd() -> None:
 
 
 @nvd.command()
-@click.option("--zip", "-z", type=click.Path(exists=True), default="nvd-json-data-feeds-main.zip", help="NVD压缩包路径 (默认: nvd-json-data-feeds-main.zip)")
+@click.option("--zip", "-z", type=click.Path(), default="nvd-json-data-feeds-main.zip", help="NVD压缩包路径 (默认: nvd-json-data-feeds-main.zip)")
+@click.option("--dir", "-d", type=click.Path(exists=True, file_okay=False, dir_okay=True), help="NVD数据目录路径")
 @click.option("--limit", "-l", type=int, default=None, help="限制处理的文件数量 (用于测试)")
 @click.option("--no-rag", is_flag=True, help="不导入到RAG库，仅解析")
 @click.option("--batch-size", "-b", type=int, default=1000, help="批量处理大小 (默认: 1000)")
 @click.option("--resume", type=int, default=0, help="从指定文件开始续传")
 @click.option("--model", "-m", default="Qwen/Qwen3-Embedding-0.6B", help="嵌入模型名称 (默认: Qwen/Qwen3-Embedding-0.6B)")
 @click.pass_context
-def update(ctx, zip, limit, no_rag, batch_size, resume, model) -> None:
+def update(ctx, zip, dir, limit, no_rag, batch_size, resume, model) -> None:
     """更新NVD漏洞库，解压并同步到本地RAG库"""
     config: Config = ctx.obj["config"]
     
-    zip_path = Path(zip)
-    if not zip_path.exists():
-        script_dir = Path(__file__).parent.parent.parent
-        script_zip = script_dir / zip
-        if script_zip.exists():
-            zip_path = script_zip
-        else:
-            console.print(f"[bold red]错误: 找不到压缩包: {zip}[/bold red]")
-            console.print(f"请确保文件存在于: {zip_path.absolute()}")
-            return
+    # 确定输入路径
+    if dir:
+        input_path = Path(dir)
+        console.print(f"[bold green]使用目录导入: {input_path}[/bold green]")
+    else:
+        input_path = Path(zip)
+        if not input_path.exists():
+            script_dir = Path(__file__).parent.parent.parent
+            script_zip = script_dir / zip
+            if script_zip.exists():
+                input_path = script_zip
+            else:
+                console.print(f"[bold red]错误: 找不到压缩包: {zip}[/bold red]")
+                console.print(f"请确保文件存在于: {input_path.absolute()}")
+                return
+        console.print(f"[bold green]使用压缩包导入: {input_path}[/bold green]")
     
     rag_base = None
     if not no_rag:
@@ -357,7 +364,7 @@ def update(ctx, zip, limit, no_rag, batch_size, resume, model) -> None:
                     progress.update(phase3, completed=current, total=total)
             
             stats = run_update(
-                str(zip_path),
+                str(input_path),
                 rag_base=rag_base,
                 limit=limit,
                 batch_size=batch_size,

@@ -237,10 +237,28 @@ class CVE:
 
 
 def detect_format(data):
-    if 'cve' in data and 'CVE_data_meta' in data.get('cve', {}):
-        return 'v1.1'
-    elif 'id' in data and 'descriptions' in data:
+    # 检测 v1.1 格式
+    if 'cve' in data:
+        cve_data = data.get('cve', {})
+        if 'CVE_data_meta' in cve_data:
+            return 'v1.1'
+    
+    # 检测 v2.0 格式
+    if 'id' in data and 'descriptions' in data:
         return 'v2.0'
+    
+    # 检测 CVE_Items 格式（包含多个CVE的集合）
+    if 'CVE_Items' in data:
+        return 'v1.1_collection'
+    
+    # 检测其他可能的NVD格式
+    if 'CVE_data_type' in data or 'CVE_data_format' in data:
+        return 'v1.1'
+    
+    # 检测单个CVE的其他格式
+    if any(key in data for key in ['cveMetadata', 'containers', 'references']):
+        return 'v2.0'
+    
     return 'unknown'
 
 
@@ -457,29 +475,50 @@ def parse_nvd_v1(data):
         return None
 
 
-def parse_nvd(data):
+def parse_nvd(data, file_path=None):
     format_type = detect_format(data)
+    file_info = f" (文件: {file_path})" if file_path else ""
+    
     if format_type == 'v2.0':
+        logger.debug(f"检测到v2.0格式{file_info}")
         return parse_nvd_v2(data)
     elif format_type == 'v1.1':
+        logger.debug(f"检测到v1.1格式{file_info}")
         return parse_nvd_v1(data)
+    elif format_type == 'v1.1_collection':
+        # 对于CVE_Items集合，我们不在这里处理，而是在process_file中处理
+        logger.debug(f"检测到CVE_Items集合格式{file_info}，将在外部处理")
+        return None
     else:
-        logger.warning(f"未知的NVD数据格式")
+        # 尝试所有可能的格式解析
+        logger.warning(f"未知的NVD数据格式{file_info}，尝试所有可能的解析方法")
+        
+        # 记录数据的前几个键，便于分析格式
+        if data:
+            first_keys = list(data.keys())[:5]  # 只取前5个键
+            logger.warning(f"数据前几个键: {first_keys}{file_info}")
+        
+        # 尝试v2.0解析
+        result = parse_nvd_v2(data)
+        if result:
+            logger.info(f"使用v2.0解析成功{file_info}")
+            return result
+        
+        # 尝试v1.1解析
+        result = parse_nvd_v1(data)
+        if result:
+            logger.info(f"使用v1.1解析成功{file_info}")
+            return result
+        
+        logger.error(f"所有解析方法都失败{file_info}")
         return None
 
 
 def should_skip_path(path):
-    path_parts = Path(path).parts
+    path_str = str(path)
     for filtered in FILTERED_PATHS:
-        filtered_parts = Path(filtered).parts
-        if len(path_parts) >= len(filtered_parts):
-            match = True
-            for i in range(len(filtered_parts)):
-                if path_parts[i] != filtered_parts[i]:
-                    match = False
-                    break
-            if match:
-                return True
+        if filtered in path_str:
+            return True
     return False
 
 
@@ -605,8 +644,11 @@ def run_update(zip_path, rag_base=None, limit=None, batch_size=1000, resume_from
         if input_path.is_dir():
             logger.info(f"检测到文件夹路径: {zip_path}")
             logger.info("直接扫描文件夹中的JSON文件...")
-            # 直接扫描文件夹中的JSON文件
-            cve_files = list(input_path.rglob('*.json'))
+            # 直接扫描文件夹中的JSON文件，并过滤不需要的文件
+            cve_files = []
+            for json_file in input_path.rglob('*.json'):
+                if not should_skip_path(json_file):
+                    cve_files.append(json_file)
             logger.info(f"在文件夹中找到 {len(cve_files)} 个JSON文件")
             # 不需要临时目录，使用输入文件夹作为临时目录
             temp_dir = input_path
@@ -725,22 +767,44 @@ def run_update(zip_path, rag_base=None, limit=None, batch_size=1000, resume_from
                 data = safe_load_json(file_path)
                 if data is None:
                     return None
-                cve = parse_nvd(data)
-                if cve:
-                    if rag_base:
-                        try:
-                            knowledge = cve_to_knowledge(cve)
-                            return knowledge
-                        except Exception as e:
-                            print(f"\n   ❌ 转换为知识对象失败: {os.path.basename(file_path)}")
-                            print(f"      错误: {e}")
-                            import traceback
-                            traceback.print_exc()
-                            return None
+                
+                # 检查是否为CVE_Items集合
+                if 'CVE_Items' in data:
+                    # 处理CVE_Items集合
+                    cve_items = data.get('CVE_Items', [])
+                    logger.info(f"处理文件 {os.path.basename(file_path)}，包含 {len(cve_items)} 个CVE")
+                    
+                    # 处理第一个CVE作为代表
+                    if cve_items:
+                        cve = parse_nvd(cve_items[0], file_path)
+                        if cve:
+                            if rag_base:
+                                try:
+                                    knowledge = cve_to_knowledge(cve)
+                                    return knowledge
+                                except Exception as e:
+                                    print(f"\n   ❌ 转换为知识对象失败: {os.path.basename(file_path)}")
+                                    print(f"      错误: {e}")
+                                    import traceback
+                                    traceback.print_exc()
+                                    return None
+                    return None
+                else:
+                    # 单个CVE文件
+                    cve = parse_nvd(data, file_path)
+                    if cve:
+                        if rag_base:
+                            try:
+                                knowledge = cve_to_knowledge(cve)
+                                return knowledge
+                            except Exception as e:
+                                print(f"\n   ❌ 转换为知识对象失败: {os.path.basename(file_path)}")
+                                print(f"      错误: {e}")
+                                import traceback
+                                traceback.print_exc()
+                                return None
                     else:
                         return None
-                else:
-                    return None
             except Exception as e:
                 print(f"\n   ❌ 文件处理异常: {os.path.basename(file_path)}")
                 print(f"      错误: {e}")

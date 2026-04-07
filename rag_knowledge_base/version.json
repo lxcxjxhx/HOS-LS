@@ -1,0 +1,35 @@
+{
+  "version": 11,
+  "history": [
+    {
+      "timestamp": "2026-04-07T15:04:01.713203",
+      "version": 10,
+      "action": "save",
+      "details": {
+        "backup_path": "rag_knowledge_base\\history\\v9_20260407_150401",
+        "knowledge_count": 56,
+        "pattern_count": 0,
+        "graph_nodes_count": 56,
+        "graph_edges_count": 10,
+        "created_backup": true,
+        "built_index": true
+      }
+    },
+    {
+      "timestamp": "2026-04-07T15:05:06.119060",
+      "version": 11,
+      "action": "save",
+      "details": {
+        "backup_path": "rag_knowledge_base\\history\\v10_20260407_150505",
+        "knowledge_count": 109,
+        "pattern_count": 0,
+        "graph_nodes_count": 109,
+        "graph_edges_count": 10,
+        "created_backup": true,
+        "built_index": true
+      }
+    }
+  ],
+  "usage_count": 12,
+  "last_updated": "2026-04-07T15:05:06.119071"
+}
