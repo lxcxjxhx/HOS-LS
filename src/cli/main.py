@@ -36,7 +36,17 @@ class AsyncWorker:
     def start(self):
         """启动Worker"""
         self.running = True
-        asyncio.create_task(self._process_queue())
+        # 在单独的线程中运行事件循环
+        def run_event_loop():
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            loop.create_task(self._process_queue())
+            loop.run_forever()
+        
+        import threading
+        thread = threading.Thread(target=run_event_loop)
+        thread.daemon = True
+        thread.start()
     
     def stop(self):
         """停止Worker"""
@@ -65,10 +75,10 @@ def print_banner() -> None:
     """打印欢迎横幅"""
     banner = f"""
 [bold blue] _   _  ___   ___       _     _[/bold blue]
-[bold blue]| | | |/ _ \ / __|     | |   | |[/bold blue]
-[bold blue]| |_| | | | |\ \  _____| |___| |[/bold blue]
+[bold blue]| | | |/ _ \\ / __|     | |   | |[/bold blue]
+[bold blue]| |_| | | | |\\ \\  _____| |___| |[/bold blue]
 [bold blue]|  _  | |_| | > >|_____|  ___  |[/bold blue]
-[bold blue]|_| |_|\___/ |_/       |_|   |_|[/bold blue]
+[bold blue]|_| |_|\\___/ |_/       |_|   |_|[/bold blue]
 [bold green]AI 生成代码安全扫描工具 v{__version__}[/bold green]
     """
     console.print(banner)
@@ -286,8 +296,9 @@ def nvd() -> None:
 @click.option("--no-rag", is_flag=True, help="不导入到RAG库，仅解析")
 @click.option("--batch-size", "-b", type=int, default=1000, help="批量处理大小 (默认: 1000)")
 @click.option("--resume", type=int, default=0, help="从指定文件开始续传")
+@click.option("--model", "-m", default="Qwen/Qwen3-Embedding-0.6B", help="嵌入模型名称 (默认: Qwen/Qwen3-Embedding-0.6B)")
 @click.pass_context
-def update(ctx, zip, limit, no_rag, batch_size, resume) -> None:
+def update(ctx, zip, limit, no_rag, batch_size, resume, model) -> None:
     """更新NVD漏洞库，解压并同步到本地RAG库"""
     config: Config = ctx.obj["config"]
     
@@ -305,8 +316,8 @@ def update(ctx, zip, limit, no_rag, batch_size, resume) -> None:
     rag_base = None
     if not no_rag:
         try:
-            rag_base = get_rag_knowledge_base()
-            console.print("[bold green]已连接到RAG知识库[/bold green]")
+            rag_base = get_rag_knowledge_base(model_name=model)
+            console.print(f"[bold green]已连接到RAG知识库，使用模型: {model}[/bold green]")
         except Exception as e:
             console.print(f"[bold yellow]警告: 无法初始化RAG知识库: {e}[/bold yellow]")
             console.print("[bold yellow]将仅解析数据，不导入RAG[/bold yellow]")
@@ -367,6 +378,254 @@ def update(ctx, zip, limit, no_rag, batch_size, resume) -> None:
     console.print("=" * 60)
     for key, value in stats.items():
         console.print(f"  {key}: {value}")
+
+
+@nvd.command()
+@click.pass_context
+def show_checkpoint(ctx) -> None:
+    """显示当前断点状态"""
+    import json
+    from pathlib import Path
+    from datetime import datetime
+    
+    checkpoint_path = Path("nvd_update_checkpoint.json")
+    
+    if not checkpoint_path.exists():
+        console.print("[bold yellow]未找到断点文件[/bold yellow]")
+        return
+    
+    try:
+        with open(checkpoint_path, "r", encoding="utf-8") as f:
+            checkpoint = json.load(f)
+        
+        console.print(Panel("[bold blue]断点信息[/bold blue]"))
+        
+        version = checkpoint.get("version", "1.0")
+        last_processed = checkpoint.get("last_processed", 0)
+        temp_dir = checkpoint.get("temp_dir")
+        current_stage = checkpoint.get("current_stage", "unknown")
+        batch_count = checkpoint.get("batch_count", 0)
+        stats_checkpoint = checkpoint.get("stats", {})
+        stage_progress = checkpoint.get("stage_progress", {})
+        timestamp = checkpoint.get("timestamp")
+        
+        table = Table(title="断点详情")
+        table.add_column("项目", style="cyan")
+        table.add_column("值", style="green")
+        
+        table.add_row("版本", version)
+        table.add_row("上次处理到文件", str(last_processed))
+        table.add_row("当前阶段", current_stage)
+        table.add_row("已完成批次", str(batch_count))
+        if temp_dir:
+            table.add_row("临时目录", temp_dir)
+        if timestamp:
+            try:
+                dt = datetime.fromisoformat(timestamp)
+                table.add_row("保存时间", dt.strftime("%Y-%m-%d %H:%M:%S"))
+            except:
+                table.add_row("保存时间", timestamp)
+        
+        console.print(table)
+        
+        if stats_checkpoint:
+            console.print("\n[bold]统计信息:[/bold]")
+            stats_table = Table()
+            stats_table.add_column("统计项", style="cyan")
+            stats_table.add_column("值", style="green")
+            for key, value in stats_checkpoint.items():
+                stats_table.add_row(str(key), str(value))
+            console.print(stats_table)
+        
+        if stage_progress:
+            console.print("\n[bold]阶段进度:[/bold]")
+            progress_table = Table()
+            progress_table.add_column("阶段", style="cyan")
+            progress_table.add_column("状态", style="green")
+            progress_table.add_column("进度", style="yellow")
+            
+            stage_names = {"extract": "解压", "embed": "嵌入", "graph": "图谱构建"}
+            
+            for stage, info in stage_progress.items():
+                stage_name = stage_names.get(stage, stage)
+                done = info.get("done", False)
+                progress = info.get("progress", 0)
+                
+                status = "✅ 完成" if done else "⏳ 进行中"
+                progress_str = str(progress) if progress else "-"
+                
+                progress_table.add_row(stage_name, status, progress_str)
+            
+            console.print(progress_table)
+        
+    except Exception as e:
+        console.print(f"[bold red]读取断点文件失败: {e}[/bold red]")
+        import traceback
+        traceback.print_exc()
+
+
+@nvd.command()
+@click.option("--force", "-f", is_flag=True, help="强制清理，无需确认")
+@click.pass_context
+def clean_checkpoints(ctx, force) -> None:
+    """清理断点残留文件"""
+    from pathlib import Path
+    import shutil
+    
+    files_to_clean = [
+        "nvd_update_checkpoint.json",
+        "nvd_batch_checkpoint.json",
+        "nvd_batch_checkpoint.txt"
+    ]
+    
+    temp_dir_pattern = "nvd_update_*"
+    
+    console.print(Panel("[bold red]清理断点残留文件[/bold red]"))
+    
+    # 查找需要清理的文件
+    found_files = []
+    for filename in files_to_clean:
+        file_path = Path(filename)
+        if file_path.exists():
+            found_files.append(file_path)
+    
+    # 查找临时目录
+    found_dirs = []
+    for item in Path(".").iterdir():
+        if item.is_dir() and item.name.startswith("nvd_update_"):
+            found_dirs.append(item)
+    
+    if not found_files and not found_dirs:
+        console.print("[bold green]没有发现断点残留文件[/bold green]")
+        return
+    
+    # 显示将要清理的内容
+    console.print("\n[bold]发现以下文件/目录将被清理:[/bold]")
+    
+    if found_files:
+        console.print("\n[cyan]文件:[/cyan]")
+        for file_path in found_files:
+            size = file_path.stat().st_size
+            console.print(f"  - {file_path.name} ({size} bytes)")
+    
+    if found_dirs:
+        console.print("\n[cyan]临时目录:[/cyan]")
+        for dir_path in found_dirs:
+            # 计算目录大小
+            dir_size = 0
+            for f in dir_path.rglob("*"):
+                if f.is_file():
+                    dir_size += f.stat().st_size
+            size_mb = dir_size / (1024 * 1024)
+            console.print(f"  - {dir_path.name} ({size_mb:.2f} MB)")
+    
+    # 确认删除
+    if not force:
+        console.print()
+        try:
+            import click
+            if not click.confirm("确定要清理以上文件/目录吗？", default=False):
+                console.print("[yellow]已取消清理[/yellow]")
+                return
+        except Exception as e:
+            console.print(f"[yellow]无法获取确认，使用 --force 参数强制清理: {e}[/yellow]")
+            return
+    
+    # 执行清理
+    console.print("\n[bold]开始清理...[/bold]")
+    
+    deleted_count = 0
+    
+    # 删除文件
+    for file_path in found_files:
+        try:
+            file_path.unlink()
+            console.print(f"  [green]✓[/green] 已删除: {file_path.name}")
+            deleted_count += 1
+        except Exception as e:
+            console.print(f"  [red]✗[/red] 删除失败: {file_path.name} - {e}")
+    
+    # 删除目录
+    for dir_path in found_dirs:
+        try:
+            shutil.rmtree(dir_path, ignore_errors=True)
+            if not dir_path.exists():
+                console.print(f"  [green]✓[/green] 已删除: {dir_path.name}")
+                deleted_count += 1
+            else:
+                console.print(f"  [yellow]⚠[/yellow] 目录可能未完全删除: {dir_path.name}")
+        except Exception as e:
+            console.print(f"  [red]✗[/red] 删除失败: {dir_path.name} - {e}")
+    
+    console.print(f"\n[bold green]清理完成！共删除 {deleted_count} 项[/bold green]")
+
+
+@cli.group()
+def model() -> None:
+    """模型管理命令"""
+    pass
+
+
+@model.command()
+@click.option("--model", "-m", default="Qwen/Qwen3-Embedding-0.6B", help="模型名称 (默认: Qwen/Qwen3-Embedding-0.6B)")
+@click.option("--output", "-o", type=click.Path(), help="输出目录")
+@click.option("--force", is_flag=True, help="强制覆盖现有模型")
+@click.option("--token", "-t", required=True, help="Hugging Face 登录 token")
+@click.pass_context
+def download(ctx, model, output, force, token) -> None:
+    """下载模型"""
+    config: Config = ctx.obj["config"]
+    
+    console.print(f"[bold blue]开始下载模型: {model}[/bold blue]")
+    
+    # 设置输出目录
+    if not output:
+        # 默认保存到模型缓存目录，为每个模型创建独立的子目录
+        import os
+        from pathlib import Path
+        model_cache = Path.home() / ".cache" / "huggingface" / "hub"
+        # 为模型创建标准的 Hugging Face 目录结构
+        model_dir_name = f"models--{model.replace('/', '--')}"
+        output = model_cache / model_dir_name
+    else:
+        output = Path(output)
+    
+    output.mkdir(parents=True, exist_ok=True)
+    console.print(f"[info]模型将保存到: {output}[/info]")
+    
+    # 下载模型
+    try:
+        from huggingface_hub import snapshot_download
+        
+        # 显示下载进度
+        with Progress(
+            SpinnerColumn(),
+            BarColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
+            console=console
+        ) as progress:
+            task = progress.add_task("[cyan]下载模型...", total=100)
+            
+            # 下载模型
+            console.print("[info]开始下载，这可能需要几分钟时间...[/info]")
+            result = snapshot_download(
+                repo_id=model,
+                local_dir=output,
+                force_download=force,
+                token=token
+            )
+            
+            progress.update(task, completed=100)
+        
+        console.print(f"[bold green]模型下载成功: {model}[/bold green]")
+        console.print(f"[info]模型保存位置: {result}[/info]")
+        
+    except Exception as e:
+        console.print(f"[bold red]下载失败: {e}[/bold red]")
+        import traceback
+        traceback.print_exc()
+        sys.exit(1)
 
 
 def _display_result(result) -> None:

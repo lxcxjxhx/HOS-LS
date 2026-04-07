@@ -12,11 +12,19 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 from enum import Enum
 
-try:
-    from sentence_transformers import SentenceTransformer
+# 全局极致内存优化
+os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True,max_split_size_mb:256"
+os.environ["TOKENIZERS_PARALLELISM"] = "false"  # 避免tokenizer警告
 
+try:
+    print("🔍 尝试导入 sentence_transformers...")
+    from sentence_transformers import SentenceTransformer
+    print("✅ sentence_transformers 导入成功")
     SENTENCE_TRANSFORMERS_AVAILABLE = True
-except ImportError:
+except ImportError as e:
+    print(f"❌ sentence_transformers 导入失败: {e}")
+    import traceback
+    traceback.print_exc()
     SENTENCE_TRANSFORMERS_AVAILABLE = False
 
 try:
@@ -45,6 +53,8 @@ class ModelType(Enum):
     BGE_BASE = "BAAI/bge-base-en-v1.5"
     BGE_SMALL = "BAAI/bge-small-en-v1.5"
     E5_BASE = "intfloat/e5-base-v2"
+    QWEN3_EMBEDDING_0_6B = "Qwen/Qwen3-Embedding-0.6B"
+    EMBEDDING_GEMMA_300M = "google/embeddinggemma-300M"
     CUSTOM = "custom"
 
 
@@ -52,13 +62,17 @@ class ModelType(Enum):
 class EmbedConfig:
     """嵌入配置"""
 
-    model_name: str = "all-MiniLM-L6-v2"
-    batch_size: int = 64
+    model_name: str = "BAAI/bge-m3"
+    batch_size: int = 1024
     max_length: int = 512
     use_cache: bool = True
     cache_dir: Optional[str] = None
     device: str = "auto"
     use_blockify: bool = True
+    use_onnx: bool = False
+    precision: str = "float16"
+    matryoshka_dim: Optional[int] = 256  # Matryoshka 压缩维度（从512降到256，内存/速度大幅改善）
+    embedding_batch_size: int = 1024  # 嵌入批处理大小
 
 
 class CodeEmbedder:
@@ -88,28 +102,133 @@ class CodeEmbedder:
             return
 
         try:
+            print(f"🔧 开始初始化模型: {self.config.model_name}")
+            print(f"⏱️ 开始时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+            
             model_kwargs = {}
+            tokenizer_kwargs = {}
+            
+            # 检查模型路径
+            import os
+            from pathlib import Path
+            cache_dir = self.config.cache_dir or str(Path.home() / ".cache" / "huggingface" / "hub")
+            print(f"🔍 检查模型缓存目录: {cache_dir}")
+            
+            # 检查具体模型目录
+            model_dir_name = f"models--{self.config.model_name.replace('/', '--')}"
+            model_path = Path(cache_dir) / model_dir_name
+            print(f"🔍 检查模型目录: {model_path}")
+            print(f"📁 目录是否存在: {model_path.exists()}")
+            if model_path.exists():
+                files = list(model_path.iterdir())[:10]  # 只显示前10个文件
+                print(f"📄 目录中的文件: {[f.name for f in files]}")
+                # 如果本地模型目录存在，直接使用本地路径
+                model_name_or_path = str(model_path)
+                print(f"✅ 使用本地模型路径: {model_name_or_path}")
+            else:
+                # 否则使用模型名称从 Hugging Face 下载
+                model_name_or_path = self.config.model_name
+                print(f"ℹ️ 使用模型名称: {model_name_or_path}")
+            
             if self.config.cache_dir:
                 model_kwargs["cache_folder"] = self.config.cache_dir
+                print(f"📁 使用缓存目录: {self.config.cache_dir}")
+            
+            # 添加 Hugging Face token 认证
+            import os
+            hf_token = os.environ.get("HUGGING_FACE_HUB_TOKEN")
+            if hf_token:
+                model_kwargs["token"] = hf_token
+                print("✅ 已设置 Hugging Face token")
+            else:
+                # 尝试从文件读取 token
+                token_file = Path.home() / "HUGGINGFACE"
+                if token_file.exists():
+                    try:
+                        with open(token_file, 'r', encoding='utf-8') as f:
+                            hf_token = f.read().strip()
+                        model_kwargs["token"] = hf_token
+                        print("✅ 从文件读取 Hugging Face token")
+                    except Exception as e:
+                        print(f"ℹ️ 读取 token 文件失败: {e}")
+                else:
+                    print("ℹ️ 未设置 Hugging Face token")
 
             # 自动检测 GPU
             if self.config.device == "auto":
                 if TORCH_AVAILABLE and torch.cuda.is_available():
                     device = "cuda"
                     print(f"✅ Using GPU: {torch.cuda.get_device_name(0)}")
+                    print(f"🔍 GPU 内存: {torch.cuda.get_device_properties(0).total_memory / 1024**3:.2f} GB")
                 else:
                     device = "cpu"
                     print("ℹ️ Using CPU (GPU not available)")
             else:
                 device = self.config.device
+                print(f"📱 使用指定设备: {device}")
 
-            model_kwargs["device"] = device
+            # 为 Qwen3-Embedding-0.6B 添加特殊配置
+            if "Qwen3-Embedding" in self.config.model_name:
+                print("🔧 Configuring Qwen3-Embedding model...")
+                # 设置 padding_side 为 "left"
+                tokenizer_kwargs["padding_side"] = "left"
+                # Qwen3-Embedding-0.6B 官方推荐配置
+                try:
+                    # 尝试使用 flash_attention_2
+                    model_kwargs["attn_implementation"] = "flash_attention_2"  # 加速+省显存
+                    print("✅ 启用 flash_attention_2 加速")
+                except Exception:
+                    # 回退到常规注意力机制
+                    print("ℹ️ flash_attention_2 不可用，使用常规注意力机制")
+                model_kwargs["torch_dtype"] = torch.float16  # fp16 省内存
+                model_kwargs["device_map"] = "auto"
+                # Matryoshka 压缩维度将在 encode 方法中设置
+            
+            # 为 google/embeddinggemma-300M 添加特殊配置
+            elif "embeddinggemma-300M" in self.config.model_name:
+                print("🔧 Configuring google/embeddinggemma-300M（保守稳定版）...")
+                # 设置 padding_side 为 "left"
+                tokenizer_kwargs = {"padding_side": "left"}
+                # embeddinggemma-300M 配置
+                model_kwargs = {
+                    "torch_dtype": torch.float16,
+                    "device_map": "auto",
+                }
+                # 设置模型最大序列长度
+                self.config.max_length = 256
+                print("✅ 模型加载完成（256维压缩 + 极致内存优化）")
+
+            # 支持 ONNX 后端
+            if self.config.use_onnx and "Qwen3-Embedding" not in self.config.model_name:
+                model_kwargs["backend"] = "onnx"
+                model_kwargs["model_kwargs"] = {
+                    "provider": "CUDAExecutionProvider" if device == "cuda" else "CPUExecutionProvider"
+                }
 
             self._model = SentenceTransformer(
-                self.config.model_name,
-                **model_kwargs
+                model_name_or_path,
+                model_kwargs=model_kwargs,
+                tokenizer_kwargs=tokenizer_kwargs
             )
 
+            # 确保模型移动到正确的设备
+            if TORCH_AVAILABLE:
+                print(f"🚚 将模型移动到 {device} 设备...")
+                self._model = self._model.to(device)
+                # 设置精度
+                if device == "cuda" and self.config.precision == "float16":
+                    print("🔄 将模型精度设置为 float16...")
+                    self._model = self._model.half()
+                # torch.compile 加速（PyTorch 2.4+ 以上支持）
+                try:
+                    print("⚡ 启用 torch.compile 加速...")
+                    self._model = torch.compile(self._model, mode="reduce-overhead")
+                    print("✅ 已启用 torch.compile 加速")
+                except Exception as e:
+                    print(f"ℹ️ torch.compile 不可用: {e}")
+
+            print(f"⏱️ 模型初始化完成时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+            print(f"✅ 模型 {self.config.model_name} 初始化成功")
             self._initialized = True
         except Exception as e:
             print(f"❌ Model initialization failed: {e}")
@@ -137,18 +256,35 @@ class CodeEmbedder:
 
         return embedding
 
-    def embed_batch(self, codes: List[str]) -> List[List[float]]:
+    def embed_batch(self, codes: List[str], batch_size: int = 1024) -> List[List[float]]:
         """批量生成嵌入
 
         Args:
             codes: 代码列表
+            batch_size: 批处理大小
 
         Returns:
             嵌入向量列表
         """
         if not codes:
             return []
-
+        
+        print(f"\n🚀 开始生成嵌入... 批次大小: {len(codes)} 条（外层512）")
+        
+        # 3次强力清理
+        import gc
+        for _ in range(3):
+            gc.collect()
+            if TORCH_AVAILABLE and torch.cuda.is_available():
+                torch.cuda.empty_cache()
+                torch.cuda.reset_peak_memory_stats()
+        
+        # 极致 GPU 加速设置
+        if TORCH_AVAILABLE:
+            torch.backends.cudnn.benchmark = True
+            torch.set_float32_matmul_precision('high')
+            torch.backends.cuda.matmul.allow_tf32 = True
+        
         embeddings: List[List[float]] = []
         uncached_codes: List[str] = []
         uncached_indices: List[int] = []
@@ -164,7 +300,9 @@ class CodeEmbedder:
             uncached_indices.append(i)
 
         if uncached_codes:
-            batch_embeddings = self._generate_embeddings_batch(uncached_codes)
+            # 新增！阻止梯度缓存，进一步省内存
+            with torch.no_grad():
+                batch_embeddings = self._generate_embeddings_batch(uncached_codes)
 
             for i, (idx, embedding) in enumerate(zip(uncached_indices, batch_embeddings)):
                 embeddings.insert(idx, embedding)
@@ -172,6 +310,12 @@ class CodeEmbedder:
                 if self.config.use_cache:
                     cache_key = self._generate_cache_key(uncached_codes[i])
                     self._cache[cache_key] = embedding
+
+        # 再次清理
+        for _ in range(2):
+            gc.collect()
+            if TORCH_AVAILABLE and torch.cuda.is_available():
+                torch.cuda.empty_cache()
 
         return embeddings
 
@@ -261,11 +405,25 @@ class CodeEmbedder:
         try:
             # 使用Blockify压缩
             compressed_code = self._blockify(code)
+            
+            # 为 embeddinggemma-300M 设置特殊参数
+            encode_kwargs = {}
+            if self.config.matryoshka_dim:
+                encode_kwargs["truncate_dim"] = self.config.matryoshka_dim
+            
+            if "embeddinggemma-300M" in self.config.model_name:
+                # 使用 numpy 格式，减少 GPU 内存占用
+                convert_to_tensor = False
+            else:
+                convert_to_tensor = TORCH_AVAILABLE
+            
             embedding = self._model.encode(
                 compressed_code,
                 batch_size=self.config.batch_size,
-                max_length=self.config.max_length,
                 show_progress_bar=False,
+                convert_to_tensor=convert_to_tensor,
+                normalize_embeddings=True,
+                **encode_kwargs
             )
 
             if NUMPY_AVAILABLE and isinstance(embedding, np.ndarray):
@@ -291,29 +449,70 @@ class CodeEmbedder:
             return [self._fallback_embedding(code) for code in codes]
 
         try:
-            # 使用Blockify压缩
-            compressed_codes = [self._blockify(code) for code in codes]
+            print(f"📊 开始批量生成嵌入，总条数: {len(codes)}")
+            print(f"⏱️ 开始时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
             
-            # 优化批处理大小以充分利用 GPU
-            batch_size = min(self.config.batch_size, 128)  # 增加批处理大小以提高 GPU 利用率
-            
-            embeddings = self._model.encode(
-                compressed_codes,
-                batch_size=batch_size,
-                max_length=self.config.max_length,
-                show_progress_bar=False,
-                convert_to_tensor=TORCH_AVAILABLE,  # 使用张量输出以提高性能
-            )
-
-            if TORCH_AVAILABLE and isinstance(embeddings, torch.Tensor):
-                # 确保在 CPU 上转换为 numpy 数组
-                embeddings = embeddings.cpu().numpy()
-
-            if NUMPY_AVAILABLE and isinstance(embeddings, np.ndarray):
-                return embeddings.tolist()
-            elif isinstance(embeddings, list):
-                return embeddings
+            # 为不同模型设置合适的 batch_size
+            if "Qwen3-Embedding" in self.config.model_name:
+                batch_size = self.config.embedding_batch_size  # 使用配置的嵌入批处理大小
+            elif "embeddinggemma-300M" in self.config.model_name:
+                batch_size = self.config.embedding_batch_size  # 使用配置的嵌入批处理大小
             else:
+                batch_size = self.config.batch_size
+            
+            print(f"🔧 使用批处理大小: {batch_size}")
+            
+            # 可选 Matryoshka 压缩维度（省注入内存）
+            encode_kwargs = {}
+            if self.config.matryoshka_dim:
+                encode_kwargs["truncate_dim"] = self.config.matryoshka_dim
+                print(f"📏 使用 Matryoshka 压缩维度: {self.config.matryoshka_dim}")
+            
+            # 为 embeddinggemma-300M 设置特殊参数
+            if "embeddinggemma-300M" in self.config.model_name:
+                # 使用 numpy 格式，减少 GPU 内存占用
+                convert_to_tensor = False
+                print("📊 使用 numpy 格式输出")
+            else:
+                convert_to_tensor = TORCH_AVAILABLE
+                print(f"📊 使用 {'tensor' if convert_to_tensor else 'numpy'} 格式输出")
+            
+            print("🚀 开始生成嵌入...")
+            batch_start_time = datetime.now()
+            # 自动检测设备
+            device = "cuda" if TORCH_AVAILABLE and torch.cuda.is_available() else "cpu"
+            print(f"📱 使用设备: {device}")
+            
+            # 使用 torch.no_grad() 阻止梯度缓存，进一步省内存
+            with torch.no_grad():
+                batch_embeddings = self._model.encode(
+                    codes,
+                    batch_size=batch_size,  # 内层 batch 设为与外层一致
+                    device=device,
+                    show_progress_bar=True,  # 显示进度条
+                    convert_to_tensor=convert_to_tensor,
+                    normalize_embeddings=True,
+                    **encode_kwargs
+                )
+            
+            batch_end_time = datetime.now()
+            batch_time = (batch_end_time - batch_start_time).total_seconds()
+            print(f"✅ 嵌入完成，耗时: {batch_time:.2f} 秒")
+
+            if TORCH_AVAILABLE and isinstance(batch_embeddings, torch.Tensor):
+                # 确保在 CPU 上转换为 numpy 数组
+                print("🔄 将 tensor 转换为 numpy 数组...")
+                batch_embeddings = batch_embeddings.cpu().numpy()
+
+            if NUMPY_AVAILABLE and isinstance(batch_embeddings, np.ndarray):
+                print(f"📥 处理 numpy 嵌入，形状: {batch_embeddings.shape}")
+                return batch_embeddings.tolist()
+            elif isinstance(batch_embeddings, list):
+                print(f"📥 处理列表嵌入，长度: {len(batch_embeddings)}")
+                return batch_embeddings
+            else:
+                # 降级到单个嵌入
+                print("⚠️  降级到单个嵌入处理...")
                 return [self._fallback_embedding(code) for code in codes]
 
         except Exception as e:
@@ -332,9 +531,10 @@ class CodeEmbedder:
         hash_value = hashlib.sha256(code.encode()).hexdigest()
         embedding = []
 
-        for i in range(0, 384, 2):
+        # 生成512维向量，与模型一致
+        for i in range(0, 512):
             if i < len(hash_value):
-                embedding.append(int(hash_value[i:i+2], 16) / 255.0)
+                embedding.append(int(hash_value[i % len(hash_value)], 16) / 15.0)
             else:
                 embedding.append(0.0)
 

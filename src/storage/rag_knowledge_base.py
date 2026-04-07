@@ -19,16 +19,103 @@ from src.storage.vector_store import VectorStore
 logger = get_logger(__name__)
 
 
+def validate_json_file(file_path: Path) -> tuple[bool, str | None, Exception | None]:
+    """验证JSON文件
+    
+    Args:
+        file_path: JSON文件路径
+        
+    Returns:
+        (是否有效, 错误信息, 异常对象)
+    """
+    if not file_path.exists():
+        return False, "文件不存在", None
+    
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+        # 尝试加载
+        data = json.loads(content)
+        return True, None, None
+    except json.JSONDecodeError as e:
+        return False, f"JSON语法错误: {e}", e
+    except Exception as e:
+        return False, f"文件读取错误: {e}", e
+
+
+def find_latest_valid_backup(history_path: Path) -> Path | None:
+    """查找最近的有效备份
+    
+    Args:
+        history_path: 历史备份目录
+        
+    Returns:
+        最近的有效备份路径，或None
+    """
+    if not history_path.exists():
+        return None
+    
+    # 获取所有备份目录，按时间倒序
+    backup_dirs = sorted(
+        [d for d in history_path.iterdir() if d.is_dir()],
+        key=lambda x: x.stat().st_mtime,
+        reverse=True
+    )
+    
+    for backup_dir in backup_dirs:
+        # 检查备份是否有效
+        knowledge_valid, _, _ = validate_json_file(backup_dir / "knowledge.json")
+        if knowledge_valid:
+            return backup_dir
+    
+    return None
+
+
+def restore_from_backup(backup_dir: Path, target_dir: Path) -> bool:
+    """从备份恢复
+    
+    Args:
+        backup_dir: 备份目录
+        target_dir: 目标目录
+        
+    Returns:
+        是否恢复成功
+    """
+    try:
+        # 复制备份文件到目标目录
+        for file_name in ["knowledge.json", "patterns.json", "knowledge_graph.json"]:
+            src_file = backup_dir / file_name
+            if src_file.exists():
+                shutil.copy(src_file, target_dir / file_name)
+        
+        # 复制向量存储
+        src_vector = backup_dir / "vector_store"
+        if src_vector.exists():
+            target_vector = target_dir / "vector_store"
+            if target_vector.exists():
+                shutil.rmtree(target_vector)
+            shutil.copytree(src_vector, target_vector)
+        
+        logger.info(f"从备份恢复成功: {backup_dir}")
+        return True
+    except Exception as e:
+        logger.error(f"从备份恢复失败: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
+
+
 @dataclass
 class RAGKnowledgeBase:
     """RAG知识库管理系统"""
 
-    def __init__(self, config: Optional[Config] = None, base_path: Optional[Union[str, Path]] = None):
+    def __init__(self, config: Optional[Config] = None, base_path: Optional[Union[str, Path]] = None, model_name: Optional[str] = None):
         """初始化RAG知识库
 
         Args:
             config: 配置对象
             base_path: 知识库基础路径
+            model_name: 嵌入模型名称
         """
         self.config = config or get_config()
         self.base_path = Path(base_path or "./rag_knowledge_base")
@@ -45,7 +132,7 @@ class RAGKnowledgeBase:
         self.history_path.mkdir(parents=True, exist_ok=True)
         
         # 向量存储
-        self.vector_store = VectorStore(self.base_path / "vector_store")
+        self.vector_store = VectorStore(self.base_path / "vector_store", model_name=model_name)
         
         # 内存存储
         self._knowledge: Dict[str, Knowledge] = {}
@@ -69,6 +156,37 @@ class RAGKnowledgeBase:
         # 加载现有数据
         self.load()
         self.load_version_info()
+    
+    def _reset_knowledge_base(self) -> None:
+        """重置知识库到初始状态"""
+        logger.warning("重置知识库到初始状态...")
+        
+        # 清空内存存储
+        self._knowledge.clear()
+        self._patterns.clear()
+        self._graph_nodes.clear()
+        self._graph_edges.clear()
+        self._type_index.clear()
+        self._tag_index.clear()
+        
+        # 重置版本信息
+        self.version = 1
+        self.history = []
+        self.usage_count = 0
+        
+        # 清空向量存储
+        self.vector_store.clear()
+        
+        # 删除损坏的文件
+        for file_path in [self.knowledge_path, self.patterns_path, self.graph_path]:
+            if file_path.exists():
+                try:
+                    file_path.unlink()
+                    logger.info(f"已删除损坏的文件: {file_path}")
+                except Exception as e:
+                    logger.warning(f"删除文件失败: {file_path} - {e}")
+        
+        logger.warning("知识库已重置到初始状态")
         
     def _get_memory_usage(self) -> int:
         """获取当前内存使用情况
@@ -139,75 +257,105 @@ class RAGKnowledgeBase:
         # 检查内存限制
         if not self._check_memory_limit():
             logger.warning("内存使用接近限制，将分批处理")
-            # 分批处理
-            batch_size = 100
+            # 分批处理 - 使用大 batch 大小以提高 GPU 利用率
+            import torch
+            inject_batch_size = 4096  # 关键！使用大 batch 大小以提高 GPU 利用率
             total_added = 0
-            for i in range(0, len(knowledge_list), batch_size):
-                batch = knowledge_list[i:i+batch_size]
-                if not self._check_memory_limit():
-                    logger.warning("内存使用超过限制，暂停处理")
-                    # 清理内存
-                    import gc
-                    gc.collect()
-                    # 再次检查内存
-                    if not self._check_memory_limit():
-                        logger.error("内存使用仍然超过限制，无法继续处理")
-                        break
+            total_batches = (len(knowledge_list) + inject_batch_size - 1) // inject_batch_size
+            
+            for i in range(0, len(knowledge_list), inject_batch_size):
+                batch = knowledge_list[i:i+inject_batch_size]
+                batch_num = i // inject_batch_size + 1
                 
-                # 批量添加到内存存储
-                for knowledge in batch:
-                    self._knowledge[knowledge.id] = knowledge
-                    self._update_indexes(knowledge)
-                    self._add_to_graph(knowledge)
+                try:
+                    # 批量添加到内存存储
+                    for knowledge in batch:
+                        self._knowledge[knowledge.id] = knowledge
+                        self._update_indexes(knowledge)
+                        self._add_to_graph(knowledge)
+                    
+                    # 批量添加到向量存储
+                    documents = []
+                    for knowledge in batch:
+                        documents.append({
+                            "document_id": knowledge.id,
+                            "content": knowledge.content,
+                            "metadata": {
+                                "type": knowledge.knowledge_type.value,
+                                "source": knowledge.source,
+                                "tags": knowledge.tags
+                            }
+                        })
+                    
+                    # 批量添加文档到向量存储
+                    self.vector_store.add_documents(documents, build_index=build_index)
+                    total_added += len(batch)
+                    logger.info(f"✅ 成功注入批次 {batch_num}/{total_batches}：{len(batch)} 条")
+                except Exception as e:
+                    logger.error(f"❌ 批次 {batch_num} 失败: {e}，跳过或重试")
+                    continue
                 
-                # 批量添加到向量存储
-                documents = []
-                for knowledge in batch:
-                    documents.append({
-                        "document_id": knowledge.id,
-                        "content": knowledge.content,
-                        "metadata": {
-                            "type": knowledge.knowledge_type.value,
-                            "source": knowledge.source,
-                            "tags": knowledge.tags
-                        }
-                    })
-                
-                # 批量添加文档到向量存储
-                self.vector_store.add_documents(documents, build_index=build_index)
-                total_added += len(batch)
+                # 每批注入后强制清理内存
+                import gc
+                gc.collect()
+                if torch.cuda.is_available():
+                    torch.cuda.empty_cache()
+                    logger.info("已清理 GPU 内存")
             
             # 条件性保存
             if auto_save:
                 self.save()
             return total_added
         else:
-            # 批量添加到内存存储
-            for knowledge in knowledge_list:
-                self._knowledge[knowledge.id] = knowledge
-                self._update_indexes(knowledge)
-                self._add_to_graph(knowledge)
+            # 即使内存充足，也使用大 batch 大小以提高 GPU 利用率
+            import torch
+            inject_batch_size = 4096  # 关键！使用大 batch 大小以提高 GPU 利用率
+            total_added = 0
+            total_batches = (len(knowledge_list) + inject_batch_size - 1) // inject_batch_size
             
-            # 批量添加到向量存储
-            documents = []
-            for knowledge in knowledge_list:
-                documents.append({
-                    "document_id": knowledge.id,
-                    "content": knowledge.content,
-                    "metadata": {
-                        "type": knowledge.knowledge_type.value,
-                        "source": knowledge.source,
-                        "tags": knowledge.tags
-                    }
-                })
-            
-            # 批量添加文档到向量存储
-            self.vector_store.add_documents(documents, build_index=build_index)
+            for i in range(0, len(knowledge_list), inject_batch_size):
+                batch = knowledge_list[i:i+inject_batch_size]
+                batch_num = i // inject_batch_size + 1
+                
+                try:
+                    # 批量添加到内存存储
+                    for knowledge in batch:
+                        self._knowledge[knowledge.id] = knowledge
+                        self._update_indexes(knowledge)
+                        self._add_to_graph(knowledge)
+                    
+                    # 批量添加到向量存储
+                    documents = []
+                    for knowledge in batch:
+                        documents.append({
+                            "document_id": knowledge.id,
+                            "content": knowledge.content,
+                            "metadata": {
+                                "type": knowledge.knowledge_type.value,
+                                "source": knowledge.source,
+                                "tags": knowledge.tags
+                            }
+                        })
+                    
+                    # 批量添加文档到向量存储
+                    self.vector_store.add_documents(documents, build_index=build_index)
+                    total_added += len(batch)
+                    logger.info(f"✅ 成功注入批次 {batch_num}/{total_batches}：{len(batch)} 条")
+                except Exception as e:
+                    logger.error(f"❌ 批次 {batch_num} 失败: {e}，跳过或重试")
+                    continue
+                
+                # 每批注入后强制清理内存
+                import gc
+                gc.collect()
+                if torch.cuda.is_available():
+                    torch.cuda.empty_cache()
+                    logger.info("已清理 GPU 内存")
             
             # 条件性保存
             if auto_save:
                 self.save()
-            return len(knowledge_list)
+            return total_added
 
     def add_pattern(self, pattern: Pattern) -> str:
         """添加模式
@@ -536,6 +684,42 @@ class RAGKnowledgeBase:
 
     def load(self) -> None:
         """加载知识库"""
+        logger.info("开始加载知识库...")
+        
+        # 先进行数据完整性检查
+        files_to_check = [
+            (self.knowledge_path, "knowledge.json"),
+            (self.patterns_path, "patterns.json"),
+            (self.graph_path, "knowledge_graph.json"),
+        ]
+        
+        damaged_files = []
+        for file_path, file_name in files_to_check:
+            if file_path.exists():
+                is_valid, error_msg, _ = validate_json_file(file_path)
+                if not is_valid:
+                    damaged_files.append((file_name, error_msg))
+                    logger.error(f"发现损坏的文件: {file_name} - {error_msg}")
+        
+        # 如果有损坏文件，尝试从备份恢复
+        if damaged_files:
+            logger.warning("发现损坏的文件，尝试从备份恢复...")
+            latest_backup = find_latest_valid_backup(self.history_path)
+            if latest_backup:
+                logger.info(f"找到有效备份: {latest_backup}")
+                # 询问是否恢复（这里我们自动恢复）
+                if restore_from_backup(latest_backup, self.base_path):
+                    logger.info("从备份恢复成功，重新加载知识库")
+                else:
+                    logger.error("从备份恢复失败，将重置知识库")
+                    # 重置知识库
+                    self._reset_knowledge_base()
+            else:
+                logger.error("没有找到有效备份，将重置知识库")
+                self._reset_knowledge_base()
+        else:
+            logger.info("所有文件完整性检查通过")
+        
         # 加载知识
         if self.knowledge_path.exists():
             try:
@@ -564,8 +748,11 @@ class RAGKnowledgeBase:
                             "tags": knowledge.tags
                         }
                     )
+                logger.info(f"成功加载 {len(knowledge_data)} 条知识")
             except Exception as e:
                 logger.error(f"加载知识失败: {e}")
+                import traceback
+                traceback.print_exc()
         
         # 加载模式
         if self.patterns_path.exists():
@@ -1158,13 +1345,16 @@ class RAGKnowledgeBase:
 _rag_knowledge_base: Optional[RAGKnowledgeBase] = None
 
 
-def get_rag_knowledge_base() -> RAGKnowledgeBase:
+def get_rag_knowledge_base(model_name: Optional[str] = None) -> RAGKnowledgeBase:
     """获取全局RAG知识库实例
+
+    Args:
+        model_name: 嵌入模型名称
 
     Returns:
         RAG知识库实例
     """
     global _rag_knowledge_base
     if _rag_knowledge_base is None:
-        _rag_knowledge_base = RAGKnowledgeBase()
+        _rag_knowledge_base = RAGKnowledgeBase(model_name=model_name)
     return _rag_knowledge_base

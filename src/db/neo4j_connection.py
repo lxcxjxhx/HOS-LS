@@ -6,7 +6,7 @@
 from typing import Dict, List, Optional, Any
 
 from neo4j import GraphDatabase
-from neo4j_graphrag import GraphRAG
+from neo4j_graphrag.generation import GraphRAG
 from neo4j_graphrag.embeddings import OpenAIEmbeddings
 
 from src.core.config import Config, get_config

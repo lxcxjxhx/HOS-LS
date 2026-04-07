@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Any
 
 from src.utils.logger import get_logger
+from src.storage.code_embedder import CodeEmbedder, EmbedConfig
 
 logger = get_logger(__name__)
 
@@ -19,11 +20,12 @@ class VectorStore:
     实现基于本地文件的向量存储，支持文档的嵌入和相似度搜索。
     """
 
-    def __init__(self, storage_path: Path):
+    def __init__(self, storage_path: Path, model_name: Optional[str] = None):
         """初始化向量存储
 
         Args:
             storage_path: 存储路径
+            model_name: 嵌入模型名称
         """
         self.storage_path = storage_path
         self.storage_path.mkdir(parents=True, exist_ok=True)
@@ -36,6 +38,12 @@ class VectorStore:
         self._embeddings: Optional[np.ndarray] = None
         self._documents: Dict[str, Dict] = {}
         self._document_ids: List[str] = []
+        
+        # 初始化 CodeEmbedder
+        config = EmbedConfig()
+        if model_name:
+            config.model_name = model_name
+        self.embedder = CodeEmbedder(config)
         
         # 加载现有数据
         self.load()
@@ -50,6 +58,18 @@ class VectorStore:
         """
         # 生成嵌入
         embedding = self._generate_embedding(content)
+        
+        # 检查嵌入维度是否一致
+        if self._embeddings is not None:
+            existing_dim = self._embeddings.shape[1]
+            new_dim = len(embedding)
+            if existing_dim != new_dim:
+                logger.warning(f"嵌入维度不匹配: 现有维度 {existing_dim}, 新维度 {new_dim}")
+                logger.warning("清空现有嵌入数据以使用新维度")
+                # 清空现有数据
+                self._embeddings = None
+                self._document_ids = []
+                self._documents.clear()
         
         # 添加到内存存储
         if document_id in self._documents:
@@ -86,19 +106,49 @@ class VectorStore:
         
         # 批量处理文档
         new_embeddings = []
-        new_document_ids = []
+        contents = []
+        doc_info = []
         
         for doc in documents:
             document_id = doc["document_id"]
             content = doc["content"]
             metadata = doc["metadata"]
             
-            # 生成嵌入
-            embedding = self._generate_embedding(content)
-            new_embeddings.append(embedding)
-            new_document_ids.append(document_id)
+            contents.append(content)
+            doc_info.append((document_id, content, metadata))
             
-            # 更新文档信息
+        # 使用批量嵌入
+        if self.embedder.is_available() and contents:
+            try:
+                # 使用 CodeEmbedder 的批量嵌入功能
+                batch_embeddings = self.embedder.embed_batch(contents)
+                new_embeddings = [np.array(embedding) for embedding in batch_embeddings]
+            except Exception as e:
+                logger.error(f"批量嵌入失败: {e}")
+                # 降级到单个嵌入
+                new_embeddings = [self._generate_embedding(content) for content in contents]
+        else:
+            # 单个生成嵌入
+            new_embeddings = [self._generate_embedding(content) for content in contents]
+        
+        # 检查嵌入维度是否一致
+        if new_embeddings:
+            embedding_dim = len(new_embeddings[0])
+            
+            # 检查现有嵌入维度是否匹配
+            if self._embeddings is not None:
+                existing_dim = self._embeddings.shape[1]
+                if existing_dim != embedding_dim:
+                    logger.warning(f"嵌入维度不匹配: 现有维度 {existing_dim}, 新维度 {embedding_dim}")
+                    logger.warning("清空现有嵌入数据以使用新维度")
+                    # 清空现有数据
+                    self._embeddings = None
+                    self._document_ids = []
+                    self._documents.clear()
+        
+        # 更新文档信息
+        for i, (document_id, content, metadata) in enumerate(doc_info):
+            embedding = new_embeddings[i]
             self._documents[document_id] = {
                 "content": content,
                 "metadata": metadata,
@@ -299,31 +349,27 @@ class VectorStore:
         Returns:
             嵌入向量
         """
-        # 使用简单的TF-IDF-like嵌入作为示例
-        # 实际应用中应该使用更先进的嵌入模型
-        words = text.lower().split()
-        word_set = set(words)
-        embedding = []
-        
-        # 使用前100个常见词作为特征
-        common_words = [
-            "the", "and", "of", "in", "a", "is", "that", "for", "on", "with",
-            "as", "by", "at", "from", "to", "this", "are", "have", "be", "has",
-            "it", "which", "or", "but", "an", "will", "not", "if", "can", "all",
-            "were", "when", "there", "what", "so", "out", "up", "about", "into", "than",
-            "then", "some", "like", "other", "how", "just", "more", "most", "time", "now",
-            "no", "man", "one", "year", "people", "day", "way", "make", "help", "take",
-            "see", "place", "work", "week", "system", "security", "vulnerability", "attack", "risk", "threat"
-        ]
-        
-        for word in common_words:
-            embedding.append(1.0 if word in word_set else 0.0)
-        
-        # 归一化
-        embedding = np.array(embedding)
-        norm = np.linalg.norm(embedding)
-        if norm > 0:
-            embedding = embedding / norm
+        # 使用 CodeEmbedder 生成嵌入
+        if self.embedder.is_available():
+            embedding = self.embedder.embed_code(text)
+            embedding = np.array(embedding)
+        else:
+            # 降级方案：使用简单的哈希嵌入，生成512维向量
+            import hashlib
+            hash_value = hashlib.sha256(text.encode()).hexdigest()
+            embedding = []
+            
+            # 生成512维向量，与模型一致
+            for i in range(0, 512):
+                if i < len(hash_value):
+                    embedding.append(int(hash_value[i % len(hash_value)], 16) / 15.0)
+                else:
+                    embedding.append(0.0)
+            
+            embedding = np.array(embedding)
+            norm = np.linalg.norm(embedding)
+            if norm > 0:
+                embedding = embedding / norm
         
         return embedding
 

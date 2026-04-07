@@ -17,6 +17,13 @@ from pathlib import Path
 from dataclasses import dataclass, field
 from typing import Dict, Optional, List
 
+# 导入 torch 用于 GPU 内存管理
+try:
+    import torch
+    TORCH_AVAILABLE = True
+except ImportError:
+    TORCH_AVAILABLE = False
+
 from src.learning.self_learning import Knowledge, KnowledgeType
 from src.utils.logger import get_logger
 
@@ -554,10 +561,23 @@ def run_update(zip_path, rag_base=None, limit=None, batch_size=1000, resume_from
                 checkpoint = json.load(f)
             resume_from = checkpoint.get("last_processed", 0)
             existing_temp_dir = checkpoint.get("temp_dir")
+            
+            # 显示断点信息（支持新旧格式）
+            version = checkpoint.get("version", "1.0")
+            current_stage = checkpoint.get("current_stage", "embed")
+            batch_count = checkpoint.get("batch_count", 0)
+            stats_checkpoint = checkpoint.get("stats", {})
+            
             if resume_from > 0:
-                logger.info(f"从上次中断点继续处理，上次处理到文件 {resume_from}")
+                logger.info(f"从上次中断点继续处理")
+                logger.info(f"  断点版本: {version}")
+                logger.info(f"  上次处理到文件: {resume_from}")
+                logger.info(f"  当前阶段: {current_stage}")
+                logger.info(f"  已完成批次: {batch_count}")
+                if stats_checkpoint:
+                    logger.info(f"  统计信息: {stats_checkpoint}")
                 if existing_temp_dir:
-                    logger.info(f"发现上次的临时目录: {existing_temp_dir}")
+                    logger.info(f"  发现上次的临时目录: {existing_temp_dir}")
         except Exception as e:
             logger.warning(f"读取断点文件失败: {e}")
             resume_from = 0
@@ -576,83 +596,119 @@ def run_update(zip_path, rag_base=None, limit=None, batch_size=1000, resume_from
         initial_memory = process.memory_info().rss / 1024 / 1024
         logger.info(f"初始内存使用: {initial_memory:.2f} MB")
         
-        logger.info(f"开始解压: {zip_path}")
-        if existing_temp_dir and Path(existing_temp_dir).exists():
-            temp_dir = Path(existing_temp_dir)
-            logger.info(f"使用现有临时目录: {temp_dir}")
-        else:
-            temp_dir = Path(tempfile.mkdtemp(prefix='nvd_update_'))
-            logger.info(f"创建新临时目录: {temp_dir}")
-        temp_dir_path = temp_dir
-        
         cve_files = []
+        temp_dir = None
         
-        if existing_temp_dir and Path(existing_temp_dir).exists():
-            # 使用现有临时目录，直接扫描其中的JSON文件
-            logger.info("从现有临时目录中扫描JSON文件...")
-            cve_files = list(temp_dir.rglob('*.json'))
-            logger.info(f"在现有临时目录中找到 {len(cve_files)} 个JSON文件")
+        # 检查输入路径是否为文件夹
+        input_path = Path(zip_path)
+        if input_path.is_dir():
+            logger.info(f"检测到文件夹路径: {zip_path}")
+            logger.info("直接扫描文件夹中的JSON文件...")
+            # 直接扫描文件夹中的JSON文件
+            cve_files = list(input_path.rglob('*.json'))
+            logger.info(f"在文件夹中找到 {len(cve_files)} 个JSON文件")
+            # 不需要临时目录，使用输入文件夹作为临时目录
+            temp_dir = input_path
+            temp_dir_path = temp_dir
         else:
-            # 解压文件
-            with zipfile.ZipFile(zip_path, 'r') as zf:
-                # 过滤出需要处理的文件
-                members_to_extract = []
-                for member in zf.infolist():
-                    if should_skip_path(member.filename):
-                        continue
+            # 处理zip文件
+            logger.info(f"开始解压: {zip_path}")
+            if existing_temp_dir and Path(existing_temp_dir).exists():
+                temp_dir = Path(existing_temp_dir)
+                logger.info(f"使用现有临时目录: {temp_dir}")
+            else:
+                temp_dir = Path(tempfile.mkdtemp(prefix='nvd_update_'))
+                logger.info(f"创建新临时目录: {temp_dir}")
+            temp_dir_path = temp_dir
+            
+            if existing_temp_dir and Path(existing_temp_dir).exists():
+                # 使用现有临时目录，直接扫描其中的JSON文件
+                logger.info("从现有临时目录中扫描JSON文件...")
+                cve_files = list(temp_dir.rglob('*.json'))
+                logger.info(f"在现有临时目录中找到 {len(cve_files)} 个JSON文件")
+            else:
+                # 解压文件
+                with zipfile.ZipFile(zip_path, 'r') as zf:
+                    # 过滤出需要处理的文件
+                    members_to_extract = []
+                    for member in zf.infolist():
+                        if should_skip_path(member.filename):
+                            continue
+                        
+                        if member.is_dir():
+                            continue
+                        
+                        if not member.filename.endswith('.json'):
+                            continue
+                        
+                        members_to_extract.append(member)
                     
-                    if member.is_dir():
-                        continue
-                    
-                    if not member.filename.endswith('.json'):
-                        continue
-                    
-                    members_to_extract.append(member)
-                
-                # 显示解压进度条
-                if tqdm:
-                    # 使用tqdm进度条
-                    total_members = len(members_to_extract)
-                    for i, member in enumerate(tqdm(members_to_extract, desc="解压NVD文件", unit="file")):
-                        try:
-                            zf.extract(member, temp_dir)
-                            extracted_path = temp_dir / member.filename
-                            # 检查文件是否完整
-                            if extracted_path.exists() and extracted_path.stat().st_size > 0:
-                                cve_files.append(extracted_path)
-                            else:
-                                logger.warning(f"跳过空文件或不完整文件: {member.filename}")
-                                if extracted_path.exists():
-                                    extracted_path.unlink()
-                            # 调用进度回调
-                            if progress_callback:
-                                progress_callback("extract", i + 1, total_members)
-                        except Exception as e:
-                            logger.error(f"解压文件失败: {member.filename} -> {e}")
-                else:
-                    # 不使用tqdm，使用简单的进度显示
-                    total_members = len(members_to_extract)
-                    for i, member in enumerate(members_to_extract):
-                        if i > 0 and i % 10 == 0:
-                            logger.info(f"已解压 {i}/{total_members} 文件...")
-                        try:
-                            zf.extract(member, temp_dir)
-                            extracted_path = temp_dir / member.filename
-                            # 检查文件是否完整
-                            if extracted_path.exists() and extracted_path.stat().st_size > 0:
-                                cve_files.append(extracted_path)
-                            else:
-                                logger.warning(f"跳过空文件或不完整文件: {member.filename}")
-                                if extracted_path.exists():
-                                    extracted_path.unlink()
-                            # 调用进度回调
-                            if progress_callback:
-                                progress_callback("extract", i + 1, total_members)
-                        except Exception as e:
-                            logger.error(f"解压文件失败: {member.filename} -> {e}")
+                    # 显示解压进度条
+                    if tqdm:
+                        # 使用tqdm进度条
+                        total_members = len(members_to_extract)
+                        for i, member in enumerate(tqdm(members_to_extract, desc="解压NVD文件", unit="file")):
+                            try:
+                                zf.extract(member, temp_dir)
+                                extracted_path = temp_dir / member.filename
+                                # 检查文件是否完整
+                                if extracted_path.exists() and extracted_path.stat().st_size > 0:
+                                    cve_files.append(extracted_path)
+                                else:
+                                    logger.warning(f"跳过空文件或不完整文件: {member.filename}")
+                                    if extracted_path.exists():
+                                        extracted_path.unlink()
+                                # 调用进度回调
+                                if progress_callback:
+                                    progress_callback("extract", i + 1, total_members)
+                            except Exception as e:
+                                logger.error(f"解压文件失败: {member.filename} -> {e}")
+                    else:
+                        # 不使用tqdm，使用简单的进度显示
+                        total_members = len(members_to_extract)
+                        for i, member in enumerate(members_to_extract):
+                            if i > 0 and i % 10 == 0:
+                                logger.info(f"已解压 {i}/{total_members} 文件...")
+                            try:
+                                zf.extract(member, temp_dir)
+                                extracted_path = temp_dir / member.filename
+                                # 检查文件是否完整
+                                if extracted_path.exists() and extracted_path.stat().st_size > 0:
+                                    cve_files.append(extracted_path)
+                                else:
+                                    logger.warning(f"跳过空文件或不完整文件: {member.filename}")
+                                    if extracted_path.exists():
+                                        extracted_path.unlink()
+                                # 调用进度回调
+                                if progress_callback:
+                                    progress_callback("extract", i + 1, total_members)
+                            except Exception as e:
+                                logger.error(f"解压文件失败: {member.filename} -> {e}")
         
         stats['total_files'] = len(cve_files)
         logger.info(f"解压完成，找到 {len(cve_files)} 个CVE JSON文件")
+        
+        # 保存解压阶段完成的断点
+        try:
+            checkpoint = {
+                "version": "2.0",
+                "last_processed": 0,
+                "temp_dir": str(temp_dir) if temp_dir else None,
+                "stats": stats.copy(),
+                "batch_count": 0,
+                "current_stage": "embed",
+                "stage_progress": {
+                    "extract": {"done": True, "timestamp": datetime.now().isoformat()},
+                    "embed": {"done": False, "progress": 0},
+                    "graph": {"done": False, "progress": 0}
+                },
+                "timestamp": datetime.now().isoformat()
+            }
+            with open(checkpoint_path, "w", encoding="utf-8") as f:
+                json.dump(checkpoint, f, indent=2, ensure_ascii=False)
+            logger.info("已保存解压阶段断点")
+        except Exception as e:
+            logger.warning(f"保存解压阶段断点失败: {e}")
         
         if limit:
             cve_files = cve_files[:limit]
@@ -696,17 +752,15 @@ def run_update(zip_path, rag_base=None, limit=None, batch_size=1000, resume_from
         processed_count = 0
         duplicate_count = 0
         
-        # 优化：设置合理的批次大小，根据系统内存自动调整
-        # 避免批次过大导致内存溢出
-        import psutil
-        process = psutil.Process()
-        available_memory = psutil.virtual_memory().available
-        # 根据可用内存动态调整批次大小
-        # 每 100MB 内存可以处理大约 1000 条数据
-        dynamic_batch_size = min(2000, max(100, int(available_memory / (100 * 1024 * 1024) * 1000)))
-        if batch_size > dynamic_batch_size:
-            batch_size = dynamic_batch_size
-        logger.info(f"使用批次大小: {batch_size} (基于可用内存: {available_memory / 1024 / 1024:.2f} MB)")
+        import numpy as np
+        import os
+
+        os.makedirs("embeddings_cache", exist_ok=True)   # 创建缓存文件夹
+
+        outer_batch_size = 512          # ← 重新规划的核心数值（最稳）
+        logger.info(f"🔧 使用外层批处理大小: {outer_batch_size} 条（稳定防OOM版）")
+        logger.info(f"📊 总待处理条数: {len(cve_files)}")
+        batch_size = outer_batch_size
         
         # 优化：使用流式处理，边处理边导入
         # 优化：延迟加载知识ID，减少内存使用
@@ -824,42 +878,41 @@ def run_update(zip_path, rag_base=None, limit=None, batch_size=1000, resume_from
                             if len(knowledge_batch) >= batch_size:
                                 if rag_base:
                                     try:
-                                        print(f"📦 准备注入批次 {batch_count+1}: {len(knowledge_batch)} 条")
-                                        # 优化：批量导入时禁用自动保存，不立即构建索引，减少I/O操作
-                                        if tqdm:
-                                            # 添加导入进度条
-                                            with tqdm(total=len(knowledge_batch), desc=f"导入批次 {batch_count+1}", unit="item") as pbar:
-                                                added_count = rag_base.add_knowledge_batch(knowledge_batch, auto_save=False, build_index=False)
-                                                pbar.update(len(knowledge_batch))
-                                        else:
-                                            added_count = rag_base.add_knowledge_batch(knowledge_batch, auto_save=False, build_index=False)
-                                        stats['imported_to_rag'] += added_count
+                                        batch_idx = batch_count + 1
+                                        total_batches = (len(cve_files) + outer_batch_size - 1) // outer_batch_size
+                                        print(f"\n🔄 处理外层批次 {batch_idx}/{total_batches} | 大小: {len(knowledge_batch)} 条")
                                         
-                                        # 强制刷新（防止内存里没写盘）
-                                        if hasattr(rag_base, 'save'):
-                                            rag_base.save(create_backup=False, build_index=False)
+                                        # 提取文本内容用于生成嵌入
+                                        batch_texts = [k.content for k in knowledge_batch]
                                         
-                                        # 清理内存
-                                        import gc
-                                        del knowledge_batch
-                                        knowledge_batch = []
-                                        gc.collect()
-                                        batch_count += 1
+                                        # 生成 embedding
+                                        from src.storage.code_embedder import create_embedder
+                                        embedder = create_embedder()
+                                        batch_emb = embedder.embed_batch(batch_texts, batch_size=1024)
                                         
-                                        # 显示注入结果
-                                        current_len = len(rag_base._knowledge) if rag_base else 0
-                                        print(f"✅ 成功注入 {added_count} 条 | 当前 RAG 总条数: {current_len}")
+                                        # 立即存磁盘（关键！释放内存）
+                                        cache_path = f"embeddings_cache/batch_{batch_idx:06d}.npy"
+                                        np.save(cache_path, batch_emb)
+                                        print(f"💾 已保存批次 {batch_idx} 到磁盘 → {cache_path}")
+                                        
+                                        # 释放内存
+                                        del batch_emb
+                                        for _ in range(3):
+                                            import gc
+                                            gc.collect()
+                                            if TORCH_AVAILABLE and torch.cuda.is_available():
+                                                torch.cuda.empty_cache()
+                                        
+                                        print(f"✅ 外层批次 {batch_idx} 完成（已释放内存）")
                                         
                                         # 内存监控
                                         current_memory = process.memory_info().rss / 1024 / 1024
                                         logger.info(f"内存使用: {current_memory:.2f} MB (增加: {current_memory - initial_memory:.2f} MB)")
                                         
-                                        # 分段处理：每处理10个批次后休息一下，让系统清理内存
-                                        if batch_count % 10 == 0:
-                                            logger.info("执行内存清理...")
-                                            gc.collect()
-                                            current_memory = process.memory_info().rss / 1024 / 1024
-                                            logger.info(f"清理后内存使用: {current_memory:.2f} MB")
+                                        # 清理知识批次内存
+                                        del knowledge_batch
+                                        knowledge_batch = []
+                                        batch_count += 1
                                     except Exception as e:
                                         print(f"❌ 批次注入失败: {e}")
                                         traceback.print_exc()
@@ -867,9 +920,13 @@ def run_update(zip_path, rag_base=None, limit=None, batch_size=1000, resume_from
                                         stats['skipped'] += len(knowledge_batch)
                                         # 清理内存
                                         import gc
+                                        if 'batch_emb' in locals():
+                                            del batch_emb
                                         del knowledge_batch
                                         knowledge_batch = []
                                         gc.collect()
+                                        if TORCH_AVAILABLE and torch.cuda.is_available():
+                                            torch.cuda.empty_cache()
                                 
                                 # 移除定期保存，改为最终统一保存
                                 
@@ -932,6 +989,29 @@ def run_update(zip_path, rag_base=None, limit=None, batch_size=1000, resume_from
                         processed_count += 1
                         processed_files += 1
                         
+                        # 定期保存断点（每1000个文件保存一次）
+                        if processed_files % 1000 == 0:
+                            try:
+                                checkpoint = {
+                                    "version": "2.0",
+                                    "last_processed": processed_files,
+                                    "temp_dir": str(temp_dir) if temp_dir else None,
+                                    "stats": stats.copy(),
+                                    "batch_count": batch_count,
+                                    "current_stage": "embed",
+                                    "stage_progress": {
+                                        "extract": {"done": True, "timestamp": datetime.now().isoformat()},
+                                        "embed": {"done": False, "progress": processed_files},
+                                        "graph": {"done": False, "progress": 0}
+                                    },
+                                    "timestamp": datetime.now().isoformat()
+                                }
+                                with open(checkpoint_path, "w", encoding="utf-8") as f:
+                                    json.dump(checkpoint, f, indent=2, ensure_ascii=False)
+                                logger.debug(f"定期保存断点: 已处理 {processed_files} 个文件")
+                            except Exception as e:
+                                logger.warning(f"定期保存断点失败: {e}")
+                        
                         # 检查是否被中断
                         if interrupted:
                             logger.info("检测到中断信号，正在停止处理...")
@@ -947,14 +1027,32 @@ def run_update(zip_path, rag_base=None, limit=None, batch_size=1000, resume_from
                                 try:
                                     print(f"📦 准备注入批次 {batch_count+1}: {len(knowledge_batch)} 条")
                                     # 优化：批量导入时禁用自动保存，不立即构建索引，减少I/O操作
-                                    if tqdm:
-                                        # 添加导入进度条
-                                        with tqdm(total=len(knowledge_batch), desc=f"导入批次 {batch_count+1}", unit="item") as pbar:
-                                            added_count = rag_base.add_knowledge_batch(knowledge_batch, auto_save=False, build_index=False)
-                                            pbar.update(len(knowledge_batch))
-                                    else:
-                                        added_count = rag_base.add_knowledge_batch(knowledge_batch, auto_save=False, build_index=False)
-                                    stats['imported_to_rag'] += added_count
+                                    # 关键：设置合理的注入批次大小，防止内存超限
+                                    inject_batch_size = min(64, batch_size)  # 不超过64
+                                    
+                                    # 分批注入，确保每批大小合理
+                                    total_inject = len(knowledge_batch)
+                                    injected = 0
+                                    
+                                    while injected < total_inject:
+                                        inject_end = min(injected + inject_batch_size, total_inject)
+                                        inject_batch = knowledge_batch[injected:inject_end]
+                                        
+                                        if tqdm:
+                                            # 添加导入进度条
+                                            with tqdm(total=len(inject_batch), desc=f"注入批次 {batch_count+1} (子批 {injected//inject_batch_size + 1})") as pbar:
+                                                added_count = rag_base.add_knowledge_batch(inject_batch, auto_save=False, build_index=False)
+                                                pbar.update(len(inject_batch))
+                                        else:
+                                            added_count = rag_base.add_knowledge_batch(inject_batch, auto_save=False, build_index=False)
+                                        stats['imported_to_rag'] += added_count
+                                        injected = inject_end
+                                        
+                                        # 每子批后清理内存
+                                        import gc
+                                        gc.collect()
+                                        if TORCH_AVAILABLE and torch.cuda.is_available():
+                                            torch.cuda.empty_cache()
                                     
                                     # 强制刷新（防止内存里没写盘）
                                     if hasattr(rag_base, 'save'):
@@ -969,7 +1067,7 @@ def run_update(zip_path, rag_base=None, limit=None, batch_size=1000, resume_from
                                     
                                     # 显示注入结果
                                     current_len = len(rag_base._knowledge) if rag_base else 0
-                                    print(f"✅ 成功注入 {added_count} 条 | 当前 RAG 总条数: {current_len}")
+                                    print(f"✅ 成功注入 {total_inject} 条 | 当前 RAG 总条数: {current_len}")
                                     
                                     # 内存监控
                                     current_memory = process.memory_info().rss / 1024 / 1024
@@ -979,6 +1077,8 @@ def run_update(zip_path, rag_base=None, limit=None, batch_size=1000, resume_from
                                     if batch_count % 10 == 0:
                                         logger.info("执行内存清理...")
                                         gc.collect()
+                                        if TORCH_AVAILABLE and torch.cuda.is_available():
+                                            torch.cuda.empty_cache()
                                         current_memory = process.memory_info().rss / 1024 / 1024
                                         logger.info(f"清理后内存使用: {current_memory:.2f} MB")
                                 except Exception as e:
@@ -1008,8 +1108,29 @@ def run_update(zip_path, rag_base=None, limit=None, batch_size=1000, resume_from
         if knowledge_batch and rag_base:
             try:
                 print(f"📦 准备注入最后批次: {len(knowledge_batch)} 条")
-                added_count = rag_base.add_knowledge_batch(knowledge_batch, auto_save=False, build_index=False)
-                stats['imported_to_rag'] += added_count
+                # 关键：设置合理的注入批次大小，防止内存超限
+                inject_batch_size = 64  # 不超过64
+                
+                # 分批注入，确保每批大小合理
+                total_inject = len(knowledge_batch)
+                injected = 0
+                added_count = 0
+                
+                while injected < total_inject:
+                    inject_end = min(injected + inject_batch_size, total_inject)
+                    inject_batch = knowledge_batch[injected:inject_end]
+                    
+                    batch_added = rag_base.add_knowledge_batch(inject_batch, auto_save=False, build_index=False)
+                    added_count += batch_added
+                    stats['imported_to_rag'] += batch_added
+                    injected = inject_end
+                    
+                    # 每子批后清理内存
+                    import gc
+                    gc.collect()
+                    if TORCH_AVAILABLE and torch.cuda.is_available():
+                        torch.cuda.empty_cache()
+                
                 # 清理内存
                 import gc
                 del knowledge_batch
