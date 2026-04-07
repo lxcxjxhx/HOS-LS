@@ -40,34 +40,34 @@ class AttackChainAnalyzer:
         # 暂时使用硬编码的示例映射
         return {
             'SQL Injection': [
-                'execute\(.*input.*\)',
-                'query\(.*user.*\)',
-                'raw.*sql',
-                'sql.*string.*format'
+                r'execute\(.*input.*\)',
+                r'query\(.*user.*\)',
+                r'raw.*sql',
+                r'sql.*string.*format'
             ],
             'Cross-Site Scripting': [
-                'innerHTML.*=',
-                'document\.write.*',
-                'eval\(.*user.*\)',
-                'dangerouslySetInnerHTML'
+                r'innerHTML.*=',
+                r'document\.write.*',
+                r'eval\(.*user.*\)',
+                r'dangerouslySetInnerHTML'
             ],
             'Remote Code Execution': [
-                'exec\(.*',
-                'eval\(.*',
-                'system\(.*',
-                'shell_exec\(.*'
+                r'exec\(.*',
+                r'eval\(.*',
+                r'system\(.*',
+                r'shell_exec\(.*'
             ],
             'Buffer Overflow': [
-                'strcpy\(.*',
-                'memcpy\(.*',
-                'gets\(.*',
-                'fgets\(.*'
+                r'strcpy\(.*',
+                r'memcpy\(.*',
+                r'gets\(.*',
+                r'fgets\(.*'
             ],
             'Authentication Bypass': [
-                'password.*==',
-                'auth.*==.*true',
-                'login.*bypass',
-                'authentication.*skip'
+                r'password.*==',
+                r'auth.*==.*true',
+                r'login.*bypass',
+                r'authentication.*skip'
             ]
         }
 

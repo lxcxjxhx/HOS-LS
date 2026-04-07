@@ -62,7 +62,7 @@ class ModelType(Enum):
 class EmbedConfig:
     """嵌入配置"""
 
-    model_name: str = "BAAI/bge-m3"
+    model_name: str = "google/embeddinggemma-300M"
     batch_size: int = 1024
     max_length: int = 512
     use_cache: bool = True
@@ -124,15 +124,45 @@ class CodeEmbedder:
             model_path = Path(cache_dir) / model_dir_name
             print(f"🔍 检查模型目录: {model_path}")
             print(f"📁 目录是否存在: {model_path.exists()}")
+            
+            # 检查模型目录是否包含必要的配置文件
+            config_file = None
+            if model_path.exists() and list(model_path.glob("snapshots/*")):
+                snapshots_dir = model_path / "snapshots"
+                snapshot_subdirs = list(snapshots_dir.iterdir())
+                if snapshot_subdirs:
+                    config_file = snapshot_subdirs[0] / "config.json"
+            
+            model_name_or_path = self.config.model_name
+            
             if model_path.exists():
                 files = list(model_path.iterdir())[:10]  # 只显示前10个文件
                 print(f"📄 目录中的文件: {[f.name for f in files]}")
-                # 如果本地模型目录存在，直接使用本地路径
-                model_name_or_path = str(model_path)
-                print(f"✅ 使用本地模型路径: {model_name_or_path}")
+                
+                # 优先使用本地模型路径
+                if config_file and config_file.exists():
+                    # 检查config.json是否包含model_type键
+                    try:
+                        import json
+                        with open(config_file, 'r', encoding='utf-8') as f:
+                            config_data = json.load(f)
+                        if 'model_type' in config_data:
+                            # 如果本地模型目录存在且配置文件完整，直接使用本地路径
+                            model_name_or_path = str(model_path)
+                            print(f"✅ 使用本地模型路径: {model_name_or_path}")
+                        else:
+                            # 如果配置文件不完整，仍然尝试使用本地模型
+                            print(f"⚠️ 本地模型配置文件不完整，缺少model_type键，但仍尝试使用本地模型")
+                            model_name_or_path = str(model_path)
+                    except Exception as e:
+                        print(f"⚠️ 读取模型配置文件失败: {e}，但仍尝试使用本地模型")
+                        model_name_or_path = str(model_path)
+                else:
+                    # 即使没有配置文件，也尝试使用本地模型
+                    print(f"⚠️ 本地模型缺少配置文件，但仍尝试使用本地模型")
+                    model_name_or_path = str(model_path)
             else:
                 # 否则使用模型名称从 Hugging Face 下载
-                model_name_or_path = self.config.model_name
                 print(f"ℹ️ 使用模型名称: {model_name_or_path}")
             
             if self.config.cache_dir:
@@ -350,6 +380,16 @@ class CodeEmbedder:
                 if self.config.use_cache:
                     cache_key = self._generate_cache_key(uncached_codes[i])
                     self._cache[cache_key] = embedding
+
+        # 标准化嵌入向量长度
+        if embeddings:
+            standard_dim = self.get_embedding_dimension()
+            for i, emb in enumerate(embeddings):
+                if len(emb) != standard_dim:
+                    if len(emb) < standard_dim:
+                        embeddings[i] = emb + [0.0] * (standard_dim - len(emb))
+                    else:
+                        embeddings[i] = emb[:standard_dim]
 
         # 再次清理
         for _ in range(2):
@@ -605,8 +645,8 @@ class CodeEmbedder:
         hash_value = hashlib.sha256(code.encode()).hexdigest()
         embedding = []
 
-        # 生成512维向量，与模型一致
-        for i in range(0, 512):
+        # 生成256维向量，与模型一致
+        for i in range(0, 256):
             if i < len(hash_value):
                 embedding.append(int(hash_value[i % len(hash_value)], 16) / 15.0)
             else:
@@ -782,6 +822,10 @@ class InMemoryEmbedder:
         return hashlib.sha256(content.encode()).hexdigest()
 
 
+# 全局 CodeEmbedder 实例
+_global_embedder: Optional[Union[CodeEmbedder, InMemoryEmbedder]] = None
+
+
 def create_embedder(
     config: Optional[EmbedConfig] = None,
     prefer_memory: bool = False,
@@ -795,7 +839,10 @@ def create_embedder(
     Returns:
         代码嵌入生成器实例
     """
-    if prefer_memory or not SENTENCE_TRANSFORMERS_AVAILABLE:
-        return InMemoryEmbedder(config)
-
-    return CodeEmbedder(config)
+    global _global_embedder
+    if _global_embedder is None:
+        if prefer_memory or not SENTENCE_TRANSFORMERS_AVAILABLE:
+            _global_embedder = InMemoryEmbedder(config)
+        else:
+            _global_embedder = CodeEmbedder(config)
+    return _global_embedder

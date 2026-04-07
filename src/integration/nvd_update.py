@@ -1038,6 +1038,21 @@ def run_update(zip_path, rag_base=None, limit=None, batch_size=1000, resume_from
                                         # 生成 embedding
                                         batch_emb = embedder.embed_batch(batch_texts, batch_size=optimal_batch_size)
                                         
+                                        # 验证并标准化嵌入向量长度
+                                        if batch_emb:
+                                            # 获取标准嵌入维度
+                                            standard_dim = len(batch_emb[0])
+                                            # 标准化所有嵌入向量
+                                            for i, emb in enumerate(batch_emb):
+                                                if len(emb) != standard_dim:
+                                                    # 填充或截断到标准维度
+                                                    if len(emb) < standard_dim:
+                                                        # 填充 0
+                                                        batch_emb[i] = emb + [0.0] * (standard_dim - len(emb))
+                                                    else:
+                                                        # 截断
+                                                        batch_emb[i] = emb[:standard_dim]
+                                        
                                         # 写入内存映射（关键！释放内存）
                                         batch_size_actual = len(batch_emb)
                                         print(f"💾 写入内存映射: 位置 {idx}-{idx+batch_size_actual}")

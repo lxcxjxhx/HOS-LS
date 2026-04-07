@@ -462,6 +462,62 @@ class RAGKnowledgeBase:
         
         return knowledge_results
 
+    def get_standardized_output(self, query: str, top_k: int = 5) -> List[Dict[str, Any]]:
+        """获取标准化的输出格式
+
+        Args:
+            query: 搜索查询
+            top_k: 返回结果数量
+
+        Returns:
+            标准化的输出列表
+        """
+        self.record_usage()
+        
+        # 使用向量存储进行语义搜索
+        results = self.vector_store.search(
+            query=query,
+            top_k=top_k
+        )
+        
+        # 转换为标准化输出
+        output = []
+        for result in results:
+            knowledge_id = result["document_id"]
+            if knowledge_id in self._knowledge:
+                knowledge = self._knowledge[knowledge_id]
+                output.append({
+                    "type": "pattern",
+                    "pattern": knowledge.content[:100] + "..." if len(knowledge.content) > 100 else knowledge.content,
+                    "risk": knowledge.tags[0] if knowledge.tags else "Unknown",
+                    "constraints": [],
+                    "evidence": [f"RAG: {knowledge.content[:200]}..." if len(knowledge.content) > 200 else knowledge.content],
+                    "source_agent": "RAG-Agent",
+                    "confidence": knowledge.confidence,
+                    "metadata": {
+                        "knowledge_type": knowledge.knowledge_type.value,
+                        "source": knowledge.source,
+                        "tags": knowledge.tags
+                    }
+                })
+            elif knowledge_id in self._patterns:
+                pattern = self._patterns[knowledge_id]
+                output.append({
+                    "type": "pattern",
+                    "pattern": pattern.pattern_value,
+                    "risk": pattern.pattern_type,
+                    "constraints": [],
+                    "evidence": [f"RAG: {pattern.description}"],
+                    "source_agent": "RAG-Agent",
+                    "confidence": pattern.confidence,
+                    "metadata": {
+                        "pattern_type": pattern.pattern_type,
+                        "occurrence_count": pattern.occurrence_count
+                    }
+                })
+        
+        return output
+
     def update_knowledge(self, knowledge_id: str, **kwargs) -> bool:
         """更新知识
 

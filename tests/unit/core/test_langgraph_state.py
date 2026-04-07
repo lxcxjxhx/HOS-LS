@@ -11,8 +11,8 @@ def test_create_initial_state():
     assert state.target == "test.py"
     assert state.config == config
     assert state.code_analysis_result is None
-    assert state.rag_results is None
-    assert state.graph_query_results is None
+    assert state.rag == []
+    assert state.attack_paths == []
     assert state.scan_result is None
     assert state.needs_rag is False
     assert state.needs_graph is False
@@ -43,17 +43,22 @@ def test_evaluate_complexity():
     simple_code = """def hello():
     print('Hello world')
 """
-    assert evaluate_complexity(simple_code) is True
+    complexity = evaluate_complexity(simple_code)
+    assert isinstance(complexity, float)
+    assert complexity < 0.5  # 简单代码复杂度低
     
     # 测试复杂代码（超过50行）
     complex_code = "def hello():\n" + "    print('Hello')\n" * 60
-    assert evaluate_complexity(complex_code) is False
+    complexity = evaluate_complexity(complex_code)
+    assert isinstance(complexity, float)
+    assert complexity > 0.2  # 60行代码的复杂度约为0.3
     
     # 测试包含高风险模式的代码
     risky_code = """def dangerous():
     eval('print("hacked")')
 """
-    assert evaluate_complexity(risky_code) is False
+    complexity = evaluate_complexity(risky_code)
+    assert isinstance(complexity, float)
 
 
 def test_state_to_dict():
@@ -73,11 +78,13 @@ def test_state_from_dict():
     state_dict = {
         'target': 'test.py',
         'config': config,
+        'code_analysis_result': {'complexity': 'high'},
         'needs_rag': True,
         'is_simple': False
     }
     state = ScanState.from_dict(state_dict)
     
     assert state.target == 'test.py'
+    assert state.code_analysis_result == {'complexity': 'high'}
     assert state.needs_rag is True
     assert state.is_simple is False

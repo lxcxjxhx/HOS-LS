@@ -123,6 +123,7 @@ def cli(ctx: click.Context, config: Optional[str], verbose: bool, quiet: bool, d
 @click.option("--ai-provider", help="AI 提供商 (anthropic, openai, deepseek, local)")
 @click.option("--incremental", is_flag=True, help="启用增量扫描")
 @click.option("--langgraph", is_flag=True, help="使用 LangGraph 流程")
+@click.option("--test", type=int, default=0, help="启用测试模式，指定扫描文件数量，默认10")
 @click.pass_context
 def scan(
     ctx: click.Context,
@@ -136,6 +137,7 @@ def scan(
     ai_provider: Optional[str],
     incremental: bool,
     langgraph: bool,
+    test: bool,
 ) -> None:
     """扫描代码安全漏洞"""
     config: Config = ctx.obj["config"]
@@ -154,6 +156,21 @@ def scan(
     config.ai.enabled = ai
     if ai_provider:
         config.ai.provider = ai_provider
+    # 测试模式
+    if test > 0:
+        config.test_mode = True
+        # 将测试文件数量存储在 config 的 __dict__ 中
+        config.__dict__['test_file_count'] = test
+        if not config.quiet:
+            console.print(f"[bold yellow]⚠️  测试模式已启用，只扫描前{test}个优先级最高的文件[/bold yellow]")
+    elif test == 0:
+        config.test_mode = False
+    else:
+        # 负数表示使用默认值10
+        config.test_mode = True
+        config.__dict__['test_file_count'] = 10
+        if not config.quiet:
+            console.print("[bold yellow]⚠️  测试模式已启用，只扫描前10个优先级最高的文件[/bold yellow]")
 
     # 执行扫描
     try:

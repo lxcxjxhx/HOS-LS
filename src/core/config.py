@@ -144,6 +144,7 @@ class Config(BaseSettings):
     verbose: bool = Field(default=False, description="详细输出")
     quiet: bool = Field(default=False, description="静默模式")
     config_path: Optional[str] = Field(default=None, description="配置文件路径")
+    test_mode: bool = Field(default=False, description="测试模式")
 
 
 class ConfigManager:

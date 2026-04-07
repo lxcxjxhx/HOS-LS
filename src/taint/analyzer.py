@@ -4,7 +4,7 @@
 """
 
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Dict, List, Optional, Set, Tuple, Any
 
 from tree_sitter import Language, Parser, Node, Tree
 
@@ -462,3 +462,35 @@ class TaintAnalyzer:
                     if child.type == "identifier":
                         return self._get_node_text(child)
         return None
+
+    def get_standardized_output(self, paths: List[TaintPath]) -> List[Dict[str, Any]]:
+        """获取标准化的输出格式
+
+        Args:
+            paths: 污点传播路径列表
+
+        Returns:
+            标准化的输出列表
+        """
+        output = []
+        
+        for path in paths:
+            output.append({
+                "type": "sink",
+                "function": path.sink.name,
+                "source": path.source.name,
+                "location": f"{path.sink.file_path}:{path.sink.line}",
+                "evidence": [
+                    f"Taint: {path.source.description} → {path.sink.description}",
+                    f"Path: {path.path}"
+                ],
+                "source_agent": "Taint-Agent",
+                "confidence": path.confidence,
+                "metadata": {
+                    "vulnerability_type": path.sink.vulnerability_type,
+                    "severity": path.evaluate_severity(),
+                    "poc": path.poc
+                }
+            })
+        
+        return output

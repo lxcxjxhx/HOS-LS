@@ -943,3 +943,36 @@ class CSTAnalyzer(BaseAnalyzer):
         info = super().get_info()
         info["dangerous_functions"] = list(self._dangerous_functions.keys())
         return info
+
+    def get_standardized_output(self, result: AnalysisResult) -> List[Dict[str, Any]]:
+        """获取标准化的输出格式
+
+        Args:
+            result: 分析结果
+
+        Returns:
+            标准化的输出列表
+        """
+        output = []
+        
+        for issue in result.issues:
+            output.append({
+                "type": "finding",
+                "rule_id": issue.rule_id,
+                "message": issue.message,
+                "severity": issue.severity,
+                "confidence": issue.confidence,
+                "location": {
+                    "file": result.context.file_path,
+                    "line": issue.line,
+                    "column": issue.column
+                },
+                "evidence": [f"CST: {issue.message}"],
+                "source_agent": "CST-Agent",
+                "metadata": {
+                    "cwe_id": issue.cwe_id,
+                    "owasp_category": issue.owasp_category
+                }
+            })
+        
+        return output

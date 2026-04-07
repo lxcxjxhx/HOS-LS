@@ -113,12 +113,15 @@ class ASTAnalyzer(BaseAnalyzer):
 
     def _load_languages(self) -> None:
         """加载 tree-sitter 语言库"""
+        languages_loaded = 0
+        
         try:
             # Python
             from tree_sitter_python import language as python_language
 
             self._languages["python"] = Language(python_language())
             self._parsers["python"] = Parser(self._languages["python"])
+            languages_loaded += 1
         except ImportError:
             pass
 
@@ -130,6 +133,7 @@ class ASTAnalyzer(BaseAnalyzer):
             self._languages["typescript"] = Language(js_language())
             self._parsers["javascript"] = Parser(self._languages["javascript"])
             self._parsers["typescript"] = Parser(self._languages["typescript"])
+            languages_loaded += 1
         except ImportError:
             pass
 
@@ -139,6 +143,7 @@ class ASTAnalyzer(BaseAnalyzer):
 
             self._languages["java"] = Language(java_language())
             self._parsers["java"] = Parser(self._languages["java"])
+            languages_loaded += 1
         except ImportError:
             pass
 
@@ -150,6 +155,7 @@ class ASTAnalyzer(BaseAnalyzer):
             self._languages["c"] = Language(cpp_language())
             self._parsers["cpp"] = Parser(self._languages["cpp"])
             self._parsers["c"] = Parser(self._languages["c"])
+            languages_loaded += 1
         except ImportError:
             pass
 
@@ -159,6 +165,7 @@ class ASTAnalyzer(BaseAnalyzer):
 
             self._languages["go"] = Language(go_language())
             self._parsers["go"] = Parser(self._languages["go"])
+            languages_loaded += 1
         except ImportError:
             pass
 
@@ -168,6 +175,7 @@ class ASTAnalyzer(BaseAnalyzer):
 
             self._languages["rust"] = Language(rust_language())
             self._parsers["rust"] = Parser(self._languages["rust"])
+            languages_loaded += 1
         except ImportError:
             pass
 
@@ -177,8 +185,13 @@ class ASTAnalyzer(BaseAnalyzer):
 
             self._languages["php"] = Language(php_language())
             self._parsers["php"] = Parser(self._languages["php"])
+            languages_loaded += 1
         except ImportError:
             pass
+        
+        # 如果没有加载任何语言，添加一个警告
+        if languages_loaded == 0:
+            print("警告: 未加载任何 tree-sitter 语言库，静态分析将被跳过")
 
     def analyze(self, context: AnalysisContext) -> AnalysisResult:
         """执行 AST 分析
@@ -1011,3 +1024,38 @@ class ASTAnalyzer(BaseAnalyzer):
             for lang, funcs in self._dangerous_functions.items()
         }
         return info
+
+    def get_standardized_output(self, result: AnalysisResult) -> List[Dict[str, Any]]:
+        """获取标准化的输出格式
+
+        Args:
+            result: 分析结果
+
+        Returns:
+            标准化的输出列表
+        """
+        output = []
+        
+        for issue in result.issues:
+            output.append({
+                "type": "finding",
+                "rule_id": issue.rule_id,
+                "message": issue.message,
+                "severity": issue.severity,
+                "confidence": issue.confidence,
+                "location": {
+                    "file": result.context.file_path,
+                    "line": issue.line,
+                    "column": issue.column
+                },
+                "evidence": [f"AST: {issue.message}"],
+                "source_agent": "AST-Agent",
+                "metadata": {
+                    "cwe_id": issue.cwe_id,
+                    "owasp_category": issue.owasp_category,
+                    "code_snippet": issue.code_snippet,
+                    "fix_suggestion": issue.fix_suggestion
+                }
+            })
+        
+        return output

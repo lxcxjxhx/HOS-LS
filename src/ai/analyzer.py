@@ -77,10 +77,7 @@ class AIAnalyzer:
 
     async def initialize(self) -> None:
         """初始化分析器"""
-        # 每次初始化都重新获取模型管理器，确保配置生效
-        from src.ai.client import _manager
-        # 重置全局实例，强制重新初始化
-        _manager = None
+        # 获取模型管理器实例，使用单例模式
         self._manager = await get_model_manager(self.config)
 
     async def close(self) -> None:

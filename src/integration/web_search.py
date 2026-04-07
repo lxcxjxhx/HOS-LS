@@ -162,6 +162,17 @@ def get_web_searcher() -> WebSearcher:
     return _web_searcher
 
 
+def close_web_searcher():
+    """关闭全局网络搜索器实例
+    
+    确保在程序结束时正确关闭 aiohttp 客户端会话
+    """
+    global _web_searcher
+    if _web_searcher:
+        asyncio.run(_web_searcher.close())
+        _web_searcher = None
+
+
 async def search_security_info(query: str, max_results: int = 5) -> List[SearchResult]:
     """搜索安全相关信息
     
@@ -202,3 +213,8 @@ async def search_library_info(library_name: str, version: Optional[str] = None) 
     """
     searcher = get_web_searcher()
     return await searcher.search_library_vulnerabilities(library_name, version)
+
+
+# 注册退出处理函数，确保在程序结束时关闭会话
+import atexit
+atexit.register(close_web_searcher)

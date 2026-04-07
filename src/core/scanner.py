@@ -50,9 +50,24 @@ class SecurityScanner:
         from src.rules.registry import get_registry
         self.rule_registry = get_registry()
         
+        # 初始化 AST 分析器
+        try:
+            self.ast_analyzer.initialize()
+            if self.config.debug:
+                print(f"[DEBUG] AST 分析器初始化成功")
+        except Exception as e:
+            if self.config.debug:
+                print(f"[DEBUG] AST 分析器初始化失败: {e}")
+        
         if config.ai.enabled:
-            self.ai_analyzer = AIAnalyzer(config)
-            self.attack_chain_builder = get_ai_attack_chain_builder()
+            try:
+                self.ai_analyzer = AIAnalyzer(config)
+                self.attack_chain_builder = get_ai_attack_chain_builder()
+                if self.config.debug:
+                    print(f"[DEBUG] AI 分析器初始化成功")
+            except Exception as e:
+                if self.config.debug:
+                    print(f"[DEBUG] AI 分析器初始化失败: {e}")
         
         if config.debug:
             print(f"[DEBUG] 安全扫描器初始化完成，规则注册表已就绪（仅用于知识库检索）")
@@ -69,20 +84,24 @@ class SecurityScanner:
         Returns:
             扫描结果
         """
-        if self.config.debug:
-            print(f"[DEBUG] 开始扫描目标: {target}")
+        import time
+        from tqdm import tqdm
+        
+        # 开始时间
+        start_time = time.time()
+        
+        print(f"🔍 开始扫描目标: {target}")
+        print(f"⏱️ 开始时间: {time.strftime('%Y-%m-%d %H:%M:%S')}")
         
         # 发现文件
+        print("📁 正在发现文件...")
         files = self._discover_files(target)
-        
-        if self.config.debug:
-            print(f"[DEBUG] 发现 {len(files)} 个文件")
+        print(f"✅ 发现 {len(files)} 个文件")
         
         # 分析文件
+        print("🔧 正在分析文件...")
         findings = await self._analyze_files(files)
-        
-        if self.config.debug:
-            print(f"[DEBUG] 发现 {len(findings)} 个安全问题")
+        print(f"✅ 发现 {len(findings)} 个安全问题")
         
         # 创建结果对象
         from src.core.engine import ScanStatus
@@ -92,24 +111,30 @@ class SecurityScanner:
         )
         
         # 漏洞优先级评估
+        print("📊 正在评估漏洞优先级...")
         prioritized_findings = self._prioritize_findings(findings, files)
         
         # 汇总结果
-        for finding in prioritized_findings:
+        print("📋 正在汇总结果...")
+        for finding in tqdm(prioritized_findings, desc="处理漏洞结果"):
             result.add_finding(finding)
+        
+        # 计算扫描耗时
+        end_time = time.time()
+        scan_time = end_time - start_time
+        
+        # 统计不同优先级的漏洞数量
+        priority_counts = {'critical': 0, 'high': 0, 'medium': 0, 'low': 0, 'info': 0}
+        for finding in result.findings:
+            severity_name = finding.severity.name.lower()
+            if severity_name in priority_counts:
+                priority_counts[severity_name] += 1
+        
+        print(f"\n⏱️ 扫描耗时: {scan_time:.2f} 秒")
+        print(f"✅ 扫描完成")
         
         if self.config.debug:
             print(f"[DEBUG] 扫描完成，总计发现 {len(result.findings)} 个问题")
-            # 统计不同优先级的漏洞数量
-            priority_counts = {'high': 0, 'medium': 0, 'low': 0}
-            for finding in result.findings:
-                if finding.severity.name == 'HIGH':
-                    priority_counts['high'] += 1
-                elif finding.severity.name == 'MEDIUM':
-                    priority_counts['medium'] += 1
-                else:
-                    priority_counts['low'] += 1
-            print(f"[DEBUG] 高优先级: {priority_counts['high']}, 中优先级: {priority_counts['medium']}, 低优先级: {priority_counts['low']}")
         
         # 执行攻击链路分析（如果启用了AI）
         if self.config.ai.enabled and hasattr(self, 'attack_chain_builder') and result.findings:
@@ -283,6 +308,41 @@ class SecurityScanner:
                 if self.config.debug:
                     print(f"[DEBUG] 优先级评估失败: {e}")
         
+        # 集成 LangGraph 深度分析（如果启用了 AI 且发现了漏洞）
+        if self.config.ai.enabled and result.findings:
+            try:
+                print("🔍 开始执行 LangGraph 深度分析")
+                print("🚀 启动多Agent安全分析流程")
+                
+                # 导入 LangGraph 流程
+                from src.core.langgraph_flow import run_scan
+                
+                # 执行 LangGraph 扫描
+                langgraph_result = await run_scan(str(target), self.config)
+                
+                if langgraph_result and langgraph_result.findings:
+                    print(f"✅ LangGraph 深度分析发现 {len(langgraph_result.findings)} 个问题")
+                    
+                    # 检查是否已经有 LangGraph 深度分析的结果
+                    has_langgraph_finding = any(finding.rule_id == 'LANGGRAPH-ANALYSIS' for finding in result.findings)
+                    
+                    # 如果没有，将 LangGraph 分析结果添加到最终结果中
+                    if not has_langgraph_finding:
+                        for finding in langgraph_result.findings:
+                            result.add_finding(finding)
+                        
+                        # 添加 LangGraph 分析元数据
+                        if hasattr(langgraph_result, 'metadata'):
+                            result.metadata['langgraph_analysis'] = langgraph_result.metadata
+                    else:
+                        print("⚠️  已存在 LangGraph 深度分析结果，跳过重复添加")
+                
+                print("✅ LangGraph 深度分析完成")
+                print("✨ CREWAI 多专家团队分析已集成到扫描结果中")
+                    
+            except Exception as e:
+                print(f"❌ LangGraph 深度分析失败: {e}")
+        
         # 集成自学习机制
         if self.config.ai.enabled:
             try:
@@ -297,6 +357,10 @@ class SecurityScanner:
                 # 转换扫描结果为 RAG 知识库所需格式
                 learning_results = []
                 for finding in result.findings:
+                    # 过滤掉 LangGraph 深度分析的结果，避免重复判断
+                    if finding.rule_id == 'LANGGRAPH-ANALYSIS':
+                        continue
+                    
                     # 创建知识内容
                     content = f"{finding.rule_name}: {finding.description}\n\n严重级别: {finding.severity.value}\n置信度: {finding.confidence}\n\n修复建议: {finding.fix_suggestion}"
                     
@@ -366,15 +430,23 @@ class SecurityScanner:
             发现的安全问题列表
         """
         findings = []
+        from tqdm import tqdm
         
         # 评估文件优先级
         prioritized_files = []
-        for file_info in files:
+        for file_info in tqdm(files, desc="评估文件优先级"):
             score, priority = self.file_prioritizer.evaluate_file_priority(Path(file_info.path))
             prioritized_files.append((file_info, score, priority))
         
         # 按优先级排序
         prioritized_files.sort(key=lambda x: x[1], reverse=True)
+        
+        # 测试模式：只处理指定数量的优先级最高的文件
+        if self.config.test_mode:
+            test_file_count = getattr(self.config, 'test_file_count', 10)
+            original_count = len(prioritized_files)
+            prioritized_files = prioritized_files[:test_file_count]
+            print(f"⚠️  测试模式已启用，只处理前{test_file_count}个优先级最高的文件（共 {original_count} 个文件）")
         
         if self.config.debug:
             print(f"[DEBUG] 文件优先级评估完成，总计 {len(prioritized_files)} 个文件")
@@ -451,7 +523,7 @@ class SecurityScanner:
             }
         }
         
-        for file_info, score, priority in prioritized_files:
+        for file_info, score, priority in tqdm(prioritized_files, desc="分析文件"):
             if self.config.debug:
                 print(f"[DEBUG] 分析文件: {file_info.path} (优先级: {priority}, 分数: {score:.2f})")
             
@@ -531,6 +603,17 @@ class SecurityScanner:
                 language=file_info.language.value
             )
             
+            # 检查 AST 分析器是否初始化成功
+            if not hasattr(self.ast_analyzer, '_parsers') or not self.ast_analyzer._parsers:
+                if self.config.debug:
+                    print(f"[DEBUG] AST 分析器未初始化，可能缺少 tree-sitter 库")
+                # 尝试初始化分析器
+                try:
+                    self.ast_analyzer.initialize()
+                except Exception as e:
+                    if self.config.debug:
+                        print(f"[DEBUG] 初始化 AST 分析器失败: {e}")
+            
             # 使用 AST 分析器
             try:
                 if self.config.debug:
@@ -546,10 +629,34 @@ class SecurityScanner:
                         converted = self._convert_to_finding(issue)
                         if converted:
                             findings.append(converted)
+                else:
+                    if self.config.debug:
+                        print(f"[DEBUG] AST 分析未发现问题: {file_info.path}")
                 
             except Exception as e:
+                error_msg = f"AST 分析失败: {e}"
                 if self.config.debug:
-                    print(f"[DEBUG] AST 分析失败: {e}")
+                    print(f"[DEBUG] {error_msg}")
+                # 添加错误信息到结果中，让用户知道静态分析失败
+                from src.core.engine import Finding, Location, Severity
+                error_finding = Finding(
+                    rule_id="STATIC-ANALYSIS-ERROR",
+                    rule_name="静态分析失败",
+                    description=error_msg,
+                    severity=Severity.INFO,
+                    location=Location(
+                        file=str(file_info.path),
+                        line=1,
+                        column=0
+                    ),
+                    confidence=0.5,
+                    message=error_msg,
+                    code_snippet="",
+                    fix_suggestion="请确保安装了 tree-sitter 相关依赖",
+                    references=[],
+                    metadata={"error": str(e)}
+                )
+                findings.append(error_finding)
             
             # 使用 CST 分析器（仅 Python）
             if file_info.language.value == 'python':
@@ -567,17 +674,62 @@ class SecurityScanner:
                             converted = self._convert_to_finding(issue)
                             if converted:
                                 findings.append(converted)
+                    else:
+                        if self.config.debug:
+                            print(f"[DEBUG] CST 分析未发现问题: {file_info.path}")
                 
                 except Exception as e:
+                    error_msg = f"CST 分析失败: {e}"
                     if self.config.debug:
-                        print(f"[DEBUG] CST 分析失败: {e}")
+                        print(f"[DEBUG] {error_msg}")
+                    # 添加错误信息到结果中
+                    from src.core.engine import Finding, Location, Severity
+                    error_finding = Finding(
+                        rule_id="CST-ANALYSIS-ERROR",
+                        rule_name="CST 分析失败",
+                        description=error_msg,
+                        severity=Severity.INFO,
+                        location=Location(
+                            file=str(file_info.path),
+                            line=1,
+                            column=0
+                        ),
+                        confidence=0.5,
+                        message=error_msg,
+                        code_snippet="",
+                        fix_suggestion="请确保安装了 tree-sitter 相关依赖",
+                        references=[],
+                        metadata={"error": str(e)}
+                    )
+                    findings.append(error_finding)
             
             # 去重静态分析结果
             findings = self._deduplicate_findings(findings)
                 
         except Exception as e:
+            error_msg = f"静态分析失败: {e}"
             if self.config.debug:
-                print(f"[DEBUG] 静态分析失败: {e}")
+                print(f"[DEBUG] {error_msg}")
+            # 添加错误信息到结果中
+            from src.core.engine import Finding, Location, Severity
+            error_finding = Finding(
+                rule_id="STATIC-ANALYSIS-ERROR",
+                rule_name="静态分析失败",
+                description=error_msg,
+                severity=Severity.INFO,
+                location=Location(
+                    file=str(file_info.path),
+                    line=1,
+                    column=0
+                ),
+                confidence=0.5,
+                message=error_msg,
+                code_snippet="",
+                fix_suggestion="请检查文件是否可读取",
+                references=[],
+                metadata={"error": str(e)}
+            )
+            findings.append(error_finding)
         
         return findings
 
@@ -816,7 +968,36 @@ class SecurityScanner:
             elif isinstance(issue, dict) and 'rule_name' in issue:
                 rule_name = str(issue['rule_name']).strip()
             else:
-                rule_name = 'Unknown Issue'
+                # 根据 rule_id 生成规则名称
+                if hasattr(issue, 'rule_id'):
+                    rule_id = getattr(issue, 'rule_id', '').strip()
+                elif isinstance(issue, dict) and 'rule_id' in issue:
+                    rule_id = str(issue['rule_id']).strip()
+                else:
+                    rule_id = ''
+                
+                # 规则 ID 到规则名称的映射
+                rule_name_map = {
+                    'AST-DANGEROUS-FUNCTION': '危险函数调用',
+                    'AST-SENSITIVE-PARAM': '敏感参数缺少类型注解',
+                    'AST-MISSING-DOCSTRING': '函数缺少文档字符串',
+                    'AST-MISSING-CLASS-DOCSTRING': '类缺少文档字符串',
+                    'AST-WILDCARD-IMPORT': '通配符导入',
+                    'AST-DANGEROUS-MODULE': '危险模块导入',
+                    'AST-SENSITIVE-VARIABLE': '敏感变量定义',
+                    'AST-HARDCODED-SECRET': '硬编码敏感信息',
+                    'AST-CONSTANT-CONDITION': '常量条件',
+                    'AST-INFINITE-LOOP': '可能的无限循环',
+                    'AST-EMPTY-EXCEPT': '空的异常处理块',
+                    'AST-GENERIC-EXCEPTION': '通用异常',
+                    'AST-RETURN-SENSITIVE': '返回敏感信息',
+                    'AST-SQL-INJECTION': 'SQL 注入风险',
+                    'AST-XSS': 'XSS 风险',
+                    'AST-COMMAND-INJECTION': '命令注入风险',
+                    'AST-SENSITIVE-ATTRIBUTE': '类中存在敏感属性'
+                }
+                
+                rule_name = rule_name_map.get(rule_id, '未知问题')
             
             # 清理代码片段
             if hasattr(issue, 'code_snippet'):
@@ -1186,8 +1367,19 @@ class SecurityScanner:
                                 )
                                 findings.append(finding)
             
+            # 去重网络搜索结果
+            unique_findings = []
+            seen = set()
+            for finding in findings:
+                # 基于漏洞类型和URL去重
+                key = (finding.rule_name, finding.references[0] if finding.references else "")
+                if key not in seen:
+                    seen.add(key)
+                    unique_findings.append(finding)
+            findings = unique_findings
+            
             # 限制每个文件的网络搜索结果数量
-            max_findings = 10
+            max_findings = 5  # 减少最大结果数量，避免过多重复
             if len(findings) > max_findings:
                 # 按置信度排序，保留高置信度的结果
                 findings.sort(key=lambda x: x.confidence, reverse=True)
@@ -1256,20 +1448,29 @@ class SecurityScanner:
             if vuln_type not in allowed_vulnerabilities:
                 continue
             
-            # 对于小型文件，增加关键词匹配阈值
-            if code_length < 100:
-                match_count = 0
-                for keyword in keywords:
-                    if keyword in code_lower:
-                        match_count += 1
-                if match_count >= 2:  # 小型文件需要至少2个关键词匹配
+            # 增加关键词匹配阈值，减少误报
+            match_count = 0
+            for keyword in keywords:
+                if keyword in code_lower:
+                    match_count += 1
+            
+            # 根据漏洞类型设置不同的匹配阈值
+            if vuln_type == 'command_injection':
+                # command_injection 需要至少2个关键词匹配，因为其关键词如 'exec'、'eval' 太常见
+                if match_count >= 2:
+                    potential_vulnerabilities.append(vuln_type)
+            elif vuln_type == 'hardcoded_credentials':
+                # hardcoded_credentials 需要至少2个关键词匹配
+                if match_count >= 2:
+                    potential_vulnerabilities.append(vuln_type)
+            elif code_length < 100:
+                # 小型文件需要至少2个关键词匹配
+                if match_count >= 2:
                     potential_vulnerabilities.append(vuln_type)
             else:
-                # 正常文件只需要1个关键词匹配
-                for keyword in keywords:
-                    if keyword in code_lower:
-                        potential_vulnerabilities.append(vuln_type)
-                        break
+                # 正常文件需要至少1个关键词匹配
+                if match_count >= 1:
+                    potential_vulnerabilities.append(vuln_type)
         
         # 去重
         return list(set(potential_vulnerabilities))

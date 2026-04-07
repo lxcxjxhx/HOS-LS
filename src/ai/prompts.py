@@ -4,7 +4,7 @@
 """
 
 from pathlib import Path
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Optional, Union, Any
 
 from src.core.config import Config, get_config
 from src.utils.logger import get_logger
@@ -508,3 +508,96 @@ def get_prompt_manager(config: Optional[Config] = None) -> PromptManager:
     if _prompt_manager is None:
         _prompt_manager = PromptManager(config)
     return _prompt_manager
+
+
+def get_semantic_analysis_prompt(analysis_input: Dict[str, Any]) -> str:
+    """获取语义分析提示词
+
+    Args:
+        analysis_input: 分析输入，包含代码、证据、污点路径和CVE模式
+
+    Returns:
+        str: 语义分析提示词
+    """
+    prompt = """你是专业的语义安全分析专家，负责基于代码和现有证据进行深入的语义理解和漏洞分析。
+
+[分析任务]
+基于提供的代码、证据、污点路径和CVE模式，进行全面的语义分析，识别潜在的安全漏洞。
+
+[分析输入]
+代码:
+{code}
+
+现有证据:
+{evidence}
+
+污点路径:
+{taint_paths}
+
+CVE模式:
+{cve_patterns}
+
+[分析要求]
+1. 深入理解代码的语义结构和逻辑流程
+2. 结合现有证据和污点路径进行综合分析
+3. 识别潜在的安全漏洞，包括但不限于：
+   - 代码注入
+   - 命令注入
+   - SQL注入
+   - XSS
+   - 路径遍历
+   - 认证绕过
+   - 授权绕过
+   - 信息泄露
+   - 拒绝服务
+   - 缓冲区溢出
+4. 对每个发现的漏洞提供详细的分析和评估
+5. 生成标准化的输出格式
+
+[输出格式]
+请以JSON格式输出分析结果，包含以下字段：
+{
+  "vulnerabilities": [
+    {
+      "rule_id": "SEMANTIC-001",
+      "message": "语义分析发现的漏洞描述",
+      "severity": "critical|high|medium|low|info",
+      "confidence": 0.95,
+      "location": {
+        "file": "unknown",
+        "line": 123
+      },
+      "vulnerability_type": "代码注入",
+      "exploitability": "High",
+      "reasoning": "详细的分析推理过程"
+    }
+  ]
+}
+
+[注意事项]
+- 输出必须是有效的JSON格式
+- 分析要基于代码的实际语义，避免误报
+- 提供充分的推理过程，说明漏洞的成因和潜在影响
+- 置信度要基于分析的确定性，范围0.0-1.0
+"""
+    
+    # 格式化输入
+    code = analysis_input.get('code', '')
+    evidence = analysis_input.get('evidence', [])
+    taint_paths = analysis_input.get('taint_paths', [])
+    cve_patterns = analysis_input.get('cve_patterns', [])
+    
+    # 转换列表为字符串
+    evidence_str = '\n'.join([str(item) for item in evidence])
+    taint_paths_str = '\n'.join([str(item) for item in taint_paths])
+    cve_patterns_str = '\n'.join([str(item) for item in cve_patterns])
+    
+    # 替换占位符
+    prompt = prompt.format(
+        code=code,
+        evidence=evidence_str,
+        taint_paths=taint_paths_str,
+        cve_patterns=cve_patterns_str
+    )
+    
+    return prompt

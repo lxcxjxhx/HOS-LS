@@ -48,6 +48,7 @@ for i in range(100):
     file_path.unlink(missing_ok=True)
 
 
+@pytest.mark.asyncio
 async def test_simple_code_scan(test_config, simple_code_file):
     """测试简单代码扫描"""
     result = await run_scan(str(simple_code_file), test_config)
@@ -57,6 +58,7 @@ async def test_simple_code_scan(test_config, simple_code_file):
     assert len(result.findings) >= 0
 
 
+@pytest.mark.asyncio
 async def test_complex_code_scan(test_config, complex_code_file):
     """测试复杂代码扫描"""
     result = await run_scan(str(complex_code_file), test_config)
@@ -66,6 +68,7 @@ async def test_complex_code_scan(test_config, complex_code_file):
     assert len(result.findings) >= 0
 
 
+@pytest.mark.asyncio
 async def test_directory_scan(test_config):
     """测试目录扫描"""
     result = await run_scan('.', test_config)
@@ -73,6 +76,7 @@ async def test_directory_scan(test_config):
     assert result.status == 'completed'
 
 
+@pytest.mark.asyncio
 async def test_nonexistent_file(test_config):
     """测试不存在的文件"""
     result = await run_scan('nonexistent.py', test_config)

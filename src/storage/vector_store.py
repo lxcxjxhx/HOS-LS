@@ -42,11 +42,12 @@ class VectorStore:
         self._document_ids: List[str] = []
         self._embedding_cache: Dict[str, List[float]] = {}  # 文本哈希到embedding的缓存
         
-        # 初始化 CodeEmbedder
+        # 初始化 CodeEmbedder（使用单例模式）
+        from src.storage.code_embedder import create_embedder, EmbedConfig
         config = EmbedConfig()
         if model_name:
             config.model_name = model_name
-        self.embedder = CodeEmbedder(config)
+        self.embedder = create_embedder(config)
         
         # 加载现有数据
         self.load()
@@ -63,17 +64,27 @@ class VectorStore:
         # 生成嵌入
         embedding = self._generate_embedding(content)
         
-        # 检查嵌入维度是否一致
+        # 确保所有嵌入维度一致为256维
+        target_dim = 256
+        embedding = self._ensure_embedding_dimension(embedding, target_dim)
+        
+        # 检查现有嵌入维度
         if self._embeddings is not None:
             existing_dim = self._embeddings.shape[1]
-            new_dim = len(embedding)
-            if existing_dim != new_dim:
-                logger.warning(f"嵌入维度不匹配: 现有维度 {existing_dim}, 新维度 {new_dim}")
-                logger.warning("清空现有嵌入数据以使用新维度")
-                # 清空现有数据
-                self._embeddings = None
-                self._document_ids = []
-                self._documents.clear()
+            if existing_dim != target_dim:
+                # 转换现有嵌入到目标维度
+                logger.info(f"转换现有嵌入维度从 {existing_dim} 到 {target_dim}")
+                new_embeddings = []
+                for i in range(len(self._embeddings)):
+                    new_embedding = self._ensure_embedding_dimension(self._embeddings[i], target_dim)
+                    new_embeddings.append(new_embedding)
+                self._embeddings = np.array(new_embeddings)
+                
+                # 更新文档中的嵌入
+                for doc_id in self._documents:
+                    doc_embedding = np.array(self._documents[doc_id]["embedding"])
+                    new_doc_embedding = self._ensure_embedding_dimension(doc_embedding, target_dim)
+                    self._documents[doc_id]["embedding"] = new_doc_embedding.tolist()
         
         # 添加到内存存储
         if document_id in self._documents:
@@ -135,20 +146,27 @@ class VectorStore:
             # 单个生成嵌入
             new_embeddings = [self._generate_embedding(content) for content in contents]
         
-        # 检查嵌入维度是否一致
-        if new_embeddings:
-            embedding_dim = len(new_embeddings[0])
-            
-            # 检查现有嵌入维度是否匹配
-            if self._embeddings is not None:
-                existing_dim = self._embeddings.shape[1]
-                if existing_dim != embedding_dim:
-                    logger.warning(f"嵌入维度不匹配: 现有维度 {existing_dim}, 新维度 {embedding_dim}")
-                    logger.warning("清空现有嵌入数据以使用新维度")
-                    # 清空现有数据
-                    self._embeddings = None
-                    self._document_ids = []
-                    self._documents.clear()
+        # 确保所有嵌入维度一致为256维
+        target_dim = 256
+        new_embeddings = [self._ensure_embedding_dimension(embedding, target_dim) for embedding in new_embeddings]
+        
+        # 检查现有嵌入维度
+        if self._embeddings is not None:
+            existing_dim = self._embeddings.shape[1]
+            if existing_dim != target_dim:
+                # 转换现有嵌入到目标维度
+                logger.info(f"转换现有嵌入维度从 {existing_dim} 到 {target_dim}")
+                converted_embeddings = []
+                for i in range(len(self._embeddings)):
+                    converted_embedding = self._ensure_embedding_dimension(self._embeddings[i], target_dim)
+                    converted_embeddings.append(converted_embedding)
+                self._embeddings = np.array(converted_embeddings)
+                
+                # 更新文档中的嵌入
+                for doc_id in self._documents:
+                    doc_embedding = np.array(self._documents[doc_id]["embedding"])
+                    converted_doc_embedding = self._ensure_embedding_dimension(doc_embedding, target_dim)
+                    self._documents[doc_id]["embedding"] = converted_doc_embedding.tolist()
         
         # 更新文档信息
         for i, (document_id, content, metadata) in enumerate(doc_info):
@@ -398,12 +416,12 @@ class VectorStore:
             embedding = self.embedder.embed_code(text)
             embedding = np.array(embedding)
         else:
-            # 降级方案：使用简单的哈希嵌入，生成512维向量
+            # 降级方案：使用简单的哈希嵌入，生成256维向量
             hash_value = text_hash
             embedding = []
             
-            # 生成512维向量，与模型一致
-            for i in range(0, 512):
+            # 生成256维向量，与模型一致
+            for i in range(0, 256):
                 if i < len(hash_value):
                     embedding.append(int(hash_value[i % len(hash_value)], 16) / 15.0)
                 else:
@@ -414,10 +432,34 @@ class VectorStore:
             if norm > 0:
                 embedding = embedding / norm
         
+        # 确保嵌入维度为256维
+        embedding = self._ensure_embedding_dimension(embedding, 256)
+        
         # 缓存结果
         self._embedding_cache[text_hash] = embedding.tolist()
         
         return embedding
+    
+    def _ensure_embedding_dimension(self, embedding: np.ndarray, target_dim: int) -> np.ndarray:
+        """确保嵌入维度为目标维度
+
+        Args:
+            embedding: 原始嵌入向量
+            target_dim: 目标维度
+
+        Returns:
+            调整后的嵌入向量
+        """
+        current_dim = len(embedding)
+        if current_dim == target_dim:
+            return embedding
+        elif current_dim > target_dim:
+            # 截断到目标维度
+            return embedding[:target_dim]
+        else:
+            # 填充到目标维度
+            padding = np.zeros(target_dim - current_dim)
+            return np.concatenate([embedding, padding])
 
     def _calculate_similarity(self, query_embedding: np.ndarray, embeddings: np.ndarray) -> np.ndarray:
         """计算相似度
