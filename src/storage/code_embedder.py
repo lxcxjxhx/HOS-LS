@@ -16,6 +16,9 @@ from enum import Enum
 os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True,max_split_size_mb:256"
 os.environ["TOKENIZERS_PARALLELISM"] = "false"  # 避免tokenizer警告
 
+# 在nvd_importer.py中也添加相同的环境变量设置，确保在导入时就生效
+# 这样可以确保在整个NVD导入过程中都使用这个设置
+
 try:
     print("🔍 尝试导入 sentence_transformers...")
     from sentence_transformers import SentenceTransformer
@@ -580,17 +583,30 @@ class CodeEmbedder:
                 before_memory = torch.cuda.memory_allocated() / (1024 ** 2)  # MB
                 print(f"📊 生成嵌入前 GPU 内存使用: {before_memory:.2f} MB")
             
-            # 使用 torch.no_grad() 阻止梯度缓存，进一步省内存
+            # 使用 torch.no_grad() 和半精度加速，进一步省内存
             with torch.no_grad():
-                batch_embeddings = self._model.encode(
-                    codes,
-                    batch_size=batch_size,  # 内层 batch 设为与外层一致
-                    device=device,
-                    show_progress_bar=True,  # 显示进度条
-                    convert_to_tensor=convert_to_tensor,
-                    normalize_embeddings=True,
-                    **encode_kwargs
-                )
+                # 使用半精度加速
+                if TORCH_AVAILABLE and device == "cuda" and self.config.precision == "float16":
+                    with torch.autocast(device_type="cuda", dtype=torch.float16):
+                        batch_embeddings = self._model.encode(
+                            codes,
+                            batch_size=batch_size,  # 内层 batch 设为与外层一致
+                            device=device,
+                            show_progress_bar=True,  # 显示进度条
+                            convert_to_tensor=convert_to_tensor,
+                            normalize_embeddings=True,
+                            **encode_kwargs
+                        )
+                else:
+                    batch_embeddings = self._model.encode(
+                        codes,
+                        batch_size=batch_size,  # 内层 batch 设为与外层一致
+                        device=device,
+                        show_progress_bar=True,  # 显示进度条
+                        convert_to_tensor=convert_to_tensor,
+                        normalize_embeddings=True,
+                        **encode_kwargs
+                    )
             
             # 监控内存使用
             if TORCH_AVAILABLE and torch.cuda.is_available():

@@ -1035,8 +1035,30 @@ def run_update(zip_path, rag_base=None, limit=None, batch_size=1000, resume_from
                                         # 提取文本内容用于生成嵌入
                                         batch_texts = [k.content for k in knowledge_batch]
                                         
-                                        # 生成 embedding
-                                        batch_emb = embedder.embed_batch(batch_texts, batch_size=optimal_batch_size)
+                                        # 生成 embedding，添加OOM错误处理
+                                        retry_count = 0
+                                        max_retries = 3
+                                        batch_emb = None
+                                        while retry_count < max_retries:
+                                            try:
+                                                batch_emb = embedder.embed_batch(batch_texts, batch_size=optimal_batch_size)
+                                                break
+                                            except Exception as e:
+                                                # 捕获OOM错误
+                                                if "CUDA out of memory" in str(e) or "out of memory" in str(e):
+                                                    logger.warning(f"OOM错误: {e}")
+                                                    # 清理内存
+                                                    cleanup_memory()
+                                                    # 减小批次大小并重试
+                                                    optimal_batch_size = max(16, optimal_batch_size // 2)
+                                                    logger.info(f"减小批次大小到 {optimal_batch_size} 并重试")
+                                                    retry_count += 1
+                                                    if retry_count >= max_retries:
+                                                        logger.error("达到最大重试次数，跳过此批次")
+                                                        break
+                                                else:
+                                                    # 其他错误，直接抛出
+                                                    raise
                                         
                                         # 验证并标准化嵌入向量长度
                                         if batch_emb:
@@ -1054,14 +1076,15 @@ def run_update(zip_path, rag_base=None, limit=None, batch_size=1000, resume_from
                                                         batch_emb[i] = emb[:standard_dim]
                                         
                                         # 写入内存映射（关键！释放内存）
-                                        batch_size_actual = len(batch_emb)
-                                        print(f"💾 写入内存映射: 位置 {idx}-{idx+batch_size_actual}")
-                                        fp[idx:idx+batch_size_actual] = np.array(batch_emb, dtype='float16')
-                                        idx += batch_size_actual
-                                        
-                                        # 刷新内存映射
-                                        fp.flush()
-                                        print(f"✅ 已写入内存映射，当前位置: {idx}/{total_embeddings}")
+                                        if batch_emb:
+                                            batch_size_actual = len(batch_emb)
+                                            print(f"💾 写入内存映射: 位置 {idx}-{idx+batch_size_actual}")
+                                            fp[idx:idx+batch_size_actual] = np.array(batch_emb, dtype='float16')
+                                            idx += batch_size_actual
+                                            
+                                            # 刷新内存映射
+                                            fp.flush()
+                                            print(f"✅ 已写入内存映射，当前位置: {idx}/{total_embeddings}")
                                         
                                         # 删除大对象
                                         if 'batch_emb' in locals():

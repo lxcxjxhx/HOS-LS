@@ -297,3 +297,20 @@ class HybridStore:
             # 目前的VectorStore没有清理方法
         except Exception as e:
             logger.error(f"清理存储失败: {e}")
+
+    def generate_embeddings(self, texts: List[str], batch_size: int = 128) -> List[List[float]]:
+        """生成文本嵌入
+
+        Args:
+            texts: 文本列表
+            batch_size: 批处理大小
+
+        Returns:
+            嵌入向量列表
+        """
+        try:
+            # 使用CodeEmbedder生成嵌入
+            return self.vector_store.embedder.embed_batch(texts, batch_size=batch_size)
+        except Exception as e:
+            logger.error(f"生成嵌入失败: {e}")
+            return []

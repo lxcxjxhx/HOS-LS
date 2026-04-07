@@ -47,7 +47,234 @@ class NVDProcessor:
 
     def __init__(self):
         """初始化NVD处理器"""
+        # 字段长度限制
+        self.max_description_length = 4000  # 限制描述长度，避免OOM
+        self.max_reference_length = 1000
+        self.max_chunk_content_length = 2000
+        self.max_text_length = 4096  # 最大文本长度，避免OOM
+        self.max_embedding_length = 512  # 最大embedding文本长度，避免OOM
         pass
+
+    def truncate_field(self, text: str, max_length: int) -> str:
+        """截断字段长度
+
+        Args:
+            text: 原始文本
+            max_length: 最大长度
+
+        Returns:
+            截断后的文本
+        """
+        if text and len(text) > max_length:
+            return text[:max_length] + "..."
+        return text
+
+    def limit_text_length(self, text: str) -> str:
+        """限制文本长度，避免OOM
+
+        Args:
+            text: 原始文本
+
+        Returns:
+            限制长度后的文本
+        """
+        if text and len(text) > self.max_text_length:
+            logger.warning(f"文本长度超过限制，截断到 {self.max_text_length} 字符")
+            return text[:self.max_text_length] + "..."
+        return text
+
+    def split_long_description(self, description: str, cve_id: str) -> List[CVEChunk]:
+        """对长描述进行分段处理，生成多个数据块
+
+        Args:
+            description: 长描述文本
+            cve_id: CVE ID
+
+        Returns:
+            数据块列表
+        """
+        # 首先限制文本长度
+        description = self.limit_text_length(description)
+        chunks = []
+        if not description:
+            return chunks
+
+        # 按句子分割描述
+        sentences = description.split('. ')
+        current_chunk = []
+        current_length = 0
+        chunk_index = 1
+
+        for sentence in sentences:
+            sentence += '. '
+            sentence_length = len(sentence)
+
+            if current_length + sentence_length > self.max_chunk_content_length:
+                # 生成当前数据块
+                if current_chunk:
+                    chunk_content = ''.join(current_chunk)
+                    chunk = CVEChunk(
+                        cve_id=cve_id,
+                        chunk_type='description',
+                        content=f"CVE ID: {cve_id}\nDescription (part {chunk_index}): {chunk_content}",
+                        metadata={
+                            'type': 'description',
+                            'cve_id': cve_id,
+                            'part': chunk_index
+                        }
+                    )
+                    chunks.append(chunk)
+                    current_chunk = [sentence]
+                    current_length = sentence_length
+                    chunk_index += 1
+            else:
+                current_chunk.append(sentence)
+                current_length += sentence_length
+
+        # 处理最后一个数据块
+        if current_chunk:
+            chunk_content = ''.join(current_chunk)
+            chunk = CVEChunk(
+                cve_id=cve_id,
+                chunk_type='description',
+                content=f"CVE ID: {cve_id}\nDescription (part {chunk_index}): {chunk_content}",
+                metadata={
+                    'type': 'description',
+                    'cve_id': cve_id,
+                    'part': chunk_index
+                }
+            )
+            chunks.append(chunk)
+
+        logger.info(f"长描述分段完成，生成 {len(chunks)} 个数据块")
+        return chunks
+
+    def split_long_text(self, text: str, cve_id: str, chunk_type: str) -> List[CVEChunk]:
+        """对长文本进行分段处理，生成多个数据块
+
+        Args:
+            text: 长文本
+            cve_id: CVE ID
+            chunk_type: 数据块类型
+
+        Returns:
+            数据块列表
+        """
+        # 首先限制文本长度
+        text = self.limit_text_length(text)
+        chunks = []
+        if not text:
+            return chunks
+
+        # 按句子分割文本
+        sentences = text.split('. ')
+        current_chunk = []
+        current_length = 0
+        chunk_index = 1
+
+        for sentence in sentences:
+            sentence += '. '
+            sentence_length = len(sentence)
+
+            if current_length + sentence_length > self.max_chunk_content_length:
+                # 生成当前数据块
+                if current_chunk:
+                    chunk_content = ''.join(current_chunk)
+                    chunk = CVEChunk(
+                        cve_id=cve_id,
+                        chunk_type=chunk_type,
+                        content=f"CVE ID: {cve_id}\n{chunk_type.capitalize()} (part {chunk_index}): {chunk_content}",
+                        metadata={
+                            'type': chunk_type,
+                            'cve_id': cve_id,
+                            'part': chunk_index
+                        }
+                    )
+                    chunks.append(chunk)
+                    current_chunk = [sentence]
+                    current_length = sentence_length
+                    chunk_index += 1
+            else:
+                current_chunk.append(sentence)
+                current_length += sentence_length
+
+        # 处理最后一个数据块
+        if current_chunk:
+            chunk_content = ''.join(current_chunk)
+            chunk = CVEChunk(
+                cve_id=cve_id,
+                chunk_type=chunk_type,
+                content=f"CVE ID: {cve_id}\n{chunk_type.capitalize()} (part {chunk_index}): {chunk_content}",
+                metadata={
+                    'type': chunk_type,
+                    'cve_id': cve_id,
+                    'part': chunk_index
+                }
+            )
+            chunks.append(chunk)
+
+        logger.info(f"长文本分段完成，生成 {len(chunks)} 个数据块")
+        return chunks
+
+    def split_text_for_embedding(self, text: str) -> List[str]:
+        """将长文本切分为最大长度512的片段，用于embedding
+
+        Args:
+            text: 长文本
+
+        Returns:
+            切分后的文本片段列表
+        """
+        if not text:
+            return []
+
+        # 首先限制文本长度
+        text = self.limit_text_length(text)
+        
+        # 如果文本长度小于等于最大embedding长度，直接返回
+        if len(text) <= self.max_embedding_length:
+            return [text]
+
+        # 按语义切分（优先按句子）
+        sentences = text.split('. ')
+        chunks = []
+        current_chunk = []
+        current_length = 0
+
+        for sentence in sentences:
+            sentence += '. '
+            sentence_length = len(sentence)
+
+            if current_length + sentence_length > self.max_embedding_length:
+                # 生成当前数据块
+                if current_chunk:
+                    chunk_content = ''.join(current_chunk).strip()
+                    if chunk_content:
+                        chunks.append(chunk_content)
+                    current_chunk = [sentence]
+                    current_length = sentence_length
+            else:
+                current_chunk.append(sentence)
+                current_length += sentence_length
+
+        # 处理最后一个数据块
+        if current_chunk:
+            chunk_content = ''.join(current_chunk).strip()
+            if chunk_content:
+                chunks.append(chunk_content)
+
+        # 如果按语义切分后仍然有超长片段，按字符切分
+        final_chunks = []
+        for chunk in chunks:
+            if len(chunk) > self.max_embedding_length:
+                # 按字符切分
+                for i in range(0, len(chunk), self.max_embedding_length):
+                    final_chunks.append(chunk[i:i + self.max_embedding_length])
+            else:
+                final_chunks.append(chunk)
+
+        logger.info(f"文本切分完成，生成 {len(final_chunks)} 个embedding片段")
+        return final_chunks
 
     def detect_format(self, data: Dict[str, Any]) -> str:
         """检测NVD数据格式
@@ -101,6 +328,8 @@ class NVDProcessor:
             for desc in data.get('descriptions', []):
                 if desc.get('lang') == 'en':
                     description = desc.get('value', '')
+                    description = self.truncate_field(description, self.max_description_length)
+                    description = self.limit_text_length(description)
                     break
             
             # 解析CVSS
@@ -156,8 +385,8 @@ class NVDProcessor:
             references = []
             for ref in data.get('references', []):
                 references.append({
-                    'url': ref.get('url', ''),
-                    'name': ref.get('source', ''),
+                    'url': self.truncate_field(ref.get('url', ''), self.max_reference_length),
+                    'name': self.truncate_field(ref.get('source', ''), self.max_reference_length),
                 })
             
             # 解析日期
@@ -208,17 +437,9 @@ class NVDProcessor:
             # 生成数据块
             chunks = []
             
-            # 描述块
-            description_chunk = CVEChunk(
-                cve_id=cve_id,
-                chunk_type='description',
-                content=f"CVE ID: {cve_id}\nDescription: {description}",
-                metadata={
-                    'type': 'description',
-                    'cve_id': cve_id
-                }
-            )
-            chunks.append(description_chunk)
+            # 对长描述进行分段处理
+            description_chunks = self.split_long_description(description, cve_id)
+            chunks.extend(description_chunks)
             
             # 攻击链块（基于描述和引用生成）
             attack_chain_content = f"CVE ID: {cve_id}\n"
@@ -227,6 +448,7 @@ class NVDProcessor:
                 attack_chain_content += "References:\n"
                 for ref in references[:3]:  # 只取前3个引用
                     attack_chain_content += f"- {ref.get('url', '')}\n"
+            attack_chain_content = self.truncate_field(attack_chain_content, self.max_chunk_content_length)
             
             attack_chain_chunk = CVEChunk(
                 cve_id=cve_id,
@@ -266,6 +488,8 @@ class NVDProcessor:
             desc_data = cve_data.get('description', {}).get('description_data', [])
             if desc_data:
                 description = desc_data[0].get('value', '')
+                description = self.truncate_field(description, self.max_description_length)
+                description = self.limit_text_length(description)
             
             # 解析CVSS
             cvss_v3_score = None
@@ -310,8 +534,8 @@ class NVDProcessor:
             ref_data = cve_data.get('references', {}).get('reference_data', [])
             for ref in ref_data:
                 references.append({
-                    'url': ref.get('url', ''),
-                    'name': ref.get('name', ''),
+                    'url': self.truncate_field(ref.get('url', ''), self.max_reference_length),
+                    'name': self.truncate_field(ref.get('name', ''), self.max_reference_length),
                 })
             
             # 解析攻击向量
@@ -370,17 +594,9 @@ class NVDProcessor:
             # 生成数据块
             chunks = []
             
-            # 描述块
-            description_chunk = CVEChunk(
-                cve_id=cve_id,
-                chunk_type='description',
-                content=f"CVE ID: {cve_id}\nDescription: {description}",
-                metadata={
-                    'type': 'description',
-                    'cve_id': cve_id
-                }
-            )
-            chunks.append(description_chunk)
+            # 对长描述进行分段处理
+            description_chunks = self.split_long_description(description, cve_id)
+            chunks.extend(description_chunks)
             
             # 攻击链块
             attack_chain_content = f"CVE ID: {cve_id}\n"
@@ -389,6 +605,7 @@ class NVDProcessor:
                 attack_chain_content += "References:\n"
                 for ref in references[:3]:
                     attack_chain_content += f"- {ref.get('url', '')}\n"
+            attack_chain_content = self.truncate_field(attack_chain_content, self.max_chunk_content_length)
             
             attack_chain_chunk = CVEChunk(
                 cve_id=cve_id,
