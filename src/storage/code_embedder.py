@@ -101,6 +101,11 @@ class CodeEmbedder:
         if not SENTENCE_TRANSFORMERS_AVAILABLE:
             return
 
+        # 避免重复初始化
+        if self._initialized:
+            print(f"✅ 模型 {self.config.model_name} 已经初始化，直接使用")
+            return
+
         try:
             print(f"🔧 开始初始化模型: {self.config.model_name}")
             print(f"⏱️ 开始时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
@@ -269,7 +274,14 @@ class CodeEmbedder:
         if not codes:
             return []
         
-        print(f"\n🚀 开始生成嵌入... 批次大小: {len(codes)} 条（外层512）")
+        # 计算文本长度统计
+        lengths = [len(code) for code in codes]
+        avg_length = sum(lengths) / len(lengths) if lengths else 0
+        max_length = max(lengths) if lengths else 0
+        min_length = min(lengths) if lengths else 0
+        
+        print(f"\n🚀 开始生成嵌入... 批次大小: {len(codes)} 条（外层{batch_size}）")
+        print(f"📊 文本长度统计: 平均={avg_length:.1f}, 最大={max_length}, 最小={min_length}")
         
         # 3次强力清理
         import gc
@@ -289,6 +301,7 @@ class CodeEmbedder:
         uncached_codes: List[str] = []
         uncached_indices: List[int] = []
 
+        # 先检查缓存
         for i, code in enumerate(codes):
             if self.config.use_cache:
                 cache_key = self._generate_cache_key(code)
@@ -300,10 +313,41 @@ class CodeEmbedder:
             uncached_indices.append(i)
 
         if uncached_codes:
-            # 新增！阻止梯度缓存，进一步省内存
-            with torch.no_grad():
-                batch_embeddings = self._generate_embeddings_batch(uncached_codes)
+            # 对未缓存的代码进行批量处理
+            # 根据文本长度动态调整子批次大小
+            if avg_length > 1000:
+                sub_batch_size = 64
+            elif avg_length > 500:
+                sub_batch_size = 128
+            else:
+                sub_batch_size = min(batch_size, 256)
+            
+            print(f"🔧 根据文本长度调整子批次大小: {sub_batch_size}")
+            
+            total_uncached = len(uncached_codes)
+            processed_uncached = 0
+            batch_embeddings = []
+            
+            while processed_uncached < total_uncached:
+                end_idx = min(processed_uncached + sub_batch_size, total_uncached)
+                sub_batch = uncached_codes[processed_uncached:end_idx]
+                
+                print(f"🔄 处理子批次: {processed_uncached}-{end_idx}/{total_uncached}")
+                
+                # 阻止梯度缓存，进一步省内存
+                with torch.no_grad():
+                    sub_embeddings = self._generate_embeddings_batch(sub_batch)
+                
+                batch_embeddings.extend(sub_embeddings)
+                processed_uncached = end_idx
+                
+                # 每处理一个子批次后清理内存
+                del sub_embeddings
+                gc.collect()
+                if TORCH_AVAILABLE and torch.cuda.is_available():
+                    torch.cuda.empty_cache()
 
+            # 将生成的嵌入插入到正确的位置
             for i, (idx, embedding) in enumerate(zip(uncached_indices, batch_embeddings)):
                 embeddings.insert(idx, embedding)
 
@@ -460,6 +504,18 @@ class CodeEmbedder:
             else:
                 batch_size = self.config.batch_size
             
+            # 进一步限制 batch_size，确保内存安全
+            if TORCH_AVAILABLE and torch.cuda.is_available():
+                # 根据 GPU 内存动态调整 batch_size
+                try:
+                    total_memory = torch.cuda.get_device_properties(0).total_memory / (1024 ** 3)  # GB
+                    if total_memory < 8:
+                        batch_size = min(batch_size, 256)
+                    elif total_memory < 12:
+                        batch_size = min(batch_size, 512)
+                except Exception:
+                    pass
+            
             print(f"🔧 使用批处理大小: {batch_size}")
             
             # 可选 Matryoshka 压缩维度（省注入内存）
@@ -483,6 +539,11 @@ class CodeEmbedder:
             device = "cuda" if TORCH_AVAILABLE and torch.cuda.is_available() else "cpu"
             print(f"📱 使用设备: {device}")
             
+            # 监控内存使用
+            if TORCH_AVAILABLE and torch.cuda.is_available():
+                before_memory = torch.cuda.memory_allocated() / (1024 ** 2)  # MB
+                print(f"📊 生成嵌入前 GPU 内存使用: {before_memory:.2f} MB")
+            
             # 使用 torch.no_grad() 阻止梯度缓存，进一步省内存
             with torch.no_grad():
                 batch_embeddings = self._model.encode(
@@ -495,6 +556,12 @@ class CodeEmbedder:
                     **encode_kwargs
                 )
             
+            # 监控内存使用
+            if TORCH_AVAILABLE and torch.cuda.is_available():
+                after_memory = torch.cuda.memory_allocated() / (1024 ** 2)  # MB
+                print(f"📊 生成嵌入后 GPU 内存使用: {after_memory:.2f} MB")
+                print(f"📊 内存变化: {after_memory - before_memory:.2f} MB")
+            
             batch_end_time = datetime.now()
             batch_time = (batch_end_time - batch_start_time).total_seconds()
             print(f"✅ 嵌入完成，耗时: {batch_time:.2f} 秒")
@@ -503,10 +570,16 @@ class CodeEmbedder:
                 # 确保在 CPU 上转换为 numpy 数组
                 print("🔄 将 tensor 转换为 numpy 数组...")
                 batch_embeddings = batch_embeddings.cpu().numpy()
+                # 释放 GPU 内存
+                if torch.cuda.is_available():
+                    torch.cuda.empty_cache()
 
             if NUMPY_AVAILABLE and isinstance(batch_embeddings, np.ndarray):
                 print(f"📥 处理 numpy 嵌入，形状: {batch_embeddings.shape}")
-                return batch_embeddings.tolist()
+                result = batch_embeddings.tolist()
+                # 释放 numpy 数组内存
+                del batch_embeddings
+                return result
             elif isinstance(batch_embeddings, list):
                 print(f"📥 处理列表嵌入，长度: {len(batch_embeddings)}")
                 return batch_embeddings
@@ -517,6 +590,11 @@ class CodeEmbedder:
 
         except Exception as e:
             print(f"❌ Batch embedding failed: {e}")
+            # 清理内存
+            import gc
+            gc.collect()
+            if TORCH_AVAILABLE and torch.cuda.is_available():
+                torch.cuda.empty_cache()
             return [self._fallback_embedding(code) for code in codes]
 
     def _fallback_embedding(self, code: str) -> List[float]:

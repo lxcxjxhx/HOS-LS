@@ -539,6 +539,7 @@ def cve_to_knowledge(cve):
 def run_update(zip_path, rag_base=None, limit=None, batch_size=1000, resume_from=0, progress_callback=None):
     global temp_dir_path, interrupted, interrupt_signal
     temp_dir = None
+    is_user_provided_folder = False
     stats = {
         'total_files': 0,
         'parsed_success': 0,
@@ -610,6 +611,7 @@ def run_update(zip_path, rag_base=None, limit=None, batch_size=1000, resume_from
             # 不需要临时目录，使用输入文件夹作为临时目录
             temp_dir = input_path
             temp_dir_path = temp_dir
+            is_user_provided_folder = True
         else:
             # 处理zip文件
             logger.info(f"开始解压: {zip_path}")
@@ -757,10 +759,94 @@ def run_update(zip_path, rag_base=None, limit=None, batch_size=1000, resume_from
 
         os.makedirs("embeddings_cache", exist_ok=True)   # 创建缓存文件夹
 
-        outer_batch_size = 512          # ← 重新规划的核心数值（最稳）
+        # 计算合适的批量大小
+        def calculate_optimal_batch_size():
+            """根据 GPU 内存计算最优批量大小"""
+            # 使用内存监控工具
+            from src.utils.memory_monitor import get_memory_monitor
+            memory_monitor = get_memory_monitor()
+            
+            if not TORCH_AVAILABLE or not torch.cuda.is_available():
+                return 256  # CPU 模式下使用较小批量
+            
+            try:
+                # 获取 GPU 内存信息
+                memory_status = memory_monitor.get_memory_status()
+                if memory_status['gpu']:
+                    total_memory = memory_status['gpu']['total']
+                    logger.info(f"🔍 GPU 总内存: {total_memory:.2f} GB")
+                    
+                    # 根据 GPU 内存动态调整批量大小
+                    if total_memory >= 16:
+                        return 1024
+                    elif total_memory >= 12:
+                        return 768
+                    elif total_memory >= 8:
+                        return 512
+                    elif total_memory >= 6:
+                        return 384
+                    else:
+                        return 256
+                else:
+                    return 512  # 默认值
+            except Exception as e:
+                logger.warning(f"计算批量大小时出错: {e}")
+                return 512  # 默认值
+
+        # 内存清理函数
+        def cleanup_memory():
+            """彻底清理内存"""
+            # 强制垃圾回收
+            import gc
+            for _ in range(3):
+                gc.collect()
+                if TORCH_AVAILABLE and torch.cuda.is_available():
+                    torch.cuda.empty_cache()
+                    # 重置峰值内存统计
+                    torch.cuda.reset_peak_memory_stats()
+            
+            # 显式删除大对象引用
+            if 'batch_emb' in locals():
+                del batch_emb
+            if 'batch_texts' in locals():
+                del batch_texts
+            if 'knowledge_batch' in locals():
+                del knowledge_batch
+
+        # 初始化嵌入器（只初始化一次）
+        embedder = None
+        optimal_batch_size = calculate_optimal_batch_size()
+        
+        if rag_base:
+            from src.storage.code_embedder import create_embedder, EmbedConfig
+            config = EmbedConfig()
+            config.model_name = "google/embeddinggemma-300M"
+            config.batch_size = optimal_batch_size  # 优化批量大小
+            config.embedding_batch_size = optimal_batch_size  # 优化嵌入批量大小
+            embedder = create_embedder(config)
+            logger.info("✅ 嵌入器初始化完成")
+
+        outer_batch_size = optimal_batch_size          # 使用计算出的最优批量大小
         logger.info(f"🔧 使用外层批处理大小: {outer_batch_size} 条（稳定防OOM版）")
         logger.info(f"📊 总待处理条数: {len(cve_files)}")
         batch_size = outer_batch_size
+        
+        # 初始化内存映射
+        import numpy as np
+        
+        # 预计算总嵌入数量
+        total_embeddings = len(cve_files)
+        embedding_dim = 256  # 根据模型确定
+        
+        # 创建内存映射文件
+        memmap_path = Path("embeddings_cache/embeddings_all.npy")
+        memmap_path.parent.mkdir(exist_ok=True)
+        
+        # 初始化内存映射
+        logger.info(f"📋 初始化内存映射文件: {memmap_path}")
+        logger.info(f"📋 总嵌入数量: {total_embeddings}, 维度: {embedding_dim}")
+        fp = np.memmap(str(memmap_path), dtype='float16', mode='w+', shape=(total_embeddings, embedding_dim))
+        idx = 0
         
         # 优化：使用流式处理，边处理边导入
         # 优化：延迟加载知识ID，减少内存使用
@@ -886,28 +972,39 @@ def run_update(zip_path, rag_base=None, limit=None, batch_size=1000, resume_from
                                         batch_texts = [k.content for k in knowledge_batch]
                                         
                                         # 生成 embedding
-                                        from src.storage.code_embedder import create_embedder
-                                        embedder = create_embedder()
-                                        batch_emb = embedder.embed_batch(batch_texts, batch_size=1024)
+                                        batch_emb = embedder.embed_batch(batch_texts, batch_size=optimal_batch_size)
                                         
-                                        # 立即存磁盘（关键！释放内存）
-                                        cache_path = f"embeddings_cache/batch_{batch_idx:06d}.npy"
-                                        np.save(cache_path, batch_emb)
-                                        print(f"💾 已保存批次 {batch_idx} 到磁盘 → {cache_path}")
+                                        # 写入内存映射（关键！释放内存）
+                                        batch_size_actual = len(batch_emb)
+                                        print(f"💾 写入内存映射: 位置 {idx}-{idx+batch_size_actual}")
+                                        fp[idx:idx+batch_size_actual] = np.array(batch_emb, dtype='float16')
+                                        idx += batch_size_actual
+                                        
+                                        # 刷新内存映射
+                                        fp.flush()
+                                        print(f"✅ 已写入内存映射，当前位置: {idx}/{total_embeddings}")
+                                        
+                                        # 删除大对象
+                                        if 'batch_emb' in locals():
+                                            del batch_emb
+                                        if 'batch_texts' in locals():
+                                            del batch_texts
                                         
                                         # 释放内存
-                                        del batch_emb
-                                        for _ in range(3):
-                                            import gc
-                                            gc.collect()
-                                            if TORCH_AVAILABLE and torch.cuda.is_available():
-                                                torch.cuda.empty_cache()
+                                        cleanup_memory()
                                         
                                         print(f"✅ 外层批次 {batch_idx} 完成（已释放内存）")
                                         
                                         # 内存监控
                                         current_memory = process.memory_info().rss / 1024 / 1024
                                         logger.info(f"内存使用: {current_memory:.2f} MB (增加: {current_memory - initial_memory:.2f} MB)")
+                                        
+                                        # 使用内存监控工具监控 GPU 内存
+                                        from src.utils.memory_monitor import get_memory_status
+                                        memory_status = get_memory_status()
+                                        if memory_status['gpu']:
+                                            gpu_memory = memory_status['gpu']
+                                            logger.info(f"GPU 内存使用: {gpu_memory['allocated']:.2f} GB / {gpu_memory['total']:.2f} GB ({gpu_memory['used_percent']:.1f}%)")
                                         
                                         # 清理知识批次内存
                                         del knowledge_batch
@@ -919,14 +1016,13 @@ def run_update(zip_path, rag_base=None, limit=None, batch_size=1000, resume_from
                                         logger.error(f"批量导入到RAG失败: {e}")
                                         stats['skipped'] += len(knowledge_batch)
                                         # 清理内存
-                                        import gc
                                         if 'batch_emb' in locals():
                                             del batch_emb
+                                        if 'batch_texts' in locals():
+                                            del batch_texts
                                         del knowledge_batch
                                         knowledge_batch = []
-                                        gc.collect()
-                                        if TORCH_AVAILABLE and torch.cuda.is_available():
-                                            torch.cuda.empty_cache()
+                                        cleanup_memory()
                                 
                                 # 移除定期保存，改为最终统一保存
                                 
@@ -1238,6 +1334,14 @@ def run_update(zip_path, rag_base=None, limit=None, batch_size=1000, resume_from
         logger.info(f"跳过: {stats['skipped']}")
         logger.info(f"重复跳过: {duplicate_count}")
         
+        # 关闭内存映射
+        if 'fp' in locals():
+            print(f"\n🔒 关闭内存映射文件")
+            print(f"📊 总写入嵌入数量: {idx}/{total_embeddings}")
+            fp.flush()
+            del fp
+            print("✅ 内存映射文件已关闭")
+        
         # 处理完成后清理断点文件
         if checkpoint_path.exists():
             try:
@@ -1267,7 +1371,7 @@ def run_update(zip_path, rag_base=None, limit=None, batch_size=1000, resume_from
             try:
                 import click
                 keep_temp = click.confirm('是否保留临时文件用于下次断点续传？', default=True)
-                if not keep_temp:
+                if not keep_temp and not is_user_provided_folder:
                     logger.info("用户选择不保留临时文件，正在执行强力删除...")
                     # 执行强力删除
                     if temp_dir and temp_dir.exists():
@@ -1300,8 +1404,8 @@ def run_update(zip_path, rag_base=None, limit=None, batch_size=1000, resume_from
                         logger.warning(f"更新断点文件失败: {e}")
             except Exception as e:
                 logger.error(f"用户确认过程出错: {e}")
-                # 出错时默认清理临时文件
-                if temp_dir and temp_dir.exists():
+                # 出错时默认清理临时文件，但不删除用户提供的文件夹
+                if temp_dir and temp_dir.exists() and not is_user_provided_folder:
                     try:
                         shutil.rmtree(temp_dir, ignore_errors=True)
                         logger.info(f"已清理临时目录: {temp_dir}")
@@ -1309,7 +1413,7 @@ def run_update(zip_path, rag_base=None, limit=None, batch_size=1000, resume_from
                         logger.warning(f"清理临时目录失败: {e2}")
         else:
             # 正常结束，清理临时文件和目录
-            if temp_dir and temp_dir.exists():
+            if temp_dir and temp_dir.exists() and not is_user_provided_folder:
                 try:
                     # 直接使用 shutil.rmtree 删除整个目录，这是最有效的方法
                     shutil.rmtree(temp_dir, ignore_errors=True)

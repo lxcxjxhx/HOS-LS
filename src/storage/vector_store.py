@@ -5,6 +5,7 @@
 
 import json
 import numpy as np
+import hashlib
 from pathlib import Path
 from typing import Dict, List, Optional, Any
 
@@ -33,11 +34,13 @@ class VectorStore:
         # 存储文件
         self.embeddings_path = self.storage_path / "embeddings.npy"
         self.documents_path = self.storage_path / "documents.json"
+        self.embedding_cache_path = self.storage_path / "embedding_cache.json"
         
         # 内存存储
         self._embeddings: Optional[np.ndarray] = None
         self._documents: Dict[str, Dict] = {}
         self._document_ids: List[str] = []
+        self._embedding_cache: Dict[str, List[float]] = {}  # 文本哈希到embedding的缓存
         
         # 初始化 CodeEmbedder
         config = EmbedConfig()
@@ -47,6 +50,7 @@ class VectorStore:
         
         # 加载现有数据
         self.load()
+        self._load_embedding_cache()
 
     def add_document(self, document_id: str, content: str, metadata: Dict[str, Any]) -> None:
         """添加文档
@@ -320,6 +324,9 @@ class VectorStore:
             }
             with open(self.documents_path, "w", encoding="utf-8") as f:
                 json.dump(documents_data, f, indent=2, ensure_ascii=False)
+        
+        # 保存embedding缓存
+        self._save_embedding_cache()
 
     def load(self) -> None:
         """加载向量存储"""
@@ -340,6 +347,36 @@ class VectorStore:
             except Exception as e:
                 logger.error(f"加载嵌入失败: {e}")
 
+    def _load_embedding_cache(self):
+        """加载embedding缓存"""
+        try:
+            if self.embedding_cache_path.exists():
+                with open(self.embedding_cache_path, 'r', encoding='utf-8') as f:
+                    self._embedding_cache = json.load(f)
+                logger.info(f"加载了 {len(self._embedding_cache)} 个embedding缓存")
+        except Exception as e:
+            logger.error(f"加载embedding缓存失败: {e}")
+            self._embedding_cache = {}
+
+    def _save_embedding_cache(self):
+        """保存embedding缓存"""
+        try:
+            with open(self.embedding_cache_path, 'w', encoding='utf-8') as f:
+                json.dump(self._embedding_cache, f, indent=2, ensure_ascii=False)
+        except Exception as e:
+            logger.error(f"保存embedding缓存失败: {e}")
+
+    def _get_text_hash(self, text: str) -> str:
+        """计算文本哈希
+
+        Args:
+            text: 文本
+
+        Returns:
+            文本哈希
+        """
+        return hashlib.sha256(text.encode()).hexdigest()
+
     def _generate_embedding(self, text: str) -> np.ndarray:
         """生成文本嵌入
 
@@ -349,14 +386,20 @@ class VectorStore:
         Returns:
             嵌入向量
         """
+        # 计算文本哈希
+        text_hash = self._get_text_hash(text)
+        
+        # 检查缓存
+        if text_hash in self._embedding_cache:
+            return np.array(self._embedding_cache[text_hash])
+        
         # 使用 CodeEmbedder 生成嵌入
         if self.embedder.is_available():
             embedding = self.embedder.embed_code(text)
             embedding = np.array(embedding)
         else:
             # 降级方案：使用简单的哈希嵌入，生成512维向量
-            import hashlib
-            hash_value = hashlib.sha256(text.encode()).hexdigest()
+            hash_value = text_hash
             embedding = []
             
             # 生成512维向量，与模型一致
@@ -370,6 +413,9 @@ class VectorStore:
             norm = np.linalg.norm(embedding)
             if norm > 0:
                 embedding = embedding / norm
+        
+        # 缓存结果
+        self._embedding_cache[text_hash] = embedding.tolist()
         
         return embedding
 
