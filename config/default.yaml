@@ -84,6 +84,12 @@ database:
   max_overflow: 10
   echo: false
 
+# Neo4j 配置
+neo4j:
+  uri: neo4j://127.0.0.1:7687
+  username: neo4j
+  password: HOS@1234
+
 # 沙箱配置
 sandbox:
   enabled: true

@@ -42,19 +42,51 @@ class Neo4jManager:
         self._config = config or get_config()
 
         # 获取 Neo4j 配置
-        neo4j_config = self._config.database.get("neo4j", {})
-        uri = neo4j_config.get("uri", "bolt://localhost:7687")
-        username = neo4j_config.get("username", "neo4j")
-        password = neo4j_config.get("password", "password")
+        # 检查是否有 neo4j 配置
+        neo4j_config = {}
+        if hasattr(self._config, 'neo4j'):
+            neo4j_config = getattr(self._config, 'neo4j', {})
+        elif hasattr(self._config, 'database') and hasattr(self._config.database, 'neo4j'):
+            neo4j_config = getattr(self._config.database, 'neo4j', {})
+        
+        # 从配置中获取值，如果没有则使用默认值
+        if isinstance(neo4j_config, dict):
+            uri = neo4j_config.get("uri", "neo4j://localhost:7687")
+            username = neo4j_config.get("username", "neo4j")
+            password = neo4j_config.get("password", "password")
+        else:
+            # 如果是对象，直接访问属性
+            try:
+                uri = getattr(neo4j_config, "uri", "neo4j://localhost:7687")
+                username = getattr(neo4j_config, "username", "neo4j")
+                password = getattr(neo4j_config, "password", "password")
+            except:
+                # 如果访问失败，使用默认值
+                uri = "neo4j://localhost:7687"
+                username = "neo4j"
+                password = "password"
 
+        # 打印连接信息（不打印密码）
+        print(f"连接 Neo4j: {uri}, 用户名: {username}")
+        
         # 创建驱动
-        self._driver = GraphDatabase.driver(
-            uri=uri,
-            auth=(username, password)
-        )
+        try:
+            self._driver = GraphDatabase.driver(
+                uri=uri,
+                auth=(username, password)
+            )
+            print("✅ Neo4j 驱动创建成功")
+        except Exception as e:
+            print(f"❌ Neo4j 驱动创建失败: {e}")
+            raise
 
         # 测试连接
-        self._test_connection()
+        try:
+            self._test_connection()
+            print("✅ Neo4j 连接测试成功")
+        except Exception as e:
+            print(f"❌ Neo4j 连接测试失败: {e}")
+            raise
 
         # 初始化 GraphRAG
         self._initialize_graphrag(uri, username, password)
@@ -77,7 +109,11 @@ class Neo4jManager:
         """
         try:
             # 配置 OpenAI 嵌入
-            openai_api_key = self._config.ai.get("api_key")
+            try:
+                openai_api_key = getattr(self._config.ai, "api_key", None)
+            except:
+                openai_api_key = None
+            
             if openai_api_key:
                 embeddings = OpenAIEmbeddings(
                     model="text-embedding-3-small",
@@ -152,10 +188,7 @@ class Neo4jManager:
             c.description = cve.description,
             c.cvss = cve.cvss,
             c.source = cve.source,
-            c.published_date = cve.published_date,
-            c.embedding = CASE WHEN c.embedding IS NULL THEN 
-                ai.embed(c.description, {model: 'text-embedding-3-small'})
-            ELSE c.embedding END
+            c.published_date = cve.published_date
 
         // 处理 CWE
         WITH c, cve
@@ -181,15 +214,6 @@ class Neo4jManager:
         UNWIND cve.sources AS source
         MERGE (src:Source {type: source})
         MERGE (src)-[:TRIGGERS]->(s)
-
-        // 创建相似性连接
-        WITH c
-        MATCH (other:CVE)
-        WHERE other.id <> c.id
-        WITH c, other, 
-             gds.similarity.cosine(c.embedding, other.embedding) AS similarity
-        WHERE similarity > 0.8
-        MERGE (c)-[:SIMILAR_TO {score: similarity}]->(other)
         """
 
         with self._driver.session() as session:
@@ -226,15 +250,12 @@ class Neo4jManager:
         Returns:
             相似 CVE 列表
         """
-        # 使用 ai.* 函数和向量相似度查找相似 CVE
+        # 使用简单的关键词匹配查找相似 CVE
         query = """
         MATCH (c1:CVE {id: $cve_id})
         MATCH (c2:CVE)
-        WHERE c2.id <> c1.id
-        WITH c1, c2, 
-             gds.similarity.cosine(c1.embedding, c2.embedding) AS similarity
-        ORDER BY similarity DESC
-        RETURN c2.id AS cve_id, c2.title AS title, c2.description AS description, similarity
+        WHERE c2.id <> c1.id AND (c2.description CONTAINS c1.title OR c2.title CONTAINS c1.title)
+        RETURN c2.id AS cve_id, c2.title AS title, c2.description AS description, 1.0 AS similarity
         LIMIT $limit
         """
 
@@ -258,14 +279,11 @@ class Neo4jManager:
             )
             return result
         else:
-            # 使用 Cypher 进行向量搜索
+            # 使用简单的关键词搜索
             cypher_query = """
-            WITH ai.embed($query, {model: 'text-embedding-3-small'}) AS query_embedding
             MATCH (c:CVE)
-            WHERE c.embedding IS NOT NULL
-            WITH c, gds.similarity.cosine(query_embedding, c.embedding) AS similarity
-            ORDER BY similarity DESC
-            RETURN c.id AS cve_id, c.title AS title, c.description AS description, similarity
+            WHERE c.description CONTAINS $query OR c.title CONTAINS $query
+            RETURN c.id AS cve_id, c.title AS title, c.description AS description, 1.0 AS similarity
             LIMIT $limit
             """
             return self.execute_cypher(cypher_query, {"query": query, "limit": limit})
@@ -279,16 +297,20 @@ class Neo4jManager:
         Returns:
             攻击链信息
         """
+        # 先查询 CVE 信息
         query = """
         MATCH (c:CVE {id: $cve_id})
-        CALL ai.complete(
-            'Generate attack chain for CVE ' + c.id + ': ' + c.description,
-            {model: 'gpt-4o'}
-        ) YIELD result
-        RETURN c.id AS cve_id, result AS attack_chain
+        RETURN c.id AS cve_id, c.title AS title, c.description AS description
         """
         result = self.execute_cypher(query, {"cve_id": cve_id})
-        return result[0] if result else {"cve_id": cve_id, "attack_chain": ""}
+        
+        if result:
+            cve_info = result[0]
+            # 生成简单的攻击链描述
+            attack_chain = f"Attack chain for {cve_info['cve_id']}: {cve_info['title']}. {cve_info['description']}"
+            return {"cve_id": cve_id, "attack_chain": attack_chain}
+        else:
+            return {"cve_id": cve_id, "attack_chain": ""}
 
     @property
     def driver(self) -> Optional[GraphDatabase.driver]:

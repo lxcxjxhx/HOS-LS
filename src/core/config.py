@@ -119,6 +119,14 @@ class SandboxConfig(BaseModel):
     file_system_access: bool = Field(default=False, description="是否允许文件系统访问")
 
 
+class Neo4jConfig(BaseModel):
+    """Neo4j 配置"""
+
+    uri: str = Field(default="neo4j://localhost:7687", description="Neo4j URI")
+    username: str = Field(default="neo4j", description="Neo4j 用户名")
+    password: str = Field(default="password", description="Neo4j 密码")
+
+
 class Config(BaseSettings):
     """HOS-LS 主配置类"""
 
@@ -138,6 +146,7 @@ class Config(BaseSettings):
     report: ReportConfig = Field(default_factory=ReportConfig)
     database: DatabaseConfig = Field(default_factory=DatabaseConfig)
     sandbox: SandboxConfig = Field(default_factory=SandboxConfig)
+    neo4j: Neo4jConfig = Field(default_factory=Neo4jConfig)
 
     # 全局配置
     debug: bool = Field(default=False, description="调试模式")
@@ -361,4 +370,4 @@ def get_config() -> Config:
     Returns:
         全局配置对象
     """
-    return ConfigManager().config
+    return ConfigManager().auto_load()

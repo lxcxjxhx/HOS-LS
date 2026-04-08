@@ -15,6 +15,9 @@ from src.learning.self_learning import Knowledge, KnowledgeType, Pattern
 from src.utils.logger import get_logger
 from src.core.config import Config, get_config
 from src.storage.vector_store import VectorStore
+from src.storage.hybrid_retriever import HybridRetriever
+from src.storage.reranker import Reranker
+from src.storage.query_rewriter import QueryRewriter
 
 logger = get_logger(__name__)
 
@@ -134,6 +137,15 @@ class RAGKnowledgeBase:
         # 向量存储
         self.vector_store = VectorStore(self.base_path / "vector_store", model_name=model_name)
         
+        # 混合检索器
+        self.hybrid_retriever = HybridRetriever(self.base_path / "hybrid_retriever", self.vector_store)
+        
+        # 重排序器
+        self.reranker = Reranker()
+        
+        # 查询重写器
+        self.query_rewriter = QueryRewriter()
+        
         # 内存存储
         self._knowledge: Dict[str, Knowledge] = {}
         self._patterns: Dict[str, Pattern] = {}
@@ -174,8 +186,9 @@ class RAGKnowledgeBase:
         self.history = []
         self.usage_count = 0
         
-        # 清空向量存储
+        # 清空向量存储和混合检索器
         self.vector_store.clear()
+        self.hybrid_retriever.clear()
         
         # 删除损坏的文件
         for file_path in [self.knowledge_path, self.patterns_path, self.graph_path]:
@@ -226,6 +239,17 @@ class RAGKnowledgeBase:
         
         # 添加到向量存储
         self.vector_store.add_document(
+            document_id=knowledge.id,
+            content=knowledge.content,
+            metadata={
+                "type": knowledge.knowledge_type.value,
+                "source": knowledge.source,
+                "tags": knowledge.tags
+            }
+        )
+        
+        # 添加到混合检索器
+        self.hybrid_retriever.add_document(
             document_id=knowledge.id,
             content=knowledge.content,
             metadata={
@@ -289,6 +313,10 @@ class RAGKnowledgeBase:
                     
                     # 批量添加文档到向量存储
                     self.vector_store.add_documents(documents, build_index=build_index)
+                    
+                    # 批量添加文档到混合检索器
+                    self.hybrid_retriever.add_documents(documents)
+                    
                     total_added += len(batch)
                     logger.info(f"✅ 成功注入批次 {batch_num}/{total_batches}：{len(batch)} 条")
                 except Exception as e:
@@ -339,6 +367,10 @@ class RAGKnowledgeBase:
                     
                     # 批量添加文档到向量存储
                     self.vector_store.add_documents(documents, build_index=build_index)
+                    
+                    # 批量添加文档到混合检索器
+                    self.hybrid_retriever.add_documents(documents)
+                    
                     total_added += len(batch)
                     logger.info(f"✅ 成功注入批次 {batch_num}/{total_batches}：{len(batch)} 条")
                 except Exception as e:
@@ -372,6 +404,16 @@ class RAGKnowledgeBase:
         
         # 添加到向量存储
         self.vector_store.add_document(
+            document_id=pattern.id,
+            content=pattern.description,
+            metadata={
+                "type": "pattern",
+                "pattern_type": pattern.pattern_type
+            }
+        )
+        
+        # 添加到混合检索器
+        self.hybrid_retriever.add_document(
             document_id=pattern.id,
             content=pattern.description,
             metadata={
@@ -444,15 +486,21 @@ class RAGKnowledgeBase:
         """
         self.record_usage()
         
-        # 使用向量存储进行语义搜索
-        results = self.vector_store.search(
-            query=query,
-            top_k=top_k
+        # 重写查询
+        rewritten_query = self.query_rewriter.rewrite_query(query)
+        
+        # 使用混合检索器进行搜索
+        results = self.hybrid_retriever.hybrid_search(
+            query=rewritten_query,
+            top_k=top_k * 2  # 获取更多结果用于重排序
         )
+        
+        # 使用重排序器进行精排
+        reranked_results = self.reranker.rerank(query, results)
         
         # 转换为知识对象
         knowledge_results = []
-        for result in results:
+        for result in reranked_results[:top_k]:  # 只取前 top_k 个结果
             knowledge_id = result["document_id"]
             if knowledge_id in self._knowledge:
                 knowledge_results.append(self._knowledge[knowledge_id])
@@ -486,15 +534,21 @@ class RAGKnowledgeBase:
         """
         self.record_usage()
         
-        # 使用向量存储进行语义搜索
-        results = self.vector_store.search(
-            query=query,
-            top_k=top_k
+        # 重写查询
+        rewritten_query = self.query_rewriter.rewrite_query(query)
+        
+        # 使用混合检索器进行搜索
+        results = self.hybrid_retriever.hybrid_search(
+            query=rewritten_query,
+            top_k=top_k * 2  # 获取更多结果用于重排序
         )
+        
+        # 使用重排序器进行精排
+        reranked_results = self.reranker.rerank(query, results)
         
         # 转换为标准化输出
         output = []
-        for result in results:
+        for result in reranked_results[:top_k]:  # 只取前 top_k 个结果
             knowledge_id = result["document_id"]
             if knowledge_id in self._knowledge:
                 knowledge = self._knowledge[knowledge_id]
@@ -563,6 +617,17 @@ class RAGKnowledgeBase:
             }
         )
         
+        # 更新混合检索器
+        self.hybrid_retriever.update_document(
+            document_id=knowledge_id,
+            content=knowledge.content,
+            metadata={
+                "type": knowledge.knowledge_type.value,
+                "source": knowledge.source,
+                "tags": knowledge.tags
+            }
+        )
+        
         self.save()
         return True
 
@@ -597,6 +662,16 @@ class RAGKnowledgeBase:
             }
         )
         
+        # 更新混合检索器
+        self.hybrid_retriever.update_document(
+            document_id=pattern_id,
+            content=pattern.description,
+            metadata={
+                "type": "pattern",
+                "pattern_type": pattern.pattern_type
+            }
+        )
+        
         self.save()
         return True
 
@@ -617,6 +692,9 @@ class RAGKnowledgeBase:
             # 从向量存储中删除
             self.vector_store.delete_document(knowledge_id)
             
+            # 从混合检索器中删除
+            self.hybrid_retriever.delete_document(knowledge_id)
+            
             self.save()
             return True
         return False
@@ -636,6 +714,9 @@ class RAGKnowledgeBase:
             
             # 从向量存储中删除
             self.vector_store.delete_document(pattern_id)
+            
+            # 从混合检索器中删除
+            self.hybrid_retriever.delete_document(pattern_id)
             
             self.save()
             return True
@@ -1027,9 +1108,12 @@ class RAGKnowledgeBase:
         # 重新构建知识图谱
         self.build_knowledge_graph()
         
-        # 重新构建向量存储
+        # 重新构建向量存储和混合检索器
         self.vector_store.clear()
+        self.hybrid_retriever.clear()
+        
         for knowledge in self._knowledge.values():
+            # 添加到向量存储
             self.vector_store.add_document(
                 document_id=knowledge.id,
                 content=knowledge.content,
@@ -1039,8 +1123,29 @@ class RAGKnowledgeBase:
                     "tags": knowledge.tags
                 }
             )
+            # 添加到混合检索器
+            self.hybrid_retriever.add_document(
+                document_id=knowledge.id,
+                content=knowledge.content,
+                metadata={
+                    "type": knowledge.knowledge_type.value,
+                    "source": knowledge.source,
+                    "tags": knowledge.tags
+                }
+            )
+        
         for pattern in self._patterns.values():
+            # 添加到向量存储
             self.vector_store.add_document(
+                document_id=pattern.id,
+                content=pattern.description,
+                metadata={
+                    "type": "pattern",
+                    "pattern_type": pattern.pattern_type
+                }
+            )
+            # 添加到混合检索器
+            self.hybrid_retriever.add_document(
                 document_id=pattern.id,
                 content=pattern.description,
                 metadata={
