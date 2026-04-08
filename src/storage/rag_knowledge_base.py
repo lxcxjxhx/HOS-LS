@@ -257,9 +257,9 @@ class RAGKnowledgeBase:
         # 检查内存限制
         if not self._check_memory_limit():
             logger.warning("内存使用接近限制，将分批处理")
-            # 分批处理 - 使用小 batch 大小避免 OOM（根据 fix_1.md）
+            # 分批处理 - 使用小 batch 大小以避免 OOM
             import torch
-            inject_batch_size = 8  # 使用小批量避免 OOM
+            inject_batch_size = 8  # 关键！使用小 batch 大小以避免 OOM
             total_added = 0
             total_batches = (len(knowledge_list) + inject_batch_size - 1) // inject_batch_size
             
@@ -307,9 +307,9 @@ class RAGKnowledgeBase:
                 self.save()
             return total_added
         else:
-            # 即使内存充足，也使用大 batch 大小以提高 GPU 利用率
+            # 即使内存充足，也使用小 batch 大小以避免 OOM
             import torch
-            inject_batch_size = 4096  # 关键！使用大 batch 大小以提高 GPU 利用率
+            inject_batch_size = 8  # 关键！使用小 batch 大小以避免 OOM
             total_added = 0
             total_batches = (len(knowledge_list) + inject_batch_size - 1) // inject_batch_size
             
