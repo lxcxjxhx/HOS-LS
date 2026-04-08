@@ -122,6 +122,14 @@ proxy:
   http_url: http://127.0.0.1:7897
   https_url: http://127.0.0.1:7897
 
+# 批量处理配置
+batch_processing:
+  adaptive_batch_size:
+    enabled: false  # 默认关闭
+    min_batch_size: 16
+    max_batch_size: 256
+    memory_threshold: 0.8  # 内存使用阈值
+
 # 全局配置
 debug: false
 verbose: false

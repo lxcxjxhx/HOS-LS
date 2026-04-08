@@ -12,6 +12,7 @@ import concurrent.futures
 import os
 import traceback
 import signal
+import time
 from datetime import datetime
 from pathlib import Path
 from dataclasses import dataclass, field
@@ -575,7 +576,7 @@ def cve_to_knowledge(cve):
     )
 
 
-def run_update(zip_path, rag_base=None, limit=None, batch_size=1000, resume_from=0, progress_callback=None):
+def run_update(zip_path, rag_base=None, limit=None, batch_size=1000, resume_from=0, progress_callback=None, model_name=None):
     global temp_dir_path, interrupted, interrupt_signal
     temp_dir = None
     is_user_provided_folder = False
@@ -635,6 +636,27 @@ def run_update(zip_path, rag_base=None, limit=None, batch_size=1000, resume_from
         process = psutil.Process()
         initial_memory = process.memory_info().rss / 1024 / 1024
         logger.info(f"初始内存使用: {initial_memory:.2f} MB")
+        
+        # 系统信息收集
+        try:
+            import platform
+            # 确保cpu_count已定义
+            cpu_count_local = os.cpu_count() or 4
+            system_info = {
+                "system": platform.system(),
+                "release": platform.release(),
+                "version": platform.version(),
+                "machine": platform.machine(),
+                "processor": platform.processor(),
+                "cpu_count": cpu_count_local,
+                "available_memory_gb": psutil.virtual_memory().available / (1024 * 1024 * 1024)
+            }
+            logger.info(f"系统信息: {system_info}")
+        except Exception as e:
+            logger.warning(f"收集系统信息失败: {e}")
+        
+        # 记录开始时间
+        start_time = time.time()
         
         cve_files = []
         temp_dir = None
@@ -825,37 +847,83 @@ def run_update(zip_path, rag_base=None, limit=None, batch_size=1000, resume_from
 
         # 计算合适的批量大小
         def calculate_optimal_batch_size():
-            """根据 GPU 内存计算最优批量大小"""
+            """根据系统内存和GPU内存计算最优批量大小"""
+            # 从配置中获取批量大小自适应设置
+            from src.core.config import get_config
+            config = get_config()
+            
+            # 检查是否启用批量大小自适应
+            adaptive_enabled = False
+            min_batch_size = 16
+            max_batch_size = 256
+            
+            try:
+                batch_config = config.get('batch_processing', {})
+                adaptive_config = batch_config.get('adaptive_batch_size', {})
+                adaptive_enabled = adaptive_config.get('enabled', False)
+                min_batch_size = adaptive_config.get('min_batch_size', 16)
+                max_batch_size = adaptive_config.get('max_batch_size', 256)
+                logger.info(f"批量大小自适应配置: enabled={adaptive_enabled}, min={min_batch_size}, max={max_batch_size}")
+            except Exception as e:
+                logger.warning(f"获取批量处理配置失败: {e}")
+                adaptive_enabled = False
+            
+            # 如果未启用自适应，使用固定批量大小
+            if not adaptive_enabled:
+                logger.info("批量大小自适应已关闭，使用固定批量大小: 256")
+                return 256
+            
             # 使用内存监控工具
             from src.utils.memory_monitor import get_memory_monitor
             memory_monitor = get_memory_monitor()
             
-            if not TORCH_AVAILABLE or not torch.cuda.is_available():
-                return 256  # CPU 模式下使用较小批量
+            # 基础批量大小
+            base_batch_size = 128
             
+            # 检查系统内存
             try:
-                # 获取 GPU 内存信息
-                memory_status = memory_monitor.get_memory_status()
-                if memory_status['gpu']:
-                    total_memory = memory_status['gpu']['total']
-                    logger.info(f"🔍 GPU 总内存: {total_memory:.2f} GB")
-                    
-                    # 根据 GPU 内存动态调整批量大小
-                    if total_memory >= 16:
-                        return 1024
-                    elif total_memory >= 12:
-                        return 768
-                    elif total_memory >= 8:
-                        return 512
-                    elif total_memory >= 6:
-                        return 384
-                    else:
-                        return 256
+                import psutil
+                memory = psutil.virtual_memory()
+                available_memory_gb = memory.available / (1024 * 1024 * 1024)
+                logger.info(f"🔍 系统可用内存: {available_memory_gb:.2f} GB")
+                
+                # 根据系统内存调整批量大小
+                if available_memory_gb < 4:
+                    return max(min_batch_size, 32)  # 内存不足，使用小批量
+                elif available_memory_gb < 8:
+                    return max(min_batch_size, 64)  # 内存较少，使用中批量
+                elif available_memory_gb < 16:
+                    return max(min_batch_size, 128)  # 内存充足，使用默认批量
                 else:
-                    return 512  # 默认值
+                    base_batch_size = min(max_batch_size, 256)  # 内存非常充足，使用更大批量
             except Exception as e:
-                logger.warning(f"计算批量大小时出错: {e}")
-                return 512  # 默认值
+                logger.warning(f"获取系统内存信息失败: {e}")
+            
+            # 检查GPU内存
+            if TORCH_AVAILABLE and torch.cuda.is_available():
+                try:
+                    # 获取 GPU 内存信息
+                    memory_status = memory_monitor.get_memory_status()
+                    if memory_status['gpu']:
+                        available_gpu_memory = memory_status['gpu']['available']
+                        logger.info(f"🔍 GPU 可用内存: {available_gpu_memory:.2f} GB")
+                        
+                        # 根据GPU内存调整批量大小
+                        if available_gpu_memory < 1:
+                            return max(min_batch_size, 32)  # GPU内存不足，使用小批量
+                        elif available_gpu_memory < 2:
+                            return max(min_batch_size, 64)  # GPU内存较少，使用中批量
+                        elif available_gpu_memory < 4:
+                            return max(min_batch_size, 128)  # GPU内存充足，使用默认批量
+                        else:
+                            return min(base_batch_size, max_batch_size)  # GPU内存非常充足，使用更大批量
+                except Exception as e:
+                    logger.warning(f"获取GPU内存信息失败: {e}")
+            
+            # 无法获取内存信息，使用基础批量大小
+            base_batch_size = max(min_batch_size, min(base_batch_size, max_batch_size))
+            logger.info(f"使用基础批量大小: {base_batch_size}")
+            return base_batch_size
 
         # 内存清理函数
         def cleanup_memory():
@@ -876,6 +944,36 @@ def run_update(zip_path, rag_base=None, limit=None, batch_size=1000, resume_from
                 del batch_texts
             if 'knowledge_batch' in locals():
                 del knowledge_batch
+            if 'fp' in locals():
+                # 确保内存映射文件被正确关闭
+                try:
+                    if hasattr(fp, 'flush'):
+                        fp.flush()
+                except Exception as e:
+                    logger.warning(f"刷新内存映射文件失败: {e}")
+            
+            # 清理其他可能的大对象
+            large_objects = ['cve_files', 'future_to_file', 'batch_files', 'inject_batch']
+            for obj_name in large_objects:
+                if obj_name in locals():
+                    try:
+                        del locals()[obj_name]
+                    except Exception as e:
+                        logger.debug(f"清理对象 {obj_name} 失败: {e}")
+            
+            # 再次强制垃圾回收
+            gc.collect()
+            if TORCH_AVAILABLE and torch.cuda.is_available():
+                torch.cuda.empty_cache()
+            
+            # 记录内存清理后的状态
+            try:
+                import psutil
+                process = psutil.Process()
+                current_memory = process.memory_info().rss / 1024 / 1024
+                logger.debug(f"内存清理后使用: {current_memory:.2f} MB")
+            except Exception as e:
+                logger.debug(f"获取内存使用信息失败: {e}")
 
         # 初始化嵌入器（只初始化一次）
         embedder = None
@@ -884,11 +982,12 @@ def run_update(zip_path, rag_base=None, limit=None, batch_size=1000, resume_from
         if rag_base:
             from src.storage.code_embedder import create_embedder, EmbedConfig
             config = EmbedConfig()
-            config.model_name = "google/embeddinggemma-300M"
+            # 使用传递的模型名称，如果没有传递则使用默认值
+            config.model_name = model_name or getattr(rag_base, 'model_name', 'google/embeddinggemma-300M')
             config.batch_size = optimal_batch_size  # 优化批量大小
             config.embedding_batch_size = optimal_batch_size  # 优化嵌入批量大小
             embedder = create_embedder(config)
-            logger.info("✅ 嵌入器初始化完成")
+            logger.info(f"✅ 嵌入器初始化完成，使用模型: {config.model_name}")
 
         outer_batch_size = optimal_batch_size          # 使用计算出的最优批量大小
         logger.info(f"🔧 使用外层批处理大小: {outer_batch_size} 条（稳定防OOM版）")
@@ -909,7 +1008,26 @@ def run_update(zip_path, rag_base=None, limit=None, batch_size=1000, resume_from
         # 初始化内存映射
         logger.info(f"📋 初始化内存映射文件: {memmap_path}")
         logger.info(f"📋 总嵌入数量: {total_embeddings}, 维度: {embedding_dim}")
-        fp = np.memmap(str(memmap_path), dtype='float16', mode='w+', shape=(total_embeddings, embedding_dim))
+        
+        # 安全创建内存映射文件
+        try:
+            # 检查文件是否存在，如果存在先删除
+            if memmap_path.exists():
+                try:
+                    memmap_path.unlink()
+                    logger.info(f"已删除现有内存映射文件: {memmap_path}")
+                except Exception as e:
+                    logger.warning(f"删除现有内存映射文件失败: {e}")
+            
+            # 创建新的内存映射文件
+            fp = np.memmap(str(memmap_path), dtype='float16', mode='w+', shape=(total_embeddings, embedding_dim))
+            logger.info(f"成功创建内存映射文件，形状: ({total_embeddings}, {embedding_dim})")
+        except Exception as e:
+            logger.error(f"创建内存映射文件失败: {e}")
+            # 回退到不使用内存映射
+            fp = None
+            logger.warning("回退到不使用内存映射模式")
+        
         idx = 0
         
         # 优化：使用流式处理，边处理边导入
@@ -932,11 +1050,31 @@ def run_update(zip_path, rag_base=None, limit=None, batch_size=1000, resume_from
         # 对于CPU密集型任务，线程数应接近CPU核心数
         cpu_count = os.cpu_count() or 4
         # NVD文件处理主要是I/O密集型（文件读取和JSON解析）
-        max_workers = min(32, cpu_count * 4)  # 最大32个线程
+        # 根据系统内存和CPU核心数动态调整线程数
+        try:
+            import psutil
+            memory = psutil.virtual_memory()
+            available_memory_gb = memory.available / (1024 * 1024 * 1024)
+            # 根据内存和CPU核心数调整线程数
+            if available_memory_gb < 4:
+                # 内存不足，减少线程数
+                max_workers = min(8, cpu_count * 2)
+            elif available_memory_gb < 8:
+                # 内存较少，使用中等线程数
+                max_workers = min(16, cpu_count * 3)
+            else:
+                # 内存充足，使用较多线程数
+                max_workers = min(32, cpu_count * 4)
+        except Exception as e:
+            logger.warning(f"获取系统信息失败: {e}")
+            max_workers = min(32, cpu_count * 4)  # 默认值
+        
         logger.info(f"使用线程数: {max_workers}")
         
         # 优化：实现任务分批提交，避免一次性提交所有任务
-        batch_submit_size = 1000  # 每批提交1000个任务
+        # 根据线程数动态调整批处理大小
+        batch_submit_size = min(2000, max_workers * 100)  # 每批提交的任务数
+        logger.info(f"每批提交任务数: {batch_submit_size}")
         total_files = len(cve_files)
         processed_files = 0
         total_batches = (total_files + batch_submit_size - 1) // batch_submit_size
@@ -1035,13 +1173,30 @@ def run_update(zip_path, rag_base=None, limit=None, batch_size=1000, resume_from
                                         # 提取文本内容用于生成嵌入
                                         batch_texts = [k.content for k in knowledge_batch]
                                         
-                                        # 生成 embedding，添加OOM错误处理
+                                        # 生成 embedding，添加OOM错误处理和性能优化
                                         retry_count = 0
                                         max_retries = 3
                                         batch_emb = None
+                                        current_batch_size = optimal_batch_size
+                                        
                                         while retry_count < max_retries:
                                             try:
-                                                batch_emb = embedder.embed_batch(batch_texts, batch_size=optimal_batch_size)
+                                                # 优化：根据文本长度动态调整批次大小
+                                                text_lengths = [len(text) for text in batch_texts]
+                                                avg_text_length = sum(text_lengths) / len(text_lengths) if text_lengths else 0
+                                                
+                                                # 长文本需要更小的批次大小
+                                                if avg_text_length > 10000:
+                                                    current_batch_size = max(16, optimal_batch_size // 2)
+                                                elif avg_text_length > 5000:
+                                                    current_batch_size = max(32, optimal_batch_size // 2)
+                                                else:
+                                                    current_batch_size = optimal_batch_size
+                                                
+                                                logger.debug(f"生成嵌入，批次大小: {current_batch_size}, 平均文本长度: {avg_text_length:.2f}")
+                                                
+                                                # 生成嵌入
+                                                batch_emb = embedder.embed_batch(batch_texts, batch_size=current_batch_size)
                                                 break
                                             except Exception as e:
                                                 # 捕获OOM错误
@@ -1050,8 +1205,8 @@ def run_update(zip_path, rag_base=None, limit=None, batch_size=1000, resume_from
                                                     # 清理内存
                                                     cleanup_memory()
                                                     # 减小批次大小并重试
-                                                    optimal_batch_size = max(16, optimal_batch_size // 2)
-                                                    logger.info(f"减小批次大小到 {optimal_batch_size} 并重试")
+                                                    current_batch_size = max(16, current_batch_size // 2)
+                                                    logger.info(f"减小批次大小到 {current_batch_size} 并重试")
                                                     retry_count += 1
                                                     if retry_count >= max_retries:
                                                         logger.error("达到最大重试次数，跳过此批次")
@@ -1076,15 +1231,48 @@ def run_update(zip_path, rag_base=None, limit=None, batch_size=1000, resume_from
                                                         batch_emb[i] = emb[:standard_dim]
                                         
                                         # 写入内存映射（关键！释放内存）
-                                        if batch_emb:
-                                            batch_size_actual = len(batch_emb)
-                                            print(f"💾 写入内存映射: 位置 {idx}-{idx+batch_size_actual}")
-                                            fp[idx:idx+batch_size_actual] = np.array(batch_emb, dtype='float16')
-                                            idx += batch_size_actual
+                                        if batch_emb and fp is not None:
+                                            try:
+                                                batch_size_actual = len(batch_emb)
+                                                print(f"💾 写入内存映射: 位置 {idx}-{idx+batch_size_actual}")
+                                                fp[idx:idx+batch_size_actual] = np.array(batch_emb, dtype='float16')
+                                                idx += batch_size_actual
+                                                
+                                                # 刷新内存映射
+                                                fp.flush()
+                                                print(f"✅ 已写入内存映射，当前位置: {idx}/{total_embeddings}")
+                                            except Exception as e:
+                                                logger.error(f"写入内存映射失败: {e}")
+                                                # 继续处理，不影响主流程
+                                                pass
+                                        elif batch_emb:
+                                            # 不使用内存映射时的处理
+                                            logger.debug("跳过内存映射写入（内存映射未初始化）")
+                                        
+                                        # 导入到RAG知识库
+                                        inject_batch_size = 64
+                                        total_inject = len(knowledge_batch)
+                                        injected = 0
+                                        added_count = 0
+                                        
+                                        while injected < total_inject:
+                                            inject_end = min(injected + inject_batch_size, total_inject)
+                                            inject_batch = knowledge_batch[injected:inject_end]
                                             
-                                            # 刷新内存映射
-                                            fp.flush()
-                                            print(f"✅ 已写入内存映射，当前位置: {idx}/{total_embeddings}")
+                                            batch_added = rag_base.add_knowledge_batch(inject_batch, auto_save=False, build_index=False)
+                                            added_count += batch_added
+                                            stats['imported_to_rag'] += batch_added
+                                            injected = inject_end
+                                            
+                                            # 每子批后清理内存
+                                            import gc
+                                            gc.collect()
+                                            if TORCH_AVAILABLE and torch.cuda.is_available():
+                                                torch.cuda.empty_cache()
+                                        
+                                        # 显示注入结果
+                                        current_len = len(rag_base._knowledge) if rag_base else 0
+                                        print(f"✅ 成功注入 {added_count} 条 | 当前 RAG 总条数: {current_len}")
                                         
                                         # 删除大对象
                                         if 'batch_emb' in locals():
@@ -1099,7 +1287,8 @@ def run_update(zip_path, rag_base=None, limit=None, batch_size=1000, resume_from
                                         
                                         # 内存监控
                                         current_memory = process.memory_info().rss / 1024 / 1024
-                                        logger.info(f"内存使用: {current_memory:.2f} MB (增加: {current_memory - initial_memory:.2f} MB)")
+                                        memory_increase = current_memory - initial_memory
+                                        logger.info(f"内存使用: {current_memory:.2f} MB (增加: {memory_increase:.2f} MB)")
                                         
                                         # 使用内存监控工具监控 GPU 内存
                                         from src.utils.memory_monitor import get_memory_status
@@ -1107,6 +1296,11 @@ def run_update(zip_path, rag_base=None, limit=None, batch_size=1000, resume_from
                                         if memory_status['gpu']:
                                             gpu_memory = memory_status['gpu']
                                             logger.info(f"GPU 内存使用: {gpu_memory['allocated']:.2f} GB / {gpu_memory['total']:.2f} GB ({gpu_memory['used_percent']:.1f}%)")
+                                        
+                                        # 性能统计
+                                        processing_speed = processed_files / (time.time() - start_time) if (time.time() - start_time) > 0 else 0
+                                        logger.info(f"处理速度: {processing_speed:.2f} 文件/秒")
+                                        logger.info(f"预计剩余时间: {(total_files - processed_files) / processing_speed:.2f} 秒")
                                         
                                         # 清理知识批次内存
                                         del knowledge_batch
@@ -1191,7 +1385,7 @@ def run_update(zip_path, rag_base=None, limit=None, batch_size=1000, resume_from
                         if processed_files % 1000 == 0:
                             try:
                                 checkpoint = {
-                                    "version": "2.0",
+                                    "version": "2.1",
                                     "last_processed": processed_files,
                                     "temp_dir": str(temp_dir) if temp_dir else None,
                                     "stats": stats.copy(),
@@ -1202,13 +1396,31 @@ def run_update(zip_path, rag_base=None, limit=None, batch_size=1000, resume_from
                                         "embed": {"done": False, "progress": processed_files},
                                         "graph": {"done": False, "progress": 0}
                                     },
+                                    "total_files": total_files,
+                                    "optimal_batch_size": optimal_batch_size,
                                     "timestamp": datetime.now().isoformat()
                                 }
+                                # 确保断点文件目录存在
+                                checkpoint_path.parent.mkdir(exist_ok=True)
                                 with open(checkpoint_path, "w", encoding="utf-8") as f:
                                     json.dump(checkpoint, f, indent=2, ensure_ascii=False)
                                 logger.debug(f"定期保存断点: 已处理 {processed_files} 个文件")
                             except Exception as e:
-                                logger.warning(f"定期保存断点失败: {e}")
+                                logger.warning(f"更新断点文件失败: {e}")
+                                # 尝试使用更简单的断点格式
+                                try:
+                                    simple_checkpoint = {
+                                        "version": "1.0",
+                                        "last_processed": processed_files,
+                                        "stats": {k: v for k, v in stats.items() if isinstance(v, (int, str, float))},
+                                        "timestamp": datetime.now().isoformat()
+                                    }
+                                    checkpoint_path.parent.mkdir(exist_ok=True)
+                                    with open(checkpoint_path, "w", encoding="utf-8") as f:
+                                        json.dump(simple_checkpoint, f, indent=2, ensure_ascii=False)
+                                    logger.debug("使用简化格式保存断点成功")
+                                except Exception as e2:
+                                    logger.error(f"简化格式保存断点也失败: {e2}")
                         
                         # 检查是否被中断
                         if interrupted:
@@ -1315,19 +1527,31 @@ def run_update(zip_path, rag_base=None, limit=None, batch_size=1000, resume_from
                 added_count = 0
                 
                 while injected < total_inject:
-                    inject_end = min(injected + inject_batch_size, total_inject)
-                    inject_batch = knowledge_batch[injected:inject_end]
-                    
-                    batch_added = rag_base.add_knowledge_batch(inject_batch, auto_save=False, build_index=False)
-                    added_count += batch_added
-                    stats['imported_to_rag'] += batch_added
-                    injected = inject_end
-                    
-                    # 每子批后清理内存
-                    import gc
-                    gc.collect()
-                    if TORCH_AVAILABLE and torch.cuda.is_available():
-                        torch.cuda.empty_cache()
+                    try:
+                        inject_end = min(injected + inject_batch_size, total_inject)
+                        inject_batch = knowledge_batch[injected:inject_end]
+                        
+                        batch_added = rag_base.add_knowledge_batch(inject_batch, auto_save=False, build_index=False)
+                        added_count += batch_added
+                        stats['imported_to_rag'] += batch_added
+                        injected = inject_end
+                        
+                        # 每子批后清理内存
+                        import gc
+                        gc.collect()
+                        if TORCH_AVAILABLE and torch.cuda.is_available():
+                            torch.cuda.empty_cache()
+                    except Exception as e:
+                        # 子批处理失败，记录错误并继续处理下一批
+                        logger.error(f"子批注入失败: {e}")
+                        print(f"❌ 子批注入失败: {e}")
+                        # 跳过当前子批，继续处理下一批
+                        injected = inject_end
+                        # 清理内存
+                        import gc
+                        gc.collect()
+                        if TORCH_AVAILABLE and torch.cuda.is_available():
+                            torch.cuda.empty_cache()
                 
                 # 清理内存
                 import gc
@@ -1346,11 +1570,12 @@ def run_update(zip_path, rag_base=None, limit=None, batch_size=1000, resume_from
                 print(f"❌ 最后批次注入失败: {e}")
                 traceback.print_exc()
                 logger.error(f"最后一批导入到RAG失败: {e}")
-                stats['skipped'] += len(knowledge_batch)
-                # 清理内存
-                import gc
-                del knowledge_batch
-                gc.collect()
+                if 'knowledge_batch' in locals():
+                    stats['skipped'] += len(knowledge_batch)
+                    # 清理内存
+                    import gc
+                    del knowledge_batch
+                    gc.collect()
         
         # 所有批次处理完成后，统一保存
         if rag_base:
@@ -1416,15 +1641,36 @@ def run_update(zip_path, rag_base=None, limit=None, batch_size=1000, resume_from
                     logger.info(f"保存完成后内存使用: {current_memory:.2f} MB")
                     
                     logger.info("RAG知识库保存完成！")
+                
+                # 数据一致性检查
+                try:
+                    rag_size = len(rag_base._knowledge) if rag_base else 0
+                    logger.info(f"数据一致性检查: RAG知识库大小 = {rag_size}")
+                    logger.info(f"解析成功: {stats['parsed_success']}, 导入RAG: {stats['imported_to_rag']}")
+                    
+                    # 检查导入数量是否与解析成功数量一致
+                    if stats['parsed_success'] > 0 and stats['imported_to_rag'] < stats['parsed_success']:
+                        logger.warning(f"数据一致性警告: 解析成功 {stats['parsed_success']} 条，但只导入了 {stats['imported_to_rag']} 条到RAG")
+                        print(f"⚠️  数据一致性警告: 解析成功 {stats['parsed_success']} 条，但只导入了 {stats['imported_to_rag']} 条到RAG")
+                    elif stats['parsed_success'] == stats['imported_to_rag']:
+                        logger.info("✅ 数据一致性检查通过: 所有解析成功的数据都已导入到RAG")
+                        print("✅ 数据一致性检查通过: 所有解析成功的数据都已导入到RAG")
+                except Exception as e:
+                    logger.error(f"数据一致性检查失败: {e}")
             except Exception as e:
                 logger.error(f"保存RAG知识库失败: {e}")
                 # 内存监控
                 current_memory = process.memory_info().rss / 1024 / 1024
                 logger.info(f"保存失败时内存使用: {current_memory:.2f} MB")
         
+        # 计算总处理时间
+        total_time = time.time() - start_time
+        processing_speed = processed_files / total_time if total_time > 0 else 0
+        
         # 最终内存状态
         current_memory = process.memory_info().rss / 1024 / 1024
-        logger.info(f"最终内存使用: {current_memory:.2f} MB (总增加: {current_memory - initial_memory:.2f} MB)")
+        memory_increase = current_memory - initial_memory
+        logger.info(f"最终内存使用: {current_memory:.2f} MB (总增加: {memory_increase:.2f} MB)")
         
         logger.info("=" * 60)
         logger.info("更新完成！")
@@ -1435,14 +1681,42 @@ def run_update(zip_path, rag_base=None, limit=None, batch_size=1000, resume_from
         logger.info(f"导入RAG: {stats['imported_to_rag']}")
         logger.info(f"跳过: {stats['skipped']}")
         logger.info(f"重复跳过: {duplicate_count}")
+        logger.info(f"总处理时间: {total_time:.2f} 秒")
+        logger.info(f"平均处理速度: {processing_speed:.2f} 文件/秒")
+        logger.info(f"处理批次: {batch_count}")
         
-        # 关闭内存映射
-        if 'fp' in locals():
-            print(f"\n🔒 关闭内存映射文件")
-            print(f"📊 总写入嵌入数量: {idx}/{total_embeddings}")
-            fp.flush()
-            del fp
-            print("✅ 内存映射文件已关闭")
+        # 显示处理摘要
+        print("\n" + "=" * 60)
+        print("📊 处理摘要")
+        print("=" * 60)
+        print(f"总文件数: {stats['total_files']}")
+        print(f"解析成功: {stats['parsed_success']}")
+        print(f"解析失败: {stats['parsed_failed']}")
+        print(f"已导入RAG: {stats['imported_to_rag']}")
+        print(f"跳过: {stats['skipped']}")
+        print(f"重复跳过: {duplicate_count}")
+        print(f"总处理时间: {total_time:.2f} 秒")
+        print(f"平均处理速度: {processing_speed:.2f} 文件/秒")
+        print(f"最终内存使用: {current_memory:.2f} MB")
+        print("=" * 60)
+        
+        # 安全关闭内存映射文件
+        if 'fp' in locals() and fp is not None:
+            try:
+                print(f"\n🔒 关闭内存映射文件")
+                print(f"📊 总写入嵌入数量: {idx}/{total_embeddings}")
+                # 刷新内存映射
+                fp.flush()
+                # 显式删除内存映射对象，触发关闭
+                del fp
+                print("✅ 内存映射文件已关闭")
+                logger.info("成功关闭内存映射文件")
+            except Exception as e:
+                logger.error(f"关闭内存映射文件失败: {e}")
+                print(f"❌ 关闭内存映射文件失败: {e}")
+        elif 'fp' in locals():
+            logger.info("内存映射文件未初始化，跳过关闭")
+            print("📋 内存映射文件未初始化，跳过关闭")
         
         # 处理完成后清理断点文件
         if checkpoint_path.exists():

@@ -386,7 +386,8 @@ def update(ctx, zip, dir, limit, no_rag, batch_size, resume, model) -> None:
                 limit=limit,
                 batch_size=batch_size,
                 resume_from=resume,
-                progress_callback=progress_callback
+                progress_callback=progress_callback,
+                model_name=model
             )
             
             # 完成所有进度

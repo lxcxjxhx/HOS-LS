@@ -42,6 +42,11 @@ class KnowledgeType(Enum):
     AI_LEARNING = "ai_learning"
     ai_learning = "ai_learning"
     VULNERABILITY = "vulnerability"
+    
+    # 领域分类
+    VULNERABILITY_DOMAIN = "vulnerability_domain"  # 漏洞类
+    CODE_DOMAIN = "code_domain"  # 代码类
+    RULE_DOMAIN = "rule_domain"  # 规则类
 
 
 @dataclass

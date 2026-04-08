@@ -59,6 +59,7 @@ class ModelType(Enum):
     QWEN3_EMBEDDING_0_6B = "Qwen/Qwen3-Embedding-0.6B"
     EMBEDDING_GEMMA_300M = "google/embeddinggemma-300M"
     CUSTOM = "custom"
+    SECURITY_FINETUNED = "security_finetuned"
 
 
 @dataclass
@@ -66,6 +67,7 @@ class EmbedConfig:
     """嵌入配置"""
 
     model_name: str = "google/embeddinggemma-300M"
+    custom_model_path: Optional[str] = None  # 自定义模型路径
     batch_size: int = 256  # 批量处理大小，外层batch_size
     max_length: int = 512
     use_cache: bool = True
@@ -118,57 +120,68 @@ class CodeEmbedder:
             model_kwargs = {}
             tokenizer_kwargs = {}
             
-            # 检查模型路径
-            import os
-            from pathlib import Path
-            cache_dir = self.config.cache_dir or str(Path.home() / ".cache" / "huggingface" / "hub")
-            print(f"🔍 检查模型缓存目录: {cache_dir}")
-            
-            # 检查具体模型目录
-            model_dir_name = f"models--{self.config.model_name.replace('/', '--')}"
-            model_path = Path(cache_dir) / model_dir_name
-            print(f"🔍 检查模型目录: {model_path}")
-            print(f"📁 目录是否存在: {model_path.exists()}")
-            
-            # 检查模型目录是否包含必要的配置文件
-            config_file = None
-            if model_path.exists() and list(model_path.glob("snapshots/*")):
-                snapshots_dir = model_path / "snapshots"
-                snapshot_subdirs = list(snapshots_dir.iterdir())
-                if snapshot_subdirs:
-                    config_file = snapshot_subdirs[0] / "config.json"
-            
+            # 检查是否使用自定义模型路径
             model_name_or_path = self.config.model_name
             
-            if model_path.exists():
-                files = list(model_path.iterdir())[:10]  # 只显示前10个文件
-                print(f"📄 目录中的文件: {[f.name for f in files]}")
+            # 优先使用自定义模型路径
+            if self.config.custom_model_path:
+                from pathlib import Path
+                custom_path = Path(self.config.custom_model_path)
+                if custom_path.exists():
+                    model_name_or_path = str(custom_path)
+                    print(f"✅ 使用自定义模型路径: {model_name_or_path}")
+                else:
+                    print(f"⚠️ 自定义模型路径不存在: {self.config.custom_model_path}，使用默认模型")
+            else:
+                # 检查模型路径
+                import os
+                from pathlib import Path
+                cache_dir = self.config.cache_dir or str(Path.home() / ".cache" / "huggingface" / "hub")
+                print(f"🔍 检查模型缓存目录: {cache_dir}")
                 
-                # 优先使用本地模型路径
-                if config_file and config_file.exists():
-                    # 检查config.json是否包含model_type键
-                    try:
-                        import json
-                        with open(config_file, 'r', encoding='utf-8') as f:
-                            config_data = json.load(f)
-                        if 'model_type' in config_data:
-                            # 如果本地模型目录存在且配置文件完整，直接使用本地路径
+                # 检查具体模型目录
+                model_dir_name = f"models--{self.config.model_name.replace('/', '--')}"
+                model_path = Path(cache_dir) / model_dir_name
+                print(f"🔍 检查模型目录: {model_path}")
+                print(f"📁 目录是否存在: {model_path.exists()}")
+                
+                # 检查模型目录是否包含必要的配置文件
+                config_file = None
+                if model_path.exists() and list(model_path.glob("snapshots/*")):
+                    snapshots_dir = model_path / "snapshots"
+                    snapshot_subdirs = list(snapshots_dir.iterdir())
+                    if snapshot_subdirs:
+                        config_file = snapshot_subdirs[0] / "config.json"
+                
+                if model_path.exists():
+                    files = list(model_path.iterdir())[:10]  # 只显示前10个文件
+                    print(f"📄 目录中的文件: {[f.name for f in files]}")
+                    
+                    # 优先使用本地模型路径
+                    if config_file and config_file.exists():
+                        # 检查config.json是否包含model_type键
+                        try:
+                            import json
+                            with open(config_file, 'r', encoding='utf-8') as f:
+                                config_data = json.load(f)
+                            if 'model_type' in config_data:
+                                # 如果本地模型目录存在且配置文件完整，直接使用本地路径
+                                model_name_or_path = str(model_path)
+                                print(f"✅ 使用本地模型路径: {model_name_or_path}")
+                            else:
+                                # 如果配置文件不完整，仍然尝试使用本地模型
+                                print(f"⚠️ 本地模型配置文件不完整，缺少model_type键，但仍尝试使用本地模型")
+                                model_name_or_path = str(model_path)
+                        except Exception as e:
+                            print(f"⚠️ 读取模型配置文件失败: {e}，但仍尝试使用本地模型")
                             model_name_or_path = str(model_path)
-                            print(f"✅ 使用本地模型路径: {model_name_or_path}")
-                        else:
-                            # 如果配置文件不完整，仍然尝试使用本地模型
-                            print(f"⚠️ 本地模型配置文件不完整，缺少model_type键，但仍尝试使用本地模型")
-                            model_name_or_path = str(model_path)
-                    except Exception as e:
-                        print(f"⚠️ 读取模型配置文件失败: {e}，但仍尝试使用本地模型")
+                    else:
+                        # 即使没有配置文件，也尝试使用本地模型
+                        print(f"⚠️ 本地模型缺少配置文件，但仍尝试使用本地模型")
                         model_name_or_path = str(model_path)
                 else:
-                    # 即使没有配置文件，也尝试使用本地模型
-                    print(f"⚠️ 本地模型缺少配置文件，但仍尝试使用本地模型")
-                    model_name_or_path = str(model_path)
-            else:
-                # 否则使用模型名称从 Hugging Face 下载
-                print(f"ℹ️ 使用模型名称: {model_name_or_path}")
+                    # 否则使用模型名称从 Hugging Face 下载
+                    print(f"ℹ️ 使用模型名称: {model_name_or_path}")
             
             if self.config.cache_dir:
                 model_kwargs["cache_folder"] = self.config.cache_dir
@@ -226,13 +239,30 @@ class CodeEmbedder:
                 # 设置 padding_side 为 "left"
                 tokenizer_kwargs = {"padding_side": "left"}
                 # embeddinggemma-300M 配置
+                # 使用 float32 精度以避免 NaN 值
                 model_kwargs = {
-                    "torch_dtype": torch.float16,
+                    "torch_dtype": torch.float32,
                     "device_map": "auto",
                 }
                 # 设置模型最大序列长度
                 self.config.max_length = 256
-                print("✅ 模型加载完成（256维压缩 + 极致内存优化）")
+                # 禁用 Matryoshka 压缩维度
+                self.config.matryoshka_dim = None
+                print("✅ 模型加载完成（使用 float32 精度 + 禁用 Matryoshka 压缩）")
+            
+            # 为 BAAI bge 系列模型添加特殊配置
+            elif "bge-" in self.config.model_name:
+                print("🔧 Configuring BAAI bge model...")
+                # BAAI bge 模型配置
+                model_kwargs = {
+                    "torch_dtype": torch.float16,  # fp16 省内存
+                    "device_map": "auto",
+                }
+                # 设置模型最大序列长度
+                self.config.max_length = 512
+                # 设置 Matryoshka 压缩维度
+                self.config.matryoshka_dim = 256
+                print("✅ BAAI bge 模型加载完成")
 
             # 支持 ONNX 后端
             if self.config.use_onnx and "Qwen3-Embedding" not in self.config.model_name:
@@ -240,6 +270,7 @@ class CodeEmbedder:
                 model_kwargs["model_kwargs"] = {
                     "provider": "CUDAExecutionProvider" if device == "cuda" else "CPUExecutionProvider"
                 }
+                print("✅ 启用 ONNX 后端加速")
 
             self._model = SentenceTransformer(
                 model_name_or_path,
@@ -514,6 +545,27 @@ class CodeEmbedder:
         """
         return self._initialized and SENTENCE_TRANSFORMERS_AVAILABLE
 
+    def export_to_onnx(self, output_path: str):
+        """导出模型为 ONNX 格式
+
+        Args:
+            output_path: 输出路径
+        """
+        if not self._initialized:
+            print("❌ 模型未初始化，无法导出")
+            return
+
+        try:
+            from pathlib import Path
+            output_dir = Path(output_path)
+            output_dir.mkdir(parents=True, exist_ok=True)
+            
+            print(f"🔧 开始导出模型为 ONNX 格式到: {output_path}")
+            self._model.export_onnx(str(output_dir / "model.onnx"))
+            print("✅ 模型已成功导出为 ONNX 格式")
+        except Exception as e:
+            print(f"❌ 导出 ONNX 失败: {e}")
+
     def _generate_embedding(self, code: str) -> List[float]:
         """生成单个嵌入
 
@@ -605,13 +657,27 @@ class CodeEmbedder:
             with torch.no_grad():
                 # 使用半精度加速
                 if TORCH_AVAILABLE and device == "cuda" and self.config.precision == "float16":
-                    with torch.autocast(device_type="cuda", dtype=torch.float16):
+                    try:
+                        # 不使用autocast，直接使用float16模型
                         batch_embeddings = self._model.encode(
                             codes,
                             batch_size=batch_size,  # 强制小批量
                             device=device,
                             show_progress_bar=True,  # 显示进度条
-                            convert_to_tensor=convert_to_tensor,
+                            convert_to_tensor=False,
+                            convert_to_numpy=True,  # 强制 numpy 输出
+                            normalize_embeddings=True,
+                            **encode_kwargs
+                        )
+                    except Exception as e:
+                        print(f"❌ 半精度嵌入失败: {e}")
+                        # 降级到float32
+                        batch_embeddings = self._model.encode(
+                            codes,
+                            batch_size=batch_size,  # 强制小批量
+                            device=device,
+                            show_progress_bar=True,  # 显示进度条
+                            convert_to_tensor=False,
                             convert_to_numpy=True,  # 强制 numpy 输出
                             normalize_embeddings=True,
                             **encode_kwargs
@@ -622,7 +688,7 @@ class CodeEmbedder:
                         batch_size=batch_size,  # 强制小批量
                         device=device,
                         show_progress_bar=True,  # 显示进度条
-                        convert_to_tensor=convert_to_tensor,
+                        convert_to_tensor=False,
                         convert_to_numpy=True,  # 强制 numpy 输出
                         normalize_embeddings=True,
                         **encode_kwargs
@@ -646,12 +712,25 @@ class CodeEmbedder:
 
             if NUMPY_AVAILABLE and isinstance(batch_embeddings, np.ndarray):
                 print(f"📥 处理 numpy 嵌入，形状: {batch_embeddings.shape}")
+                # 检查并处理 NaN 值
+                if np.isnan(batch_embeddings).any():
+                    print("⚠️  检测到 NaN 值，使用 fallback 嵌入...")
+                    return [self._fallback_embedding(code) for code in codes]
                 result = batch_embeddings.tolist()
                 # 释放 numpy 数组内存
                 del batch_embeddings
                 return result
             elif isinstance(batch_embeddings, list):
                 print(f"📥 处理列表嵌入，长度: {len(batch_embeddings)}")
+                # 检查并处理 NaN 值
+                has_nan = False
+                for embedding in batch_embeddings:
+                    if any(math.isnan(val) for val in embedding):
+                        has_nan = True
+                        break
+                if has_nan:
+                    print("⚠️  检测到 NaN 值，使用 fallback 嵌入...")
+                    return [self._fallback_embedding(code) for code in codes]
                 return batch_embeddings
             else:
                 # 降级到单个嵌入
@@ -952,18 +1031,27 @@ _global_embedder: Optional[Union[CodeEmbedder, InMemoryEmbedder]] = None
 def create_embedder(
     config: Optional[EmbedConfig] = None,
     prefer_memory: bool = False,
+    custom_model_path: Optional[str] = None,
 ) -> Union[CodeEmbedder, InMemoryEmbedder]:
     """创建代码嵌入生成器
 
     Args:
         config: 嵌入配置
         prefer_memory: 是否优先使用内存嵌入器
+        custom_model_path: 自定义模型路径
 
     Returns:
         代码嵌入生成器实例
     """
     global _global_embedder
     if _global_embedder is None:
+        # 如果提供了自定义模型路径，创建相应的配置
+        if custom_model_path:
+            if config is None:
+                config = EmbedConfig()
+            config.custom_model_path = custom_model_path
+            config.model_name = ModelType.SECURITY_FINETUNED.value
+        
         if prefer_memory or not SENTENCE_TRANSFORMERS_AVAILABLE:
             _global_embedder = InMemoryEmbedder(config)
         else:

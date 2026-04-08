@@ -216,3 +216,72 @@ class SemanticEngine:
                 parts.append(f"{severity}: {count}")
 
         return "，".join(parts)
+
+    async def rerank_results(self, query: str, results: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """对检索结果进行重新排序
+
+        Args:
+            query: 搜索查询
+            results: 原始搜索结果列表
+
+        Returns:
+            重新排序后的结果列表
+        """
+        if not results:
+            return []
+
+        # 为每个结果计算相关性得分
+        reranked_results = []
+        for result in results:
+            # 构建用于评估的文本
+            if 'combined_content' in result:
+                content = result['combined_content']
+            elif 'content' in result:
+                content = result['content']
+            else:
+                content = str(result.get('cve', ''))
+
+            # 简单的相关性评分
+            # 实际应用中可以使用更复杂的方法，如使用语言模型评估相关性
+            relevance_score = self._calculate_relevance(query, content)
+            result['relevance_score'] = relevance_score
+            reranked_results.append(result)
+
+        # 按相关性得分排序
+        reranked_results.sort(key=lambda x: x.get('relevance_score', 0.0), reverse=True)
+
+        return reranked_results
+
+    def _calculate_relevance(self, query: str, content: str) -> float:
+        """计算查询与内容的相关性得分
+
+        Args:
+            query: 搜索查询
+            content: 文档内容
+
+        Returns:
+            相关性得分
+        """
+        import re
+
+        # 简单的词频匹配
+        query_tokens = set(re.findall(r'\w+', query.lower()))
+        content_tokens = set(re.findall(r'\w+', content.lower()))
+
+        # 计算匹配的词数
+        matched_tokens = query_tokens.intersection(content_tokens)
+        if not query_tokens:
+            return 0.0
+
+        # 计算匹配比例
+        base_score = len(matched_tokens) / len(query_tokens)
+
+        # 加分项：完全匹配的查询
+        if query.lower() in content.lower():
+            base_score += 0.5
+
+        # 加分项：查询词在内容开头
+        if content.lower().startswith(query.lower()):
+            base_score += 0.3
+
+        return min(base_score, 1.0)

@@ -43,6 +43,10 @@ class NVDImporter:
         """
         self.hybrid_store = hybrid_store
         self.batch_size = batch_size
+        # 批处理参数优化
+        self.READ_BATCH = 200
+        self.EMBED_BATCH = 32
+        self.WRITE_BATCH = 500
         self.processor = NVDProcessor()
         self.import_manager = create_import_manager()
         self.checkpoint_path = Path("./nvd_import_checkpoint.json")
@@ -555,49 +559,14 @@ class NVDImporter:
                                 # 监控内存使用
                                 self.monitor_memory_usage()
                                 
-                                # 批量处理CVE
-                                batch = []
-                                for item in cve_items:
-                                    result = self.processor.parse_nvd(item)
-                                    if result:
-                                        cve_id = result[0].cve_id
-                                        # 检查是否已处理
-                                        if not self.import_manager.is_cve_processed(cve_id):
-                                            batch.append(result)
-                                    
-                                    # 达到批次大小，执行批量存储
-                                    if len(batch) >= optimal_batch_size:
-                                        success = self.hybrid_store.store_cves_batch(batch)
-                                        stats['success'] += success
-                                        stats['failed'] += len(batch) - success
-                                        stats['total'] += len(batch)
-                                        
-                                        # 标记成功处理的CVE
-                                        for cve_data in batch[:success]:
-                                            self.import_manager.mark_cve_processed(cve_data[0].cve_id)
-                                        
-                                        # 标记失败处理的CVE
-                                        for cve_data in batch[success:]:
-                                            self.import_manager.mark_cve_failed(cve_data[0].cve_id)
-                                        
-                                        # 更新检查点
-                                        checkpoint['processed_count'] += len(batch)
-                                        checkpoint['success_count'] += success
-                                        checkpoint['failed_count'] += len(batch) - success
-                                        checkpoint['last_processed_file'] = file_idx
-                                        if batch:
-                                            checkpoint['last_cve_id'] = batch[-1][0].cve_id
-                                        self.save_checkpoint(checkpoint)
-                                        
-                                        # 更新导入管理器检查点
-                                        self.import_manager.update_checkpoint(**checkpoint)
-                                        
-                                        batch = []
-                                        # 清理内存
-                                        self.cleanup_memory()
+                                # 使用多进程处理CVE
+                                processed_cves = self.process_with_workers(cve_items)
+                                logger.info(f"多进程处理完成，成功处理 {len(processed_cves)} 个CVE")
                                 
-                                # 处理剩余的CVE
-                                if batch:
+                                # 批量存储处理后的CVE
+                                write_batch = self.WRITE_BATCH
+                                for i in range(0, len(processed_cves), write_batch):
+                                    batch = processed_cves[i:i + write_batch]
                                     success = self.hybrid_store.store_cves_batch(batch)
                                     stats['success'] += success
                                     stats['failed'] += len(batch) - success
@@ -622,6 +591,9 @@ class NVDImporter:
                                     
                                     # 更新导入管理器检查点
                                     self.import_manager.update_checkpoint(**checkpoint)
+                                    
+                                    # 清理内存
+                                    self.cleanup_memory()
                             else:
                                 # 单个CVE文件
                                 result = self.processor.parse_nvd(data)
@@ -702,49 +674,14 @@ class NVDImporter:
                             optimal_batch_size = self.get_optimal_batch_size()
                             logger.info(f"使用最优批量大小: {optimal_batch_size}")
                             
-                            # 批量处理CVE
-                            batch = []
-                            for item in cve_items:
-                                result = self.processor.parse_nvd(item)
-                                if result:
-                                    cve_id = result[0].cve_id
-                                    # 检查是否已处理
-                                    if not self.import_manager.is_cve_processed(cve_id):
-                                        batch.append(result)
-                                    
-                                    # 达到批次大小，执行批量存储
-                                    if len(batch) >= optimal_batch_size:
-                                        success = self.hybrid_store.store_cves_batch(batch)
-                                        stats['success'] += success
-                                        stats['failed'] += len(batch) - success
-                                        stats['total'] += len(batch)
-                                        
-                                        # 标记成功处理的CVE
-                                        for cve_data in batch[:success]:
-                                            self.import_manager.mark_cve_processed(cve_data[0].cve_id)
-                                        
-                                        # 标记失败处理的CVE
-                                        for cve_data in batch[success:]:
-                                            self.import_manager.mark_cve_failed(cve_data[0].cve_id)
-                                        
-                                        # 更新检查点
-                                        checkpoint['processed_count'] += len(batch)
-                                        checkpoint['success_count'] += success
-                                        checkpoint['failed_count'] += len(batch) - success
-                                        checkpoint['last_processed_file'] = file_idx
-                                        if batch:
-                                            checkpoint['last_cve_id'] = batch[-1][0].cve_id
-                                        self.save_checkpoint(checkpoint)
-                                        
-                                        # 更新导入管理器检查点
-                                        self.import_manager.update_checkpoint(**checkpoint)
-                                        
-                                        batch = []
-                                        # 清理内存
-                                        self.cleanup_memory()
+                            # 使用多进程处理CVE
+                            processed_cves = self.process_with_workers(cve_items)
+                            logger.info(f"多进程处理完成，成功处理 {len(processed_cves)} 个CVE")
                             
-                            # 处理剩余的CVE
-                            if batch:
+                            # 批量存储处理后的CVE
+                            write_batch = self.WRITE_BATCH
+                            for i in range(0, len(processed_cves), write_batch):
+                                batch = processed_cves[i:i + write_batch]
                                 success = self.hybrid_store.store_cves_batch(batch)
                                 stats['success'] += success
                                 stats['failed'] += len(batch) - success
@@ -769,6 +706,9 @@ class NVDImporter:
                                 
                                 # 更新导入管理器检查点
                                 self.import_manager.update_checkpoint(**checkpoint)
+                                
+                                # 清理内存
+                                self.cleanup_memory()
                         else:
                             # 单个CVE文件
                             result = self.processor.parse_nvd(data)
@@ -804,6 +744,64 @@ class NVDImporter:
             logger.error(f"处理目录失败: {e}")
         
         return stats
+
+    def process_cve(self, item) -> Optional[Tuple[CVEStructuredData, List[CVEChunk]]]:
+        """处理单个CVE数据
+
+        Args:
+            item: CVE数据项
+
+        Returns:
+            处理后的CVE数据或None
+        """
+        try:
+            result = self.processor.parse_nvd(item)
+            if result:
+                cve_id = result[0].cve_id
+                if not self.import_manager.is_cve_processed(cve_id):
+                    return result
+        except Exception as e:
+            logger.error(f"处理CVE失败: {e}")
+        return None
+
+    def process_with_workers(self, cve_items: List[Dict[str, Any]]) -> List[Tuple[CVEStructuredData, List[CVEChunk]]]:
+        """使用多进程处理CVE数据
+
+        Args:
+            cve_items: CVE数据项列表
+
+        Returns:
+            处理后的CVE数据列表
+        """
+        results = []
+        
+        # 计算合适的worker数量
+        import os
+        max_workers = min(os.cpu_count(), 4)  # 最多4个worker
+        logger.info(f"使用 {max_workers} 个进程处理CVE数据")
+        
+        # 分批处理
+        batch_size = self.READ_BATCH
+        for i in range(0, len(cve_items), batch_size):
+            batch = cve_items[i:i + batch_size]
+            logger.info(f"处理批次 {i//batch_size + 1}/{(len(cve_items) + batch_size - 1)//batch_size}")
+            
+            # 使用进程池并行处理
+            with concurrent.futures.ProcessPoolExecutor(max_workers=max_workers) as executor:
+                futures = []
+                for item in batch:
+                    future = executor.submit(self.process_cve, item)
+                    futures.append(future)
+                
+                for future in concurrent.futures.as_completed(futures):
+                    result = future.result()
+                    if result:
+                        results.append(result)
+            
+            # 每处理完一个批次清理内存
+            self.cleanup_memory()
+        
+        return results
 
     def process_cve_batch(self, cve_data_list: List[Tuple[CVEStructuredData, List[CVEChunk]]]) -> int:
         """处理CVE批次

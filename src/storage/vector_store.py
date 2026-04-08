@@ -21,12 +21,13 @@ class VectorStore:
     实现基于本地文件的向量存储，支持文档的嵌入和相似度搜索。
     """
 
-    def __init__(self, storage_path: Path, model_name: Optional[str] = None):
+    def __init__(self, storage_path: Path, model_name: Optional[str] = None, custom_model_path: Optional[str] = None):
         """初始化向量存储
 
         Args:
             storage_path: 存储路径
             model_name: 嵌入模型名称
+            custom_model_path: 自定义模型路径
         """
         self.storage_path = storage_path
         self.storage_path.mkdir(parents=True, exist_ok=True)
@@ -36,22 +37,32 @@ class VectorStore:
         self.documents_path = self.storage_path / "documents.json"
         self.embedding_cache_path = self.storage_path / "embedding_cache.json"
         
+        # 冷热分层相关
+        self.hot_storage_path = self.storage_path / "hot"
+        self.cold_storage_path = self.storage_path / "cold"
+        self.hot_storage_path.mkdir(exist_ok=True)
+        self.cold_storage_path.mkdir(exist_ok=True)
+        
         # 内存存储
         self._embeddings: Optional[np.ndarray] = None
         self._documents: Dict[str, Dict] = {}
         self._document_ids: List[str] = []
         self._embedding_cache: Dict[str, List[float]] = {}  # 文本哈希到embedding的缓存
         
+        # 访问频率监控
+        self._access_stats: Dict[str, Dict] = {}  # 文档ID到访问统计的映射
+        
         # 初始化 CodeEmbedder（使用单例模式）
         from src.storage.code_embedder import create_embedder, EmbedConfig
         config = EmbedConfig()
         if model_name:
             config.model_name = model_name
-        self.embedder = create_embedder(config)
+        self.embedder = create_embedder(config, custom_model_path=custom_model_path)
         
         # 加载现有数据
         self.load()
         self._load_embedding_cache()
+        self._load_access_stats()
 
     def add_document(self, document_id: str, content: str, metadata: Dict[str, Any]) -> None:
         """添加文档
@@ -119,74 +130,89 @@ class VectorStore:
         if not documents:
             return
         
-        # 批量处理文档
-        new_embeddings = []
-        contents = []
-        doc_info = []
+        # 分批处理文档
+        BATCH_SIZE = 32
+        total_docs = len(documents)
         
-        for doc in documents:
-            document_id = doc["document_id"]
-            content = doc["content"]
-            metadata = doc["metadata"]
+        for i in range(0, total_docs, BATCH_SIZE):
+            batch = documents[i:i + BATCH_SIZE]
+            logger.info(f"处理文档批次 {i//BATCH_SIZE + 1}/{(total_docs + BATCH_SIZE - 1)//BATCH_SIZE}")
             
-            contents.append(content)
-            doc_info.append((document_id, content, metadata))
+            # 批量处理文档
+            new_embeddings = []
+            contents = []
+            doc_info = []
             
-        # 使用批量嵌入
-        if self.embedder.is_available() and contents:
-            try:
-                # 使用 CodeEmbedder 的批量嵌入功能
-                batch_embeddings = self.embedder.embed_batch(contents)
-                new_embeddings = [np.array(embedding) for embedding in batch_embeddings]
-            except Exception as e:
-                logger.error(f"批量嵌入失败: {e}")
-                # 降级到单个嵌入
-                new_embeddings = [self._generate_embedding(content) for content in contents]
-        else:
-            # 单个生成嵌入
-            new_embeddings = [self._generate_embedding(content) for content in contents]
-        
-        # 确保所有嵌入维度一致为256维
-        target_dim = 256
-        new_embeddings = [self._ensure_embedding_dimension(embedding, target_dim) for embedding in new_embeddings]
-        
-        # 检查现有嵌入维度
-        if self._embeddings is not None:
-            existing_dim = self._embeddings.shape[1]
-            if existing_dim != target_dim:
-                # 转换现有嵌入到目标维度
-                logger.info(f"转换现有嵌入维度从 {existing_dim} 到 {target_dim}")
-                converted_embeddings = []
-                for i in range(len(self._embeddings)):
-                    converted_embedding = self._ensure_embedding_dimension(self._embeddings[i], target_dim)
-                    converted_embeddings.append(converted_embedding)
-                self._embeddings = np.array(converted_embeddings)
+            for doc in batch:
+                document_id = doc["document_id"]
+                content = doc["content"]
+                metadata = doc["metadata"]
                 
-                # 更新文档中的嵌入
-                for doc_id in self._documents:
-                    doc_embedding = np.array(self._documents[doc_id]["embedding"])
-                    converted_doc_embedding = self._ensure_embedding_dimension(doc_embedding, target_dim)
-                    self._documents[doc_id]["embedding"] = converted_doc_embedding.tolist()
-        
-        # 更新文档信息
-        for i, (document_id, content, metadata) in enumerate(doc_info):
-            embedding = new_embeddings[i]
-            self._documents[document_id] = {
-                "content": content,
-                "metadata": metadata,
-                "embedding": embedding.tolist()
-            }
+                contents.append(content)
+                doc_info.append((document_id, content, metadata))
+                
+            # 使用批量嵌入
+            if self.embedder.is_available() and contents:
+                try:
+                    # 使用 CodeEmbedder 的批量嵌入功能
+                    batch_embeddings = self.embedder.embed_batch(contents, batch_size=BATCH_SIZE)
+                    new_embeddings = [np.array(embedding) for embedding in batch_embeddings]
+                except Exception as e:
+                    logger.error(f"批量嵌入失败: {e}")
+                    # 降级到单个嵌入
+                    new_embeddings = [self._generate_embedding(content) for content in contents]
+            else:
+                # 单个生成嵌入
+                new_embeddings = [self._generate_embedding(content) for content in contents]
             
-            # 添加到文档ID列表（如果不存在）
-            if document_id not in self._document_ids:
-                self._document_ids.append(document_id)
-        
-        # 批量更新嵌入
-        if self._embeddings is None:
-            self._embeddings = np.array(new_embeddings)
-        else:
-            # 只添加新的嵌入，避免重复
-            self._embeddings = np.vstack([self._embeddings, new_embeddings])
+            # 确保所有嵌入维度一致为256维
+            target_dim = 256
+            new_embeddings = [self._ensure_embedding_dimension(embedding, target_dim) for embedding in new_embeddings]
+            
+            # 检查现有嵌入维度
+            if self._embeddings is not None:
+                existing_dim = self._embeddings.shape[1]
+                if existing_dim != target_dim:
+                    # 转换现有嵌入到目标维度
+                    logger.info(f"转换现有嵌入维度从 {existing_dim} 到 {target_dim}")
+                    converted_embeddings = []
+                    for i in range(len(self._embeddings)):
+                        converted_embedding = self._ensure_embedding_dimension(self._embeddings[i], target_dim)
+                        converted_embeddings.append(converted_embedding)
+                    self._embeddings = np.array(converted_embeddings)
+                    
+                    # 更新文档中的嵌入
+                    for doc_id in self._documents:
+                        doc_embedding = np.array(self._documents[doc_id]["embedding"])
+                        converted_doc_embedding = self._ensure_embedding_dimension(doc_embedding, target_dim)
+                        self._documents[doc_id]["embedding"] = converted_doc_embedding.tolist()
+            
+            # 更新文档信息
+            for i, (document_id, content, metadata) in enumerate(doc_info):
+                embedding = new_embeddings[i]
+                self._documents[document_id] = {
+                    "content": content,
+                    "metadata": metadata,
+                    "embedding": embedding.tolist()
+                }
+                
+                # 添加到文档ID列表（如果不存在）
+                if document_id not in self._document_ids:
+                    self._document_ids.append(document_id)
+            
+            # 批量更新嵌入
+            if self._embeddings is None:
+                self._embeddings = np.array(new_embeddings)
+            else:
+                # 只添加新的嵌入，避免重复
+                self._embeddings = np.vstack([self._embeddings, new_embeddings])
+            
+            # 清理内存
+            del new_embeddings
+            del contents
+            del doc_info
+            import gc
+            gc.collect()
         
         # 条件性保存
         if build_index:
@@ -244,12 +270,19 @@ class VectorStore:
         for idx in sorted_indices:
             document_id = self._document_ids[idx]
             document = self._documents[document_id]
+            
+            # 更新访问统计信息
+            self._update_access_stats(document_id)
+            
             results.append({
                 "document_id": document_id,
                 "content": document["content"],
                 "metadata": document["metadata"],
                 "similarity": float(similarities[idx])
             })
+        
+        # 检查是否需要进行冷热分层
+        self._check_hot_cold_demotion()
         
         return results
 
@@ -384,6 +417,107 @@ class VectorStore:
         except Exception as e:
             logger.error(f"保存embedding缓存失败: {e}")
 
+    def _load_access_stats(self):
+        """加载访问统计信息"""
+        access_stats_path = self.storage_path / "access_stats.json"
+        try:
+            if access_stats_path.exists():
+                with open(access_stats_path, 'r', encoding='utf-8') as f:
+                    self._access_stats = json.load(f)
+                logger.info(f"加载了 {len(self._access_stats)} 条访问统计信息")
+        except Exception as e:
+            logger.error(f"加载访问统计信息失败: {e}")
+            self._access_stats = {}
+
+    def _save_access_stats(self):
+        """保存访问统计信息"""
+        access_stats_path = self.storage_path / "access_stats.json"
+        try:
+            with open(access_stats_path, 'w', encoding='utf-8') as f:
+                json.dump(self._access_stats, f, indent=2, ensure_ascii=False)
+        except Exception as e:
+            logger.error(f"保存访问统计信息失败: {e}")
+
+    def _update_access_stats(self, document_id: str):
+        """更新文档的访问统计信息
+
+        Args:
+            document_id: 文档ID
+        """
+        import time
+        current_time = time.time()
+        
+        if document_id not in self._access_stats:
+            self._access_stats[document_id] = {
+                'access_count': 0,
+                'last_access': current_time,
+                'first_access': current_time
+            }
+        
+        stats = self._access_stats[document_id]
+        stats['access_count'] += 1
+        stats['last_access'] = current_time
+        
+        # 定期保存访问统计信息
+        if len(self._access_stats) % 100 == 0:
+            self._save_access_stats()
+
+    def _check_hot_cold_demotion(self):
+        """检查并执行冷热分层"""
+        import time
+        current_time = time.time()
+        
+        # 定期执行，避免频繁检查
+        if hasattr(self, '_last_check_time') and current_time - self._last_check_time < 3600:  # 1小时检查一次
+            return
+        
+        self._last_check_time = current_time
+        
+        # 定义热点和冷点的阈值
+        HOT_ACCESS_COUNT = 5  # 热点访问次数阈值
+        COLD_DAYS = 30  # 冷点天数阈值
+        
+        # 检查每个文档
+        for document_id, stats in self._access_stats.items():
+            access_count = stats.get('access_count', 0)
+            last_access = stats.get('last_access', 0)
+            days_since_last_access = (current_time - last_access) / (24 * 3600)
+            
+            # 检查是否需要从热存储移动到冷存储
+            if access_count < HOT_ACCESS_COUNT and days_since_last_access > COLD_DAYS:
+                self._move_to_cold_storage(document_id)
+            # 检查是否需要从冷存储移动到热存储
+            elif access_count >= HOT_ACCESS_COUNT and days_since_last_access < COLD_DAYS:
+                self._move_to_hot_storage(document_id)
+
+    def _move_to_cold_storage(self, document_id: str):
+        """将文档移动到冷存储
+
+        Args:
+            document_id: 文档ID
+        """
+        try:
+            # 这里只是标记，实际的存储移动需要根据具体实现
+            # 例如，可以将文档从内存缓存中移除，只保留在磁盘上
+            logger.info(f"将文档 {document_id} 移动到冷存储")
+            # 实际的移动操作
+        except Exception as e:
+            logger.error(f"将文档移动到冷存储失败: {e}")
+
+    def _move_to_hot_storage(self, document_id: str):
+        """将文档移动到热存储
+
+        Args:
+            document_id: 文档ID
+        """
+        try:
+            # 这里只是标记，实际的存储移动需要根据具体实现
+            # 例如，可以将文档加载到内存缓存中
+            logger.info(f"将文档 {document_id} 移动到热存储")
+            # 实际的移动操作
+        except Exception as e:
+            logger.error(f"将文档移动到热存储失败: {e}")
+
     def _get_text_hash(self, text: str) -> str:
         """计算文本哈希
 
@@ -394,6 +528,17 @@ class VectorStore:
             文本哈希
         """
         return hashlib.sha256(text.encode()).hexdigest()
+
+    def is_valid(self, vec):
+        """检查向量是否有效（无NaN和inf值）
+
+        Args:
+            vec: 向量
+
+        Returns:
+            是否有效
+        """
+        return not (np.isnan(vec).any() or np.isinf(vec).any())
 
     def _generate_embedding(self, text: str) -> np.ndarray:
         """生成文本嵌入
@@ -409,12 +554,33 @@ class VectorStore:
         
         # 检查缓存
         if text_hash in self._embedding_cache:
-            return np.array(self._embedding_cache[text_hash])
+            embedding = np.array(self._embedding_cache[text_hash])
+            if self.is_valid(embedding):
+                return embedding
+            else:
+                # 缓存中的向量无效，删除并重新生成
+                del self._embedding_cache[text_hash]
         
         # 使用 CodeEmbedder 生成嵌入
         if self.embedder.is_available():
-            embedding = self.embedder.embed_code(text)
-            embedding = np.array(embedding)
+            try:
+                embedding = self.embedder.embed_code(text)
+                embedding = np.array(embedding)
+                
+                # 确保嵌入维度为256维
+                embedding = self._ensure_embedding_dimension(embedding, 256)
+                
+                # 检查并处理NaN值
+                if not self.is_valid(embedding):
+                    logger.warning("检测到NaN或inf值，丢弃嵌入...")
+                    # 生成一个默认的有效向量
+                    embedding = np.zeros(256)
+                    embedding[0] = 1.0  # 确保向量非零
+            except Exception as e:
+                logger.error(f"生成嵌入失败: {e}")
+                # 生成一个默认的有效向量
+                embedding = np.zeros(256)
+                embedding[0] = 1.0
         else:
             # 降级方案：使用简单的哈希嵌入，生成256维向量
             hash_value = text_hash
@@ -431,9 +597,6 @@ class VectorStore:
             norm = np.linalg.norm(embedding)
             if norm > 0:
                 embedding = embedding / norm
-        
-        # 确保嵌入维度为256维
-        embedding = self._ensure_embedding_dimension(embedding, 256)
         
         # 缓存结果
         self._embedding_cache[text_hash] = embedding.tolist()

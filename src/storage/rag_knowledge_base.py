@@ -462,6 +462,18 @@ class RAGKnowledgeBase:
         
         return knowledge_results
 
+    def search(self, query: str, top_k: int = 5) -> List[Knowledge]:
+        """搜索知识（与search_knowledge方法相同）
+
+        Args:
+            query: 搜索查询
+            top_k: 返回结果数量
+
+        Returns:
+            知识列表
+        """
+        return self.search_knowledge(query, top_k)
+
     def get_standardized_output(self, query: str, top_k: int = 5) -> List[Dict[str, Any]]:
         """获取标准化的输出格式
 

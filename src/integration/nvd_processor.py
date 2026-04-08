@@ -19,7 +19,8 @@ logger = get_logger(__name__)
 class CVEChunk:
     """CVE数据块"""
     cve_id: str
-    chunk_type: str  # description, attack_chain, reference
+    chunk_id: str  # 唯一标识，格式：CVE-XXXX#field#index
+    chunk_type: str  # description, impact, solution, references, configurations
     content: str
     metadata: Dict[str, Any] = field(default_factory=dict)
 
@@ -53,7 +54,25 @@ class NVDProcessor:
         self.max_chunk_content_length = 2000
         self.max_text_length = 4096  # 最大文本长度，避免OOM
         self.max_embedding_length = 512  # 最大embedding文本长度，避免OOM
+        # Chunk参数
+        self.CHUNK_SIZE = 400
+        self.CHUNK_OVERLAP = 80
         pass
+
+    def clean_text(self, text: str) -> str:
+        """清洗文本，去除特殊字符和多余空格
+
+        Args:
+            text: 原始文本
+
+        Returns:
+            清洗后的文本
+        """
+        if not text:
+            return ""
+        text = text.replace('\x00', '')
+        text = ' '.join(text.split())
+        return text.strip()
 
     def truncate_field(self, text: str, max_length: int) -> str:
         """截断字段长度
@@ -216,11 +235,13 @@ class NVDProcessor:
         logger.info(f"长文本分段完成，生成 {len(chunks)} 个数据块")
         return chunks
 
-    def split_text_for_embedding(self, text: str) -> List[str]:
-        """将长文本切分为最大长度512的片段，用于embedding
+    def split_text_for_embedding(self, text: str, chunk_size: int = None, chunk_overlap: int = None) -> List[str]:
+        """将长文本切分为指定大小的片段，用于embedding
 
         Args:
             text: 长文本
+            chunk_size: 块大小，默认400
+            chunk_overlap: 块重叠，默认80
 
         Returns:
             切分后的文本片段列表
@@ -228,11 +249,17 @@ class NVDProcessor:
         if not text:
             return []
 
-        # 首先限制文本长度
-        text = self.limit_text_length(text)
+        # 使用默认值
+        if chunk_size is None:
+            chunk_size = self.CHUNK_SIZE
+        if chunk_overlap is None:
+            chunk_overlap = self.CHUNK_OVERLAP
+
+        # 首先清洗文本
+        text = self.clean_text(text)
         
-        # 如果文本长度小于等于最大embedding长度，直接返回
-        if len(text) <= self.max_embedding_length:
+        # 如果文本长度小于等于chunk_size，直接返回
+        if len(text) <= chunk_size:
             return [text]
 
         # 按语义切分（优先按句子）
@@ -245,14 +272,16 @@ class NVDProcessor:
             sentence += '. '
             sentence_length = len(sentence)
 
-            if current_length + sentence_length > self.max_embedding_length:
+            if current_length + sentence_length > chunk_size:
                 # 生成当前数据块
                 if current_chunk:
                     chunk_content = ''.join(current_chunk).strip()
                     if chunk_content:
                         chunks.append(chunk_content)
-                    current_chunk = [sentence]
-                    current_length = sentence_length
+                    # 计算重叠部分
+                    overlap_text = ''.join(current_chunk[-2:]) if len(current_chunk) >= 2 else ''
+                    current_chunk = [overlap_text + sentence]
+                    current_length = len(overlap_text + sentence)
             else:
                 current_chunk.append(sentence)
                 current_length += sentence_length
@@ -266,10 +295,11 @@ class NVDProcessor:
         # 如果按语义切分后仍然有超长片段，按字符切分
         final_chunks = []
         for chunk in chunks:
-            if len(chunk) > self.max_embedding_length:
-                # 按字符切分
-                for i in range(0, len(chunk), self.max_embedding_length):
-                    final_chunks.append(chunk[i:i + self.max_embedding_length])
+            if len(chunk) > chunk_size:
+                # 按字符切分，保持重叠
+                for i in range(0, len(chunk), chunk_size - chunk_overlap):
+                    end = min(i + chunk_size, len(chunk))
+                    final_chunks.append(chunk[i:end])
             else:
                 final_chunks.append(chunk)
 
@@ -437,30 +467,34 @@ class NVDProcessor:
             # 生成数据块
             chunks = []
             
-            # 对长描述进行分段处理
-            description_chunks = self.split_long_description(description, cve_id)
-            chunks.extend(description_chunks)
+            # 字段级语义切块
+            fields_to_chunk = {
+                'description': description,
+                'references': '\n'.join([f"{ref.get('url', '')} ({ref.get('name', '')})" for ref in references[:10]]),
+                'configurations': '\n'.join(cpe_list[:10])
+            }
             
-            # 攻击链块（基于描述和引用生成）
-            attack_chain_content = f"CVE ID: {cve_id}\n"
-            attack_chain_content += f"Description: {description}\n"
-            if references:
-                attack_chain_content += "References:\n"
-                for ref in references[:3]:  # 只取前3个引用
-                    attack_chain_content += f"- {ref.get('url', '')}\n"
-            attack_chain_content = self.truncate_field(attack_chain_content, self.max_chunk_content_length)
-            
-            attack_chain_chunk = CVEChunk(
-                cve_id=cve_id,
-                chunk_type='attack_chain',
-                content=attack_chain_content,
-                metadata={
-                    'type': 'attack_chain',
-                    'cve_id': cve_id,
-                    'attack_vector': attack_vector
-                }
-            )
-            chunks.append(attack_chain_chunk)
+            for field_name, field_content in fields_to_chunk.items():
+                if field_content:
+                    # 清洗文本
+                    field_content = self.clean_text(field_content)
+                    # 字段级切块
+                    field_chunks = self.split_text_for_embedding(field_content)
+                    for i, chunk_content in enumerate(field_chunks, 1):
+                        chunk_id = f"{cve_id}#{field_name}#{i}"
+                        chunk = CVEChunk(
+                            cve_id=cve_id,
+                            chunk_id=chunk_id,
+                            chunk_type=field_name,
+                            content=chunk_content,
+                            metadata={
+                                'type': field_name,
+                                'cve_id': cve_id,
+                                'part': i,
+                                'total_parts': len(field_chunks)
+                            }
+                        )
+                        chunks.append(chunk)
             
             return structured_data, chunks
         except Exception as e:
@@ -594,30 +628,34 @@ class NVDProcessor:
             # 生成数据块
             chunks = []
             
-            # 对长描述进行分段处理
-            description_chunks = self.split_long_description(description, cve_id)
-            chunks.extend(description_chunks)
+            # 字段级语义切块
+            fields_to_chunk = {
+                'description': description,
+                'references': '\n'.join([f"{ref.get('url', '')} ({ref.get('name', '')})" for ref in references[:10]]),
+                'configurations': '\n'.join(cpe_list[:10])
+            }
             
-            # 攻击链块
-            attack_chain_content = f"CVE ID: {cve_id}\n"
-            attack_chain_content += f"Description: {description}\n"
-            if references:
-                attack_chain_content += "References:\n"
-                for ref in references[:3]:
-                    attack_chain_content += f"- {ref.get('url', '')}\n"
-            attack_chain_content = self.truncate_field(attack_chain_content, self.max_chunk_content_length)
-            
-            attack_chain_chunk = CVEChunk(
-                cve_id=cve_id,
-                chunk_type='attack_chain',
-                content=attack_chain_content,
-                metadata={
-                    'type': 'attack_chain',
-                    'cve_id': cve_id,
-                    'attack_vector': attack_vector
-                }
-            )
-            chunks.append(attack_chain_chunk)
+            for field_name, field_content in fields_to_chunk.items():
+                if field_content:
+                    # 清洗文本
+                    field_content = self.clean_text(field_content)
+                    # 字段级切块
+                    field_chunks = self.split_text_for_embedding(field_content)
+                    for i, chunk_content in enumerate(field_chunks, 1):
+                        chunk_id = f"{cve_id}#{field_name}#{i}"
+                        chunk = CVEChunk(
+                            cve_id=cve_id,
+                            chunk_id=chunk_id,
+                            chunk_type=field_name,
+                            content=chunk_content,
+                            metadata={
+                                'type': field_name,
+                                'cve_id': cve_id,
+                                'part': i,
+                                'total_parts': len(field_chunks)
+                            }
+                        )
+                        chunks.append(chunk)
             
             return structured_data, chunks
         except Exception as e:
