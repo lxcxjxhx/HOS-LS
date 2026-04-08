@@ -43,8 +43,13 @@ class SecurityScanner:
         self.ai_analyzer = None
         self.local_analyzer = get_local_analyzer()  # 本地语义分析器
         self.library_matcher = get_library_matcher()  # 库匹配器
-        self.priority_evaluator = get_ai_priority_evaluator()  # 优先级评估器
-        self.web_searcher = get_web_searcher()  # 网络搜索器
+        self.priority_evaluator = None
+        self.web_searcher = None
+        
+        # 纯AI模式下跳过初始化可能导致模型加载的组件
+        if not config.pure_ai:
+            self.priority_evaluator = get_ai_priority_evaluator()  # 优先级评估器
+            self.web_searcher = get_web_searcher()  # 网络搜索器
         
         # 初始化规则注册表（仅用于知识库检索，不加载硬编码规则）
         from src.rules.registry import get_registry
@@ -68,6 +73,22 @@ class SecurityScanner:
             except Exception as e:
                 if self.config.debug:
                     print(f"[DEBUG] AI 分析器初始化失败: {e}")
+        
+        # 初始化纯AI分析器
+        self.pure_ai_analyzer = None
+        if config.pure_ai:
+            print(f"[DEBUG] 开始初始化纯AI分析器")
+            try:
+                from src.ai.pure_ai_analyzer import PureAIAnalyzer
+                print(f"[DEBUG] 导入PureAIAnalyzer成功")
+                self.pure_ai_analyzer = PureAIAnalyzer(config)
+                print(f"[DEBUG] 纯AI分析器初始化成功")
+                if self.config.debug:
+                    print(f"[DEBUG] 纯AI分析器初始化成功")
+            except Exception as e:
+                print(f"[DEBUG] 纯AI分析器初始化失败: {e}")
+                if self.config.debug:
+                    print(f"[DEBUG] 纯AI分析器初始化失败: {e}")
         
         if config.debug:
             print(f"[DEBUG] 安全扫描器初始化完成，规则注册表已就绪（仅用于知识库检索）")
@@ -110,14 +131,277 @@ class SecurityScanner:
             status=ScanStatus.COMPLETED
         )
         
-        # 漏洞优先级评估
-        print("📊 正在评估漏洞优先级...")
-        prioritized_findings = self._prioritize_findings(findings, files)
-        
-        # 汇总结果
-        print("📋 正在汇总结果...")
-        for finding in tqdm(prioritized_findings, desc="处理漏洞结果"):
-            result.add_finding(finding)
+        # 纯AI模式：跳过所有后处理步骤，直接汇总结果
+        if self.config.pure_ai:
+            if self.config.debug:
+                print(f"[DEBUG] 纯AI模式：跳过所有后处理步骤")
+            
+            # 直接汇总结果
+            print("📋 正在汇总结果...")
+            for finding in tqdm(findings, desc="处理漏洞结果"):
+                result.add_finding(finding)
+        else:
+            # 正常模式：执行所有后处理步骤
+            # 漏洞优先级评估
+            print("📊 正在评估漏洞优先级...")
+            prioritized_findings = self._prioritize_findings(findings, files)
+            
+            # 汇总结果
+            print("📋 正在汇总结果...")
+            for finding in tqdm(prioritized_findings, desc="处理漏洞结果"):
+                result.add_finding(finding)
+            
+            # 执行攻击链路分析（如果启用了AI）
+            if self.config.ai.enabled and hasattr(self, 'attack_chain_builder') and result.findings:
+                if self.config.debug:
+                    print(f"[DEBUG] 开始执行攻击链路分析")
+                
+                try:
+                    # 转换ScanResult为SecurityAnalysisResult
+                    ai_findings = []
+                    for finding in result.findings:
+                        # 创建VulnerabilityFinding对象
+                        vuln_finding = VulnerabilityFinding(
+                            rule_id=finding.rule_id,
+                            rule_name=finding.rule_name,
+                            description=finding.description,
+                            severity=finding.severity.name.lower(),
+                            confidence=finding.confidence,
+                            location={
+                                "file": finding.location.file,
+                                "line": finding.location.line,
+                                "column": finding.location.column
+                            },
+                            code_snippet=finding.code_snippet,
+                            fix_suggestion=finding.fix_suggestion,
+                            explanation=finding.message,
+                            references=finding.references,
+                            exploit_scenario=""
+                        )
+                        ai_findings.append(vuln_finding)
+                    
+                    # 创建SecurityAnalysisResult
+                    security_result = SecurityAnalysisResult(
+                        findings=ai_findings,
+                        risk_score=0.0,
+                        summary=f"Found {len(ai_findings)} potential issues",
+                        recommendations=[],
+                        metadata={}
+                    )
+                    
+                    # 执行攻击链路分析
+                    attack_chain_result = await self.attack_chain_builder.build_attack_chains(security_result)
+                    
+                    # 生成可视化数据
+                    visualization_data = self.attack_chain_builder.get_visualization_data(attack_chain_result)
+                    
+                    # 将攻击链路分析结果添加到ScanResult中
+                    result.metadata['attack_chain'] = {
+                        'summary': attack_chain_result.summary,
+                        'risk_score': attack_chain_result.risk_score,
+                        'paths': attack_chain_result.paths,
+                        'visualization': visualization_data
+                    }
+                    
+                    if self.config.debug:
+                        print(f"[DEBUG] 攻击链路分析完成，识别出 {len(attack_chain_result.paths)} 条攻击路径")
+                        print(f"[DEBUG] 总体风险评分: {attack_chain_result.risk_score:.2f}")
+                except Exception as e:
+                    if self.config.debug:
+                        print(f"[DEBUG] 攻击链路分析失败: {e}")
+            
+            # 执行本地攻击链分析（无论是否启用AI）
+            if result.findings:
+                if self.config.debug:
+                    print(f"[DEBUG] 开始执行本地攻击链分析")
+                
+                try:
+                    from src.core.attack_chain_analyzer import AttackChainAnalyzer
+                    from src.core.result_aggregator import AggregatedFinding
+                    
+                    # 转换为AggregatedFinding
+                    aggregated_findings = []
+                    for finding in result.findings:
+                        # 简化的AggregatedFinding创建
+                        agg_finding = AggregatedFinding(
+                            rule_id=finding.rule_id,
+                            rule_name=finding.rule_name,
+                            description=finding.description,
+                            severity=finding.severity,
+                            file_path=finding.location.file,
+                            line=finding.location.line,
+                            column=finding.location.column,
+                            confidence=finding.confidence,
+                            message=finding.message,
+                            code_snippet=finding.code_snippet,
+                            fix_suggestion=finding.fix_suggestion,
+                            references=finding.references,
+                            metadata=finding.metadata
+                        )
+                        aggregated_findings.append(agg_finding)
+                    
+                    # 执行攻击链分析
+                    analyzer = AttackChainAnalyzer()
+                    chain_result = analyzer.analyze(aggregated_findings)
+                    
+                    # 将攻击链分析结果添加到ScanResult中
+                    result.metadata['local_attack_chain'] = {
+                        'summary': chain_result.summary,
+                        'critical_chains': [{
+                            'description': chain.description,
+                            'risk_level': chain.risk_level,
+                            'status': chain.status,
+                            'steps': [{
+                                'rule_name': step.finding.rule_name,
+                                'description': step.description
+                            } for step in chain.steps]
+                        } for chain in chain_result.critical_chains]
+                    }
+                    
+                    if self.config.debug:
+                        print(f"[DEBUG] 本地攻击链分析完成，识别出 {len(chain_result.critical_chains)} 条关键攻击链")
+                except Exception as e:
+                    if self.config.debug:
+                        print(f"[DEBUG] 本地攻击链分析失败: {e}")
+            
+            # 执行漏洞优先级评估（如果启用了AI）
+            if self.config.ai.enabled and hasattr(self, 'priority_evaluator') and result.findings:
+                if self.config.debug:
+                    print(f"[DEBUG] 开始执行漏洞优先级评估")
+                
+                try:
+                    # 转换ScanResult为SecurityAnalysisResult
+                    ai_findings = []
+                    for finding in result.findings:
+                        # 创建VulnerabilityFinding对象
+                        vuln_finding = VulnerabilityFinding(
+                            rule_id=finding.rule_id,
+                            rule_name=finding.rule_name,
+                            description=finding.description,
+                            severity=finding.severity.name.lower(),
+                            confidence=finding.confidence,
+                            location={
+                                "file": finding.location.file,
+                                "line": finding.location.line,
+                                "column": finding.location.column
+                            },
+                            code_snippet=finding.code_snippet,
+                            fix_suggestion=finding.fix_suggestion,
+                            explanation=finding.message,
+                            references=finding.references,
+                            exploit_scenario=""
+                        )
+                        ai_findings.append(vuln_finding)
+                    
+                    # 创建SecurityAnalysisResult
+                    security_result = SecurityAnalysisResult(
+                        findings=ai_findings,
+                        risk_score=0.0,
+                        summary=f"Found {len(ai_findings)} potential issues",
+                        recommendations=[],
+                        metadata={}
+                    )
+                    
+                    # 执行优先级评估
+                    priority_result = await self.priority_evaluator.prioritize_findings(security_result, AnalysisContext(
+                        file_path=str(target),
+                        code_content="",
+                        language="python"  # 默认语言
+                    ))
+                    
+                    # 将优先级评估结果添加到ScanResult中
+                    result.metadata['priority_analysis'] = {
+                        'summary': priority_result.summary,
+                        'priority_distribution': priority_result.metadata.get('priority_distribution', {}),
+                        'prioritized_findings': [finding.rule_name for finding in priority_result.prioritized_findings]
+                    }
+                    
+                    if self.config.debug:
+                        print(f"[DEBUG] 优先级评估完成")
+                        print(f"[DEBUG] {priority_result.summary}")
+                except Exception as e:
+                    if self.config.debug:
+                        print(f"[DEBUG] 优先级评估失败: {e}")
+            
+            # 集成 LangGraph 深度分析（如果启用了 AI 且发现了漏洞）
+            if self.config.ai.enabled and result.findings:
+                try:
+                    print("🔍 开始执行 LangGraph 深度分析")
+                    print("🚀 启动多Agent安全分析流程")
+                    
+                    # 导入 LangGraph 流程
+                    from src.core.langgraph_flow import run_scan
+                    
+                    # 执行 LangGraph 扫描
+                    langgraph_result = await run_scan(str(target), self.config)
+                    
+                    if langgraph_result and langgraph_result.findings:
+                        print(f"✅ LangGraph 深度分析发现 {len(langgraph_result.findings)} 个问题")
+                        
+                        # 检查是否已经有 LangGraph 深度分析的结果
+                        has_langgraph_finding = any(finding.rule_id == 'LANGGRAPH-ANALYSIS' for finding in result.findings)
+                        
+                        # 如果没有，将 LangGraph 分析结果添加到最终结果中
+                        if not has_langgraph_finding:
+                            for finding in langgraph_result.findings:
+                                result.add_finding(finding)
+                            
+                            # 添加 LangGraph 分析元数据
+                            if hasattr(langgraph_result, 'metadata'):
+                                result.metadata['langgraph_analysis'] = langgraph_result.metadata
+                        else:
+                            print("⚠️  已存在 LangGraph 深度分析结果，跳过重复添加")
+                    
+                    print("✅ LangGraph 深度分析完成")
+                    print("✨ CREWAI 多专家团队分析已集成到扫描结果中")
+                        
+                except Exception as e:
+                    print(f"❌ LangGraph 深度分析失败: {e}")
+            
+            # 集成自学习机制
+            if self.config.ai.enabled and not self.config.pure_ai:
+                try:
+                    from src.storage.rag_knowledge_base import get_rag_knowledge_base
+                    from src.learning.self_learning import Knowledge, KnowledgeType
+                    from datetime import datetime
+                    import hashlib
+                    
+                    # 获取 RAG 知识库实例
+                    rag_kb = get_rag_knowledge_base()
+                    
+                    # 转换扫描结果为 RAG 知识库所需格式
+                    learning_results = []
+                    for finding in result.findings:
+                        # 过滤掉 LangGraph 深度分析的结果，避免重复判断
+                        if finding.rule_id == 'LANGGRAPH-ANALYSIS':
+                            continue
+                        
+                        # 创建知识内容
+                        content = f"{finding.rule_name}: {finding.description}\n\n严重级别: {finding.severity.value}\n置信度: {finding.confidence}\n\n修复建议: {finding.fix_suggestion}"
+                        
+                        learning_results.append({
+                            "content": content,
+                            "knowledge_type": "ai_learning",
+                            "source": "auto_learning",
+                            "confidence": finding.confidence,
+                            "tags": [finding.severity.value, finding.rule_name],
+                            "metadata": {
+                                "rule_id": finding.rule_id,
+                                "file_path": finding.location.file,
+                                "line": finding.location.line,
+                                "code_snippet": finding.code_snippet
+                            }
+                        })
+                    
+                    # 自动记录学习结果到 RAG 知识库
+                    rag_kb.auto_record_learning(learning_results)
+                    
+                    if self.config.debug:
+                        print(f"[DEBUG] 自学习完成，已更新 RAG 知识库")
+                        
+                except Exception as e:
+                    if self.config.debug:
+                        print(f"[DEBUG] 自学习集成失败: {e}")
         
         # 计算扫描耗时
         end_time = time.time()
@@ -135,258 +419,6 @@ class SecurityScanner:
         
         if self.config.debug:
             print(f"[DEBUG] 扫描完成，总计发现 {len(result.findings)} 个问题")
-        
-        # 执行攻击链路分析（如果启用了AI）
-        if self.config.ai.enabled and hasattr(self, 'attack_chain_builder') and result.findings:
-            if self.config.debug:
-                print(f"[DEBUG] 开始执行攻击链路分析")
-            
-            try:
-                # 转换ScanResult为SecurityAnalysisResult
-                ai_findings = []
-                for finding in result.findings:
-                    # 创建VulnerabilityFinding对象
-                    vuln_finding = VulnerabilityFinding(
-                        rule_id=finding.rule_id,
-                        rule_name=finding.rule_name,
-                        description=finding.description,
-                        severity=finding.severity.name.lower(),
-                        confidence=finding.confidence,
-                        location={
-                            "file": finding.location.file,
-                            "line": finding.location.line,
-                            "column": finding.location.column
-                        },
-                        code_snippet=finding.code_snippet,
-                        fix_suggestion=finding.fix_suggestion,
-                        explanation=finding.message,
-                        references=finding.references,
-                        exploit_scenario=""
-                    )
-                    ai_findings.append(vuln_finding)
-                
-                # 创建SecurityAnalysisResult
-                security_result = SecurityAnalysisResult(
-                    findings=ai_findings,
-                    risk_score=0.0,
-                    summary=f"Found {len(ai_findings)} potential issues",
-                    recommendations=[],
-                    metadata={}
-                )
-                
-                # 执行攻击链路分析
-                attack_chain_result = await self.attack_chain_builder.build_attack_chains(security_result)
-                
-                # 生成可视化数据
-                visualization_data = self.attack_chain_builder.get_visualization_data(attack_chain_result)
-                
-                # 将攻击链路分析结果添加到ScanResult中
-                result.metadata['attack_chain'] = {
-                    'summary': attack_chain_result.summary,
-                    'risk_score': attack_chain_result.risk_score,
-                    'paths': attack_chain_result.paths,
-                    'visualization': visualization_data
-                }
-                
-                if self.config.debug:
-                    print(f"[DEBUG] 攻击链路分析完成，识别出 {len(attack_chain_result.paths)} 条攻击路径")
-                    print(f"[DEBUG] 总体风险评分: {attack_chain_result.risk_score:.2f}")
-            except Exception as e:
-                if self.config.debug:
-                    print(f"[DEBUG] 攻击链路分析失败: {e}")
-        
-        # 执行本地攻击链分析（无论是否启用AI）
-        if result.findings:
-            if self.config.debug:
-                print(f"[DEBUG] 开始执行本地攻击链分析")
-            
-            try:
-                from src.core.attack_chain_analyzer import AttackChainAnalyzer
-                from src.core.result_aggregator import AggregatedFinding
-                
-                # 转换为AggregatedFinding
-                aggregated_findings = []
-                for finding in result.findings:
-                    # 简化的AggregatedFinding创建
-                    agg_finding = AggregatedFinding(
-                        rule_id=finding.rule_id,
-                        rule_name=finding.rule_name,
-                        description=finding.description,
-                        severity=finding.severity,
-                        file_path=finding.location.file,
-                        line=finding.location.line,
-                        column=finding.location.column,
-                        confidence=finding.confidence,
-                        message=finding.message,
-                        code_snippet=finding.code_snippet,
-                        fix_suggestion=finding.fix_suggestion,
-                        references=finding.references,
-                        metadata=finding.metadata
-                    )
-                    aggregated_findings.append(agg_finding)
-                
-                # 执行攻击链分析
-                analyzer = AttackChainAnalyzer()
-                chain_result = analyzer.analyze(aggregated_findings)
-                
-                # 将攻击链分析结果添加到ScanResult中
-                result.metadata['local_attack_chain'] = {
-                    'summary': chain_result.summary,
-                    'critical_chains': [{
-                        'description': chain.description,
-                        'risk_level': chain.risk_level,
-                        'status': chain.status,
-                        'steps': [{
-                            'rule_name': step.finding.rule_name,
-                            'description': step.description
-                        } for step in chain.steps]
-                    } for chain in chain_result.critical_chains]
-                }
-                
-                if self.config.debug:
-                    print(f"[DEBUG] 本地攻击链分析完成，识别出 {len(chain_result.critical_chains)} 条关键攻击链")
-            except Exception as e:
-                if self.config.debug:
-                    print(f"[DEBUG] 本地攻击链分析失败: {e}")
-        
-        # 执行漏洞优先级评估（如果启用了AI）
-        if self.config.ai.enabled and hasattr(self, 'priority_evaluator') and result.findings:
-            if self.config.debug:
-                print(f"[DEBUG] 开始执行漏洞优先级评估")
-            
-            try:
-                # 转换ScanResult为SecurityAnalysisResult
-                ai_findings = []
-                for finding in result.findings:
-                    # 创建VulnerabilityFinding对象
-                    vuln_finding = VulnerabilityFinding(
-                        rule_id=finding.rule_id,
-                        rule_name=finding.rule_name,
-                        description=finding.description,
-                        severity=finding.severity.name.lower(),
-                        confidence=finding.confidence,
-                        location={
-                            "file": finding.location.file,
-                            "line": finding.location.line,
-                            "column": finding.location.column
-                        },
-                        code_snippet=finding.code_snippet,
-                        fix_suggestion=finding.fix_suggestion,
-                        explanation=finding.message,
-                        references=finding.references,
-                        exploit_scenario=""
-                    )
-                    ai_findings.append(vuln_finding)
-                
-                # 创建SecurityAnalysisResult
-                security_result = SecurityAnalysisResult(
-                    findings=ai_findings,
-                    risk_score=0.0,
-                    summary=f"Found {len(ai_findings)} potential issues",
-                    recommendations=[],
-                    metadata={}
-                )
-                
-                # 执行优先级评估
-                priority_result = await self.priority_evaluator.prioritize_findings(security_result, AnalysisContext(
-                    file_path=str(target),
-                    code_content="",
-                    language="python"  # 默认语言
-                ))
-                
-                # 将优先级评估结果添加到ScanResult中
-                result.metadata['priority_analysis'] = {
-                    'summary': priority_result.summary,
-                    'priority_distribution': priority_result.metadata.get('priority_distribution', {}),
-                    'prioritized_findings': [finding.rule_name for finding in priority_result.prioritized_findings]
-                }
-                
-                if self.config.debug:
-                    print(f"[DEBUG] 优先级评估完成")
-                    print(f"[DEBUG] {priority_result.summary}")
-            except Exception as e:
-                if self.config.debug:
-                    print(f"[DEBUG] 优先级评估失败: {e}")
-        
-        # 集成 LangGraph 深度分析（如果启用了 AI 且发现了漏洞）
-        if self.config.ai.enabled and result.findings:
-            try:
-                print("🔍 开始执行 LangGraph 深度分析")
-                print("🚀 启动多Agent安全分析流程")
-                
-                # 导入 LangGraph 流程
-                from src.core.langgraph_flow import run_scan
-                
-                # 执行 LangGraph 扫描
-                langgraph_result = await run_scan(str(target), self.config)
-                
-                if langgraph_result and langgraph_result.findings:
-                    print(f"✅ LangGraph 深度分析发现 {len(langgraph_result.findings)} 个问题")
-                    
-                    # 检查是否已经有 LangGraph 深度分析的结果
-                    has_langgraph_finding = any(finding.rule_id == 'LANGGRAPH-ANALYSIS' for finding in result.findings)
-                    
-                    # 如果没有，将 LangGraph 分析结果添加到最终结果中
-                    if not has_langgraph_finding:
-                        for finding in langgraph_result.findings:
-                            result.add_finding(finding)
-                        
-                        # 添加 LangGraph 分析元数据
-                        if hasattr(langgraph_result, 'metadata'):
-                            result.metadata['langgraph_analysis'] = langgraph_result.metadata
-                    else:
-                        print("⚠️  已存在 LangGraph 深度分析结果，跳过重复添加")
-                
-                print("✅ LangGraph 深度分析完成")
-                print("✨ CREWAI 多专家团队分析已集成到扫描结果中")
-                    
-            except Exception as e:
-                print(f"❌ LangGraph 深度分析失败: {e}")
-        
-        # 集成自学习机制
-        if self.config.ai.enabled:
-            try:
-                from src.storage.rag_knowledge_base import get_rag_knowledge_base
-                from src.learning.self_learning import Knowledge, KnowledgeType
-                from datetime import datetime
-                import hashlib
-                
-                # 获取 RAG 知识库实例
-                rag_kb = get_rag_knowledge_base()
-                
-                # 转换扫描结果为 RAG 知识库所需格式
-                learning_results = []
-                for finding in result.findings:
-                    # 过滤掉 LangGraph 深度分析的结果，避免重复判断
-                    if finding.rule_id == 'LANGGRAPH-ANALYSIS':
-                        continue
-                    
-                    # 创建知识内容
-                    content = f"{finding.rule_name}: {finding.description}\n\n严重级别: {finding.severity.value}\n置信度: {finding.confidence}\n\n修复建议: {finding.fix_suggestion}"
-                    
-                    learning_results.append({
-                        "content": content,
-                        "knowledge_type": "ai_learning",
-                        "source": "auto_learning",
-                        "confidence": finding.confidence,
-                        "tags": [finding.severity.value, finding.rule_name],
-                        "metadata": {
-                            "rule_id": finding.rule_id,
-                            "file_path": finding.location.file,
-                            "line": finding.location.line,
-                            "code_snippet": finding.code_snippet
-                        }
-                    })
-                
-                # 自动记录学习结果到 RAG 知识库
-                rag_kb.auto_record_learning(learning_results)
-                
-                if self.config.debug:
-                    print(f"[DEBUG] 自学习完成，已更新 RAG 知识库")
-                    
-            except Exception as e:
-                if self.config.debug:
-                    print(f"[DEBUG] 自学习集成失败: {e}")
         
         return result
 
@@ -534,48 +566,65 @@ class SecurityScanner:
             if self.config.debug:
                 print(f"[DEBUG] 文件类型: {file_type}, 分析配置: {analysis_config}")
             
-            # 静态分析
-            static_findings = []
-            if analysis_config['static']:
-                static_findings = self._static_analyze(file_info)
-                findings.extend(static_findings)
-            
-            # 本地语义分析（始终启用，轻量级）
-            semantic_findings = []
-            if analysis_config['semantic']:
-                semantic_findings = self._semantic_analyze(file_info)
-                findings.extend(semantic_findings)
-            
-            # 库匹配分析
-            library_findings = []
-            if analysis_config['library']:
-                library_findings = self._library_analyze(file_info)
-                findings.extend(library_findings)
-            
-            # AI 分析（如果启用 --ai 参数，对所有文件进行分析）
-            ai_findings = []
-            if self.ai_analyzer and self.config.ai.enabled and analysis_config['ai']:
-                ai_findings = await self._ai_analyze(file_info)
-                findings.extend(ai_findings)
-            
-            # 规则分析（结合AI分析结果）
-            rule_findings = []
-            if analysis_config['rule']:
-                rule_findings = self._rule_analyze(file_info, ai_findings)
-                findings.extend(rule_findings)
-            
-            # 网络搜索分析（结合AI分析结果）
-            web_findings = []
-            if analysis_config['web']:
-                web_findings = await self._web_search_analyze(file_info, library_findings)
-                # 利用AI分析结果过滤网络搜索结果
-                if ai_findings:
-                    web_findings = self._filter_web_findings_by_ai(web_findings, ai_findings)
-                findings.extend(web_findings)
-            
-            if self.config.debug:
-                total_findings = len(static_findings) + len(rule_findings) + len(semantic_findings) + len(library_findings) + len(web_findings) + len(ai_findings)
-                print(f"[DEBUG] 文件分析完成，发现 {total_findings} 个问题")
+            # 纯AI模式：只执行AI分析
+            if self.config.pure_ai:
+                if self.config.debug:
+                    print(f"[DEBUG] 纯AI模式：只执行AI分析")
+                
+                # 纯AI分析 - 对所有文件类型执行AI分析
+                ai_findings = []
+                if self.pure_ai_analyzer:
+                    print(f"[PURE-AI] 分析文件: {file_info.path}")
+                    ai_findings = await self.pure_ai_analyzer.analyze_file(file_info)
+                    findings.extend(ai_findings)
+                    print(f"[PURE-AI] 分析完成，发现 {len(ai_findings)} 个问题")
+                
+                if self.config.debug:
+                    print(f"[DEBUG] 纯AI模式分析完成，发现 {len(ai_findings)} 个问题")
+            else:
+                # 正常模式：执行所有分析
+                # 静态分析
+                static_findings = []
+                if analysis_config['static']:
+                    static_findings = self._static_analyze(file_info)
+                    findings.extend(static_findings)
+                
+                # 本地语义分析（始终启用，轻量级）
+                semantic_findings = []
+                if analysis_config['semantic']:
+                    semantic_findings = self._semantic_analyze(file_info)
+                    findings.extend(semantic_findings)
+                
+                # 库匹配分析
+                library_findings = []
+                if analysis_config['library']:
+                    library_findings = self._library_analyze(file_info)
+                    findings.extend(library_findings)
+                
+                # AI 分析（如果启用 --ai 参数，对所有文件进行分析）
+                ai_findings = []
+                if self.ai_analyzer and self.config.ai.enabled and analysis_config['ai']:
+                    ai_findings = await self._ai_analyze(file_info)
+                    findings.extend(ai_findings)
+                
+                # 规则分析（结合AI分析结果）
+                rule_findings = []
+                if analysis_config['rule']:
+                    rule_findings = self._rule_analyze(file_info, ai_findings)
+                    findings.extend(rule_findings)
+                
+                # 网络搜索分析（结合AI分析结果）
+                web_findings = []
+                if analysis_config['web'] and self.web_searcher:
+                    web_findings = await self._web_search_analyze(file_info, library_findings)
+                    # 利用AI分析结果过滤网络搜索结果
+                    if ai_findings:
+                        web_findings = self._filter_web_findings_by_ai(web_findings, ai_findings)
+                    findings.extend(web_findings)
+                
+                if self.config.debug:
+                    total_findings = len(static_findings) + len(rule_findings) + len(semantic_findings) + len(library_findings) + len(web_findings) + len(ai_findings)
+                    print(f"[DEBUG] 文件分析完成，发现 {total_findings} 个问题")
         
         return findings
 
@@ -745,6 +794,10 @@ class SecurityScanner:
         Returns:
             发现的安全问题列表
         """
+        # 纯AI模式下跳过RAG分析
+        if self.config.pure_ai:
+            return []
+            
         findings = []
         
         try:

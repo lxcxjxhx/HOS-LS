@@ -57,6 +57,11 @@ class VectorStore:
         config = EmbedConfig()
         if model_name:
             config.model_name = model_name
+        # 检查是否为纯AI模式
+        from src.core.config import get_config
+        core_config = get_config()
+        if hasattr(core_config, 'pure_ai') and core_config.pure_ai:
+            config.pure_ai = True
         self.embedder = create_embedder(config, custom_model_path=custom_model_path)
         
         # 加载现有数据

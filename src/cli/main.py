@@ -5,6 +5,7 @@ HOS-LS 的命令行入口。
 
 import sys
 import asyncio
+import os
 from pathlib import Path
 from typing import Optional, List, Dict, Any
 from concurrent.futures import ThreadPoolExecutor
@@ -18,9 +19,6 @@ from rich.progress import Progress, SpinnerColumn, BarColumn, TextColumn
 
 from src import __version__
 from src.core.config import Config, ConfigManager
-from src.core.scanner import SecurityScanner, create_scanner
-from src.integration.nvd_update import run_update
-from src.storage.rag_knowledge_base import get_rag_knowledge_base
 
 console = Console()
 
@@ -74,12 +72,19 @@ class AsyncWorker:
 def print_banner() -> None:
     """打印欢迎横幅"""
     banner = f"""
-[bold blue] _   _  ___   ___       _     _[/bold blue]
-[bold blue]| | | |/ _ \\ / __|     | |   | |[/bold blue]
-[bold blue]| |_| | | | |\\ \\  _____| |___| |[/bold blue]
-[bold blue]|  _  | |_| | > >|_____|  ___  |[/bold blue]
-[bold blue]|_| |_|\\___/ |_/       |_|   |_|[/bold blue]
-[bold green]AI 生成代码安全扫描工具 v{__version__}[/bold green]
+[bold blue]╔═══════════════════════════════════════════════════════════════╗[/bold blue]
+[bold blue]║                                                           ║[/bold blue]
+[bold blue]║    H   H  OOO  SSSS  -  L     SSSS                            ║[/bold blue]
+[bold blue]║    H   H O   O S      -  L     S                            ║[/bold blue]
+[bold blue]║    HHHHH O   O SSSS    -  L     SSSS                        ║[/bold blue]
+[bold blue]║    H   H O   O     S   -  L         S                       ║[/bold blue]
+[bold blue]║    H   H  OOO  SSSS    -  LLLLL SSSS                        ║[/bold blue]
+[bold blue]║                                                           ║[/bold blue]
+[bold green]║              HOS-LS  AI 代码安全扫描工具 v{__version__}              ║[/bold green]
+[bold blue]║                                                           ║[/bold blue]
+[bold blue]║              🔒  深度语义分析  •  🤖  多Agent协作  •  📊  智能报告            ║[/bold blue]
+[bold blue]║                                                           ║[/bold blue]
+[bold blue]╚═══════════════════════════════════════════════════════════════╝[/bold blue]
     """
     console.print(banner)
 
@@ -120,6 +125,7 @@ def cli(ctx: click.Context, config: Optional[str], verbose: bool, quiet: bool, d
 @click.option("--diff", is_flag=True, help="扫描 Git 差异")
 @click.option("--workers", "-w", type=int, default=4, help="工作线程数")
 @click.option("--ai", is_flag=True, help="启用 AI 分析")
+@click.option("--pure-ai", is_flag=True, help="启用纯AI深度语义解析模式，只执行AI分析和报告导出")
 @click.option("--ai-provider", help="AI 提供商 (anthropic, openai, deepseek, local)")
 @click.option("--incremental", is_flag=True, help="启用增量扫描")
 @click.option("--langgraph", is_flag=True, help="使用 LangGraph 流程")
@@ -134,6 +140,7 @@ def scan(
     diff: bool,
     workers: int,
     ai: bool,
+    pure_ai: bool,
     ai_provider: Optional[str],
     incremental: bool,
     langgraph: bool,
@@ -142,6 +149,69 @@ def scan(
     """扫描代码安全漏洞"""
     config: Config = ctx.obj["config"]
 
+    # 提前检查纯AI模式
+    if pure_ai:
+        # 设置环境变量
+        os.environ["HOS_LS_MODE"] = "PURE_AI"
+        
+        if not config.quiet:
+            print_banner()
+            console.print("[bold green]🔒 纯AI模式已激活，隔离运行时环境...[/bold green]")
+        
+        # 纯AI模式配置
+        config.scan.max_workers = workers
+        config.scan.incremental = incremental
+        if ruleset:
+            config.rules.ruleset = ruleset
+        config.report.format = output_format
+        if output:
+            config.report.output = output
+        config.ai.enabled = True
+        config.pure_ai = True
+        
+        # 纯AI模式默认使用deepseek-reasoner
+        config.pure_ai_provider = "deepseek"
+        config.pure_ai_model = "deepseek-reasoner"
+        
+        # 测试模式
+        if test > 0:
+            config.test_mode = True
+            config.__dict__['test_file_count'] = test
+            if not config.quiet:
+                console.print(f"[bold yellow]⚠️  测试模式已启用，只扫描前{test}个优先级最高的文件[/bold yellow]")
+        elif test == 0:
+            config.test_mode = False
+        else:
+            config.test_mode = True
+            config.__dict__['test_file_count'] = 10
+            if not config.quiet:
+                console.print("[bold yellow]⚠️  测试模式已启用，只扫描前10个优先级最高的文件[/bold yellow]")
+        
+        # 导入纯AI扫描器
+        from src.core.scanner import create_scanner
+        
+        # 执行纯AI扫描
+        try:
+            scanner = create_scanner(config)
+            result = scanner.scan_sync(target)
+
+            # 显示结果
+            if not config.quiet:
+                _display_result(result)
+
+            # 生成报告
+            if output:
+                _generate_report(result, output, output_format)
+
+            # 根据结果设置退出码
+            if result.findings:
+                sys.exit(1)
+        except Exception as e:
+            console.print(f"[bold red]扫描失败: {e}[/bold red]")
+            sys.exit(2)
+        return
+    
+    # 非纯AI模式
     if not config.quiet:
         print_banner()
 
@@ -154,19 +224,19 @@ def scan(
     if output:
         config.report.output = output
     config.ai.enabled = ai
+    config.pure_ai = False
+    
     if ai_provider:
         config.ai.provider = ai_provider
     # 测试模式
     if test > 0:
         config.test_mode = True
-        # 将测试文件数量存储在 config 的 __dict__ 中
         config.__dict__['test_file_count'] = test
         if not config.quiet:
             console.print(f"[bold yellow]⚠️  测试模式已启用，只扫描前{test}个优先级最高的文件[/bold yellow]")
     elif test == 0:
         config.test_mode = False
     else:
-        # 负数表示使用默认值10
         config.test_mode = True
         config.__dict__['test_file_count'] = 10
         if not config.quiet:
@@ -177,7 +247,6 @@ def scan(
         if langgraph:
             # 使用 LangGraph 多Agent流程
             from src.core.langgraph_flow import analyze_code
-            import asyncio
             # 读取目标文件内容
             target_path = Path(target)
             if target_path.is_file():
@@ -214,6 +283,7 @@ def scan(
                 sys.exit(1)
         else:
             # 使用传统扫描器
+            from src.core.scanner import create_scanner
             scanner = create_scanner(config)
             result = scanner.scan_sync(target)
 
@@ -260,6 +330,7 @@ def config(ctx: click.Context) -> None:
 @click.pass_context
 def rules(ctx: click.Context) -> None:
     """列出可用规则"""
+    # 导入get_registry
     from src.rules.registry import get_registry
 
     cfg: Config = ctx.obj["config"]
@@ -340,11 +411,15 @@ def update(ctx, zip, dir, limit, no_rag, batch_size, resume, model) -> None:
     rag_base = None
     if not no_rag:
         try:
+            from src.storage.rag_knowledge_base import get_rag_knowledge_base
             rag_base = get_rag_knowledge_base(model_name=model)
             console.print(f"[bold green]已连接到RAG知识库，使用模型: {model}[/bold green]")
         except Exception as e:
             console.print(f"[bold yellow]警告: 无法初始化RAG知识库: {e}[/bold yellow]")
             console.print("[bold yellow]将仅解析数据，不导入RAG[/bold yellow]")
+    
+    # 导入run_update
+    from src.integration.nvd_update import run_update
     
     console.print("[bold blue]开始更新NVD漏洞库...[/bold blue]")
     
@@ -606,7 +681,6 @@ def download(ctx, model, output, force, token) -> None:
     # 设置输出目录
     if not output:
         # 默认保存到模型缓存目录，为每个模型创建独立的子目录
-        import os
         from pathlib import Path
         model_cache = Path.home() / ".cache" / "huggingface" / "hub"
         # 为模型创建标准的 Hugging Face 目录结构
@@ -655,6 +729,7 @@ def download(ctx, model, output, force, token) -> None:
 
 def _display_result(result) -> None:
     """显示扫描结果"""
+    # 导入Severity
     from src.core.engine import Severity
 
     summary = result.to_dict()["summary"]
@@ -736,6 +811,7 @@ def _display_result(result) -> None:
 
 def _generate_report(result, output: str, format: str) -> None:
     """生成报告"""
+    # 导入报告生成器
     from src.reporting.generator import JSONReportGenerator, HTMLReportGenerator, MarkdownReportGenerator, SARIFReportGenerator
     
     # 根据格式选择报告生成器

@@ -140,8 +140,21 @@ class RAGKnowledgeBase:
         # 混合检索器
         self.hybrid_retriever = HybridRetriever(self.base_path / "hybrid_retriever", self.vector_store)
         
+        # 重排序器配置
+        try:
+            rerank_enabled = self.config.rag.rerank.enabled
+            rerank_model = self.config.rag.rerank.model
+        except (AttributeError, KeyError):
+            # 兼容旧配置格式
+            rerank_config = self.config.get('rag', {}).get('rerank', {})
+            rerank_enabled = rerank_config.get('enabled', False)
+            rerank_model = rerank_config.get('model', None)
+        
         # 重排序器
-        self.reranker = Reranker()
+        if rerank_enabled and rerank_model:
+            self.reranker = Reranker(model_name=rerank_model)
+        else:
+            self.reranker = None
         
         # 查询重写器
         self.query_rewriter = QueryRewriter()
@@ -495,8 +508,11 @@ class RAGKnowledgeBase:
             top_k=top_k * 2  # 获取更多结果用于重排序
         )
         
-        # 使用重排序器进行精排
-        reranked_results = self.reranker.rerank(query, results)
+        # 使用重排序器进行精排（如果启用）
+        if self.reranker:
+            reranked_results = self.reranker.rerank(query, results)
+        else:
+            reranked_results = results
         
         # 转换为知识对象
         knowledge_results = []
@@ -543,8 +559,11 @@ class RAGKnowledgeBase:
             top_k=top_k * 2  # 获取更多结果用于重排序
         )
         
-        # 使用重排序器进行精排
-        reranked_results = self.reranker.rerank(query, results)
+        # 使用重排序器进行精排（如果启用）
+        if self.reranker:
+            reranked_results = self.reranker.rerank(query, results)
+        else:
+            reranked_results = results
         
         # 转换为标准化输出
         output = []

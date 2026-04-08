@@ -158,21 +158,21 @@ def safe_load_json(file_path):
             data = json.loads(content)
             return data
     except json.JSONDecodeError as e:
-        print(f"\n   ❌ JSON 格式损坏: {os.path.basename(file_path)}")
-        print(f"      错误位置: line {e.lineno} col {e.colno} (char {e.pos})")
+        logger.error(f"JSON解析错误 {file_path}: {e}")
+        logger.error(f"错误位置: line {e.lineno} col {e.colno} (char {e.pos})")
         # 打印附近 10 行内容，帮助你立刻看到坏在哪里
         try:
             with open(file_path, 'r', encoding='utf-8') as f:
                 lines = f.readlines()
             start = max(0, e.lineno - 10)
-            print("      附近内容预览:")
+            logger.error("附近内容预览:")
             for ln in range(start, min(len(lines), e.lineno + 10)):
-                print(f"        {ln+1:6d} | {lines[ln].rstrip()[:200]}")
+                logger.error(f"  {ln+1:6d} | {lines[ln].rstrip()[:200]}")
         except:
             pass
         return None
     except Exception as e:
-        print(f"\n   ❌ 读取失败: {os.path.basename(file_path)} -> {e}")
+        logger.error(f"读取文件失败 {file_path}: {e}")
         return None
 
 # 添加进度条支持
@@ -989,7 +989,8 @@ def run_update(zip_path, rag_base=None, limit=None, batch_size=1000, resume_from
             embedder = create_embedder(config)
             logger.info(f"✅ 嵌入器初始化完成，使用模型: {config.model_name}")
 
-        outer_batch_size = optimal_batch_size          # 使用计算出的最优批量大小
+        # 优化批处理大小，避免内存问题
+        outer_batch_size = min(optimal_batch_size, 128)  # 限制最大批处理大小为128
         logger.info(f"🔧 使用外层批处理大小: {outer_batch_size} 条（稳定防OOM版）")
         logger.info(f"📊 总待处理条数: {len(cve_files)}")
         batch_size = outer_batch_size
@@ -999,7 +1000,18 @@ def run_update(zip_path, rag_base=None, limit=None, batch_size=1000, resume_from
         
         # 预计算总嵌入数量
         total_embeddings = len(cve_files)
-        embedding_dim = 256  # 根据模型确定
+        
+        # 从嵌入器获取实际维度，默认为768（google/embeddinggemma-300M）
+        if embedder:
+            try:
+                embedding_dim = embedder.get_embedding_dimension()
+                logger.info(f"📏 从嵌入器获取维度: {embedding_dim}")
+            except Exception as e:
+                logger.warning(f"获取嵌入维度失败: {e}，使用默认维度 768")
+                embedding_dim = 768
+        else:
+            embedding_dim = 768  # 默认维度
+            logger.info(f"📏 使用默认嵌入维度: {embedding_dim}")
         
         # 创建内存映射文件
         memmap_path = Path("embeddings_cache/embeddings_all.npy")

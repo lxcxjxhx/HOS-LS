@@ -23,21 +23,22 @@ class Reranker:
     使用 bge-reranker 或 cross-encoder 对检索结果进行精排，提高命中率。
     """
 
-    def __init__(self, model_name: str = "BAAI/bge-reranker-large", device: str = "cpu"):
+    def __init__(self, model_name: str = None, device: str = "auto"):
         """初始化重排序器
 
         Args:
-            model_name: 重排序模型名称
-            device: 运行设备 (cpu, cuda)
+            model_name: 重排序模型名称，None 表示禁用
+            device: 运行设备 (auto, cpu, cuda)
         """
         self.model_name = model_name
-        self.device = device
+        self.device = device if device != "auto" else ("cuda" if torch.cuda.is_available() else "cpu")
         self.model = None
-        self._load_model()
+        if model_name:
+            self._load_model()
 
     def _load_model(self) -> None:
         """加载重排序模型"""
-        if CrossEncoder is not None:
+        if CrossEncoder is not None and self.model_name:
             try:
                 logger.info(f"加载重排序模型: {self.model_name}")
                 self.model = CrossEncoder(self.model_name, device=self.device)
@@ -46,7 +47,10 @@ class Reranker:
                 logger.error(f"加载重排序模型失败: {e}")
                 self.model = None
         else:
-            logger.warning("sentence-transformers 未安装，使用回退实现")
+            if not self.model_name:
+                logger.info("重排序功能已禁用")
+            else:
+                logger.warning("sentence-transformers 未安装，使用回退实现")
             self.model = None
 
     def rerank(self, query: str, candidates: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
@@ -62,12 +66,17 @@ class Reranker:
         if not candidates:
             return []
         
-        # 使用模型进行重排序
+        # 使用模型进行重排序（如果可用）
         if self.model is not None:
-            return self._model_rerank(query, candidates)
+            try:
+                return self._model_rerank(query, candidates)
+            except Exception as e:
+                logger.error(f"模型重排序失败: {e}")
+                # 失败时回退到原始结果
+                return candidates
         else:
-            # 回退到简单排序
-            return self._fallback_rerank(query, candidates)
+            # 未启用重排序，返回原始结果
+            return candidates
 
     def _model_rerank(self, query: str, candidates: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """使用模型进行重排序

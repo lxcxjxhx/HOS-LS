@@ -127,6 +127,33 @@ class Neo4jConfig(BaseModel):
     password: str = Field(default="password", description="Neo4j 密码")
 
 
+class RAGHybridConfig(BaseModel):
+    """RAG 混合检索配置"""
+    enabled: bool = Field(default=True, description="是否启用混合检索")
+    hybrid_search_weight: float = Field(default=0.7, description="混合搜索权重")
+    top_k: int = Field(default=10, description="返回结果数量")
+
+
+class RAGBM25Config(BaseModel):
+    """RAG BM25 检索配置"""
+    enabled: bool = Field(default=True, description="是否启用 BM25 检索")
+    k1: float = Field(default=1.2, description="BM25 k1 参数")
+    b: float = Field(default=0.75, description="BM25 b 参数")
+
+
+class RAGRerankConfig(BaseModel):
+    """RAG 重排序配置"""
+    enabled: bool = Field(default=False, description="是否启用重排序")
+    model: str = Field(default="BAAI/bge-reranker-large", description="重排序模型")
+
+
+class RAGConfig(BaseModel):
+    """RAG 配置"""
+    hybrid: RAGHybridConfig = Field(default_factory=RAGHybridConfig)
+    bm25: RAGBM25Config = Field(default_factory=RAGBM25Config)
+    rerank: RAGRerankConfig = Field(default_factory=RAGRerankConfig)
+
+
 class Config(BaseSettings):
     """HOS-LS 主配置类"""
 
@@ -147,6 +174,7 @@ class Config(BaseSettings):
     database: DatabaseConfig = Field(default_factory=DatabaseConfig)
     sandbox: SandboxConfig = Field(default_factory=SandboxConfig)
     neo4j: Neo4jConfig = Field(default_factory=Neo4jConfig)
+    rag: RAGConfig = Field(default_factory=RAGConfig)
 
     # 全局配置
     debug: bool = Field(default=False, description="调试模式")
@@ -154,6 +182,9 @@ class Config(BaseSettings):
     quiet: bool = Field(default=False, description="静默模式")
     config_path: Optional[str] = Field(default=None, description="配置文件路径")
     test_mode: bool = Field(default=False, description="测试模式")
+    pure_ai: bool = Field(default=False, description="纯AI深度语义解析模式")
+    pure_ai_provider: str = Field(default="deepseek", description="纯AI模式的AI提供商")
+    pure_ai_model: str = Field(default="deepseek-reasoner", description="纯AI模式的AI模型")
 
 
 class ConfigManager:

@@ -19,31 +19,15 @@ os.environ["TOKENIZERS_PARALLELISM"] = "false"  # 避免tokenizer警告
 # 在nvd_importer.py中也添加相同的环境变量设置，确保在导入时就生效
 # 这样可以确保在整个NVD导入过程中都使用这个设置
 
-try:
-    print("🔍 尝试导入 sentence_transformers...")
-    from sentence_transformers import SentenceTransformer
-    print("✅ sentence_transformers 导入成功")
-    SENTENCE_TRANSFORMERS_AVAILABLE = True
-except ImportError as e:
-    print(f"❌ sentence_transformers 导入失败: {e}")
-    import traceback
-    traceback.print_exc()
-    SENTENCE_TRANSFORMERS_AVAILABLE = False
+# 延迟导入标记
+SENTENCE_TRANSFORMERS_AVAILABLE = False
+NUMPY_AVAILABLE = False
+TORCH_AVAILABLE = False
 
-try:
-    import numpy as np
-
-    NUMPY_AVAILABLE = True
-except ImportError:
-    NUMPY_AVAILABLE = False
-
-
-try:
-    import torch
-
-    TORCH_AVAILABLE = True
-except ImportError:
-    TORCH_AVAILABLE = False
+# 全局模型和库引用
+SentenceTransformer = None
+np = None
+torch = None
 
 
 class ModelType(Enum):
@@ -82,6 +66,47 @@ class EmbedConfig:
     stride: int = 128  # 切分重叠大小
 
 
+def _lazy_imports():
+    """延迟导入必要的模块
+    
+    Returns:
+        tuple: (SENTENCE_TRANSFORMERS_AVAILABLE, NUMPY_AVAILABLE, TORCH_AVAILABLE)
+    """
+    # 检查是否为纯AI模式
+    if os.getenv("HOS_LS_MODE") == "PURE_AI":
+        raise RuntimeError("PURE_AI mode should not load embedding components")
+    
+    global SentenceTransformer, np, torch, SENTENCE_TRANSFORMERS_AVAILABLE, NUMPY_AVAILABLE, TORCH_AVAILABLE
+    
+    if not SENTENCE_TRANSFORMERS_AVAILABLE:
+        try:
+            print("🔍 尝试导入 sentence_transformers...")
+            from sentence_transformers import SentenceTransformer
+            print("✅ sentence_transformers 导入成功")
+            SENTENCE_TRANSFORMERS_AVAILABLE = True
+        except ImportError as e:
+            print(f"❌ sentence_transformers 导入失败: {e}")
+            import traceback
+            traceback.print_exc()
+            SENTENCE_TRANSFORMERS_AVAILABLE = False
+    
+    if not NUMPY_AVAILABLE:
+        try:
+            import numpy as np
+            NUMPY_AVAILABLE = True
+        except ImportError:
+            NUMPY_AVAILABLE = False
+    
+    if not TORCH_AVAILABLE:
+        try:
+            import torch
+            TORCH_AVAILABLE = True
+        except ImportError:
+            TORCH_AVAILABLE = False
+    
+    return SENTENCE_TRANSFORMERS_AVAILABLE, NUMPY_AVAILABLE, TORCH_AVAILABLE
+
+
 class CodeEmbedder:
     """代码嵌入生成器
 
@@ -100,12 +125,21 @@ class CodeEmbedder:
         self._block_cache: Dict[str, str] = {}
         self._initialized = False
 
-        if SENTENCE_TRANSFORMERS_AVAILABLE:
+        # 检查是否为纯AI模式，如果是则跳过模型初始化
+        if hasattr(self.config, 'pure_ai') and self.config.pure_ai:
+            print("⚠️  纯AI模式下跳过模型初始化")
+            return
+
+        # 延迟导入并初始化模型
+        st_available, _, _ = _lazy_imports()
+        if st_available:
             self._initialize_model()
 
     def _initialize_model(self) -> None:
         """初始化模型"""
-        if not SENTENCE_TRANSFORMERS_AVAILABLE:
+        # 确保模块已导入
+        st_available, _, _ = _lazy_imports()
+        if not st_available:
             return
 
         # 避免重复初始化
@@ -481,13 +515,24 @@ class CodeEmbedder:
             嵌入维度
         """
         if not self._initialized:
-            return 384  # 默认维度
+            return 768  # 默认维度，与 google/embeddinggemma-300M 一致
 
         try:
-            sample_embedding = self.embed_code('def hello():\n    pass')
-            return len(sample_embedding)
-        except Exception:
-            return 384
+            # 使用实际模型检测嵌入维度
+            sample_embedding = self._model.encode(
+                "test",
+                convert_to_numpy=True,
+                show_progress_bar=False
+            )
+            if NUMPY_AVAILABLE and isinstance(sample_embedding, np.ndarray):
+                return sample_embedding.shape[-1]
+            elif isinstance(sample_embedding, list):
+                return len(sample_embedding)
+            else:
+                return 768
+        except Exception as e:
+            print(f"⚠️  检测嵌入维度失败: {e}，使用默认维度 768")
+            return 768
 
     def clear_cache(self) -> None:
         """清除缓存"""
@@ -530,11 +575,18 @@ class CodeEmbedder:
         """
         try:
             with open(path, "r", encoding="utf-8") as f:
-                cache_data = json.load(f)
+                try:
+                    cache_data = json.load(f)
+                except json.JSONDecodeError:
+                    print("⚠️  缓存文件损坏，删除并重新创建")
+                    if Path(path).exists():
+                        Path(path).unlink()
+                    return False
 
             self._cache = cache_data.get("cache", {})
             return True
-        except Exception:
+        except Exception as e:
+            print(f"⚠️  加载缓存失败: {e}")
             return False
 
     def is_available(self) -> bool:
@@ -712,24 +764,39 @@ class CodeEmbedder:
 
             if NUMPY_AVAILABLE and isinstance(batch_embeddings, np.ndarray):
                 print(f"📥 处理 numpy 嵌入，形状: {batch_embeddings.shape}")
-                # 检查并处理 NaN 值
-                if np.isnan(batch_embeddings).any():
-                    print("⚠️  检测到 NaN 值，使用 fallback 嵌入...")
+                # 检查并处理 NaN 和 inf 值
+                has_nan = np.isnan(batch_embeddings).any()
+                has_inf = np.isinf(batch_embeddings).any()
+                
+                if has_nan or has_inf:
+                    print("⚠️  检测到 NaN 或 inf 值，使用 fallback 嵌入...")
                     return [self._fallback_embedding(code) for code in codes]
+                
+                # 标准化嵌入值，确保范围合理
+                batch_embeddings = np.clip(batch_embeddings, -1.0, 1.0)
+                
                 result = batch_embeddings.tolist()
                 # 释放 numpy 数组内存
                 del batch_embeddings
                 return result
             elif isinstance(batch_embeddings, list):
                 print(f"📥 处理列表嵌入，长度: {len(batch_embeddings)}")
-                # 检查并处理 NaN 值
+                # 检查并处理 NaN 和 inf 值
+                import math
                 has_nan = False
+                has_inf = False
                 for embedding in batch_embeddings:
-                    if any(math.isnan(val) for val in embedding):
-                        has_nan = True
+                    for val in embedding:
+                        if math.isnan(val):
+                            has_nan = True
+                        if math.isinf(val):
+                            has_inf = True
+                        if has_nan or has_inf:
+                            break
+                    if has_nan or has_inf:
                         break
-                if has_nan:
-                    print("⚠️  检测到 NaN 值，使用 fallback 嵌入...")
+                if has_nan or has_inf:
+                    print("⚠️  检测到 NaN 或 inf 值，使用 fallback 嵌入...")
                     return [self._fallback_embedding(code) for code in codes]
                 return batch_embeddings
             else:
@@ -772,8 +839,9 @@ class CodeEmbedder:
         hash_value = hashlib.sha256(code.encode()).hexdigest()
         embedding = []
 
-        # 生成256维向量，与模型一致
-        for i in range(0, 256):
+        # 使用实际模型维度，默认为768（与 google/embeddinggemma-300M 一致）
+        embedding_dim = self.get_embedding_dimension() if self._initialized else 768
+        for i in range(0, embedding_dim):
             if i < len(hash_value):
                 embedding.append(int(hash_value[i % len(hash_value)], 16) / 15.0)
             else:
@@ -1052,8 +1120,17 @@ def create_embedder(
             config.custom_model_path = custom_model_path
             config.model_name = ModelType.SECURITY_FINETUNED.value
         
-        if prefer_memory or not SENTENCE_TRANSFORMERS_AVAILABLE:
+        # 检查是否为纯AI模式（从环境变量和配置中检查）
+        pure_ai = os.getenv("HOS_LS_MODE") == "PURE_AI" or (hasattr(config, 'pure_ai') and config.pure_ai)
+        
+        if pure_ai:
+            # 纯AI模式下使用内存嵌入器
             _global_embedder = InMemoryEmbedder(config)
         else:
-            _global_embedder = CodeEmbedder(config)
+            # 非纯AI模式下延迟导入并创建相应的嵌入器
+            st_available, _, _ = _lazy_imports()
+            if prefer_memory or not st_available:
+                _global_embedder = InMemoryEmbedder(config)
+            else:
+                _global_embedder = CodeEmbedder(config)
     return _global_embedder
