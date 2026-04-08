@@ -2,9 +2,13 @@ import asyncio
 import json
 import re
 from typing import Dict, List, Any, Optional
+from rich.console import Console
+from rich.progress import Progress, SpinnerColumn, TextColumn
 from src.ai.pure_ai.context_builder import ContextBuilder
 from src.ai.pure_ai.prompt_templates import PromptTemplates
 from src.ai.models import AIRequest
+
+console = Console()
 
 class MultiAgentPipeline:
     """多Agent流水线系统
@@ -43,39 +47,48 @@ class MultiAgentPipeline:
             分析结果
         """
         try:
-            print(f"[PURE-AI] 开始分析文件: {file_path}")
+            console.print(f"[bold cyan][PURE-AI][/bold cyan] 开始分析文件: [bold green]{file_path}[/bold green]")
             
             # 1. 构建上下文
-            context = self.context_builder.build_context(file_path)
-            print(f"[PURE-AI] 上下文构建完成")
+            with console.status("[bold blue]构建上下文...[/bold blue]", spinner="dots"):
+                context = self.context_builder.build_context(file_path)
+            console.print(f"[bold cyan][PURE-AI][/bold cyan] [green]✓[/green] 上下文构建完成")
             
             # 2. Agent 0: 上下文分析
-            context_analysis = await self._run_agent_0(file_path, context)
-            print(f"[PURE-AI] Agent 0 分析完成")
+            with console.status("[bold blue]Agent 0: 上下文分析...[/bold blue]", spinner="dots"):
+                context_analysis = await self._run_agent_0(file_path, context)
+            console.print(f"[bold cyan][PURE-AI][/bold cyan] [green]✓[/green] Agent 0 分析完成")
             
             # 3. Agent 1: 代码理解
-            code_understanding = await self._run_agent_1(file_path, context, context_analysis)
-            print(f"[PURE-AI] Agent 1 分析完成")
+            with console.status("[bold blue]Agent 1: 代码理解...[/bold blue]", spinner="dots"):
+                code_understanding = await self._run_agent_1(file_path, context, context_analysis)
+            console.print(f"[bold cyan][PURE-AI][/bold cyan] [green]✓[/green] Agent 1 分析完成")
             
             # 4. Agent 2: 风险枚举
-            risk_enumeration = await self._run_agent_2(file_path, code_understanding)
-            print(f"[PURE-AI] Agent 2 分析完成")
+            with console.status("[bold blue]Agent 2: 风险枚举...[/bold blue]", spinner="dots"):
+                risk_enumeration = await self._run_agent_2(file_path, code_understanding)
+            console.print(f"[bold cyan][PURE-AI][/bold cyan] [green]✓[/green] Agent 2 分析完成")
             
             # 5. Agent 3: 漏洞验证
-            vulnerability_verification = await self._run_agent_3(file_path, risk_enumeration, context['file_content'])
-            print(f"[PURE-AI] Agent 3 分析完成")
+            with console.status("[bold blue]Agent 3: 漏洞验证...[/bold blue]", spinner="dots"):
+                vulnerability_verification = await self._run_agent_3(file_path, risk_enumeration, context['file_content'])
+            console.print(f"[bold cyan][PURE-AI][/bold cyan] [green]✓[/green] Agent 3 分析完成")
             
             # 6. Agent 4: 攻击链分析
-            attack_chain_analysis = await self._run_agent_4(file_path, vulnerability_verification)
-            print(f"[PURE-AI] Agent 4 分析完成")
+            with console.status("[bold blue]Agent 4: 攻击链分析...[/bold blue]", spinner="dots"):
+                attack_chain_analysis = await self._run_agent_4(file_path, vulnerability_verification)
+            console.print(f"[bold cyan][PURE-AI][/bold cyan] [green]✓[/green] Agent 4 分析完成")
             
             # 7. Agent 5: 对抗验证
-            adversarial_validation = await self._run_agent_5(file_path, attack_chain_analysis, context['file_content'])
-            print(f"[PURE-AI] Agent 5 分析完成")
+            with console.status("[bold blue]Agent 5: 对抗验证...[/bold blue]", spinner="dots"):
+                adversarial_validation = await self._run_agent_5(file_path, attack_chain_analysis, context['file_content'])
+            console.print(f"[bold cyan][PURE-AI][/bold cyan] [green]✓[/green] Agent 5 分析完成")
             
             # 8. Agent 6: 最终裁决
-            final_decision = await self._run_agent_6(file_path, adversarial_validation, vulnerability_verification)
-            print(f"[PURE-AI] Agent 6 分析完成")
+            with console.status("[bold blue]Agent 6: 最终裁决...[/bold blue]", spinner="dots"):
+                final_decision = await self._run_agent_6(file_path, adversarial_validation, vulnerability_verification)
+            console.print(f"[bold cyan][PURE-AI][/bold cyan] [green]✓[/green] Agent 6 分析完成")
+            console.print(f"[bold cyan][PURE-AI][/bold cyan] [bold green]分析完成![/bold green]")
             
             return {
                 'file_path': file_path,
@@ -88,7 +101,7 @@ class MultiAgentPipeline:
                 'final_decision': final_decision
             }
         except Exception as e:
-            print(f"[PURE-AI] 分析失败: {e}")
+            console.print(f"[bold cyan][PURE-AI][/bold cyan] [bold red]分析失败: {e}[/bold red]")
             import traceback
             traceback.print_exc()
             return {
@@ -269,7 +282,7 @@ class MultiAgentPipeline:
                     return str(response)
                     
             except Exception as e:
-                print(f"[PURE-AI] 生成失败 (尝试 {i+1}/{self.max_retries}): {e}")
+                console.print(f"[bold cyan][PURE-AI][/bold cyan] [yellow]生成失败 (尝试 {i+1}/{self.max_retries}): {e}[/yellow]")
                 import traceback
                 traceback.print_exc()
                 if i == self.max_retries - 1:
@@ -344,6 +357,6 @@ class MultiAgentPipeline:
             # 如果没有找到JSON，返回原始响应
             return {'raw_response': response}
         except Exception as e:
-            print(f"[PURE-AI] JSON解析失败: {e}")
-            print(f"[PURE-AI] 原始响应: {response[:500]}...")  # 打印前500字符
+            console.print(f"[bold cyan][PURE-AI][/bold cyan] [yellow]JSON解析失败: {e}[/yellow]")
+            console.print(f"[bold cyan][PURE-AI][/bold cyan] [dim]原始响应: {response[:500]}...[/dim]")
             return {'raw_response': response, 'error': str(e)}

@@ -38,7 +38,7 @@ class HybridStore:
         self.postgres.connect()
         
         # 初始化向量存储
-        vector_path = Path(vector_config.get('path', './vector_store'))
+        vector_path = Path(vector_config.get('path', './rag_knowledge_base/vector_store'))
         model_name = vector_config.get('model_name', 'BAAI/bge-small-en-v1.5')
         self.vector_store = VectorStore(vector_path, model_name=model_name)
         

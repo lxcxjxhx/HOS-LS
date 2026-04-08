@@ -1,4 +1,5 @@
 <div align="center">
+
 # 🔒 HOS-LS v0.3.1.5
 
 ## AI 生成代码安全扫描工具
@@ -11,6 +12,282 @@
 </div>
 
 ***
+
+## 📋 快速导航
+
+- [🤖 纯净AI模式（--pure-ai）](#-纯净ai模式--pure-ai) - 低配置首选，开箱即用
+- [🔒 正式模式（完整版）](#-正式模式完整版) - 全功能，高性能硬件推荐
+
+***
+
+## 🤖 纯净AI模式（--pure-ai）
+
+### 什么是 --pure-ai 模式？
+
+`--pure-ai` 是 HOS-LS 推出的轻量级纯 AI 深度语义解析模式。它采用多 Agent 流水线架构，默认使用 deepseek-reasoner 模型，无需依赖 Neo4j、FAISS、GraphRAG 等重型组件，即可提供高质量的代码安全扫描服务。
+
+### 为什么推出 --pure-ai 模式？
+
+根据客户反馈，正式模式对于电脑性能依赖过高，需要较高配置的硬件才能流畅运行。为了让更多开发者能够轻松使用 HOS-LS，我们特别推出了 `--pure-ai` 模式，它具有以下特点：
+
+- **低性能依赖**：不依赖图数据库、向量存储等重型组件
+- **开箱即用**：只需配置 API 密钥即可开始使用
+- **多语言支持**：支持 Python、JavaScript、TypeScript、Java、C/C++ 等多种语言
+- **高质量分析**：7 个专业 Agent 协同工作，提供深度安全分析
+
+### 核心优势对比
+
+| 特性 | 纯净AI模式（--pure-ai） | 正式模式（完整版） |
+|------|---------------------|-----------------|
+| **硬件要求** | 普通配置即可 | 推荐高性能配置 |
+| **依赖组件** | 仅需 AI API | Neo4j、FAISS、PostgreSQL 等 |
+| **启动速度** | ⚡ 快速启动 | 🐢 需要初始化多个组件 |
+| **内存占用** | 低 | 较高 |
+| **AI 分析** | ✅ 7 Agent 流水线 | ✅ 强 Multi-Agent 架构 |
+| **RAG 知识库** | ❌ | ✅ |
+| **攻击链分析** | ✅ | ✅ |
+| **CVE 集成** | ❌ | ✅ |
+| **适用场景** | 日常开发、快速扫描 | 深度安全审计、大型项目 |
+
+### 7个专业 Agent 详解
+
+`--pure-ai` 模式采用 7 个专业 Agent 协同工作，形成完整的安全分析流水线：
+
+#### Agent 0: 上下文分析
+- **职责**：构建代码上下文，分析文件依赖关系
+- **功能**：
+  - 读取文件内容
+  - 识别相关文件
+  - 分析 import 语句
+  - 追踪函数调用关系
+
+#### Agent 1: 代码理解
+- **职责**：深度理解代码逻辑和意图
+- **功能**：
+  - 分析代码结构
+  - 识别业务逻辑
+  - 理解数据流
+  - 建立代码语义模型
+
+#### Agent 2: 风险枚举
+- **职责**：枚举潜在安全风险点
+- **功能**：
+  - 识别危险函数调用
+  - 检测可疑代码模式
+  - 标记高风险区域
+  - 生成初步风险列表
+
+#### Agent 3: 漏洞验证
+- **职责**：验证风险是否为真实漏洞
+- **功能**：
+  - 逐项验证风险点
+  - 分析利用可能性
+  - 评估影响范围
+  - 筛选有效漏洞
+
+#### Agent 4: 攻击链分析
+- **职责**：构建完整攻击路径
+- **功能**：
+  - 分析漏洞间关联
+  - 构建攻击链条
+  - 评估攻击复杂度
+  - 识别关键攻击路径
+
+#### Agent 5: 对抗验证
+- **职责**：从攻击者角度验证漏洞
+- **功能**：
+  - 模拟攻击场景
+  - 测试绕过可能性
+  - 评估防御有效性
+  - 强化验证结果
+
+#### Agent 6: 最终裁决
+- **职责**：综合所有分析结果，做出最终判断
+- **功能**：
+  - 整合所有 Agent 输出
+  - 评估漏洞严重性
+  - 生成修复建议
+  - 输出最终报告
+
+### 快速上手（30秒）
+
+#### 1. 安装
+
+```bash
+# 使用 pip 安装
+pip install hos-ls
+```
+
+#### 2. 配置 API 密钥
+
+```bash
+# Windows
+set DEEPSEEK_API_KEY=sk-your-api-key-here
+
+# Linux/Mac
+export DEEPSEEK_API_KEY=sk-your-api-key-here
+```
+
+#### 3. 开始扫描
+
+```bash
+# 测试命令
+cd PATH ; python -m src.cli.main --debug scan PATH\nanobot-0.1.4.post6 --pure-ai -o nanobot-security-report
+
+# 扫描当前目录（纯净AI模式）
+hos-ls scan --pure-ai
+
+# 扫描指定项目
+hos-ls scan /path/to/project --pure-ai
+
+# 生成 HTML 报告
+hos-ls scan --pure-ai --format html --output report.html
+
+# 测试模式（只扫描前10个文件）
+hos-ls scan --pure-ai --test 10
+```
+
+### 详细使用指南
+
+#### 命令行参数
+
+```bash
+hos-ls scan --pure-ai [OPTIONS] [PATH]
+
+Arguments:
+  PATH                 要扫描的目录或文件 [默认: 当前目录]
+
+Options:
+  --format, -f         输出格式: html, json, markdown, sarif [默认: html]
+  --output, -o         输出文件路径
+  --ruleset, -r        规则集: owasp-top10, cwe-top25, all, v3 [默认: v3]
+  --severity, -s       最低严重级别: critical, high, medium, low
+  --workers, -w        并行工作进程数 [默认: 4]
+  --incremental        增量扫描（使用缓存）
+  --test, -t           测试模式，指定扫描文件数量
+  --config, -c         配置文件路径
+  --verbose, -v        详细输出
+  --help, -h           显示帮助信息
+```
+
+#### 配置文件
+
+创建 `.hos-ls.yaml` 配置文件：
+
+```yaml
+# 纯AI模式配置
+pure_ai:
+  enabled: true
+  provider: deepseek          # AI 提供商: anthropic, openai, deepseek
+  model: deepseek-reasoner    # AI 模型
+  api_key: ${DEEPSEEK_API_KEY}
+  base_url: https://api.deepseek.com
+  temperature: 0.0
+  max_tokens: 4096
+  timeout: 60
+
+# 扫描配置
+scan:
+  max_workers: 4
+  cache_enabled: true
+  incremental: true
+  timeout: 300
+  max_file_size: 10485760  # 10MB
+  exclude_patterns:
+    - "*.min.js"
+    - "*.min.css"
+    - "node_modules/**"
+    - "__pycache__/**"
+    - ".git/**"
+    - ".venv/**"
+    - "venv/**"
+    - "dist/**"
+    - "build/**"
+  include_patterns:
+    - "*.py"
+    - "*.js"
+    - "*.ts"
+    - "*.java"
+    - "*.cpp"
+    - "*.c"
+    - "*.h"
+    - "*.go"
+    - "*.rs"
+
+# 报告配置
+report:
+  format: html
+  output: ./security-report
+  include_code_snippets: true
+  include_fix_suggestions: true
+
+# 全局配置
+debug: false
+verbose: false
+quiet: false
+```
+
+#### 使用示例
+
+```bash
+# 基本扫描
+hos-ls scan --pure-ai
+
+# 扫描指定目录
+hos-ls scan /path/to/project --pure-ai
+
+# 生成 JSON 报告
+hos-ls scan --pure-ai --format json --output report.json
+
+# 只扫描高严重级别问题
+hos-ls scan --pure-ai --severity high
+
+# 使用 8 个工作进程
+hos-ls scan --pure-ai --workers 8
+
+# 增量扫描（使用缓存）
+hos-ls scan --pure-ai --incremental
+
+# 测试模式（只扫描前 20 个文件）
+hos-ls scan --pure-ai --test 20
+
+# 详细输出
+hos-ls scan --pure-ai --verbose
+```
+
+#### 环境变量
+
+```bash
+# AI API 密钥
+export ANTHROPIC_API_KEY="your-key"
+export OPENAI_API_KEY="your-key"
+export DEEPSEEK_API_KEY="your-key"
+
+# 配置路径
+export HOS_LS_CONFIG_PATH="/path/to/config.yaml"
+
+# 日志级别
+export HOS_LS_LOG_LEVEL="DEBUG"
+```
+
+### 支持的 AI 模型
+
+`--pure-ai` 模式支持多种 AI 模型：
+
+| 提供商 | 模型 | 说明 |
+|-------|------|------|
+| **DeepSeek** | deepseek-reasoner | 推荐，推理能力强 |
+| **DeepSeek** | deepseek-chat | 快速响应 |
+| **OpenAI** | gpt-4 | 高质量分析 |
+| **OpenAI** | gpt-4-turbo | 平衡速度和质量 |
+| **Anthropic** | claude-3-5-sonnet | 长文本处理优秀 |
+| **Anthropic** | claude-3-opus | 最高质量 |
+
+***
+
+## 🔒 正式模式（完整版）
+
+> **注意**：正式模式提供完整功能，但对硬件配置要求较高。推荐 16GB+ 内存、支持 CUDA 的 GPU。如果您的配置有限，建议使用 [纯净AI模式（--pure-ai）](#-纯净ai模式--pure-ai)。
 
 ## 📖 简介
 
@@ -202,12 +479,6 @@ hos-ls nvd update --batch-size 500
 ```bash
 # 使用 pip 安装
 pip install hos-ls
-
-# 或使用 Poetry
-poetry add hos-ls
-
-# 或使用 Docker
-docker pull hosls/hos-ls:latest
 ```
 
 ### 30 秒上手
@@ -1335,16 +1606,6 @@ v3 新增规则驱动 Prompt，优化了所有模型的输出质量。
 </details>
 
 <details>
-<summary><b>可以扫描 Docker 镜像中的代码吗？</b></summary>
-
-可以。两种方式：
-
-1. 使用 HOS-LS Docker 镜像挂载代码目录
-2. 在 CI/CD 流程中扫描后再构建镜像
-
-</details>
-
-<details>
 <summary><b>如何启用 GPU 加速？</b></summary>
 
 HOS-LS 会自动检测 GPU 并启用加速：
@@ -1367,319 +1628,4 @@ HOS-LS 会自动检测 GPU 并启用加速：
 </details>
 
 <details>
-<summary><b>如何配置 Neo4j 数据库？</b></summary>
-
-1. **安装 Neo4j**
-   - 下载并安装 Neo4j Desktop 或 Neo4j Community Edition
-   - 启动 Neo4j 服务
-
-2. **配置连接信息**
-   ```yaml
-   database:
-     neo4j:
-       uri: bolt://localhost:7687
-       username: neo4j
-       password: password  # 首次登录后需要修改
-   ```
-
-3. **验证连接**
-   运行 `hos-ls scan` 时会自动连接 Neo4j 并创建所需的图模型
-
-</details>
-
-<details>
-<summary><b>GPU + Neo4j 架构有什么优势？</b></summary>
-
-- **性能提升**: Embedding 生成速度提升 5-10 倍
-- **大规模数据支持**: 轻松处理 10 万+ CVE 数据
-- **实时攻击链分析**: 毫秒级攻击链查询
-- **增量更新**: 无需重建图，支持实时数据更新
-- **复杂关系分析**: 支持多跳查询和路径分析
-
-</details>
-
-<details>
-<summary><b>什么是混合 RAG 架构？</b></summary>
-
-混合 RAG 架构是 HOS-LS v0.3.1.1 引入的核心技术，它结合了结构化存储和向量存储的优势：
-
-- **结构化存储 (PostgreSQL)**: 存储 CVE 元数据、CVSS 评分、时间戳等结构化数据
-- **向量存储 (FAISS/Milvus)**: 存储 CVE 描述、攻击链等需要语义搜索的数据
-- **混合检索**: 结合结构化过滤和语义搜索，提高检索准确性和速度
-
-**优势**:
-- 解决了大规模 NVD 数据导入卡顿问题
-- 提高了查询速度和准确性
-- 支持复杂的漏洞关联分析
-- 减少了内存使用
-
-</details>
-
-<details>
-<summary><b>如何优化 NVD 导入性能？</b></summary>
-
-HOS-LS v0.3.1.4 提供了多种 NVD 导入优化策略：
-
-1. **多进程架构**: 并行处理 CVE 数据，导入速度提升 50%
-2. **字段级语义切块**: 按描述、引用、配置等字段进行切块，保留语义完整性
-3. **Token 级二次切块**: 400/80 块大小和重叠，优化长文本处理
-4. **批量处理优化**: READ_BATCH=200, EMBED_BATCH=32, WRITE_BATCH=500
-5. **流式处理**: 避免一次性加载全部数据，减少内存使用
-6. **批量 Embedding**: 批量处理提高 Embedding 速度
-7. **断点续传**: 支持中断后继续导入
-8. **去重机制**: 避免重复导入相同 CVE
-9. **Embedding 缓存**: 避免重复计算 Embedding
-10. **GPU 加速**: 利用 GPU 加速 Embedding 生成
-11. **NaN 检测和过滤**: 消除无效嵌入向量，提高系统稳定性
-
-**推荐配置**:
-```bash
-# 优化的 NVD 导入命令
-hos-ls nvd update --batch-size 200 --max-workers 8
-```
-
-</details>
-
-<details>
-<summary><b>什么是 NVD 字段级语义切块？</b></summary>
-
-NVD 字段级语义切块是 HOS-LS v0.3.1.4 引入的核心优化技术，它：
-
-- **按字段切块**: 将 CVE 数据按 description、references、configurations 等字段进行切块
-- **保留语义完整性**: 每个字段作为一个语义单元，避免跨字段的上下文断裂
-- **Token 级二次切块**: 对长字段进行 400/80 的 token 级切块，确保嵌入质量
-- **优化长文本处理**: 解决了长 CVE 描述的处理问题，避免 OOM 错误
-
-**优势**:
-- 提高检索准确性：每个块都保持完整的语义上下文
-- 减少内存使用：小块大小降低了内存需求
-- 提高处理速度：并行处理多个小块
-
-</details>
-
-<details>
-<summary><b>什么是 BM25 混合检索？</b></summary>
-
-BM25 混合检索是 HOS-LS v0.3.1.4 引入的检索优化技术，它：
-
-- **融合向量搜索和 BM25**: 结合向量搜索的语义理解能力和 BM25 的词频统计能力
-- **提高检索质量**: 比单独使用向量搜索或 BM25 效果更好
-- **Top-K 拼接**: 对每个 CVE 的多个块进行排序和拼接
-- **Rerank 功能**: 对检索结果进行重新排序，提升相关性
-
-**配置示例**:
-```yaml
-rag:
-  hybrid:
-    enabled: true
-    hybrid_search_weight: 0.7
-    top_k: 10
-  bm25:
-    enabled: true
-    k1: 1.2
-    b: 0.75
-  rerank:
-    enabled: true
-    model: BAAI/bge-reranker-large
-```
-
-</details>
-
-<details>
-<summary><b>如何处理 NVD 导入卡顿问题？</b></summary>
-
-NVD 导入卡顿通常由以下原因引起：
-
-1. **数据量过大**: NVD 包含 20 万+ CVE，一次性导入会导致内存爆炸
-2. **Embedding 速度慢**: 单条调用 Embedding API 速度慢
-3. **向量库写入瓶颈**: 频繁写入向量库会导致性能下降
-
-**解决方案**:
-- 使用流式处理，避免一次性加载全部数据
-- 启用批量 Embedding，提高 Embedding 速度
-- 配置合适的批量大小（建议 100-200）
-- 启用断点续传，支持中断后继续
-- 确保有足够的内存（建议至少 8GB）
-
-</details>
-
-<details>
-<summary><b>什么是 LangGraph 流程控制？</b></summary>
-
-LangGraph 流程控制是 HOS-LS v0.3.0.4 新增的核心特性，它将传统的线性扫描流程转变为可决策的状态机流程。
-
-**核心优势**：
-- **按需执行**: 根据代码复杂度和风险级别，自动选择最优扫描路径
-- **智能决策**: 基于代码特征和分析结果，动态调整扫描策略
-- **多阶段推理**: 支持漏洞 → 攻击链 → 利用方式 → 修复建议的完整推理流程
-- **性能优化**: 简单代码走快速路径，复杂代码走完整路径，节省 80% 时间
-- **可扩展性**: 易于添加新的扫描节点和流程路径
-
-**使用方法**：
-```bash
-# 使用 LangGraph 流程控制
-hos-ls scan --langgraph
-```
-
-</details>
-
-***
-
-## 🗺️ 路线图
-
-### v0.3.1.4 (当前版本 - 已完成)
-
-- [x] NVD RAG 系统优化（字段级语义切块和 token 级二次切块）
-- [x] BAAI bge 系列模型支持
-- [x] 多进程架构优化（并行处理 CVE 数据）
-- [x] BM25 混合检索实现
-- [x] Rerank 功能（结果重新排序）
-- [x] NaN 检测和过滤
-- [x] 内存管理优化（批处理参数优化）
-- [x] 完整的 LangGraph StateGraph 实现
-- [x] 强 Multi-Agent 架构实现
-- [x] DSPy 自动优化系统
-- [x] LangSmith + DeepEval 评估闭环
-- [x] OWASP LLM 2025 安全检查
-- [x] 性能优化（GPU 批量嵌入、Blockify 压缩）
-- [x] 内存使用优化（LazyGraphRAG 模式）
-- [x] CLI 响应速度提升（Async 任务 + 三级进度条）
-- [x] 安全检查集成
-- [x] 评估反馈循环
-- [x] 混合 RAG 架构实现
-- [x] NVD 数据导入优化（流式处理、批量 embedding、断点续传、去重机制）
-- [x] 数据拆分设计（NVD JSON 拆分为结构化数据和 embedding 块）
-- [x] 混合检索查询层（结构化搜索、语义搜索、混合搜索）
-- [x] 攻击链分析增强（漏洞到代码模式映射、攻击链 RAG、exploit 知识注入）
-- [x] PostgreSQL 集成（CVE 结构化数据存储）
-- [x] 向量存储优化（embedding 缓存、批量处理）
-
-### v0.3.1.0 (已完成)
-
-- [x] 函数级代码切片器（Python/JS/TS）
-- [x] 多阶段扫描（轻量定位 → 精扫）
-- [x] 规则驱动 Prompt 工程
-- [x] NVD JSON Feed 集成
-- [x] ExploitDB 映射器
-- [x] CVE 增量同步系统
-- [x] 攻击链分析增强
-- [x] 并发扫描调度器
-- [x] 7897 端口代理支持
-- [x] 结果聚合引擎
-- [x] 配置文件更新
-- [x] GPU 加速 Embedding
-- [x] Neo4j 图数据库集成
-- [x] FAISS 向量检索优化
-- [x] RAG + 图融合集成
-- [x] LangGraph 流程控制
-- [x] 多Agent 协作系统
-- [x] DSPy 自动优化
-- [x] 动态决策流程
-- [x] Critic 质量把关
-- [x] Repair Agent
-- [x] 异步执行优化
-
-### v0.3.0.3 (已完成)
-
-- [x] 修复 severity 枚举类型处理问题
-- [x] 修复文件句柄占用导致的备份删除失败
-- [x] 增强错误处理和日志记录
-- [x] 优化 RAG 知识库历史清理机制
-
-### v0.3.0.2 (已完成)
-
-- [x] RAG 知识库专项存储系统
-- [x] CVE 网站爬虫和数据集成
-- [x] 特大型项目文件优先级评估
-- [x] 扩展文件类型和安全问题识别
-- [x] 网络搜索集成功能
-
-### v0.3.1 (计划中)
-
-- [ ] 支持更多语言（Go、Rust 完整切片支持）
-- [ ] 云原生安全扫描
-- [ ] SBOM 生成与漏洞关联
-- [ ] VS Code 插件增强（实时攻击链展示）
-- [ ] 交互式漏洞验证
-
-### v0.3.2 (计划中)
-
-- [ ] 实时协作扫描
-- [ ] 安全知识图谱增强
-- [ ] 自动化修复 PR 生成
-- [ ] 移动端安全扫描
-- [ ] 自定义规则编辑器 GUI
-
-### v0.4.0 (远期)
-
-- [ ] 多租户 SaaS 版本
-- [ ] 自定义 AI 模型训练
-- [ ] 安全态势感知平台
-- [ ] 合规性自动化报告（SOC2、ISO27001）
-
-***
-
-## 🤝 贡献
-
-我们欢迎所有形式的贡献！
-
-### 贡献方式
-
-- 🐛 [报告 Bug](https://github.com/hos-ls/hos-ls/issues)
-- 💡 [提出新功能](https://github.com/hos-ls/hos-ls/issues)
-- 📝 改进文档
-- 🔧 提交代码
-
-### 开发环境设置
-
-```bash
-# 克隆仓库
-git clone https://github.com/hos-ls/hos-ls.git
-cd hos-ls
-
-# 安装开发依赖
-poetry install --with dev
-
-# 激活虚拟环境
-poetry shell
-
-# 运行测试
-pytest
-
-# 代码格式化
-black src tests
-isort src tests
-
-# 类型检查
-mypy src
-```
-
-请查看 [CONTRIBUTING.md](CONTRIBUTING.md) 了解详细信息。
-
-***
-
-## 📄 许可证
-
-本项目采用 MIT 许可证 - 查看 [LICENSE](LICENSE) 文件了解详情。
-
-感谢所有贡献者的付出！
-
-***
-
-## 📞 联系方式
-
-- **项目主页**: <https://github.com/hos-ls/hos-ls>
-- **问题反馈**: <https://github.com/hos-ls/hos-ls/issues>
-- **邮箱**: <aqfxz_zh@qq.com>
-
-***
-
-<div align="center">
-
-**如果 HOS-LS 对你有帮助，请给我们一个 ⭐ Star！**
-
-[![Star History Chart](https://api.star-history.com/svg?repos=hos-ls/hos-ls&type=Date)](https://star-history.com/#hos-ls/hos-ls&Date)
-
-Made with ❤️ by HOS-LS Team
-
-</div>
+<summary><b>如何配置 Neo4j

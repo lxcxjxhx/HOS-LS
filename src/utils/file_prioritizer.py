@@ -65,6 +65,21 @@ class FilePrioritizer:
             (优先级分数, 优先级级别)
         """
         score = 0.0
+        
+        # 首先检查是否是测试文件，如果是则强制降低优先级
+        filename_lower = file_path.name.lower()
+        is_test_file = (
+            filename_lower.startswith('test_') or
+            filename_lower.endswith('_test.py') or
+            filename_lower.endswith('_test.js') or
+            filename_lower.endswith('_test.ts') or
+            filename_lower.startswith('spec_') or
+            filename_lower.endswith('_spec.py') or
+            filename_lower.endswith('_spec.js') or
+            filename_lower.endswith('_spec.ts') or
+            'tests' in str(file_path.parent).lower() or
+            '__tests__' in str(file_path.parent).lower()
+        )
 
         # 评估文件名
         filename_score = self._evaluate_filename(file_path.name)
@@ -77,6 +92,10 @@ class FilePrioritizer:
         # 评估目录路径
         directory_score = self._evaluate_directory(file_path.parent)
         score += directory_score * 0.3
+        
+        # 如果是测试文件，强制降低分数
+        if is_test_file:
+            score = min(score * 0.3, 0.3)
 
         # 确定优先级级别
         if score >= 0.7:
@@ -86,7 +105,7 @@ class FilePrioritizer:
         else:
             priority = 'low'
 
-        logger.debug(f"文件 {file_path} 优先级评估: 分数={score:.2f}, 级别={priority}")
+        logger.debug(f"文件 {file_path} 优先级评估: 分数={score:.2f}, 级别={priority}, 测试文件={is_test_file}")
         return score, priority
 
     def _evaluate_filename(self, filename: str) -> float:

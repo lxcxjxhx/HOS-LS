@@ -49,7 +49,12 @@ class CacheManager:
         """
         file_hash = self.get_file_hash(file_path)
         if file_hash:
-            return f"{file_hash}.json"
+            # 添加文件修改时间到缓存键，确保文件修改后缓存失效
+            try:
+                mtime = str(int(os.path.getmtime(file_path)))
+                return f"{file_hash}_{mtime}.json"
+            except Exception:
+                return f"{file_hash}.json"
         return None
     
     def get(self, file_path: str) -> Optional[Dict[str, Any]]:
@@ -67,24 +72,36 @@ class CacheManager:
         
         cache_file = self.cache_dir / cache_key
         if not cache_file.exists():
+            # 尝试清理旧的缓存文件
+            self._clean_old_cache_files(file_path)
             return None
         
         # 检查缓存是否过期
         try:
-            with open(cache_file, 'r', encoding='utf-8') as f:
+            with open(cache_file, 'r', encoding='utf-8', errors='replace') as f:
                 data = json.load(f)
             
             timestamp = data.get('timestamp', 0)
-            if time.time() - timestamp > self.cache_ttl:
+            # 根据文件大小动态调整缓存过期时间
+            file_size = os.path.getsize(file_path) if os.path.exists(file_path) else 0
+            dynamic_ttl = self._get_dynamic_ttl(file_size)
+            
+            if time.time() - timestamp > dynamic_ttl:
                 # 缓存过期，删除
-                os.remove(cache_file)
+                try:
+                    os.remove(cache_file)
+                except Exception:
+                    pass
                 return None
             
             return data.get('result')
         except Exception:
             # 缓存文件损坏，删除
             if cache_file.exists():
-                os.remove(cache_file)
+                try:
+                    os.remove(cache_file)
+                except Exception:
+                    pass
             return None
     
     def set(self, file_path: str, result: Dict[str, Any]) -> bool:
@@ -103,18 +120,89 @@ class CacheManager:
         
         try:
             cache_file = self.cache_dir / cache_key
+            # 获取文件大小
+            file_size = os.path.getsize(file_path) if os.path.exists(file_path) else 0
             data = {
                 'timestamp': time.time(),
                 'result': result,
-                'file_path': file_path
+                'file_path': file_path,
+                'file_size': file_size
             }
             
-            with open(cache_file, 'w', encoding='utf-8') as f:
+            with open(cache_file, 'w', encoding='utf-8', errors='replace') as f:
                 json.dump(data, f, ensure_ascii=False, indent=2)
+            
+            # 定期清理过期缓存
+            if time.time() % 10 == 0:  # 每10次缓存操作清理一次
+                self._clean_expired_cache()
             
             return True
         except Exception:
             return False
+    
+    def _get_dynamic_ttl(self, file_size: int) -> int:
+        """根据文件大小动态调整缓存过期时间
+        
+        Args:
+            file_size: 文件大小（字节）
+            
+        Returns:
+            动态过期时间（秒）
+        """
+        # 小文件（< 10KB）缓存时间较短
+        if file_size < 10240:
+            return self.cache_ttl // 2  # 12小时
+        # 大文件（> 1MB）缓存时间较长
+        elif file_size > 1048576:
+            return self.cache_ttl * 2  # 48小时
+        # 中等文件使用默认缓存时间
+        else:
+            return self.cache_ttl
+    
+    def _clean_old_cache_files(self, file_path: str) -> None:
+        """清理旧的缓存文件
+        
+        Args:
+            file_path: 文件路径
+        """
+        try:
+            file_hash = self.get_file_hash(file_path)
+            if not file_hash:
+                return
+            
+            # 查找并删除旧的缓存文件
+            for cache_file in self.cache_dir.glob(f"{file_hash}_*.json"):
+                try:
+                    os.remove(cache_file)
+                except Exception:
+                    pass
+        except Exception:
+            pass
+    
+    def _clean_expired_cache(self) -> None:
+        """清理过期的缓存文件
+        """
+        try:
+            current_time = time.time()
+            for cache_file in self.cache_dir.glob('*.json'):
+                try:
+                    with open(cache_file, 'r', encoding='utf-8', errors='replace') as f:
+                        data = json.load(f)
+                    
+                    timestamp = data.get('timestamp', 0)
+                    file_size = data.get('file_size', 0)
+                    dynamic_ttl = self._get_dynamic_ttl(file_size)
+                    
+                    if current_time - timestamp > dynamic_ttl:
+                        os.remove(cache_file)
+                except Exception:
+                    # 缓存文件损坏，删除
+                    try:
+                        os.remove(cache_file)
+                    except Exception:
+                        pass
+        except Exception:
+            pass
     
     def invalidate(self, file_path: str) -> bool:
         """使缓存失效
@@ -146,7 +234,10 @@ class CacheManager:
         """
         try:
             for cache_file in self.cache_dir.glob('*.json'):
-                os.remove(cache_file)
+                try:
+                    os.remove(cache_file)
+                except Exception:
+                    pass
             return True
         except Exception:
             return False
@@ -164,7 +255,7 @@ class CacheManager:
             
             for cache_file in cache_files:
                 try:
-                    with open(cache_file, 'r', encoding='utf-8') as f:
+                    with open(cache_file, 'r', encoding='utf-8', errors='replace') as f:
                         data = json.load(f)
                     timestamp = data.get('timestamp', 0)
                     if time.time() - timestamp > self.cache_ttl:

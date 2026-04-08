@@ -1,4 +1,3 @@
-import os
 import ast
 from pathlib import Path
 from typing import Dict, List, Optional, Any
@@ -56,18 +55,28 @@ class ContextBuilder:
         
         return context
     
-    def _read_file(self, file_path: str) -> str:
+    def _read_file(self, file_path: str, max_size: int = 1048576) -> str:
         """读取文件内容
         
         Args:
             file_path: 文件路径
+            max_size: 最大读取大小（字节），默认1MB
             
         Returns:
             文件内容
         """
         try:
-            with open(file_path, 'r', encoding='utf-8') as f:
-                return f.read()
+            # 检查文件大小
+            file_size = os.path.getsize(file_path)
+            if file_size > max_size:
+                # 文件过大，只读取前max_size字节
+                with open(file_path, 'r', encoding='utf-8', errors='replace') as f:
+                    content = f.read(max_size)
+                return content + "\n... [文件过大，已截断]"
+            else:
+                # 文件大小正常，读取全部内容
+                with open(file_path, 'r', encoding='utf-8', errors='replace') as f:
+                    return f.read()
         except Exception:
             return ''
     
@@ -135,7 +144,8 @@ class ContextBuilder:
         related_files = []
         try:
             # 获取当前文件所在目录
-            current_dir = os.path.dirname(file_path)
+            current_path = Path(file_path)
+            current_dir = current_path.parent
             
             # 获取当前文件的导入模块
             imports = self._extract_imports(file_path)
@@ -151,34 +161,70 @@ class ContextBuilder:
                     if imp_parts[0] == 'from':
                         # 处理 from module import ...
                         module_path = imp_parts[1].replace('.', '/')
-                        for ext in ['.py', '.pyw']:
-                            potential_path = os.path.join(current_dir, f"{module_path}{ext}")
-                            if os.path.exists(potential_path):
+                        # 尝试不同的文件扩展名
+                        for ext in ['.py', '.pyw', '.pyc']:
+                            # 尝试直接文件路径
+                            potential_path = current_dir / f"{module_path}{ext}"
+                            if potential_path.exists():
                                 related_files.append({
-                                    'path': potential_path,
-                                    'content': self._read_file(potential_path)
+                                    'path': str(potential_path),
+                                    'content': self._read_file(str(potential_path), max_size=524288)  # 限制为512KB
                                 })
                                 break
                             # 尝试目录下的 __init__.py
-                            potential_init = os.path.join(current_dir, module_path, '__init__.py')
-                            if os.path.exists(potential_init):
+                            potential_init = current_dir / module_path / '__init__.py'
+                            if potential_init.exists():
                                 related_files.append({
-                                    'path': potential_init,
-                                    'content': self._read_file(potential_init)
+                                    'path': str(potential_init),
+                                    'content': self._read_file(str(potential_init), max_size=524288)  # 限制为512KB
+                                })
+                                break
+                    elif imp_parts[0] == 'import':
+                        # 处理 import module
+                        module_name = imp_parts[1]
+                        # 尝试不同的文件扩展名
+                        for ext in ['.py', '.pyw', '.pyc']:
+                            # 尝试直接文件路径
+                            potential_path = current_dir / f"{module_name.replace('.', '/')}{ext}"
+                            if potential_path.exists():
+                                related_files.append({
+                                    'path': str(potential_path),
+                                    'content': self._read_file(str(potential_path), max_size=524288)  # 限制为512KB
+                                })
+                                break
+                            # 尝试目录下的 __init__.py
+                            potential_init = current_dir / module_name.replace('.', '/') / '__init__.py'
+                            if potential_init.exists():
+                                related_files.append({
+                                    'path': str(potential_init),
+                                    'content': self._read_file(str(potential_init), max_size=524288)  # 限制为512KB
                                 })
                                 break
             
             # 如果相关文件不足，添加同目录下的其他Python文件
             if len(related_files) < self.max_related_files:
-                for file in os.listdir(current_dir):
+                # 按文件大小排序，优先添加较大的文件（可能包含更多相关信息）
+                python_files = []
+                for file in current_dir.iterdir():
+                    if file.suffix == '.py' and file.name != current_path.name:
+                        try:
+                            file_size = file.stat().st_size
+                            python_files.append((file_size, file))
+                        except Exception:
+                            pass
+                
+                # 按文件大小降序排序
+                python_files.sort(reverse=True, key=lambda x: x[0])
+                
+                # 添加排序后的文件
+                for _, file in python_files:
                     if len(related_files) >= self.max_related_files:
                         break
-                    if file.endswith('.py') and file != os.path.basename(file_path):
-                        potential_path = os.path.join(current_dir, file)
-                        related_files.append({
-                            'path': potential_path,
-                            'content': self._read_file(potential_path)
-                        })
+                    potential_path = current_dir / file
+                    related_files.append({
+                        'path': str(potential_path),
+                        'content': self._read_file(str(potential_path), max_size=524288)  # 限制为512KB
+                    })
         except Exception:
             pass
         
@@ -196,7 +242,10 @@ class ContextBuilder:
         structure = {
             'functions': [],
             'classes': [],
-            'variables': []
+            'variables': [],
+            'imports': [],
+            'class_methods': {},
+            'function_calls': []
         }
         
         try:
@@ -204,24 +253,86 @@ class ContextBuilder:
                 content = f.read()
             
             tree = ast.parse(content, filename=file_path)
+            
+            # 提取导入语句
+            imports = []
+            for node in ast.walk(tree):
+                if isinstance(node, ast.Import):
+                    for alias in node.names:
+                        imports.append(f"import {alias.name}")
+                elif isinstance(node, ast.ImportFrom):
+                    module = node.module or ''
+                    for alias in node.names:
+                        imports.append(f"from {module} import {alias.name}")
+            structure['imports'] = imports
+            
+            # 提取函数调用
+            function_calls = []
+            for node in ast.walk(tree):
+                if isinstance(node, ast.Call):
+                    if isinstance(node.func, ast.Name):
+                        function_calls.append(node.func.id)
+                    elif isinstance(node.func, ast.Attribute):
+                        function_calls.append(f"{node.func.attr}")
+            structure['function_calls'] = function_calls
+            
+            # 提取类和函数
             for node in ast.walk(tree):
                 if isinstance(node, ast.FunctionDef):
+                    # 提取函数参数
+                    args = []
+                    for arg in node.args.args:
+                        args.append(arg.arg)
+                    # 提取默认参数
+                    defaults = []
+                    for default in node.args.defaults:
+                        if isinstance(default, ast.Constant):
+                            defaults.append(default.value)
+                        else:
+                            defaults.append(None)
+                    # 提取函数文档字符串
+                    docstring = ast.get_docstring(node, clean=False)
                     structure['functions'].append({
                         'name': node.name,
-                        'args': [arg.arg for arg in node.args.args],
-                        'line': node.lineno
+                        'args': args,
+                        'defaults': defaults,
+                        'line': node.lineno,
+                        'docstring': docstring
                     })
                 elif isinstance(node, ast.ClassDef):
+                    # 提取类文档字符串
+                    docstring = ast.get_docstring(node, clean=False)
                     structure['classes'].append({
                         'name': node.name,
-                        'line': node.lineno
+                        'line': node.lineno,
+                        'docstring': docstring
                     })
+                    # 提取类方法
+                    class_methods = []
+                    for item in node.body:
+                        if isinstance(item, ast.FunctionDef):
+                            method_args = []
+                            for arg in item.args.args:
+                                method_args.append(arg.arg)
+                            method_docstring = ast.get_docstring(item, clean=False)
+                            class_methods.append({
+                                'name': item.name,
+                                'args': method_args,
+                                'line': item.lineno,
+                                'docstring': method_docstring
+                            })
+                    structure['class_methods'][node.name] = class_methods
                 elif isinstance(node, ast.Assign):
                     for target in node.targets:
                         if isinstance(target, ast.Name):
+                            # 尝试提取变量值
+                            value = None
+                            if isinstance(node.value, ast.Constant):
+                                value = node.value.value
                             structure['variables'].append({
                                 'name': target.id,
-                                'line': node.lineno
+                                'line': node.lineno,
+                                'value': value
                             })
         except Exception:
             pass

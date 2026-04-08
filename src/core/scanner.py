@@ -4,8 +4,11 @@
 """
 
 import asyncio
+import time
 from pathlib import Path
 from typing import List, Optional, Union
+from rich.console import Console
+from rich.progress import Progress, SpinnerColumn, BarColumn, TextColumn, TimeElapsedColumn
 
 from src.core.config import Config
 from src.core.engine import ScanEngine, ScanResult, BaseScanner
@@ -20,6 +23,8 @@ from src.analyzers.ast_analyzer import ASTAnalyzer
 from src.analyzers.cst_analyzer import CSTAnalyzer
 from src.scanner.library_matcher import get_library_matcher
 from src.integration.web_search import get_web_searcher, search_vulnerability_info, search_library_info
+
+console = Console()
 
 
 class SecurityScanner:
@@ -108,24 +113,23 @@ class SecurityScanner:
         Returns:
             扫描结果
         """
-        import time
         from tqdm import tqdm
         
         # 开始时间
         start_time = time.time()
         
-        print(f"🔍 开始扫描目标: {target}")
-        print(f"⏱️ 开始时间: {time.strftime('%Y-%m-%d %H:%M:%S')}")
+        console.print(f"[bold cyan]🔍 开始扫描目标:[/bold cyan] [bold green]{target}[/bold green]")
+        console.print(f"[bold cyan]⏱️ 开始时间:[/bold cyan] [bold]{time.strftime('%Y-%m-%d %H:%M:%S')}[/bold]")
         
         # 发现文件
-        print("📁 正在发现文件...")
-        files = self._discover_files(target)
-        print(f"✅ 发现 {len(files)} 个文件")
+        with console.status("[bold blue]📁 正在发现文件...[/bold blue]", spinner="dots"):
+            files = self._discover_files(target)
+        console.print(f"[bold cyan]✅ 发现[/bold cyan] [bold green]{len(files)}[/bold green] 个文件")
         
         # 分析文件
-        print("🔧 正在分析文件...")
+        console.print("[bold cyan]🔧 正在分析文件...[/bold cyan]")
         findings = await self._analyze_files(files)
-        print(f"✅ 发现 {len(findings)} 个安全问题")
+        console.print(f"[bold cyan]✅ 发现[/bold cyan] [bold red]{len(findings)}[/bold red] 个安全问题")
         
         # 创建结果对象
         from src.core.engine import ScanStatus
@@ -417,11 +421,12 @@ class SecurityScanner:
             if severity_name in priority_counts:
                 priority_counts[severity_name] += 1
         
-        print(f"\n⏱️ 扫描耗时: {scan_time:.2f} 秒")
-        print(f"✅ 扫描完成")
+        console.print()
+        console.print(f"[bold cyan]⏱️ 扫描耗时:[/bold cyan] [bold]{scan_time:.2f}[/bold] 秒")
+        console.print(f"[bold cyan]✅ 扫描完成[/bold cyan]")
         
         if self.config.debug:
-            print(f"[DEBUG] 扫描完成，总计发现 {len(result.findings)} 个问题")
+            console.print(f"[dim][DEBUG] 扫描完成，总计发现 {len(result.findings)} 个问题[/dim]")
         
         return result
 

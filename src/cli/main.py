@@ -6,6 +6,7 @@ HOS-LS 的命令行入口。
 import sys
 import asyncio
 import os
+import warnings
 from pathlib import Path
 from typing import Optional, List, Dict, Any
 from concurrent.futures import ThreadPoolExecutor
@@ -16,6 +17,10 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 from rich.progress import Progress, SpinnerColumn, BarColumn, TextColumn
+
+warnings.filterwarnings("ignore", message="Failed to find CUDA.")
+warnings.filterwarnings("ignore", category=RuntimeWarning, message="Redirects are currently not supported in Windows or MacOs.")
+warnings.filterwarnings("ignore", category=RuntimeWarning, message="'src.cli.main' found in sys.modules after import of package 'src.cli'")
 
 from src import __version__
 from src.core.config import Config, ConfigManager
@@ -71,19 +76,22 @@ class AsyncWorker:
 
 def print_banner() -> None:
     """打印欢迎横幅"""
+    version_str = f"HOS-LS  AI 代码安全扫描工具 v{__version__}"
+    features_str = "🔒  深度语义分析  •  🤖  多Agent协作  •  📊  智能报告"
+    
     banner = f"""
 [bold blue]╔═══════════════════════════════════════════════════════════════╗[/bold blue]
-[bold blue]║                                                           ║[/bold blue]
-[bold blue]║    H   H  OOO  SSSS  -  L     SSSS                        ║[/bold blue]
-[bold blue]║    H   H O   O S      -  L     S                          ║[/bold blue]
-[bold blue]║    HHHHH O   O SSSS    -  L     SSSS                      ║[/bold blue]
-[bold blue]║    H   H O   O     S   -  L         S                     ║[/bold blue]
-[bold blue]║    H   H  OOO  SSSS    -  LLLLL SSSS                      ║[/bold blue]
-[bold blue]║                                                           ║[/bold blue]
-[bold green]║              HOS-LS  AI 代码安全扫描工具 v{__version__}              ║[/bold green]
-[bold blue]║                                                           ║[/bold blue]
-[bold blue]║              🔒  深度语义分析  •  🤖  多Agent协作  •  📊  智能报告        ║[/bold blue]
-[bold blue]║                                                           ║[/bold blue]
+[bold blue]║                                                                 ║[/bold blue]
+[bold blue]║    H   H  OOO  SSSS  -  L     SSSS                          ║[/bold blue]
+[bold blue]║    H   H O   O S      -  L     S                            ║[/bold blue]
+[bold blue]║    HHHHH O   O SSSS    -  L     SSSS                        ║[/bold blue]
+[bold blue]║    H   H O   O     S   -  L         S                       ║[/bold blue]
+[bold blue]║    H   H  OOO  SSSS    -  LLLLL SSSS                        ║[/bold blue]
+[bold blue]║                                                                 ║[/bold blue]
+[bold green]║{version_str:^65}║[/bold green]
+[bold blue]║                                                                 ║[/bold blue]
+[bold blue]║{features_str:^65}║[/bold blue]
+[bold blue]║                                                                 ║[/bold blue]
 [bold blue]╚═══════════════════════════════════════════════════════════════╝[/bold blue]
     """
     console.print(banner)

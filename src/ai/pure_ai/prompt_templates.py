@@ -72,44 +72,57 @@ class PromptTemplates:
 
 请提取并输出以下结构化信息：
 
-1. 输入源：识别所有可能的用户输入、HTTP请求、环境变量等数据来源
-2. 危险操作：识别所有可能的危险操作，如exec、文件读写、网络请求等
-3. 数据流路径：描述数据从输入到危险操作的流动路径
-4. 可疑点：标记可能存在安全问题的代码位置
+1. 输入源：识别所有可能的用户输入、HTTP请求、环境变量、命令行参数、文件输入等数据来源
+2. 危险操作：识别所有可能的危险操作，如exec、eval、文件读写、网络请求、系统命令执行等
+3. 数据流路径：详细描述数据从输入到危险操作的完整流动路径，包括变量名和函数调用
+4. 可疑点：标记可能存在安全问题的代码位置，包括具体的行号和代码片段
+5. 依赖关系：识别代码中使用的外部依赖和库
 
 输出必须是结构化JSON，格式如下：
 {{
   "input_sources": [
     {{
       "type": "输入类型",
-      "location": "代码位置",
-      "description": "描述"
+      "location": "文件路径:行号",
+      "description": "详细描述",
+      "variable_name": "变量名（如果有）"
     }}
   ],
   "dangerous_operations": [
     {{
       "type": "操作类型",
-      "location": "代码位置",
-      "description": "描述"
+      "location": "文件路径:行号",
+      "description": "详细描述",
+      "function_name": "函数名（如果有）"
     }}
   ],
   "data_flows": [
     {{
       "source": "数据来源",
       "sink": "数据去向",
-      "path": "流动路径描述"
+      "path": "详细流动路径描述",
+      "steps": ["步骤1", "步骤2"]
     }}
   ],
   "suspicious_points": [
     {{
-      "location": "代码位置",
-      "description": "可疑原因"
+      "location": "文件路径:行号",
+      "description": "可疑原因",
+      "code_snippet": "相关代码片段"
+    }}
+  ],
+  "dependencies": [
+    {{
+      "name": "依赖名称",
+      "type": "导入类型",
+      "usage": "使用方式"
     }}
   ]
 }}
 
 你必须逐步推理，不允许跳步。
 禁止判断漏洞，只进行事实提取。
+请确保信息的准确性和完整性。
 """
     
     # Agent 2: 风险枚举（高召回）
@@ -124,12 +137,17 @@ class PromptTemplates:
 请尽可能多地列出可能的安全风险，包括但不限于：
 - 远程代码执行 (RCE)
 - 服务器端请求伪造 (SSRF)
-- 文件读写漏洞
-- 注入攻击（SQL注入、命令注入等）
+- 文件读写漏洞（任意文件读取、文件上传漏洞等）
+- 注入攻击（SQL注入、命令注入、LDAP注入等）
 - Prompt注入
 - 认证绕过
 - 授权问题
 - 敏感信息泄露
+- 跨站脚本 (XSS)
+- 跨站请求伪造 (CSRF)
+- 会话管理问题
+- 密码存储问题
+- 不安全的加密实现
 
 输出必须是结构化JSON，格式如下：
 {{
@@ -137,8 +155,9 @@ class PromptTemplates:
     {{
       "type": "风险类型",
       "location": "可能的代码位置",
-      "description": "风险描述",
-      "potential_impact": "潜在影响"
+      "description": "详细风险描述",
+      "potential_impact": "潜在影响",
+      "cvss_score": "估计的CVSS评分（0-10）"
     }}
   ]
 }}
@@ -146,6 +165,7 @@ class PromptTemplates:
 你必须逐步推理，不允许跳步。
 要求尽可能多的列举，允许误报。
 不要验证风险是否真实存在，只进行枚举。
+请确保风险描述的详细性和准确性。
 """
     
     # Agent 3: 漏洞验证（核心）
@@ -161,9 +181,11 @@ class PromptTemplates:
 {file_content}
 
 对于每个风险，请：
-1. 构造攻击路径
-2. 提供具体的payload
-3. 明确判断 YES / NO（是否真实存在）
+1. 详细分析代码逻辑
+2. 构造具体的攻击路径
+3. 提供可执行的具体payload
+4. 明确判断 YES / NO（是否真实存在）
+5. 给出详细的验证理由
 
 输出必须是结构化JSON，格式如下：
 {{
@@ -171,16 +193,18 @@ class PromptTemplates:
     {{
       "risk_type": "风险类型",
       "location": "代码位置",
-      "attack_path": "攻击路径描述",
+      "attack_path": "详细攻击路径描述",
       "payload": "具体的攻击payload",
       "verdict": "YES/NO",
-      "reason": "验证理由"
+      "reason": "详细验证理由",
+      "cvss_score": "验证后的CVSS评分（0-10）"
     }}
   ]
 }}
 
 你必须逐步推理，不允许跳步。
 无法构造利用链 = NO。
+请确保验证过程的严谨性和准确性。
 """
     
     # Agent 4: 攻击链分析（高级能力）
@@ -193,10 +217,11 @@ class PromptTemplates:
 {verification_results}
 
 请分析：
-1. 攻击步骤（step-by-step）
-2. 前置条件
-3. 利用顺序
-4. 最终影响（RCE/数据泄露等）
+1. 攻击步骤（step-by-step，详细描述每个步骤）
+2. 前置条件（所有必要的条件）
+3. 利用顺序（最佳攻击顺序）
+4. 最终影响（RCE/数据泄露等详细描述）
+5. 防御绕过方法（如果有）
 
 输出必须是结构化JSON，格式如下：
 {{
@@ -206,17 +231,21 @@ class PromptTemplates:
       "steps": [
         {{
           "step": 1,
-          "description": "步骤描述",
-          "prerequisites": ["前置条件1", "前置条件2"]
+          "description": "详细步骤描述",
+          "prerequisites": ["前置条件1", "前置条件2"],
+          "payload": "步骤使用的payload"
         }}
       ],
-      "final_impact": "最终影响",
-      "severity": "严重程度"
+      "final_impact": "详细最终影响",
+      "severity": "严重程度",
+      "cvss_score": "攻击链的CVSS评分（0-10）",
+      "defense_bypasses": ["防御绕过方法1", "防御绕过方法2"]
     }}
   ]
 }}
 
 你必须逐步推理，不允许跳步。
+请确保攻击链分析的完整性和可行性。
 """
     
     # Agent 5: 对抗验证（反AI幻觉）
@@ -231,14 +260,16 @@ class PromptTemplates:
 代码内容:
 {file_content}
 
-请检查：
-1. 是否真的可控输入？
-2. 是否存在执行路径？
-3. payload是否可执行？
+请严格检查：
+1. 是否真的可控输入？输入是否经过验证或过滤？
+2. 是否存在执行路径？代码逻辑是否允许攻击路径执行？
+3. payload是否可执行？是否有防御机制阻止payload执行？
+4. 攻击链是否存在逻辑漏洞或假设错误？
 
 对于每个攻击链，请输出：
 - REFUTE（反驳）/ ACCEPT（接受）/ UNCERTAIN（不确定）
-- 详细理由
+- 详细理由（基于代码事实）
+- 具体的反驳论点
 
 输出必须是结构化JSON，格式如下：
 {{
@@ -246,13 +277,15 @@ class PromptTemplates:
     {{
       "attack_chain_name": "攻击链名称",
       "verdict": "REFUTE/ACCEPT/UNCERTAIN",
-      "reason": "详细理由",
-      "counter_arguments": ["反驳论点1", "反驳论点2"]
+      "reason": "详细理由（基于代码分析）",
+      "counter_arguments": ["具体反驳论点1", "具体反驳论点2"],
+      "evidence": "支持反驳的代码证据"
     }}
   ]
 }}
 
 你必须逐步推理，不允许跳步。
+请基于代码事实进行反驳，避免主观臆断。
 """
     
     # Agent 6: 最终裁决（防胡说）
@@ -268,31 +301,43 @@ class PromptTemplates:
 {verification_results}
 
 请根据以下标准进行判断：
-- 有真实利用链 → VALID
-- 存疑 → UNCERTAIN
-- 无法利用 → INVALID
+- 有真实利用链且经过验证 → VALID
+- 存疑或需要更多信息 → UNCERTAIN
+- 无法利用或被反驳 → INVALID
+
+对于每个发现，请：
+1. 给出明确的状态判断
+2. 提供详细的判断理由
+3. 给出具体的修复建议
+4. 评估置信度（0-100）
 
 输出必须是结构化JSON，格式如下：
 {{
   "final_findings": [
     {{
-      "vulnerability": "漏洞描述",
+      "vulnerability": "详细漏洞描述",
       "location": "代码位置",
       "severity": "严重程度",
       "status": "VALID/UNCERTAIN/INVALID",
       "confidence": "置信度 (0-100)",
-      "recommendation": "修复建议"
+      "cvss_score": "最终CVSS评分（0-10）",
+      "recommendation": "详细修复建议",
+      "evidence": "支持判断的证据"
     }}
   ],
   "summary": {{
     "total_vulnerabilities": 数字,
     "valid_vulnerabilities": 数字,
     "uncertain_vulnerabilities": 数字,
-    "invalid_vulnerabilities": 数字
+    "invalid_vulnerabilities": 数字,
+    "high_severity_count": 数字,
+    "medium_severity_count": 数字,
+    "low_severity_count": 数字
   }}
 }}
 
 你必须逐步推理，不允许跳步。
+请确保判断的客观性和准确性。
 """
     
     # 辅助函数：格式化相关文件

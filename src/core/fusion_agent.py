@@ -106,6 +106,8 @@ class FusionAgent:
         confidence = 0.0
         vulnerability_types = set()
         sources = set()
+        severity_counts = {}
+        confidence_weights = {}
         
         # 收集信息
         for result in results:
@@ -121,8 +123,14 @@ class FusionAgent:
             if severity_order.index(result_severity) > severity_order.index(severity):
                 severity = result_severity
             
-            # 计算平均置信度
-            confidence += result.get('confidence', 0.0)
+            # 统计严重性分布
+            if result_severity not in severity_counts:
+                severity_counts[result_severity] = 0
+            severity_counts[result_severity] += 1
+            
+            # 计算加权置信度
+            result_confidence = result.get('confidence', 0.0)
+            confidence += result_confidence
             
             # 收集漏洞类型
             vuln_type = result.get('metadata', {}).get('vulnerability_type') or result.get('vulnerability_type')
@@ -130,7 +138,13 @@ class FusionAgent:
                 vulnerability_types.add(vuln_type)
             
             # 收集源 Agent
-            sources.add(result.get('source_agent', 'Unknown'))
+            source_agent = result.get('source_agent', 'Unknown')
+            sources.add(source_agent)
+            
+            # 记录每个Agent的置信度
+            if source_agent not in confidence_weights:
+                confidence_weights[source_agent] = []
+            confidence_weights[source_agent].append(result_confidence)
         
         # 计算平均置信度
         if results:
@@ -148,7 +162,9 @@ class FusionAgent:
             "source_agent": "Fusion-Agent",
             "metadata": {
                 "result_count": len(results),
-                "unique_sources": len(sources)
+                "unique_sources": len(sources),
+                "severity_distribution": severity_counts,
+                "confidence_by_agent": {agent: sum(weights) / len(weights) for agent, weights in confidence_weights.items()}
             }
         }
         
