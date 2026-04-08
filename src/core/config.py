@@ -185,6 +185,7 @@ class Config(BaseSettings):
     pure_ai: bool = Field(default=False, description="纯AI深度语义解析模式")
     pure_ai_provider: str = Field(default="deepseek", description="纯AI模式的AI提供商")
     pure_ai_model: str = Field(default="deepseek-reasoner", description="纯AI模式的AI模型")
+    pure_ai_api_key: Optional[str] = Field(default=None, description="纯AI模式的API密钥")
 
 
 class ConfigManager:

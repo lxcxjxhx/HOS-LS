@@ -82,11 +82,14 @@ class SecurityScanner:
                 from src.ai.pure_ai_analyzer import PureAIAnalyzer
                 print(f"[DEBUG] 导入PureAIAnalyzer成功")
                 self.pure_ai_analyzer = PureAIAnalyzer(config)
-                print(f"[DEBUG] 纯AI分析器初始化成功")
+                print(f"[DEBUG] 纯AI分析器初始化成功: {self.pure_ai_analyzer}")
+                print(f"[DEBUG] 纯AI分析器属性: pipeline={self.pure_ai_analyzer.pipeline}, client={self.pure_ai_analyzer.client}")
                 if self.config.debug:
                     print(f"[DEBUG] 纯AI分析器初始化成功")
             except Exception as e:
                 print(f"[DEBUG] 纯AI分析器初始化失败: {e}")
+                import traceback
+                traceback.print_exc()
                 if self.config.debug:
                     print(f"[DEBUG] 纯AI分析器初始化失败: {e}")
         

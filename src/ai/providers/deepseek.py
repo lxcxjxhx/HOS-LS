@@ -34,7 +34,17 @@ class DeepSeekClient(AIClient):
         if self._initialized:
             return
 
-        api_key = self.config.ai.api_key or os.getenv("DEEPSEEK_API_KEY")
+        # 优先使用配置中的 API 密钥
+        api_key = self.config.ai.api_key
+        
+        # 其次尝试从环境变量获取（与正式模式一致）
+        if not api_key:
+            api_key = os.getenv("HOS_LS_AI_API_KEY")
+        
+        # 最后尝试 DEEPSEEK_API_KEY 作为兼容
+        if not api_key:
+            api_key = os.getenv("DEEPSEEK_API_KEY")
+
         if not api_key:
             raise ValueError("DeepSeek API 密钥未设置")
 
