@@ -205,19 +205,19 @@ class PromptTemplates:
 - 必须可被 json.loads 解析
 
 [OUTPUT FORMAT]
-{
+{{
   "file_function": "",
   "dependencies": [
-    {"import": "", "purpose": ""}
+    {{"import": "", "purpose": ""}}
   ],
   "key_functions": [
-    {"name": "", "purpose": "", "security_impact": ""}
+    {{"name": "", "purpose": "", "security_impact": ""}}
   ],
   "input_sources": [],
   "file_relationships": [
-    {"file": "", "relationship": ""}
+    {{"file": "", "relationship": ""}}
   ]
-}
+}}
 
 [FAILSAFE]
 如果信息不足：
@@ -271,23 +271,23 @@ class PromptTemplates:
 - 必须可被 json.loads 解析
 
 [OUTPUT FORMAT]
-{
+{{
   "input_sources": [
-    {"type": "", "location": "{file_path}:line", "description": "", "variable_name": ""}
+    {{"type": "", "location": "{file_path}:line", "description": "", "variable_name": ""}}
   ],
   "dangerous_operations": [
-    {"type": "", "location": "{file_path}:line", "description": "", "function_name": ""}
+    {{"type": "", "location": "{file_path}:line", "description": "", "function_name": ""}}
   ],
   "data_flows": [
-    {"source": "", "sink": "", "path": "", "steps": []}
+    {{"source": "", "sink": "", "path": "", "steps": []}}
   ],
   "suspicious_points": [
-    {"location": "{file_path}:line", "description": "", "code_snippet": ""}
+    {{"location": "{file_path}:line", "description": "", "code_snippet": ""}}
   ],
   "dependencies": [
-    {"name": "", "type": "", "usage": ""}
+    {{"name": "", "type": "", "usage": ""}}
   ]
-}
+}}
 
 [FAILSAFE]
 如果信息不足：
@@ -337,17 +337,17 @@ class PromptTemplates:
 - 必须可被 json.loads 解析
 
 [OUTPUT FORMAT]
-{
+{{
   "risks": [
-    {
+    {{
       "type": "",
       "location": "",
       "description": "",
       "potential_impact": "",
       "cvss_score": ""
-    }
+    }}
   ]
-}
+}}
 
 [FAILSAFE]
 如果信息不足：
@@ -406,9 +406,9 @@ class PromptTemplates:
 - 必须可被 json.loads 解析
 
 [OUTPUT FORMAT]
-{
+{{
   "verifications": [
-    {
+    {{
       "risk_type": "",
       "location": "",
       "attack_path": "",
@@ -418,9 +418,9 @@ class PromptTemplates:
       "cvss_score": "",
       "impact_scope": "",
       "exploitation_complexity": ""
-    }
+    }}
   ]
-}
+}}
 
 [FAILSAFE]
 如果信息不足：
@@ -469,20 +469,20 @@ class PromptTemplates:
 - 必须可被 json.loads 解析
 
 [OUTPUT FORMAT]
-{
+{{
   "attack_chains": [
-    {
+    {{
       "name": "",
       "steps": [
-        {"step": 1, "description": "", "prerequisites": [], "payload": ""}
+        {{"step": 1, "description": "", "prerequisites": [], "payload": ""}}
       ],
       "final_impact": "",
       "severity": "",
       "cvss_score": "",
       "defense_bypasses": []
-    }
+    }}
   ]
-}
+}}
 
 [FAILSAFE]
 如果信息不足：
@@ -542,17 +542,17 @@ class PromptTemplates:
 - 必须可被 json.loads 解析
 
 [OUTPUT FORMAT]
-{
+{{
   "adversarial_analysis": [
-    {
+    {{
       "attack_chain_name": "",
       "verdict": "REFUTE/ACCEPT/UNCERTAIN",
       "reason": "",
       "counter_arguments": [],
       "evidence": ""
-    }
+    }}
   ]
-}
+}}
 
 [FAILSAFE]
 如果信息不足：
@@ -604,9 +604,9 @@ class PromptTemplates:
 - 必须可被 json.loads 解析
 
 [OUTPUT FORMAT]
-{
+{{
   "final_findings": [
-    {
+    {{
       "vulnerability": "",
       "location": "",
       "severity": "",
@@ -615,9 +615,9 @@ class PromptTemplates:
       "cvss_score": "",
       "recommendation": "",
       "evidence": ""
-    }
+    }}
   ],
-  "summary": {
+  "summary": {{
     "total_vulnerabilities": 0,
     "valid_vulnerabilities": 0,
     "uncertain_vulnerabilities": 0,
@@ -625,8 +625,8 @@ class PromptTemplates:
     "high_severity_count": 0,
     "medium_severity_count": 0,
     "low_severity_count": 0
-  }
-}
+  }}
+}}
 
 [FAILSAFE]
 如果信息不足：

@@ -195,8 +195,39 @@ class SecurityScanner:
             
             # 直接汇总结果
             console.print("[bold cyan]📋 正在汇总结果...[/bold cyan]")
+            from src.core.engine import Finding, Location, Severity
             for finding in findings:
-                result.add_finding(finding)
+                # Convert VulnerabilityFinding to Finding
+                if hasattr(finding, 'severity') and isinstance(finding.severity, str):
+                    # Map string severity to Severity enum
+                    severity_map = {
+                        'critical': Severity.CRITICAL,
+                        'high': Severity.HIGH,
+                        'medium': Severity.MEDIUM,
+                        'low': Severity.LOW,
+                        'info': Severity.INFO
+                    }
+                    severity = severity_map.get(finding.severity.lower(), Severity.INFO)
+                else:
+                    severity = Severity.INFO
+                
+                # Create Finding object
+                finding_obj = Finding(
+                    rule_id=finding.rule_id,
+                    rule_name=finding.rule_name,
+                    description=finding.description,
+                    severity=severity,
+                    location=Location(
+                        file=finding.location.get('file', 'unknown'),
+                        line=finding.location.get('line', 0),
+                        column=finding.location.get('column', 0)
+                    ),
+                    confidence=finding.confidence,
+                    message=finding.description,
+                    fix_suggestion=finding.fix_suggestion,
+                    metadata={}
+                )
+                result.add_finding(finding_obj)
         else:
             # 正常模式：执行所有后处理步骤
             # 漏洞优先级评估
