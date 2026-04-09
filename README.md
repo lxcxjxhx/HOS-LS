@@ -127,8 +127,20 @@ export DEEPSEEK_API_KEY=sk-your-api-key-here
 
 ```bash
 # 真实测试命令（用户提供）
-python -m src.cli.main scan c:\1AAA_PROJECT\HOS\HOS-LS\real-project\crewAI-main --pure-ai --test 5 -o crewai_test
+python -m src.cli.main scan c:\1AAA_PROJECT\HOS\HOS-LS\real-project\crewAI-main --pure-ai --test 1 -o crewai_test
+```
+<details>
+<summary><b>预期输出</b></summary>
+    <div align="center">
+<img width=60% alt="屏幕捕获_2026_04_09_22_32_15_318" src="https://github.com/user-attachments/assets/8c08aea1-e2be-4b73-bfd1-9f878de62923" />
+<img width=60% alt="屏幕捕获_2026_04_09_22_32_41_615" src="https://github.com/user-attachments/assets/c49157f7-f0d7-4f57-891f-691cf6e7c543" />
+<img width=60% alt="屏幕捕获_2026_04_09_22_33_02_93" src="https://github.com/user-attachments/assets/cf6ead33-6355-4861-9d11-6cb0d35f07a1" />
+<img width=60% alt="屏幕捕获_2026_04_09_22_35_24_127" src="https://github.com/user-attachments/assets/03adb1bd-9f06-4c1e-94f2-e576e96ee3fe" />
+<img width=60% alt="屏幕捕获_2026_04_09_22_35_37_234" src="https://github.com/user-attachments/assets/58b99d03-a311-49e3-9aed-f4dfef4ed011" />
+        </div>
+</details>
 
+```bash
 # 扫描当前目录（纯净AI模式）
 python -m src.cli.main scan . --pure-ai
 
@@ -144,6 +156,8 @@ python -m src.cli.main scan --pure-ai --test 10
 # 调试模式
 python -m src.cli.main --debug scan /path/to/project --pure-ai
 ```
+
+
 
 ### 详细使用指南
 
