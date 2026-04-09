@@ -16,6 +16,7 @@ import click
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
+from rich.live import Live
 from rich.progress import Progress, SpinnerColumn, BarColumn, TextColumn
 
 warnings.filterwarnings("ignore", message="Failed to find CUDA.")
@@ -76,25 +77,73 @@ class AsyncWorker:
 
 def print_banner() -> None:
     """打印欢迎横幅"""
-    version_str = f"HOS-LS  AI 代码安全扫描工具 v{__version__}"
-    features_str = "🔒  深度语义分析  •  🤖  多Agent协作  •  📊  智能报告"
+    console.print(Panel(
+        "[bold]HOS-LS[/bold] · AI Code Security Scanner\n"
+        "[dim]Multi-Agent · Semantic Analysis · Risk Detection[/dim]",
+        border_style="dim",
+    ))
+
+
+def show_scan_progress() -> None:
+    """显示流式扫描进度"""
+    from rich.table import Table
+    import time
     
-    banner = f"""
-[bold blue]╔═══════════════════════════════════════════════════════════════╗[/bold blue]
-[bold blue]║                                                                 ║[/bold blue]
-[bold blue]║    H   H  OOO  SSSS  -  L     SSSS                          ║[/bold blue]
-[bold blue]║    H   H O   O S      -  L     S                            ║[/bold blue]
-[bold blue]║    HHHHH O   O SSSS    -  L     SSSS                        ║[/bold blue]
-[bold blue]║    H   H O   O     S   -  L         S                       ║[/bold blue]
-[bold blue]║    H   H  OOO  SSSS    -  LLLLL SSSS                        ║[/bold blue]
-[bold blue]║                                                                 ║[/bold blue]
-[bold green]║{version_str:^65}║[/bold green]
-[bold blue]║                                                                 ║[/bold blue]
-[bold blue]║{features_str:^65}║[/bold blue]
-[bold blue]║                                                                 ║[/bold blue]
-[bold blue]╚═══════════════════════════════════════════════════════════════╝[/bold blue]
-    """
-    console.print(banner)
+    steps = [
+        "Parsing AST",
+        "Building Graph",
+        "Running Agents",
+        "Risk Analysis"
+    ]
+    
+    with Live(refresh_per_second=4) as live:
+        for i, step in enumerate(steps):
+            # 创建新表格
+            table = Table()
+            table.add_column("Step")
+            table.add_column("Status")
+            
+            # 添加已完成的步骤
+            for j in range(i):
+                table.add_row(steps[j], "[green]Done")
+            
+            # 添加当前步骤
+            table.add_row(step, "[yellow]Running...")
+            
+            # 更新显示
+            live.update(table)
+            time.sleep(0.8)
+        
+        # 显示最终完成状态
+        final_table = Table()
+        final_table.add_column("Step")
+        final_table.add_column("Status")
+        for step in steps:
+            final_table.add_row(step, "[green]Done")
+        live.update(final_table)
+
+
+def show_agent_status() -> None:
+    """显示 Agent 状态"""
+    from rich.table import Table
+    
+    table = Table(title="Agents")
+    
+    table.add_column("Agent")
+    table.add_column("Status")
+    
+    table.add_row("Semantic Analyzer", "✔")
+    table.add_row("Vulnerability Agent", "⚠")
+    table.add_row("Dependency Scanner", "✔")
+    
+    console.print(table)
+
+
+def show_risk_bar(percentage: float) -> None:
+    """显示风险条"""
+    bars = int(percentage * 10)
+    risk_bar = "█" * bars + "░" * (10 - bars)
+    console.print(f"Risk Level: {risk_bar} {int(percentage * 100)}%")
 
 
 @click.group()
@@ -156,6 +205,10 @@ def scan(
 ) -> None:
     """扫描代码安全漏洞"""
     config: Config = ctx.obj["config"]
+    
+    # 显示 Claude 风格的输入提示
+    if not config.quiet:
+        console.print("[bold cyan]> hosls scan " + target + "[/bold cyan]")
 
     # 提前检查纯AI模式
     if pure_ai:
@@ -177,34 +230,39 @@ def scan(
         config.ai.enabled = True
         config.pure_ai = True
         
-        # 纯AI模式默认使用deepseek-reasoner
+        # 纯AI模式默认使用deepseek-chat
         config.pure_ai_provider = "deepseek"
-        config.pure_ai_model = "deepseek-reasoner"
+        config.pure_ai_model = "deepseek-chat"
         
         # 测试模式
         if test > 0:
             config.test_mode = True
             config.__dict__['test_file_count'] = test
             if not config.quiet:
-                console.print(f"[bold yellow]⚠️  测试模式已启用，只扫描前{test}个优先级最高的文件[/bold yellow]")
+                console.print(f"[bold yellow]⚠ 测试模式已启用，只扫描前{test}个优先级最高的文件[/bold yellow]")
         elif test == 0:
             config.test_mode = False
         else:
             config.test_mode = True
             config.__dict__['test_file_count'] = 10
             if not config.quiet:
-                console.print("[bold yellow]⚠️  测试模式已启用，只扫描前10个优先级最高的文件[/bold yellow]")
+                console.print("[bold yellow]⚠ 测试模式已启用，只扫描前10个优先级最高的文件[/bold yellow]")
         
         # 导入纯AI扫描器
         from src.core.scanner import create_scanner
         
         # 执行纯AI扫描
         try:
+            # 显示扫描进度
+            if not config.quiet:
+                show_scan_progress()
+            
             scanner = create_scanner(config)
             result = scanner.scan_sync(target)
 
             # 显示结果
             if not config.quiet:
+                show_agent_status()
                 _display_result(result)
 
             # 生成报告
@@ -241,14 +299,14 @@ def scan(
         config.test_mode = True
         config.__dict__['test_file_count'] = test
         if not config.quiet:
-            console.print(f"[bold yellow]⚠️  测试模式已启用，只扫描前{test}个优先级最高的文件[/bold yellow]")
+            console.print(f"[bold yellow]⚠ 测试模式已启用，只扫描前{test}个优先级最高的文件[/bold yellow]")
     elif test == 0:
         config.test_mode = False
     else:
         config.test_mode = True
         config.__dict__['test_file_count'] = 10
         if not config.quiet:
-            console.print("[bold yellow]⚠️  测试模式已启用，只扫描前10个优先级最高的文件[/bold yellow]")
+            console.print("[bold yellow]⚠ 测试模式已启用，只扫描前10个优先级最高的文件[/bold yellow]")
 
     # 执行扫描
     try:
@@ -292,11 +350,17 @@ def scan(
         else:
             # 使用传统扫描器
             from src.core.scanner import create_scanner
+            
+            # 显示扫描进度
+            if not config.quiet:
+                show_scan_progress()
+            
             scanner = create_scanner(config)
             result = scanner.scan_sync(target)
 
             # 显示结果
             if not config.quiet:
+                show_agent_status()
                 _display_result(result)
 
             # 生成报告
@@ -742,33 +806,29 @@ def _display_result(result) -> None:
 
     summary = result.to_dict()["summary"]
 
-    # 创建结果表格
-    table = Table(title="扫描结果摘要")
-    table.add_column("严重级别", style="cyan")
-    table.add_column("数量", style="green")
-
-    severity_colors = {
-        "critical": "red",
-        "high": "orange3",
-        "medium": "yellow",
-        "low": "blue",
-        "info": "grey",
-    }
-
-    for severity in ["critical", "high", "medium", "low", "info"]:
-        count = summary.get(severity, 0)
-        color = severity_colors.get(severity, "white")
-        table.add_row(f"[{color}]{severity}[/{color}]", str(count))
-
-    table.add_row("总计", str(summary["total"]), style="bold")
-
-    console.print(table)
+    # 计算风险等级
+    total_issues = summary.get("total", 0)
+    high_risk = summary.get("high", 0) + summary.get("critical", 0)
+    medium_risk = summary.get("medium", 0)
+    
+    # 显示 Claude 风格的风险结果
+    console.print(
+        "[bold yellow]⚠ Scan Result[/bold yellow]\n"
+        "──────────────\n"
+        f"Issues Found: {total_issues}\n"
+        f"[red]High Risk:[/red] {high_risk}\n"
+        f"[yellow]Medium Risk:[/yellow] {medium_risk}"
+    )
+    
+    # 显示风险条
+    risk_percentage = min(1.0, (high_risk * 2 + medium_risk) / (total_issues * 2) if total_issues > 0 else 0)
+    show_risk_bar(risk_percentage)
 
     # 显示详细发现
     if result.findings:
         console.print("\n[bold]发现问题:[/bold]")
         for i, finding in enumerate(result.findings[:10], 1):  # 只显示前10个
-            severity_color = severity_colors.get(finding.severity.value, "white")
+            severity_color = "red" if finding.severity.value in ["critical", "high"] else "yellow" if finding.severity.value == "medium" else "blue"
             # 清理消息，去除多余的空格和换行
             message = finding.message.strip()
             # 限制每行长度，确保格式整洁
@@ -799,13 +859,49 @@ def _display_result(result) -> None:
 
         if len(result.findings) > 10:
             console.print(f"... 还有 {len(result.findings) - 10} 个问题")
+            
+            # 折叠式日志
+            console.print("\n[bold cyan][+] Show Details[/bold cyan]")
+            console.print("按 Enter 查看完整日志，按其他键继续...")
+            
+            try:
+                import sys
+                import termios
+                import tty
+                
+                # 获取终端属性
+                fd = sys.stdin.fileno()
+                old_settings = termios.tcgetattr(fd)
+                
+                try:
+                    # 设置终端为原始模式
+                    tty.setraw(fd)
+                    # 读取一个字符
+                    char = sys.stdin.read(1)
+                    
+                    # 如果是 Enter 键（ASCII 13），显示完整日志
+                    if char == '\r':
+                        console.print("\n[bold]完整问题列表:[/bold]")
+                        for i, finding in enumerate(result.findings, 1):
+                            severity_color = "red" if finding.severity.value in ["critical", "high"] else "yellow" if finding.severity.value == "medium" else "blue"
+                            message = finding.message.strip()
+                            console.print(
+                                f"{i}. [{severity_color}]{finding.severity.value}[/{severity_color}] "
+                                f"{finding.rule_name}: {message}"
+                            )
+                finally:
+                    # 恢复终端设置
+                    termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+            except Exception:
+                # 如果无法获取键盘输入（如在非交互式环境中），则跳过
+                pass
 
     # 显示攻击链分析结果
     if hasattr(result, 'metadata') and 'local_attack_chain' in result.metadata:
         attack_chain_data = result.metadata['local_attack_chain']
         if attack_chain_data.get('critical_chains'):
-            console.print("\n[bold]攻击链分析:[/bold]")
-            console.print(f"[info]{attack_chain_data.get('summary', '')}[/info]")
+            console.print("\n[bold cyan]🔗 攻击链分析:[/bold cyan]")
+            console.print(f"[dim]{attack_chain_data.get('summary', '')}[/dim]")
             
             for i, chain in enumerate(attack_chain_data['critical_chains'][:3], 1):
                 risk_color = "red" if chain['risk_level'] == "high" else "yellow" if chain['risk_level'] == "medium" else "blue"

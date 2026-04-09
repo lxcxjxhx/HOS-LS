@@ -29,6 +29,28 @@ class VectorStore:
             model_name: 嵌入模型名称
             custom_model_path: 自定义模型路径
         """
+        # 检查是否为纯AI模式
+        from src.core.config import get_config
+        core_config = get_config()
+        self.pure_ai = hasattr(core_config, 'pure_ai') and core_config.pure_ai
+        
+        if self.pure_ai:
+            # 纯AI模式下，跳过所有存储初始化
+            self.storage_path = storage_path
+            # 初始化空的内存存储
+            self._embeddings: Optional[np.ndarray] = None
+            self._documents: Dict[str, Dict] = {}
+            self._document_ids: List[str] = []
+            self._embedding_cache: Dict[str, List[float]] = {}
+            self._access_stats: Dict[str, Dict] = {}
+            # 初始化一个简单的嵌入器
+            from src.storage.code_embedder import create_embedder, EmbedConfig
+            config = EmbedConfig()
+            config.pure_ai = True
+            self.embedder = create_embedder(config, custom_model_path=custom_model_path)
+            return
+        
+        # 非纯AI模式下正常初始化
         self.storage_path = storage_path
         self.storage_path.mkdir(parents=True, exist_ok=True)
         
@@ -57,11 +79,6 @@ class VectorStore:
         config = EmbedConfig()
         if model_name:
             config.model_name = model_name
-        # 检查是否为纯AI模式
-        from src.core.config import get_config
-        core_config = get_config()
-        if hasattr(core_config, 'pure_ai') and core_config.pure_ai:
-            config.pure_ai = True
         self.embedder = create_embedder(config, custom_model_path=custom_model_path)
         
         # 加载现有数据
@@ -327,6 +344,10 @@ class VectorStore:
         Args:
             incremental: 是否增量保存
         """
+        if self.pure_ai:
+            # 纯AI模式下，跳过保存操作
+            return
+        
         # 保存嵌入
         if self._embeddings is not None:
             # 增量保存时，只保存新的嵌入
@@ -386,8 +407,12 @@ class VectorStore:
 
     def load(self) -> None:
         """加载向量存储"""
+        if self.pure_ai:
+            # 纯AI模式下，跳过加载操作
+            return
+        
         # 加载文档
-        if self.documents_path.exists():
+        if hasattr(self, 'documents_path') and self.documents_path.exists():
             try:
                 with open(self.documents_path, "r", encoding="utf-8") as f:
                     documents_data = json.load(f)
@@ -397,7 +422,7 @@ class VectorStore:
                 logger.error(f"加载文档失败: {e}")
         
         # 加载嵌入
-        if self.embeddings_path.exists():
+        if hasattr(self, 'embeddings_path') and self.embeddings_path.exists():
             try:
                 self._embeddings = np.load(self.embeddings_path)
             except Exception as e:
@@ -405,8 +430,12 @@ class VectorStore:
 
     def _load_embedding_cache(self):
         """加载embedding缓存"""
+        if self.pure_ai:
+            # 纯AI模式下，跳过加载操作
+            return
+        
         try:
-            if self.embedding_cache_path.exists():
+            if hasattr(self, 'embedding_cache_path') and self.embedding_cache_path.exists():
                 with open(self.embedding_cache_path, 'r', encoding='utf-8') as f:
                     self._embedding_cache = json.load(f)
                 logger.info(f"加载了 {len(self._embedding_cache)} 个embedding缓存")
@@ -416,14 +445,23 @@ class VectorStore:
 
     def _save_embedding_cache(self):
         """保存embedding缓存"""
+        if self.pure_ai:
+            # 纯AI模式下，跳过保存操作
+            return
+        
         try:
-            with open(self.embedding_cache_path, 'w', encoding='utf-8') as f:
-                json.dump(self._embedding_cache, f, indent=2, ensure_ascii=False)
+            if hasattr(self, 'embedding_cache_path'):
+                with open(self.embedding_cache_path, 'w', encoding='utf-8') as f:
+                    json.dump(self._embedding_cache, f, indent=2, ensure_ascii=False)
         except Exception as e:
             logger.error(f"保存embedding缓存失败: {e}")
 
     def _load_access_stats(self):
         """加载访问统计信息"""
+        if self.pure_ai:
+            # 纯AI模式下，跳过加载操作
+            return
+        
         access_stats_path = self.storage_path / "access_stats.json"
         try:
             if access_stats_path.exists():
@@ -436,6 +474,10 @@ class VectorStore:
 
     def _save_access_stats(self):
         """保存访问统计信息"""
+        if self.pure_ai:
+            # 纯AI模式下，跳过保存操作
+            return
+        
         access_stats_path = self.storage_path / "access_stats.json"
         try:
             with open(access_stats_path, 'w', encoding='utf-8') as f:

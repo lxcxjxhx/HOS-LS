@@ -377,6 +377,46 @@ class PromptTemplates:
             return "无"
         return '\n'.join(imports)
     
+    # 文件优先级评估模板
+    FILE_PRIORITY_EVALUATION = """
+你是代码安全分析专家，请评估以下代码文件的安全重要性优先级。
+
+文件路径: {file_path}
+
+文件内容（前500行）:
+{file_content}
+
+请从以下维度评估文件的安全重要性：
+1. 功能复杂度：文件包含的功能数量和复杂度
+2. 安全敏感程度：是否涉及认证、授权、加密、输入处理等安全相关功能
+3. 代码影响力：是否是核心模块，被其他模块广泛依赖
+4. 风险暴露面：是否直接处理用户输入、网络请求等
+5. 依赖关系重要性：使用的第三方库和依赖的安全风险
+
+输出必须是结构化JSON，格式如下：
+{{
+  "priority_score": 0.85,
+  "priority_level": "high",
+  "analysis_summary": "文件是核心认证模块，包含用户登录、密码加密等安全敏感功能，被整个应用广泛依赖",
+  "key_risk_factors": [
+    "包含密码加密和验证逻辑",
+    "处理用户输入和认证请求",
+    "是整个应用的核心依赖模块"
+  ],
+  "security_sensitivity": "high",
+  "code_complexity": "high",
+  "impact_scope": "system-wide"
+}}
+
+priority_score: 0-1之间的分数，越高越重要
+priority_level: "high" (>=0.7), "medium" (0.4-0.69), "low" (<0.4)
+security_sensitivity: "high", "medium", "low"
+code_complexity: "high", "medium", "low"
+impact_scope: "system-wide", "module-wide", "local"
+
+你必须逐步推理，不允许跳步。
+"""
+    
     # 辅助函数：格式化函数调用
     @staticmethod
     def format_function_calls(function_calls):

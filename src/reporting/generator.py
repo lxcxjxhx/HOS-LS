@@ -11,6 +11,13 @@ from typing import Any, Dict, List, Optional
 from src.core.engine import ScanResult
 from src.core.config import Config, get_config
 
+# 尝试导入 Jinja2，如果没有安装则使用简单的字符串替换
+try:
+    from jinja2 import Template
+    JINJA_AVAILABLE = True
+except ImportError:
+    JINJA_AVAILABLE = False
+
 
 class BaseReportGenerator(ABC):
     """报告生成器基类"""
@@ -98,216 +105,126 @@ class HTMLReportGenerator(BaseReportGenerator):
 
         return str(output_file)
 
+    def _get_security_status(self, summary):
+        """获取安全状态"""
+        total_findings = summary["total_findings"]
+        critical = summary["severity_counts"].get("critical", 0)
+        high = summary["severity_counts"].get("high", 0)
+        medium = summary["severity_counts"].get("medium", 0)
+        
+        if total_findings == 0:
+            return "safe", "安全状态良好"
+        elif critical > 0:
+            return "critical", "严重安全风险"
+        elif high > 0:
+            return "high", "高安全风险"
+        elif medium > 0:
+            return "medium", "中等安全风险"
+        else:
+            return "low", "低安全风险"
+
+    def _get_scan_duration(self, results):
+        """获取扫描总时长"""
+        total_duration = 0
+        for result in results:
+            total_duration += result.duration
+        return round(total_duration, 2)
+
     def _generate_html(self, results: List[ScanResult]) -> str:
         """生成 HTML 内容"""
         summary = self._generate_summary(results)
+        status, status_text = self._get_security_status(summary)
+        total_duration = self._get_scan_duration(results)
 
-        html = f"""<!DOCTYPE html>
+        # 加载模板文件
+        template_path = Path(__file__).parent / "templates" / "builtin" / "html" / "default.html"
+        if not template_path.exists():
+            # 如果模板文件不存在，使用默认模板
+            return self._generate_default_html(results, summary, status, status_text, total_duration)
+
+        try:
+            with open(template_path, "r", encoding="utf-8") as f:
+                template_content = f.read()
+
+            if JINJA_AVAILABLE:
+                # 使用 Jinja2 渲染模板
+                template = Template(template_content)
+                html = template.render(
+                    summary=summary,
+                    results=results,
+                    status=status,
+                    status_text=status_text,
+                    total_duration=total_duration
+                )
+            else:
+                # 简单的字符串替换（如果没有 Jinja2）
+                html = template_content
+                html = html.replace("{{ status }}", status)
+                html = html.replace("{{ status_text }}", status_text)
+                html = html.replace("{{ summary.total_scans }}", str(summary["total_scans"]))
+                html = html.replace("{{ summary.total_findings }}", str(summary["total_findings"]))
+                html = html.replace("{{ total_duration }}", str(total_duration))
+                html = html.replace("{{ summary.severity_counts.critical }}", str(summary["severity_counts"].get("critical", 0)))
+                html = html.replace("{{ summary.severity_counts.high }}", str(summary["severity_counts"].get("high", 0)))
+                html = html.replace("{{ summary.severity_counts.medium }}", str(summary["severity_counts"].get("medium", 0)))
+                html = html.replace("{{ summary.severity_counts.low }}", str(summary["severity_counts"].get("low", 0)))
+                html = html.replace("{{ summary.severity_counts.info }}", str(summary["severity_counts"].get("info", 0)))
+
+            return html
+        except Exception as e:
+            # 如果模板渲染失败，使用默认模板
+            return self._generate_default_html(results, summary, status, status_text, total_duration)
+
+    def _generate_default_html(self, results, summary, status, status_text, total_duration):
+        """生成默认 HTML 内容（当模板文件不存在或渲染失败时使用）"""
+        # 简单的默认 HTML 模板
+        html = f"""
+<!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
     <title>HOS-LS 安全扫描报告</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body {{ font-family: Arial, sans-serif; margin: 20px; }}
         h1 {{ color: #333; text-align: center; }}
-        .summary {{ background: #f5f5f5; padding: 20px; border-radius: 5px; margin: 20px 0; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }}
-        .chart-container {{ position: relative; height: 400px; margin: 20px 0; }}
-        .finding {{ border: 1px solid #ddd; margin: 15px 0; padding: 15px; border-radius: 5px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); transition: all 0.3s ease; }}
-        .finding:hover {{ box-shadow: 0 4px 8px rgba(0,0,0,0.15); }}
+        .summary {{ background: #f5f5f5; padding: 20px; border-radius: 5px; margin: 20px 0; }}
+        .finding {{ border: 1px solid #ddd; margin: 15px 0; padding: 15px; border-radius: 5px; }}
         .severity-critical {{ border-left: 4px solid #dc3545; background-color: #f8d7da; }}
         .severity-high {{ border-left: 4px solid #fd7e14; background-color: #fff3cd; }}
         .severity-medium {{ border-left: 4px solid #ffc107; background-color: #fff3cd; }}
         .severity-low {{ border-left: 4px solid #17a2b8; background-color: #d1ecf1; }}
         .severity-info {{ border-left: 4px solid #6c757d; background-color: #e2e3e5; }}
-        .code {{ background: #f8f9fa; padding: 10px; border-radius: 3px; font-family: monospace; white-space: pre-wrap; margin: 10px 0; overflow-x: auto; }}
-        .filter-bar {{ margin: 20px 0; padding: 15px; background: #f8f9fa; border-radius: 5px; }}
-        .filter-bar select {{ margin: 0 10px; padding: 5px; }}
-        .finding-header {{ display: flex; justify-content: space-between; align-items: center; }}
-        .finding-header h3 {{ margin: 0; }}
-        .severity-badge {{ padding: 2px 8px; border-radius: 12px; font-size: 12px; font-weight: bold; }}
-        .badge-critical {{ background-color: #dc3545; color: white; }}
-        .badge-high {{ background-color: #fd7e14; color: white; }}
-        .badge-medium {{ background-color: #ffc107; color: #212529; }}
-        .badge-low {{ background-color: #17a2b8; color: white; }}
-        .badge-info {{ background-color: #6c757d; color: white; }}
-        .poc-section {{ margin: 10px 0; padding: 10px; background: #f8f9fa; border-radius: 3px; border-left: 3px solid #6f42c1; }}
-        .poc-section h4 {{ margin: 0 0 5px 0; color: #6f42c1; }}
-        @media (max-width: 768px) {{
-            body {{ margin: 10px; }}
-            .chart-container {{ height: 300px; }}
-        }}
     </style>
 </head>
 <body>
     <h1>HOS-LS 安全扫描报告</h1>
-    
-    <div class="filter-bar">
-        <label for="severity-filter">按严重级别过滤:</label>
-        <select id="severity-filter" onchange="filterFindings()">
-            <option value="all">全部</option>
-            <option value="critical">严重</option>
-            <option value="high">高</option>
-            <option value="medium">中</option>
-            <option value="low">低</option>
-            <option value="info">信息</option>
-        </select>
-        <label for="search-input">搜索:</label>
-        <input type="text" id="search-input" placeholder="搜索漏洞..." onkeyup="filterFindings()">
-    </div>
-    
     <div class="summary">
-        <h2>摘要</h2>
-        <div style="display: flex; flex-wrap: wrap; gap: 20px;">
-            <div style="flex: 1; min-width: 200px;">
-                <p><strong>扫描文件数:</strong> {summary["total_scans"]}</p>
-                <p><strong>发现问题数:</strong> {summary["total_findings"]}</p>
-                <p><strong>严重级别分布:</strong></p>
-                <ul>
-                    <li>严重: {summary["severity_counts"].get("critical", 0)}</li>
-                    <li>高: {summary["severity_counts"].get("high", 0)}</li>
-                    <li>中: {summary["severity_counts"].get("medium", 0)}</li>
-                    <li>低: {summary["severity_counts"].get("low", 0)}</li>
-                    <li>信息: {summary["severity_counts"].get("info", 0)}</li>
-                </ul>
-            </div>
-            <div style="flex: 2; min-width: 300px;">
-                <canvas id="severityChart"></canvas>
-            </div>
-        </div>
+        <h2>扫描摘要</h2>
+        <p>扫描文件数: {summary["total_scans"]}</p>
+        <p>发现问题数: {summary["total_findings"]}</p>
+        <p>安全状态: {status_text}</p>
     </div>
-    
     <h2>详细发现</h2>
-    <div id="findings-container">
-"""
+    """
 
         for result in results:
             for finding in result.findings:
-                html += self._generate_finding_html(finding)
+                html += f"""
+    <div class="finding severity-{finding.severity.value}">
+        <h3>{finding.rule_name} ({finding.rule_id})</h3>
+        <p><strong>位置:</strong> {finding.location}</p>
+        <p><strong>描述:</strong> {finding.message}</p>
+    </div>
+                """
 
         html += """
-    </div>
-"""
-
-        # 添加攻击链路分析结果
-        for result in results:
-            if hasattr(result, 'metadata') and 'attack_chain' in result.metadata:
-                attack_chain = result.metadata['attack_chain']
-                html += f"""
-    <h2>攻击链路分析</h2>
-    <div class="summary">
-        <h3>分析摘要</h3>
-        <p>{attack_chain['summary']}</p>
-        <p><strong>总体风险评分:</strong> {attack_chain['risk_score']:.2f}</p>
-    </div>
-    <h3>高风险攻击路径</h3>
-    <ul>
-                """
-                
-                for i, path in enumerate(attack_chain['paths'][:5]):  # 只显示前5条路径
-                    html += f"<li>{i+1}. {path.description} (风险: {path.risk_score:.2f})</li>"
-                
-                html += """
-    </ul>
-                """
-
-        html += f"""
-    <script>
-        // 严重级别分布图表
-        const ctx = document.getElementById('severityChart').getContext('2d');
-        new Chart(ctx, {{
-            type: 'doughnut',
-            data: {{
-                labels: ['严重', '高', '中', '低', '信息'],
-                datasets: [{{
-                    data: [{summary["severity_counts"].get("critical", 0)}, {summary["severity_counts"].get("high", 0)}, {summary["severity_counts"].get("medium", 0)}, {summary["severity_counts"].get("low", 0)}, {summary["severity_counts"].get("info", 0)}],
-                    backgroundColor: ['#dc3545', '#fd7e14', '#ffc107', '#17a2b8', '#6c757d'],
-                    borderWidth: 1
-                }}]
-            }},
-            options: {{
-                responsive: true,
-                plugins: {{
-                    legend: {{
-                        position: 'bottom'
-                    }},
-                    title: {{
-                        display: true,
-                        text: '漏洞严重级别分布'
-                    }}
-                }}
-            }}
-        }});
-        
-        // 过滤功能
-        function filterFindings() {{
-            const severityFilter = document.getElementById('severity-filter').value;
-            const searchInput = document.getElementById('search-input').value.toLowerCase();
-            const findings = document.querySelectorAll('.finding');
-            
-            findings.forEach(finding => {{
-                const severity = finding.classList.contains('severity-critical') ? 'critical' : 
-                               finding.classList.contains('severity-high') ? 'high' :
-                               finding.classList.contains('severity-medium') ? 'medium' :
-                               finding.classList.contains('severity-low') ? 'low' : 'info';
-                const text = finding.textContent.toLowerCase();
-                
-                const severityMatch = severityFilter === 'all' || severity === severityFilter;
-                const searchMatch = text.includes(searchInput);
-                
-                finding.style.display = (severityMatch && searchMatch) ? 'block' : 'none';
-            }});
-        }}
-    </script>
 </body>
-</html>"""
+</html>
+        """
 
         return html
 
-    def _generate_finding_html(self, finding) -> str:
-        """生成单个发现的 HTML"""
-        severity = finding.severity.value
-        badge_class = f"badge-{severity}"
-        
-        # 构建 POC 部分
-        poc_html = ""
-        if hasattr(finding, 'poc') and finding.poc:
-            poc_html = f"""
-        <div class="poc-section">
-            <h4>漏洞利用 (POC)</h4>
-            <div class="code">{finding.poc}</div>
-        </div>
-        """
-        
-        # 构建修复建议部分
-        fix_html = ""
-        if hasattr(finding, 'fix_suggestion') and finding.fix_suggestion:
-            fix_html = f"""
-        <p><strong>修复建议:</strong> {finding.fix_suggestion}</p>
-        """
-        
-        # 构建代码片段部分
-        code_html = ""
-        if hasattr(finding, 'code_snippet') and finding.code_snippet:
-            code_html = f"""
-        <div class="code">{finding.code_snippet}</div>
-        """
-        
-        return f"""
-    <div class="finding severity-{severity}">
-        <div class="finding-header">
-            <h3>{finding.rule_name} ({finding.rule_id})</h3>
-            <span class="severity-badge {badge_class}">{severity}</span>
-        </div>
-        <p><strong>位置:</strong> {finding.location}</p>
-        <p><strong>描述:</strong> {finding.message}</p>
-        <p><strong>置信度:</strong> {finding.confidence}</p>
-        {code_html}
-        {poc_html}
-        {fix_html}
-    </div>
-"""
+
 
     def _generate_summary(self, results: List[ScanResult]) -> Dict[str, Any]:
         """生成摘要"""

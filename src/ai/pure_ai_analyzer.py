@@ -9,11 +9,15 @@ import os
 from pathlib import Path
 from typing import List, Optional, Dict, Any
 
+from rich.console import Console
+
 from src.core.config import Config
 from src.ai.client import get_model_manager, AIProvider
 from src.ai.models import AnalysisContext, SecurityAnalysisResult, VulnerabilityFinding
 from src.ai.pure_ai.multi_agent_pipeline import MultiAgentPipeline
 from src.ai.pure_ai.cache import CacheManager
+
+console = Console()
 
 
 class PureAIAnalyzer:
@@ -29,9 +33,9 @@ class PureAIAnalyzer:
             config: 配置对象
         """
         self.config = config
-        # 默认使用 deepseek-reasoner
+        # 强制使用 deepseek-reasoner 模型进行文件分析
         self.ai_provider = getattr(config, "pure_ai_provider", "deepseek")
-        self.ai_model = getattr(config, "pure_ai_model", "deepseek-reasoner")
+        self.ai_model = "deepseek-reasoner"  # 强制使用reasoner模型
         self.model_manager = None
         self.client = None
         self.pipeline = None
@@ -42,8 +46,9 @@ class PureAIAnalyzer:
     async def _initialize(self):
         """异步初始化"""
         try:
-            print(f"[DEBUG] 开始初始化纯AI分析器，使用提供商: {self.ai_provider}")
-            print(f"[DEBUG] 使用模型: {self.ai_model}")
+            if self.config.debug:
+                console.print(f"[dim][DEBUG] 开始初始化纯AI分析器，使用提供商: {self.ai_provider}[/dim]")
+                console.print(f"[dim][DEBUG] 使用模型: {self.ai_model}[/dim]")
             
             # 检查API密钥
             api_key = getattr(self.config, "pure_ai_api_key", None)
@@ -55,9 +60,11 @@ class PureAIAnalyzer:
                 api_key = os.getenv("DEEPSEEK_API_KEY")
             
             if not api_key:
-                print(f"[DEBUG] 警告: API 密钥未设置")
+                if self.config.debug:
+                    console.print(f"[dim][DEBUG] 警告: API 密钥未设置[/dim]")
             else:
-                print(f"[DEBUG] API 密钥已设置 (长度: {len(api_key)})")
+                if self.config.debug:
+                    console.print(f"[dim][DEBUG] API 密钥已设置 (长度: {len(api_key)})[/dim]")
             
             # 为纯AI模式创建临时配置
             from src.ai.client import AIModelManager
@@ -72,7 +79,8 @@ class PureAIAnalyzer:
             # 初始化模型管理器
             self.model_manager = AIModelManager()
             await self.model_manager.initialize(temp_config)
-            print(f"[DEBUG] 模型管理器初始化成功: {self.model_manager}")
+            if self.config.debug:
+                console.print(f"[dim][DEBUG] 模型管理器初始化成功: {self.model_manager}[/dim]")
             
             # 映射提供商名称到AIProvider枚举
             from src.ai.client import AIProvider
@@ -83,29 +91,37 @@ class PureAIAnalyzer:
                 "local": AIProvider.LOCAL,
             }
             provider = provider_map.get(self.ai_provider, AIProvider.DEEPSEEK)
-            print(f"[DEBUG] 使用提供商: {provider}")
+            if self.config.debug:
+                console.print(f"[dim][DEBUG] 使用提供商: {provider}[/dim]")
             
             # 获取客户端
             self.client = self.model_manager.get_client(provider)
-            print(f"[DEBUG] 获取客户端: {self.client}")
+            if self.config.debug:
+                console.print(f"[dim][DEBUG] 获取客户端: {self.client}[/dim]")
             
             if not self.client:
                 # 尝试获取默认客户端
-                print(f"[DEBUG] 尝试获取默认客户端")
+                if self.config.debug:
+                    console.print(f"[dim][DEBUG] 尝试获取默认客户端[/dim]")
                 self.client = self.model_manager.get_default_client()
-                print(f"[DEBUG] 默认客户端: {self.client}")
+                if self.config.debug:
+                    console.print(f"[dim][DEBUG] 默认客户端: {self.client}[/dim]")
             
             if self.client:
                 # 验证API访问
-                print(f"[DEBUG] 验证API访问...")
+                if self.config.debug:
+                    console.print(f"[dim][DEBUG] 验证API访问...[/dim]")
                 try:
                     is_available, error_msg = await self.client.validate_api_access()
                     if is_available:
-                        print(f"[DEBUG] API访问验证成功")
+                        if self.config.debug:
+                            console.print(f"[dim][DEBUG] API访问验证成功[/dim]")
                     else:
-                        print(f"[DEBUG] API访问验证失败: {error_msg}")
+                        if self.config.debug:
+                            console.print(f"[dim][DEBUG] API访问验证失败: {error_msg}[/dim]")
                 except Exception as e:
-                    print(f"[DEBUG] API访问验证异常: {e}")
+                    if self.config.debug:
+                        console.print(f"[dim][DEBUG] API访问验证异常: {e}[/dim]")
                 
                 # 创建pipeline配置，包含模型信息
                 pipeline_config = {
@@ -113,13 +129,16 @@ class PureAIAnalyzer:
                     'model': self.ai_model
                 }
                 self.pipeline = MultiAgentPipeline(self.client, pipeline_config)
-                print(f"[DEBUG] 纯AI分析器初始化成功，使用客户端: {self.ai_provider}, 模型: {self.ai_model}")
+                if self.config.debug:
+                    console.print(f"[dim][DEBUG] 纯AI分析器初始化成功，使用客户端: {self.ai_provider}, 模型: {self.ai_model}[/dim]")
             else:
-                print(f"[DEBUG] 纯AI分析器初始化失败：无法获取AI客户端")
+                if self.config.debug:
+                    console.print(f"[dim][DEBUG] 纯AI分析器初始化失败：无法获取AI客户端[/dim]")
         except Exception as e:
-            print(f"[DEBUG] 纯AI分析器初始化失败: {e}")
-            import traceback
-            traceback.print_exc()
+            if self.config.debug:
+                console.print(f"[dim][DEBUG] 纯AI分析器初始化失败: {e}[/dim]")
+                import traceback
+                traceback.print_exc()
 
     async def analyze(self, file_path: str, file_content: str) -> List[VulnerabilityFinding]:
         """分析文件
@@ -161,14 +180,32 @@ class PureAIAnalyzer:
             
             for finding in final_findings:
                 if finding.get('status') == 'VALID':
+                    # 提取详细信息
+                    vulnerability_desc = finding.get('vulnerability', 'unknown')
+                    location = finding.get('location', 'unknown')
+                    recommendation = finding.get('recommendation', '')
+                    evidence = finding.get('evidence', '')
+                    
+                    # 生成更具体的规则名称
+                    rule_name = vulnerability_desc
+                    if location:
+                        rule_name = f"{vulnerability_desc} (位于 {location})"
+                    
+                    # 生成详细的描述
+                    description = vulnerability_desc
+                    if evidence:
+                        description = f"{vulnerability_desc}。{evidence}"
+                    if recommendation:
+                        description = f"{description} 建议：{recommendation}"
+                    
                     vulnerability = VulnerabilityFinding(
                         rule_id=finding.get('vulnerability', 'unknown'),
-                        rule_name=finding.get('vulnerability', 'unknown'),
+                        rule_name=rule_name,
                         severity=finding.get('severity', 'medium'),
                         confidence=float(finding.get('confidence', 50)) / 100.0,
-                        location={'file': finding.get('location', 'unknown')},
-                        description=finding.get('vulnerability', 'unknown'),
-                        fix_suggestion=finding.get('recommendation', ''),
+                        location={'file': location},
+                        description=description,
+                        fix_suggestion=recommendation,
                         evidence=json.dumps(finding, ensure_ascii=False)
                     )
                     findings.append(vulnerability)
@@ -220,13 +257,13 @@ class PureAIAnalyzer:
         try:
             # 检查pipeline是否初始化
             if not self.pipeline:
-                print(f"[DEBUG] 纯AI分析器未初始化，跳过分析: {file_info.path}")
+                console.print(f"[dim][DEBUG] 纯AI分析器未初始化，跳过分析: {file_info.path}[/dim]")
                 return []
 
             # 分析文件
             return await self.analyze(file_info.path, "")
         except Exception as e:
-            print(f"[DEBUG] 纯AI分析文件失败: {e}")
+            console.print(f"[dim][DEBUG] 纯AI分析文件失败: {e}[/dim]")
             import traceback
             traceback.print_exc()
             return []

@@ -64,45 +64,66 @@ class SecurityScanner:
         try:
             self.ast_analyzer.initialize()
             if self.config.debug:
-                print(f"[DEBUG] AST 分析器初始化成功")
+                console.print(f"[dim][DEBUG] AST 分析器初始化成功[/dim]")
         except Exception as e:
             if self.config.debug:
-                print(f"[DEBUG] AST 分析器初始化失败: {e}")
+                console.print(f"[dim][DEBUG] AST 分析器初始化失败: {e}[/dim]")
         
-        if config.ai.enabled:
+        if config.ai.enabled and not config.pure_ai:
             try:
                 self.ai_analyzer = AIAnalyzer(config)
                 self.attack_chain_builder = get_ai_attack_chain_builder()
                 if self.config.debug:
-                    print(f"[DEBUG] AI 分析器初始化成功")
+                    console.print(f"[dim][DEBUG] AI 分析器初始化成功[/dim]")
             except Exception as e:
                 if self.config.debug:
-                    print(f"[DEBUG] AI 分析器初始化失败: {e}")
+                    console.print(f"[dim][DEBUG] AI 分析器初始化失败: {e}[/dim]")
         
         # 初始化纯AI分析器
         self.pure_ai_analyzer = None
+        self.ai_file_prioritizer = None
         if config.pure_ai:
-            print(f"[DEBUG] 开始初始化纯AI分析器")
+            if self.config.debug:
+                console.print(f"[dim][DEBUG] 开始初始化纯AI分析器[/dim]")
             try:
                 from src.ai.pure_ai_analyzer import PureAIAnalyzer
-                print(f"[DEBUG] 导入PureAIAnalyzer成功")
-                self.pure_ai_analyzer = PureAIAnalyzer(config)
-                print(f"[DEBUG] 纯AI分析器初始化成功: {self.pure_ai_analyzer}")
-                print(f"[DEBUG] 纯AI分析器属性: pipeline={self.pure_ai_analyzer.pipeline}, client={self.pure_ai_analyzer.client}")
                 if self.config.debug:
-                    print(f"[DEBUG] 纯AI分析器初始化成功")
+                    console.print(f"[dim][DEBUG] 导入PureAIAnalyzer成功[/dim]")
+                self.pure_ai_analyzer = PureAIAnalyzer(config)
+                if self.config.debug:
+                    console.print(f"[dim][DEBUG] 纯AI分析器初始化成功[/dim]")
+                
+                # 初始化AI文件优先级评估器
+                try:
+                    from src.utils.ai_file_prioritizer import AIFilePrioritizer
+                    # 等待纯AI分析器完全初始化
+                    if self.pure_ai_analyzer and hasattr(self.pure_ai_analyzer, 'client') and self.pure_ai_analyzer.client:
+                        self.ai_file_prioritizer = AIFilePrioritizer(
+                            ai_client=self.pure_ai_analyzer.client,
+                            config=config
+                        )
+                        if self.config.debug:
+                            if self.ai_file_prioritizer.enabled:
+                                console.print("[dim][DEBUG] AI文件优先级评估器初始化成功并已启用[/dim]")
+                            else:
+                                console.print("[dim][DEBUG] AI文件优先级评估器初始化成功但未启用（客户端不可用）[/dim]")
+                    else:
+                        if self.config.debug:
+                            console.print("[dim][DEBUG] AI文件优先级评估器未初始化：纯AI分析器客户端未就绪[/dim]")
+                except Exception as e:
+                    if self.config.debug:
+                        console.print(f"[dim][DEBUG] AI文件优先级评估器初始化失败: {e}[/dim]")
+                
             except Exception as e:
-                print(f"[DEBUG] 纯AI分析器初始化失败: {e}")
+                console.print(f"[dim][DEBUG] 纯AI分析器初始化失败: {e}[/dim]")
                 import traceback
                 traceback.print_exc()
-                if self.config.debug:
-                    print(f"[DEBUG] 纯AI分析器初始化失败: {e}")
         
         if config.debug:
-            print(f"[DEBUG] 安全扫描器初始化完成，规则注册表已就绪（仅用于知识库检索）")
-            print(f"[DEBUG] 本地语义分析器已启用")
+            console.print(f"[dim][DEBUG] 安全扫描器初始化完成，规则注册表已就绪（仅用于知识库检索）[/dim]")
+            console.print(f"[dim][DEBUG] 本地语义分析器已启用[/dim]")
             if config.ai.enabled:
-                print(f"[DEBUG] 攻击链路分析器已启用")
+                console.print(f"[dim][DEBUG] 攻击链路分析器已启用[/dim]")
 
     async def scan(self, target: Union[str, Path]) -> ScanResult:
         """执行异步扫描
@@ -141,27 +162,27 @@ class SecurityScanner:
         # 纯AI模式：跳过所有后处理步骤，直接汇总结果
         if self.config.pure_ai:
             if self.config.debug:
-                print(f"[DEBUG] 纯AI模式：跳过所有后处理步骤")
+                console.print(f"[dim][DEBUG] 纯AI模式：跳过所有后处理步骤[/dim]")
             
             # 直接汇总结果
-            print("📋 正在汇总结果...")
-            for finding in tqdm(findings, desc="处理漏洞结果"):
+            console.print("[bold cyan]📋 正在汇总结果...[/bold cyan]")
+            for finding in findings:
                 result.add_finding(finding)
         else:
             # 正常模式：执行所有后处理步骤
             # 漏洞优先级评估
-            print("📊 正在评估漏洞优先级...")
+            console.print("[bold cyan]📊 正在评估漏洞优先级...[/bold cyan]")
             prioritized_findings = self._prioritize_findings(findings, files)
             
             # 汇总结果
-            print("📋 正在汇总结果...")
-            for finding in tqdm(prioritized_findings, desc="处理漏洞结果"):
+            console.print("[bold cyan]📋 正在汇总结果...[/bold cyan]")
+            for finding in prioritized_findings:
                 result.add_finding(finding)
             
-            # 执行攻击链路分析（如果启用了AI）
-            if self.config.ai.enabled and hasattr(self, 'attack_chain_builder') and result.findings:
+            # 执行攻击链路分析（如果启用了AI且不是纯AI模式）
+            if self.config.ai.enabled and not self.config.pure_ai and getattr(self, 'attack_chain_builder', None) is not None and result.findings:
                 if self.config.debug:
-                    print(f"[DEBUG] 开始执行攻击链路分析")
+                    console.print(f"[dim][DEBUG] 开始执行攻击链路分析[/dim]")
                 
                 try:
                     # 转换ScanResult为SecurityAnalysisResult
@@ -211,16 +232,16 @@ class SecurityScanner:
                     }
                     
                     if self.config.debug:
-                        print(f"[DEBUG] 攻击链路分析完成，识别出 {len(attack_chain_result.paths)} 条攻击路径")
-                        print(f"[DEBUG] 总体风险评分: {attack_chain_result.risk_score:.2f}")
+                        console.print(f"[dim][DEBUG] 攻击链路分析完成，识别出 {len(attack_chain_result.paths)} 条攻击路径[/dim]")
+                        console.print(f"[dim][DEBUG] 总体风险评分: {attack_chain_result.risk_score:.2f}[/dim]")
                 except Exception as e:
                     if self.config.debug:
-                        print(f"[DEBUG] 攻击链路分析失败: {e}")
+                        console.print(f"[dim][DEBUG] 攻击链路分析失败: {e}[/dim]")
             
-            # 执行本地攻击链分析（无论是否启用AI）
-            if result.findings:
+            # 执行本地攻击链分析（纯AI模式下跳过）
+            if result.findings and not self.config.pure_ai:
                 if self.config.debug:
-                    print(f"[DEBUG] 开始执行本地攻击链分析")
+                    console.print(f"[dim][DEBUG] 开始执行本地攻击链分析[/dim]")
                 
                 try:
                     from src.core.attack_chain_analyzer import AttackChainAnalyzer
@@ -266,15 +287,15 @@ class SecurityScanner:
                     }
                     
                     if self.config.debug:
-                        print(f"[DEBUG] 本地攻击链分析完成，识别出 {len(chain_result.critical_chains)} 条关键攻击链")
+                        console.print(f"[dim][DEBUG] 本地攻击链分析完成，识别出 {len(chain_result.critical_chains)} 条关键攻击链[/dim]")
                 except Exception as e:
                     if self.config.debug:
-                        print(f"[DEBUG] 本地攻击链分析失败: {e}")
+                        console.print(f"[dim][DEBUG] 本地攻击链分析失败: {e}[/dim]")
             
-            # 执行漏洞优先级评估（如果启用了AI）
-            if self.config.ai.enabled and hasattr(self, 'priority_evaluator') and result.findings:
+            # 执行漏洞优先级评估（如果启用了AI且不是纯AI模式）
+            if self.config.ai.enabled and self.priority_evaluator is not None and result.findings:
                 if self.config.debug:
-                    print(f"[DEBUG] 开始执行漏洞优先级评估")
+                    console.print(f"[dim][DEBUG] 开始执行漏洞优先级评估[/dim]")
                 
                 try:
                     # 转换ScanResult为SecurityAnalysisResult
@@ -324,14 +345,14 @@ class SecurityScanner:
                     }
                     
                     if self.config.debug:
-                        print(f"[DEBUG] 优先级评估完成")
-                        print(f"[DEBUG] {priority_result.summary}")
+                        console.print(f"[dim][DEBUG] 优先级评估完成[/dim]")
+                        console.print(f"[dim][DEBUG] {priority_result.summary}[/dim]")
                 except Exception as e:
                     if self.config.debug:
-                        print(f"[DEBUG] 优先级评估失败: {e}")
+                        console.print(f"[dim][DEBUG] 优先级评估失败: {e}[/dim]")
             
-            # 集成 LangGraph 深度分析（如果启用了 AI 且发现了漏洞）
-            if self.config.ai.enabled and result.findings:
+            # 集成 LangGraph 深度分析（如果启用了 AI 且发现了漏洞，纯AI模式下跳过）
+            if self.config.ai.enabled and not self.config.pure_ai and result.findings:
                 try:
                     print("🔍 开始执行 LangGraph 深度分析")
                     print("🚀 启动多Agent安全分析流程")
@@ -404,11 +425,11 @@ class SecurityScanner:
                     rag_kb.auto_record_learning(learning_results)
                     
                     if self.config.debug:
-                        print(f"[DEBUG] 自学习完成，已更新 RAG 知识库")
+                        console.print(f"[dim][DEBUG] 自学习完成，已更新 RAG 知识库[/dim]")
                         
                 except Exception as e:
                     if self.config.debug:
-                        print(f"[DEBUG] 自学习集成失败: {e}")
+                        console.print(f"[dim][DEBUG] 自学习集成失败: {e}[/dim]")
         
         # 计算扫描耗时
         end_time = time.time()
@@ -470,13 +491,46 @@ class SecurityScanner:
             发现的安全问题列表
         """
         findings = []
-        from tqdm import tqdm
+        from rich.progress import Progress, SpinnerColumn, BarColumn, TextColumn, TimeElapsedColumn
         
         # 评估文件优先级
         prioritized_files = []
-        for file_info in tqdm(files, desc="评估文件优先级"):
-            score, priority = self.file_prioritizer.evaluate_file_priority(Path(file_info.path))
-            prioritized_files.append((file_info, score, priority))
+        
+        # 显示文件优先级评估信息
+        if not self.config.quiet:
+            console.print("[bold cyan]🔍 正在评估文件优先级...[/bold cyan]")
+        
+        # 纯AI模式下使用专门的文件优先级评估器
+        if self.config.pure_ai:
+            # 导入并使用纯净AI模式的文件优先级评估器
+            try:
+                from src.ai.pure_ai.file_prioritizer import FilePrioritizer as PureAIFilePrioritizer
+                pure_ai_prioritizer = PureAIFilePrioritizer()
+                if self.config.debug:
+                    console.print("[dim][DEBUG] 使用纯净AI模式的文件优先级评估器[/dim]")
+                for file_info in files:
+                    priority_result = pure_ai_prioritizer.calculate_priority(file_info.path)
+                    score = priority_result['priority_score']
+                    # 根据分数确定优先级级别
+                    if score >= 0.7:
+                        priority = 'high'
+                    elif score >= 0.4:
+                        priority = 'medium'
+                    else:
+                        priority = 'low'
+                    prioritized_files.append((file_info, score, priority))
+            except Exception as e:
+                if self.config.debug:
+                    console.print(f"[dim][DEBUG] 纯净AI文件优先级评估器初始化失败，使用传统评估: {e}[/dim]")
+                # 回退到传统评估
+                for file_info in files:
+                    score, priority = self.file_prioritizer.evaluate_file_priority(Path(file_info.path))
+                    prioritized_files.append((file_info, score, priority))
+        else:
+            # 使用传统的基于规则的评估
+            for file_info in files:
+                score, priority = self.file_prioritizer.evaluate_file_priority(Path(file_info.path))
+                prioritized_files.append((file_info, score, priority))
         
         # 按优先级排序
         prioritized_files.sort(key=lambda x: x[1], reverse=True)
@@ -486,14 +540,14 @@ class SecurityScanner:
             test_file_count = getattr(self.config, 'test_file_count', 10)
             original_count = len(prioritized_files)
             prioritized_files = prioritized_files[:test_file_count]
-            print(f"⚠️  测试模式已启用，只处理前{test_file_count}个优先级最高的文件（共 {original_count} 个文件）")
+            console.print(f"[yellow]⚠️  测试模式已启用，只处理前{test_file_count}个优先级最高的文件（共 {original_count} 个文件）[/yellow]")
         
         if self.config.debug:
-            print(f"[DEBUG] 文件优先级评估完成，总计 {len(prioritized_files)} 个文件")
+            console.print(f"[dim][DEBUG] 文件优先级评估完成，总计 {len(prioritized_files)} 个文件[/dim]")
             high_count = sum(1 for _, _, p in prioritized_files if p == 'high')
             medium_count = sum(1 for _, _, p in prioritized_files if p == 'medium')
             low_count = sum(1 for _, _, p in prioritized_files if p == 'low')
-            print(f"[DEBUG] 高优先级: {high_count}, 中优先级: {medium_count}, 低优先级: {low_count}")
+            console.print(f"[dim][DEBUG] 高优先级: {high_count}, 中优先级: {medium_count}, 低优先级: {low_count}[/dim]")
         
         # 文件类型过滤配置
         file_type_analysis_config = {
@@ -563,63 +617,106 @@ class SecurityScanner:
             }
         }
         
-        for file_info, score, priority in tqdm(prioritized_files, desc="分析文件"):
+        # 显示文件分析信息
+        if not self.config.quiet:
+            console.print("[bold cyan]🔧 正在分析文件...[/bold cyan]")
+        
+        for file_info, score, priority in prioritized_files:
             if self.config.debug:
-                print(f"[DEBUG] 分析文件: {file_info.path} (优先级: {priority}, 分数: {score:.2f})")
+                console.print(f"[dim][DEBUG] 分析文件: {file_info.path} (优先级: {priority}, 分数: {score:.2f})[/dim]")
             
             # 获取文件类型配置
             file_type = file_info.language.value if file_info.language else 'unknown'
             analysis_config = file_type_analysis_config.get(file_type, file_type_analysis_config['unknown'])
             
             if self.config.debug:
-                print(f"[DEBUG] 文件类型: {file_type}, 分析配置: {analysis_config}")
+                console.print(f"[dim][DEBUG] 文件类型: {file_type}, 分析配置: {analysis_config}[/dim]")
             
             # 纯AI模式：只执行AI分析
             if self.config.pure_ai:
                 if self.config.debug:
-                    print(f"[DEBUG] 纯AI模式：只执行AI分析")
+                    console.print(f"[dim][DEBUG] 纯AI模式：只执行AI分析[/dim]")
                 
                 # 纯AI分析 - 对所有文件类型执行AI分析
                 ai_findings = []
                 if self.pure_ai_analyzer:
-                    print(f"[PURE-AI] 分析文件: {file_info.path}")
+                    # 显示实时扫描信息
+                    console.print(f"Scanning file: {Path(file_info.path).name}")
                     ai_findings = await self.pure_ai_analyzer.analyze_file(file_info)
                     findings.extend(ai_findings)
-                    print(f"[PURE-AI] 分析完成，发现 {len(ai_findings)} 个问题")
+                    
+                    # 实时显示发现的问题
+                    if ai_findings:
+                        for finding in ai_findings:
+                            severity_color = "red" if finding.severity.value in ["critical", "high"] else "yellow" if finding.severity.value == "medium" else "blue"
+                            console.print(f"→ [{severity_color}]Found {finding.rule_name}[/{severity_color}]")
                 
                 if self.config.debug:
-                    print(f"[DEBUG] 纯AI模式分析完成，发现 {len(ai_findings)} 个问题")
+                    console.print(f"[dim][DEBUG] 纯AI模式分析完成，发现 {len(ai_findings)} 个问题[/dim]")
             else:
                 # 正常模式：执行所有分析
+                # 显示实时扫描信息
+                console.print(f"Scanning file: {Path(file_info.path).name}")
+                
                 # 静态分析
                 static_findings = []
                 if analysis_config['static']:
                     static_findings = self._static_analyze(file_info)
                     findings.extend(static_findings)
+                    
+                    # 实时显示发现的问题
+                    if static_findings:
+                        for finding in static_findings:
+                            severity_color = "red" if finding.severity.value in ["critical", "high"] else "yellow" if finding.severity.value == "medium" else "blue"
+                            console.print(f"→ [{severity_color}]Found {finding.rule_name}[/{severity_color}]")
                 
                 # 本地语义分析（始终启用，轻量级）
                 semantic_findings = []
                 if analysis_config['semantic']:
                     semantic_findings = self._semantic_analyze(file_info)
                     findings.extend(semantic_findings)
+                    
+                    # 实时显示发现的问题
+                    if semantic_findings:
+                        for finding in semantic_findings:
+                            severity_color = "red" if finding.severity.value in ["critical", "high"] else "yellow" if finding.severity.value == "medium" else "blue"
+                            console.print(f"→ [{severity_color}]Found {finding.rule_name}[/{severity_color}]")
                 
                 # 库匹配分析
                 library_findings = []
                 if analysis_config['library']:
                     library_findings = self._library_analyze(file_info)
                     findings.extend(library_findings)
+                    
+                    # 实时显示发现的问题
+                    if library_findings:
+                        for finding in library_findings:
+                            severity_color = "red" if finding.severity.value in ["critical", "high"] else "yellow" if finding.severity.value == "medium" else "blue"
+                            console.print(f"→ [{severity_color}]Found {finding.rule_name}[/{severity_color}]")
                 
                 # AI 分析（如果启用 --ai 参数，对所有文件进行分析）
                 ai_findings = []
                 if self.ai_analyzer and self.config.ai.enabled and analysis_config['ai']:
                     ai_findings = await self._ai_analyze(file_info)
                     findings.extend(ai_findings)
+                    
+                    # 实时显示发现的问题
+                    if ai_findings:
+                        for finding in ai_findings:
+                            severity_color = "red" if finding.severity.value in ["critical", "high"] else "yellow" if finding.severity.value == "medium" else "blue"
+                            console.print(f"→ [{severity_color}]Found {finding.rule_name}[/{severity_color}]")
                 
                 # 规则分析（结合AI分析结果）
                 rule_findings = []
                 if analysis_config['rule']:
                     rule_findings = self._rule_analyze(file_info, ai_findings)
                     findings.extend(rule_findings)
+                    
+                    # 实时显示发现的问题
+                    if rule_findings:
+                        for finding in rule_findings:
+                            severity_color = "red" if finding.severity.value in ["critical", "high"] else "yellow" if finding.severity.value == "medium" else "blue"
+                            console.print(f"→ [{severity_color}]Found {finding.rule_name}[/{severity_color}]")
                 
                 # 网络搜索分析（结合AI分析结果）
                 web_findings = []
@@ -629,10 +726,16 @@ class SecurityScanner:
                     if ai_findings:
                         web_findings = self._filter_web_findings_by_ai(web_findings, ai_findings)
                     findings.extend(web_findings)
+                    
+                    # 实时显示发现的问题
+                    if web_findings:
+                        for finding in web_findings:
+                            severity_color = "red" if finding.severity.value in ["critical", "high"] else "yellow" if finding.severity.value == "medium" else "blue"
+                            console.print(f"→ [{severity_color}]Found {finding.rule_name}[/{severity_color}]")
                 
                 if self.config.debug:
                     total_findings = len(static_findings) + len(rule_findings) + len(semantic_findings) + len(library_findings) + len(web_findings) + len(ai_findings)
-                    print(f"[DEBUG] 文件分析完成，发现 {total_findings} 个问题")
+                    console.print(f"[dim][DEBUG] 文件分析完成，发现 {total_findings} 个问题[/dim]")
         
         return findings
 
@@ -663,24 +766,24 @@ class SecurityScanner:
             # 检查 AST 分析器是否初始化成功
             if not hasattr(self.ast_analyzer, '_parsers') or not self.ast_analyzer._parsers:
                 if self.config.debug:
-                    print(f"[DEBUG] AST 分析器未初始化，可能缺少 tree-sitter 库")
+                    console.print(f"[dim][DEBUG] AST 分析器未初始化，可能缺少 tree-sitter 库[/dim]")
                 # 尝试初始化分析器
                 try:
                     self.ast_analyzer.initialize()
                 except Exception as e:
                     if self.config.debug:
-                        print(f"[DEBUG] 初始化 AST 分析器失败: {e}")
+                        console.print(f"[dim][DEBUG] 初始化 AST 分析器失败: {e}[/dim]")
             
             # 使用 AST 分析器
             try:
                 if self.config.debug:
-                    print(f"[DEBUG] 使用 AST 分析器分析: {file_info.path}")
+                    console.print(f"[dim][DEBUG] 使用 AST 分析器分析: {file_info.path}[/dim]")
                 
                 ast_result = self.ast_analyzer.analyze(context)
                 
                 if ast_result.issues:
                     if self.config.debug:
-                        print(f"[DEBUG] AST 分析发现 {len(ast_result.issues)} 个问题")
+                        console.print(f"[dim][DEBUG] AST 分析发现 {len(ast_result.issues)} 个问题[/dim]")
                     
                     for issue in ast_result.issues:
                         converted = self._convert_to_finding(issue)
@@ -688,12 +791,12 @@ class SecurityScanner:
                             findings.append(converted)
                 else:
                     if self.config.debug:
-                        print(f"[DEBUG] AST 分析未发现问题: {file_info.path}")
+                        console.print(f"[dim][DEBUG] AST 分析未发现问题: {file_info.path}[/dim]")
                 
             except Exception as e:
                 error_msg = f"AST 分析失败: {e}"
                 if self.config.debug:
-                    print(f"[DEBUG] {error_msg}")
+                    console.print(f"[dim][DEBUG] {error_msg}[/dim]")
                 # 添加错误信息到结果中，让用户知道静态分析失败
                 from src.core.engine import Finding, Location, Severity
                 error_finding = Finding(
@@ -719,13 +822,13 @@ class SecurityScanner:
             if file_info.language.value == 'python':
                 try:
                     if self.config.debug:
-                        print(f"[DEBUG] 使用 CST 分析器分析: {file_info.path}")
+                        console.print(f"[dim][DEBUG] 使用 CST 分析器分析: {file_info.path}[/dim]")
                     
                     cst_result = self.cst_analyzer.analyze(context)
                     
                     if cst_result.issues:
                         if self.config.debug:
-                            print(f"[DEBUG] CST 分析发现 {len(cst_result.issues)} 个问题")
+                            console.print(f"[dim][DEBUG] CST 分析发现 {len(cst_result.issues)} 个问题[/dim]")
                         
                         for issue in cst_result.issues:
                             converted = self._convert_to_finding(issue)
@@ -733,12 +836,12 @@ class SecurityScanner:
                                 findings.append(converted)
                     else:
                         if self.config.debug:
-                            print(f"[DEBUG] CST 分析未发现问题: {file_info.path}")
+                            console.print(f"[dim][DEBUG] CST 分析未发现问题: {file_info.path}[/dim]")
                 
                 except Exception as e:
                     error_msg = f"CST 分析失败: {e}"
                     if self.config.debug:
-                        print(f"[DEBUG] {error_msg}")
+                        console.print(f"[dim][DEBUG] {error_msg}[/dim]")
                     # 添加错误信息到结果中
                     from src.core.engine import Finding, Location, Severity
                     error_finding = Finding(
@@ -766,7 +869,7 @@ class SecurityScanner:
         except Exception as e:
             error_msg = f"静态分析失败: {e}"
             if self.config.debug:
-                print(f"[DEBUG] {error_msg}")
+                console.print(f"[dim][DEBUG] {error_msg}[/dim]")
             # 添加错误信息到结果中
             from src.core.engine import Finding, Location, Severity
             error_finding = Finding(
@@ -814,7 +917,7 @@ class SecurityScanner:
                 file_content = f.read()
             
             if self.config.debug:
-                print(f"[DEBUG] 执行 RAG 知识库检索分析: {file_info.path}")
+                console.print(f"[dim][DEBUG] 执行 RAG 知识库检索分析: {file_info.path}[/dim]")
             
             # 导入 RAG 知识库
             from src.storage.rag_knowledge_base import get_rag_knowledge_base
@@ -850,21 +953,21 @@ class SecurityScanner:
                     vuln_types_str = ', '.join(ai_vulnerability_types)
                     search_query = f"{search_query} 相关漏洞: {vuln_types_str}"
                     if self.config.debug:
-                        print(f"[DEBUG] 根据AI分析结果调整RAG搜索查询，添加漏洞类型: {vuln_types_str}")
+                        console.print(f"[dim][DEBUG] 根据AI分析结果调整RAG搜索查询，添加漏洞类型: {vuln_types_str}[/dim]")
             
             # 搜索 RAG 知识库
             search_results = rag_kb.search_knowledge(search_query)
             
             if search_results:
                 if self.config.debug:
-                    print(f"[DEBUG] RAG 知识库检索发现 {len(search_results)} 个相关结果")
+                    console.print(f"[dim][DEBUG] RAG 知识库检索发现 {len(search_results)} 个相关结果[/dim]")
                 
                 # 过滤低相关性结果
                 relevant_results = [result for result in search_results if result.confidence >= 0.75]
                 
                 if relevant_results:
                     if self.config.debug:
-                        print(f"[DEBUG] 过滤后保留 {len(relevant_results)} 个高相关性结果")
+                        console.print(f"[dim][DEBUG] 过滤后保留 {len(relevant_results)} 个高相关性结果[/dim]")
                     
                     # 转换知识库结果为 Finding 对象
                     from src.core.engine import Finding, Location, Severity
@@ -948,11 +1051,11 @@ class SecurityScanner:
                 findings.sort(key=lambda x: x.confidence, reverse=True)
                 findings = findings[:max_findings]
                 if self.config.debug:
-                    print(f"[DEBUG] 限制RAG知识库结果数量为 {max_findings}")
+                    console.print(f"[dim][DEBUG] 限制RAG知识库结果数量为 {max_findings}[/dim]")
             
         except Exception as e:
             if self.config.debug:
-                print(f"[DEBUG] RAG 知识库检索分析失败: {e}")
+                console.print(f"[dim][DEBUG] RAG 知识库检索分析失败: {e}[/dim]")
         
         return findings
     
@@ -1173,7 +1276,7 @@ class SecurityScanner:
                 code_content = f.read()
             
             if self.config.debug:
-                print(f"[DEBUG] 执行本地语义分析: {file_info.path}")
+                console.print(f"[dim][DEBUG] 执行本地语义分析: {file_info.path}[/dim]")
             
             # 执行本地语义分析
             semantic_result = self.local_analyzer.analyze(
@@ -1215,12 +1318,12 @@ class SecurityScanner:
                 findings.append(finding)
                 
                 if self.config.debug:
-                    print(f"[DEBUG] 语义分析发现漏洞: {semantic_result.reason}")
-                    print(f"[DEBUG] 攻击链路: {' -> '.join(semantic_result.attack_chain)}")
+                    console.print(f"[dim][DEBUG] 语义分析发现漏洞: {semantic_result.reason}[/dim]")
+                    console.print(f"[dim][DEBUG] 攻击链路: {' -> '.join(semantic_result.attack_chain)}[/dim]")
                 
         except Exception as e:
             if self.config.debug:
-                print(f"[DEBUG] 语义分析失败: {e}")
+                console.print(f"[dim][DEBUG] 语义分析失败: {e}[/dim]")
         
         return findings
     
@@ -1241,7 +1344,7 @@ class SecurityScanner:
                 code_content = f.read()
             
             if self.config.debug:
-                print(f"[DEBUG] 执行库匹配分析: {file_info.path}")
+                console.print(f"[dim][DEBUG] 执行库匹配分析: {file_info.path}[/dim]")
             
             # 检测代码中使用的库
             libraries = self.library_matcher.detect_libraries(
@@ -1251,14 +1354,14 @@ class SecurityScanner:
             
             if libraries:
                 if self.config.debug:
-                    print(f"[DEBUG] 检测到 {len(libraries)} 个库")
+                    console.print(f"[dim][DEBUG] 检测到 {len(libraries)} 个库[/dim]")
                 
                 # 匹配库漏洞
                 vulnerabilities = self.library_matcher.match_vulnerabilities(libraries)
                 
                 if vulnerabilities:
                     if self.config.debug:
-                        print(f"[DEBUG] 发现 {len(vulnerabilities)} 个库漏洞")
+                        console.print(f"[dim][DEBUG] 发现 {len(vulnerabilities)} 个库漏洞[/dim]")
                     
                     # 转换为 Finding 对象
                     from src.core.engine import Finding, Location, Severity
@@ -1295,7 +1398,7 @@ class SecurityScanner:
         
         except Exception as e:
             if self.config.debug:
-                print(f"[DEBUG] 库匹配分析失败: {e}")
+                console.print(f"[dim][DEBUG] 库匹配分析失败: {e}[/dim]")
         
         return findings
 
@@ -1313,7 +1416,7 @@ class SecurityScanner:
         
         try:
             if self.config.debug:
-                print(f"[DEBUG] 执行网络搜索分析: {file_info.path}")
+                console.print(f"[dim][DEBUG] 执行网络搜索分析: {file_info.path}[/dim]")
             
             # 读取文件内容
             with open(file_info.path, 'r', encoding='utf-8') as f:
@@ -1325,20 +1428,20 @@ class SecurityScanner:
             # 对每个潜在漏洞类型进行网络搜索
             for vulnerability_type in potential_vulnerabilities:
                 if self.config.debug:
-                    print(f"[DEBUG] 搜索漏洞信息: {vulnerability_type}")
+                    console.print(f"[dim][DEBUG] 搜索漏洞信息: {vulnerability_type}[/dim]")
                 
                 search_results = await search_vulnerability_info(vulnerability_type)
                 
                 if search_results:
                     if self.config.debug:
-                        print(f"[DEBUG] 网络搜索发现 {len(search_results)} 个相关结果")
+                        console.print(f"[dim][DEBUG] 网络搜索发现 {len(search_results)} 个相关结果[/dim]")
                     
                     # 过滤低相关性结果
                     relevant_results = [result for result in search_results if result.relevance >= 0.7]
                     
                     if relevant_results:
                         if self.config.debug:
-                            print(f"[DEBUG] 过滤后保留 {len(relevant_results)} 个高相关性结果")
+                            console.print(f"[dim][DEBUG] 过滤后保留 {len(relevant_results)} 个高相关性结果[/dim]")
                         
                         # 转换搜索结果为 Finding 对象
                         from src.core.engine import Finding, Location, Severity
@@ -1381,20 +1484,20 @@ class SecurityScanner:
                 if "LIBRARY-VULN" in library_finding.rule_id:
                     library_name = library_finding.rule_name.split(': ')[1].split(' (')[0]
                     if self.config.debug:
-                        print(f"[DEBUG] 搜索库漏洞信息: {library_name}")
+                        console.print(f"[dim][DEBUG] 搜索库漏洞信息: {library_name}[/dim]")
                     
                     search_results = await search_library_info(library_name)
                     
                     if search_results:
                         if self.config.debug:
-                            print(f"[DEBUG] 网络搜索发现 {len(search_results)} 个库漏洞相关结果")
+                            console.print(f"[dim][DEBUG] 网络搜索发现 {len(search_results)} 个库漏洞相关结果[/dim]")
                         
                         # 过滤低相关性结果
                         relevant_results = [result for result in search_results if result.relevance >= 0.7]
                         
                         if relevant_results:
                             if self.config.debug:
-                                print(f"[DEBUG] 过滤后保留 {len(relevant_results)} 个高相关性结果")
+                                console.print(f"[dim][DEBUG] 过滤后保留 {len(relevant_results)} 个高相关性结果[/dim]")
                             
                             # 转换搜索结果为 Finding 对象
                             from src.core.engine import Finding, Location, Severity
@@ -1446,11 +1549,11 @@ class SecurityScanner:
                 findings.sort(key=lambda x: x.confidence, reverse=True)
                 findings = findings[:max_findings]
                 if self.config.debug:
-                    print(f"[DEBUG] 限制网络搜索结果数量为 {max_findings}")
+                    console.print(f"[dim][DEBUG] 限制网络搜索结果数量为 {max_findings}[/dim]")
             
         except Exception as e:
             if self.config.debug:
-                print(f"[DEBUG] 网络搜索分析失败: {e}")
+                console.print(f"[dim][DEBUG] 网络搜索分析失败: {e}[/dim]")
         
         return findings
     
@@ -1549,7 +1652,7 @@ class SecurityScanner:
         
         try:
             if self.config.debug:
-                print(f"[DEBUG] 开始执行完整 AI 分析: {file_info.path}")
+                console.print(f"[dim][DEBUG] 开始执行完整 AI 分析: {file_info.path}[/dim]")
             
             # 读取文件内容
             with open(file_info.path, 'r', encoding='utf-8') as f:
@@ -1564,13 +1667,13 @@ class SecurityScanner:
             )
             
             if self.config.debug:
-                print(f"[DEBUG] 调用 AI 分析器...")
+                console.print(f"[dim][DEBUG] 调用 AI 分析器...[/dim]")
             
             # 执行 AI 分析
             ai_result = await self.ai_analyzer.analyze(context)
             
             if self.config.debug:
-                print(f"[DEBUG] AI 分析完成，发现 {len(ai_result.findings)} 个问题")
+                console.print(f"[dim][DEBUG] AI 分析完成，发现 {len(ai_result.findings)} 个问题[/dim]")
             
             # 转换 AI 结果为标准格式
             for finding in ai_result.findings:
@@ -1578,11 +1681,11 @@ class SecurityScanner:
                 if converted:
                     findings.append(converted)
                     if self.config.debug:
-                        print(f"[DEBUG] AI 发现: {converted.rule_name}")
+                        console.print(f"[dim][DEBUG] AI 发现: {converted.rule_name}[/dim]")
                 
         except Exception as e:
             if self.config.debug:
-                print(f"[DEBUG] AI 分析失败: {e}")
+                console.print(f"[dim][DEBUG] AI 分析失败: {e}[/dim]")
         
         return findings
     

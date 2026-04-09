@@ -77,7 +77,11 @@ class AttackChainAnalyzer:
         self._manager: Optional[AIModelManager] = None
         self._prompt_manager = get_prompt_manager(self.config)
         self._system_prompt = self._load_system_prompt()
-        self._rag_knowledge_base = get_rag_knowledge_base()
+        # 纯AI模式下跳过RAG知识库初始化
+        if hasattr(self.config, 'pure_ai') and self.config.pure_ai:
+            self._rag_knowledge_base = None
+        else:
+            self._rag_knowledge_base = get_rag_knowledge_base()
 
     def _load_system_prompt(self) -> str:
         """加载攻击链路分析系统提示"""

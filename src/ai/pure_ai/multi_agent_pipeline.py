@@ -1,12 +1,15 @@
 import asyncio
 import json
 import re
-from typing import Dict, List, Any, Optional
+import time
+from pathlib import Path
+from typing import Dict, List, Any, Optional, Tuple
 from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn
 from src.ai.pure_ai.context_builder import ContextBuilder
 from src.ai.pure_ai.prompt_templates import PromptTemplates
 from src.ai.models import AIRequest
+from src.ai.token_tracker import get_token_tracker
 
 console = Console()
 
@@ -27,6 +30,7 @@ class MultiAgentPipeline:
         self.config = config
         self.context_builder = ContextBuilder(config)
         self.prompt_templates = PromptTemplates()
+        self.token_tracker = get_token_tracker()
         # 尝试从配置中获取max_retries，如果不存在则使用默认值3
         if hasattr(config, 'get'):
             # 配置是字典
@@ -46,49 +50,116 @@ class MultiAgentPipeline:
         Returns:
             分析结果
         """
+        from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TimeElapsedColumn
+        
         try:
-            console.print(f"[bold cyan][PURE-AI][/bold cyan] 开始分析文件: [bold green]{file_path}[/bold green]")
+            total_start_time = time.time()
+            agent_timings = {}
+            total_token_usage = {
+                'prompt_tokens': 0,
+                'completion_tokens': 0,
+                'total_tokens': 0
+            }
             
-            # 1. 构建上下文
-            with console.status("[bold blue]构建上下文...[/bold blue]", spinner="dots"):
+            # 使用统一的Progress管理器，避免多个status/print混合导致的混乱
+            # 修复进度条闪烁问题：使用稳定的描述，只在完成时更新
+            with Progress(
+                SpinnerColumn(),
+                TextColumn("[progress.description]{task.description}"),
+                BarColumn(),
+                TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
+                TimeElapsedColumn(),
+                console=console,
+                transient=True  # 完成后自动清除进度条
+            ) as progress:
+                # 主任务：7个步骤（上下文构建 + 6个Agent）
+                main_task = progress.add_task(f"[cyan]分析: {Path(file_path).name}[/cyan]", total=7)
+                
+                # 1. 构建上下文
+                start_time = time.time()
                 context = self.context_builder.build_context(file_path)
-            console.print(f"[bold cyan][PURE-AI][/bold cyan] [green]✓[/green] 上下文构建完成")
+                elapsed = time.time() - start_time
+                agent_timings['context_build'] = elapsed
+                progress.advance(main_task)
+                
+                # 2. Agent 0: 上下文分析
+                start_time = time.time()
+                context_analysis, token_usage = await self._run_agent_0(file_path, context)
+                elapsed = time.time() - start_time
+                agent_timings['agent_0'] = elapsed
+                total_token_usage['prompt_tokens'] += token_usage['prompt_tokens']
+                total_token_usage['completion_tokens'] += token_usage['completion_tokens']
+                total_token_usage['total_tokens'] += token_usage['total_tokens']
+                progress.advance(main_task)
+                
+                # 3. Agent 1: 代码理解
+                start_time = time.time()
+                code_understanding, token_usage = await self._run_agent_1(file_path, context, context_analysis)
+                elapsed = time.time() - start_time
+                agent_timings['agent_1'] = elapsed
+                total_token_usage['prompt_tokens'] += token_usage['prompt_tokens']
+                total_token_usage['completion_tokens'] += token_usage['completion_tokens']
+                total_token_usage['total_tokens'] += token_usage['total_tokens']
+                progress.advance(main_task)
+                
+                # 4. Agent 2: 风险枚举
+                start_time = time.time()
+                risk_enumeration, token_usage = await self._run_agent_2(file_path, code_understanding)
+                elapsed = time.time() - start_time
+                agent_timings['agent_2'] = elapsed
+                total_token_usage['prompt_tokens'] += token_usage['prompt_tokens']
+                total_token_usage['completion_tokens'] += token_usage['completion_tokens']
+                total_token_usage['total_tokens'] += token_usage['total_tokens']
+                progress.advance(main_task)
+                
+                # 5. Agent 3: 漏洞验证
+                start_time = time.time()
+                vulnerability_verification, token_usage = await self._run_agent_3(file_path, risk_enumeration, context['file_content'])
+                elapsed = time.time() - start_time
+                agent_timings['agent_3'] = elapsed
+                total_token_usage['prompt_tokens'] += token_usage['prompt_tokens']
+                total_token_usage['completion_tokens'] += token_usage['completion_tokens']
+                total_token_usage['total_tokens'] += token_usage['total_tokens']
+                progress.advance(main_task)
+                
+                # 6. Agent 4: 攻击链分析
+                start_time = time.time()
+                attack_chain_analysis, token_usage = await self._run_agent_4(file_path, vulnerability_verification)
+                elapsed = time.time() - start_time
+                agent_timings['agent_4'] = elapsed
+                total_token_usage['prompt_tokens'] += token_usage['prompt_tokens']
+                total_token_usage['completion_tokens'] += token_usage['completion_tokens']
+                total_token_usage['total_tokens'] += token_usage['total_tokens']
+                progress.advance(main_task)
+                
+                # 7. Agent 5: 对抗验证
+                start_time = time.time()
+                adversarial_validation, token_usage = await self._run_agent_5(file_path, attack_chain_analysis, context['file_content'])
+                elapsed = time.time() - start_time
+                agent_timings['agent_5'] = elapsed
+                total_token_usage['prompt_tokens'] += token_usage['prompt_tokens']
+                total_token_usage['completion_tokens'] += token_usage['completion_tokens']
+                total_token_usage['total_tokens'] += token_usage['total_tokens']
+                progress.advance(main_task)
+                
+                # 8. Agent 6: 最终裁决
+                start_time = time.time()
+                final_decision, token_usage = await self._run_agent_6(file_path, adversarial_validation, vulnerability_verification)
+                elapsed = time.time() - start_time
+                agent_timings['agent_6'] = elapsed
+                total_token_usage['prompt_tokens'] += token_usage['prompt_tokens']
+                total_token_usage['completion_tokens'] += token_usage['completion_tokens']
+                total_token_usage['total_tokens'] += token_usage['total_tokens']
+                progress.advance(main_task)
             
-            # 2. Agent 0: 上下文分析
-            with console.status("[bold blue]Agent 0: 上下文分析...[/bold blue]", spinner="dots"):
-                context_analysis = await self._run_agent_0(file_path, context)
-            console.print(f"[bold cyan][PURE-AI][/bold cyan] [green]✓[/green] Agent 0 分析完成")
+            # Progress结束后输出最终结果
+            total_elapsed = time.time() - total_start_time
+            console.print(f"[bold cyan][PURE-AI][/bold cyan] [bold green]✓ {Path(file_path).name} 分析完成[/bold green] [dim]({total_elapsed:.2f}s)[/dim]")
             
-            # 3. Agent 1: 代码理解
-            with console.status("[bold blue]Agent 1: 代码理解...[/bold blue]", spinner="dots"):
-                code_understanding = await self._run_agent_1(file_path, context, context_analysis)
-            console.print(f"[bold cyan][PURE-AI][/bold cyan] [green]✓[/green] Agent 1 分析完成")
-            
-            # 4. Agent 2: 风险枚举
-            with console.status("[bold blue]Agent 2: 风险枚举...[/bold blue]", spinner="dots"):
-                risk_enumeration = await self._run_agent_2(file_path, code_understanding)
-            console.print(f"[bold cyan][PURE-AI][/bold cyan] [green]✓[/green] Agent 2 分析完成")
-            
-            # 5. Agent 3: 漏洞验证
-            with console.status("[bold blue]Agent 3: 漏洞验证...[/bold blue]", spinner="dots"):
-                vulnerability_verification = await self._run_agent_3(file_path, risk_enumeration, context['file_content'])
-            console.print(f"[bold cyan][PURE-AI][/bold cyan] [green]✓[/green] Agent 3 分析完成")
-            
-            # 6. Agent 4: 攻击链分析
-            with console.status("[bold blue]Agent 4: 攻击链分析...[/bold blue]", spinner="dots"):
-                attack_chain_analysis = await self._run_agent_4(file_path, vulnerability_verification)
-            console.print(f"[bold cyan][PURE-AI][/bold cyan] [green]✓[/green] Agent 4 分析完成")
-            
-            # 7. Agent 5: 对抗验证
-            with console.status("[bold blue]Agent 5: 对抗验证...[/bold blue]", spinner="dots"):
-                adversarial_validation = await self._run_agent_5(file_path, attack_chain_analysis, context['file_content'])
-            console.print(f"[bold cyan][PURE-AI][/bold cyan] [green]✓[/green] Agent 5 分析完成")
-            
-            # 8. Agent 6: 最终裁决
-            with console.status("[bold blue]Agent 6: 最终裁决...[/bold blue]", spinner="dots"):
-                final_decision = await self._run_agent_6(file_path, adversarial_validation, vulnerability_verification)
-            console.print(f"[bold cyan][PURE-AI][/bold cyan] [green]✓[/green] Agent 6 分析完成")
-            console.print(f"[bold cyan][PURE-AI][/bold cyan] [bold green]分析完成![/bold green]")
+            # 显示总体token统计
+            if total_token_usage['total_tokens'] > 0:
+                avg_tokens_per_agent = total_token_usage['total_tokens'] / 6 if 6 > 0 else 0
+                console.print(f"[dim]  📊 Token: {total_token_usage['total_tokens']:,} (提示词: {total_token_usage['prompt_tokens']:,}, 补全: {total_token_usage['completion_tokens']:,})[/dim]")
             
             return {
                 'file_path': file_path,
@@ -101,7 +172,7 @@ class MultiAgentPipeline:
                 'final_decision': final_decision
             }
         except Exception as e:
-            console.print(f"[bold cyan][PURE-AI][/bold cyan] [bold red]分析失败: {e}[/bold red]")
+            console.print(f"[bold cyan][PURE-AI][/bold cyan] [bold red]✗ {Path(file_path).name} 分析失败: {e}[/bold red]")
             import traceback
             traceback.print_exc()
             return {
@@ -109,7 +180,7 @@ class MultiAgentPipeline:
                 'error': str(e)
             }
     
-    async def _run_agent_0(self, file_path: str, context: Dict[str, Any]) -> Dict[str, Any]:
+    async def _run_agent_0(self, file_path: str, context: Dict[str, Any]) -> Tuple[Dict[str, Any], Dict[str, int]]:
         """运行Agent 0：上下文构建
         
         Args:
@@ -117,7 +188,7 @@ class MultiAgentPipeline:
             context: 上下文信息
             
         Returns:
-            上下文分析结果
+            (上下文分析结果, token使用信息)
         """
         prompt = self.prompt_templates.AGENT_0_CONTEXT_BUILDER.format(
             file_path=file_path,
@@ -127,10 +198,10 @@ class MultiAgentPipeline:
             function_calls=self.prompt_templates.format_function_calls(context['function_calls'])
         )
         
-        response = await self._generate_with_retry(prompt)
-        return self._parse_json_response(response)
+        response, token_usage = await self._generate_with_retry(prompt)
+        return self._parse_json_response(response), token_usage
     
-    async def _run_agent_1(self, file_path: str, context: Dict[str, Any], context_analysis: Dict[str, Any]) -> Dict[str, Any]:
+    async def _run_agent_1(self, file_path: str, context: Dict[str, Any], context_analysis: Dict[str, Any]) -> Tuple[Dict[str, Any], Dict[str, int]]:
         """运行Agent 1：代码理解
         
         Args:
@@ -139,7 +210,7 @@ class MultiAgentPipeline:
             context_analysis: 上下文分析结果
             
         Returns:
-            代码理解结果
+            (代码理解结果, token使用信息)
         """
         context_info = json.dumps(context_analysis, ensure_ascii=False)
         prompt = self.prompt_templates.AGENT_1_CODE_UNDERSTANDING.format(
@@ -148,10 +219,10 @@ class MultiAgentPipeline:
             context_info=context_info
         )
         
-        response = await self._generate_with_retry(prompt)
-        return self._parse_json_response(response)
+        response, token_usage = await self._generate_with_retry(prompt)
+        return self._parse_json_response(response), token_usage
     
-    async def _run_agent_2(self, file_path: str, code_understanding: Dict[str, Any]) -> Dict[str, Any]:
+    async def _run_agent_2(self, file_path: str, code_understanding: Dict[str, Any]) -> Tuple[Dict[str, Any], Dict[str, int]]:
         """运行Agent 2：风险枚举
         
         Args:
@@ -159,7 +230,7 @@ class MultiAgentPipeline:
             code_understanding: 代码理解结果
             
         Returns:
-            风险枚举结果
+            (风险枚举结果, token使用信息)
         """
         structured_data = json.dumps(code_understanding, ensure_ascii=False)
         prompt = self.prompt_templates.AGENT_2_RISK_ENUMERATION.format(
@@ -167,10 +238,10 @@ class MultiAgentPipeline:
             structured_data=structured_data
         )
         
-        response = await self._generate_with_retry(prompt)
-        return self._parse_json_response(response)
+        response, token_usage = await self._generate_with_retry(prompt)
+        return self._parse_json_response(response), token_usage
     
-    async def _run_agent_3(self, file_path: str, risk_enumeration: Dict[str, Any], file_content: str) -> Dict[str, Any]:
+    async def _run_agent_3(self, file_path: str, risk_enumeration: Dict[str, Any], file_content: str) -> Tuple[Dict[str, Any], Dict[str, int]]:
         """运行Agent 3：漏洞验证
         
         Args:
@@ -179,7 +250,7 @@ class MultiAgentPipeline:
             file_content: 文件内容
             
         Returns:
-            漏洞验证结果
+            (漏洞验证结果, token使用信息)
         """
         risk_list = json.dumps(risk_enumeration.get('risks', []), ensure_ascii=False)
         prompt = self.prompt_templates.AGENT_3_VULNERABILITY_VERIFICATION.format(
@@ -188,10 +259,10 @@ class MultiAgentPipeline:
             file_content=file_content
         )
         
-        response = await self._generate_with_retry(prompt)
-        return self._parse_json_response(response)
+        response, token_usage = await self._generate_with_retry(prompt)
+        return self._parse_json_response(response), token_usage
     
-    async def _run_agent_4(self, file_path: str, vulnerability_verification: Dict[str, Any]) -> Dict[str, Any]:
+    async def _run_agent_4(self, file_path: str, vulnerability_verification: Dict[str, Any]) -> Tuple[Dict[str, Any], Dict[str, int]]:
         """运行Agent 4：攻击链分析
         
         Args:
@@ -199,7 +270,7 @@ class MultiAgentPipeline:
             vulnerability_verification: 漏洞验证结果
             
         Returns:
-            攻击链分析结果
+            (攻击链分析结果, token使用信息)
         """
         verification_results = json.dumps(vulnerability_verification, ensure_ascii=False)
         prompt = self.prompt_templates.AGENT_4_ATTACK_CHAIN_ANALYSIS.format(
@@ -207,10 +278,10 @@ class MultiAgentPipeline:
             verification_results=verification_results
         )
         
-        response = await self._generate_with_retry(prompt)
-        return self._parse_json_response(response)
+        response, token_usage = await self._generate_with_retry(prompt)
+        return self._parse_json_response(response), token_usage
     
-    async def _run_agent_5(self, file_path: str, attack_chain_analysis: Dict[str, Any], file_content: str) -> Dict[str, Any]:
+    async def _run_agent_5(self, file_path: str, attack_chain_analysis: Dict[str, Any], file_content: str) -> Tuple[Dict[str, Any], Dict[str, int]]:
         """运行Agent 5：对抗验证
         
         Args:
@@ -219,7 +290,7 @@ class MultiAgentPipeline:
             file_content: 文件内容
             
         Returns:
-            对抗验证结果
+            (对抗验证结果, token使用信息)
         """
         attack_chain_json = json.dumps(attack_chain_analysis, ensure_ascii=False)
         prompt = self.prompt_templates.AGENT_5_ADVERSARIAL_VALIDATION.format(
@@ -228,10 +299,10 @@ class MultiAgentPipeline:
             file_content=file_content
         )
         
-        response = await self._generate_with_retry(prompt)
-        return self._parse_json_response(response)
+        response, token_usage = await self._generate_with_retry(prompt)
+        return self._parse_json_response(response), token_usage
     
-    async def _run_agent_6(self, file_path: str, adversarial_validation: Dict[str, Any], vulnerability_verification: Dict[str, Any]) -> Dict[str, Any]:
+    async def _run_agent_6(self, file_path: str, adversarial_validation: Dict[str, Any], vulnerability_verification: Dict[str, Any]) -> Tuple[Dict[str, Any], Dict[str, int]]:
         """运行Agent 6：最终裁决
         
         Args:
@@ -240,7 +311,7 @@ class MultiAgentPipeline:
             vulnerability_verification: 漏洞验证结果
             
         Returns:
-            最终裁决结果
+            (最终裁决结果, token使用信息)
         """
         adversarial_results = json.dumps(adversarial_validation, ensure_ascii=False)
         verification_results = json.dumps(vulnerability_verification, ensure_ascii=False)
@@ -250,17 +321,17 @@ class MultiAgentPipeline:
             verification_results=verification_results
         )
         
-        response = await self._generate_with_retry(prompt)
-        return self._parse_json_response(response)
+        response, token_usage = await self._generate_with_retry(prompt)
+        return self._parse_json_response(response), token_usage
     
-    async def _generate_with_retry(self, prompt: str) -> str:
+    async def _generate_with_retry(self, prompt: str) -> Tuple[str, Dict[str, int]]:
         """带重试的生成
         
         Args:
             prompt: 提示词
             
         Returns:
-            生成的响应
+            (生成的响应, token使用信息)
         """
         for i in range(self.max_retries):
             try:
@@ -275,11 +346,22 @@ class MultiAgentPipeline:
                 # 调用客户端生成
                 response = await self.client.generate(request)
                 
-                # 返回响应内容
+                # 提取token使用信息
+                token_usage = {
+                    'prompt_tokens': 0,
+                    'completion_tokens': 0,
+                    'total_tokens': 0
+                }
+                if hasattr(response, 'usage') and response.usage:
+                    token_usage['prompt_tokens'] = response.usage.get('prompt_tokens', 0)
+                    token_usage['completion_tokens'] = response.usage.get('completion_tokens', 0)
+                    token_usage['total_tokens'] = response.usage.get('total_tokens', 0)
+                
+                # 返回响应内容和token使用信息
                 if hasattr(response, 'content'):
-                    return response.content
+                    return response.content, token_usage
                 else:
-                    return str(response)
+                    return str(response), token_usage
                     
             except Exception as e:
                 console.print(f"[bold cyan][PURE-AI][/bold cyan] [yellow]生成失败 (尝试 {i+1}/{self.max_retries}): {e}[/yellow]")
