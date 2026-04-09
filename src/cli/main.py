@@ -267,7 +267,7 @@ def scan(
 
             # 生成报告
             if output:
-                _generate_report(result, output, output_format)
+                _generate_report(result, output, output_format, config)
 
             # 根据结果设置退出码
             if result.findings:
@@ -365,7 +365,7 @@ def scan(
 
             # 生成报告
             if output:
-                _generate_report(result, output, output_format)
+                _generate_report(result, output, output_format, config)
 
             # 根据结果设置退出码
             if result.findings:
@@ -913,27 +913,14 @@ def _display_result(result) -> None:
                 console.print(f"   状态: {chain['status']}")
 
 
-def _generate_report(result, output: str, format: str) -> None:
+def _generate_report(result, output: str, format: str, config=None) -> None:
     """生成报告"""
     # 导入报告生成器
-    from src.reporting.generator import JSONReportGenerator, HTMLReportGenerator, MarkdownReportGenerator, SARIFReportGenerator
-    
-    # 根据格式选择报告生成器
-    generators = {
-        "json": JSONReportGenerator,
-        "html": HTMLReportGenerator,
-        "markdown": MarkdownReportGenerator,
-        "sarif": SARIFReportGenerator
-    }
-    
-    generator_class = generators.get(format)
-    if not generator_class:
-        console.print(f"[bold red]不支持的报告格式: {format}[/bold red]")
-        return
+    from src.reporting.generator import ReportGenerator
     
     try:
-        generator = generator_class()
-        report_path = generator.generate([result], output)
+        generator = ReportGenerator(config)
+        report_path = generator.generate([result], output, format)
         console.print(f"[bold green]报告已生成: {report_path}[/bold green]")
     except Exception as e:
         console.print(f"[bold red]报告生成失败: {e}[/bold red]")

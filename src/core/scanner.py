@@ -139,6 +139,14 @@ class SecurityScanner:
         # 开始时间
         start_time = time.time()
         
+        # 验证目标路径解析
+        resolved_target = Path(target).resolve()
+        if self.config.debug:
+            console.print(f"[dim][DEBUG] 原始目标路径: {target}[/dim]")
+            console.print(f"[dim][DEBUG] 解析后目标路径: {resolved_target}[/dim]")
+            console.print(f"[dim][DEBUG] 目标是否存在: {resolved_target.exists()}[/dim]")
+            console.print(f"[dim][DEBUG] 目标是否为目录: {resolved_target.is_dir()}[/dim]")
+        
         console.print(f"[bold cyan]🔍 开始扫描目标:[/bold cyan] [bold green]{target}[/bold green]")
         console.print(f"[bold cyan]⏱️ 开始时间:[/bold cyan] [bold]{time.strftime('%Y-%m-%d %H:%M:%S')}[/bold]")
         

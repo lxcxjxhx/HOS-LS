@@ -13,7 +13,7 @@ services:
       - ./output:/output
       - ./cache:/cache
     environment:
-      - HOS_LS_AI__API_KEY=${ANTHROPIC_API_KEY:-}
+      - HOS_LS_AI__API_KEY=${DEEPSEEK_API_KEY:-}
       - HOS_LS_DEBUG=false
     command: scan /app/src -f html -o /output/report.html
 

@@ -43,16 +43,17 @@ class MultiAgentPipeline:
     
     async def run_pipeline(self, file_path: str) -> Dict[str, Any]:
         """运行完整的多Agent流水线
-        
+
         Args:
             file_path: 文件路径
-            
+
         Returns:
             分析结果
         """
         from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TimeElapsedColumn
         
         try:
+            print(f"[DEBUG] 开始运行多Agent流水线: {file_path}")
             total_start_time = time.time()
             agent_timings = {}
             total_token_usage = {
@@ -182,14 +183,15 @@ class MultiAgentPipeline:
     
     async def _run_agent_0(self, file_path: str, context: Dict[str, Any]) -> Tuple[Dict[str, Any], Dict[str, int]]:
         """运行Agent 0：上下文构建
-        
+
         Args:
             file_path: 文件路径
             context: 上下文信息
-            
+
         Returns:
             (上下文分析结果, token使用信息)
         """
+        print(f"[DEBUG] 运行Agent 0 (上下文构建) on: {file_path}")
         prompt = self.prompt_templates.AGENT_0_CONTEXT_BUILDER.format(
             file_path=file_path,
             file_content=context['file_content'],
@@ -199,19 +201,22 @@ class MultiAgentPipeline:
         )
         
         response, token_usage = await self._generate_with_retry(prompt)
-        return self._parse_json_response(response), token_usage
+        result = self._parse_json_response(response)
+        print(f"[DEBUG] Agent 0 完成，token使用: {token_usage['total_tokens']}")
+        return result, token_usage
     
     async def _run_agent_1(self, file_path: str, context: Dict[str, Any], context_analysis: Dict[str, Any]) -> Tuple[Dict[str, Any], Dict[str, int]]:
         """运行Agent 1：代码理解
-        
+
         Args:
             file_path: 文件路径
             context: 上下文信息
             context_analysis: 上下文分析结果
-            
+
         Returns:
             (代码理解结果, token使用信息)
         """
+        print(f"[DEBUG] 运行Agent 1 (代码理解) on: {file_path}")
         context_info = json.dumps(context_analysis, ensure_ascii=False)
         prompt = self.prompt_templates.AGENT_1_CODE_UNDERSTANDING.format(
             file_path=file_path,
@@ -220,18 +225,21 @@ class MultiAgentPipeline:
         )
         
         response, token_usage = await self._generate_with_retry(prompt)
-        return self._parse_json_response(response), token_usage
+        result = self._parse_json_response(response)
+        print(f"[DEBUG] Agent 1 完成，token使用: {token_usage['total_tokens']}")
+        return result, token_usage
     
     async def _run_agent_2(self, file_path: str, code_understanding: Dict[str, Any]) -> Tuple[Dict[str, Any], Dict[str, int]]:
         """运行Agent 2：风险枚举
-        
+
         Args:
             file_path: 文件路径
             code_understanding: 代码理解结果
-            
+
         Returns:
             (风险枚举结果, token使用信息)
         """
+        print(f"[DEBUG] 运行Agent 2 (风险枚举) on: {file_path}")
         structured_data = json.dumps(code_understanding, ensure_ascii=False)
         prompt = self.prompt_templates.AGENT_2_RISK_ENUMERATION.format(
             file_path=file_path,
@@ -239,19 +247,22 @@ class MultiAgentPipeline:
         )
         
         response, token_usage = await self._generate_with_retry(prompt)
-        return self._parse_json_response(response), token_usage
+        result = self._parse_json_response(response)
+        print(f"[DEBUG] Agent 2 完成，token使用: {token_usage['total_tokens']}")
+        return result, token_usage
     
     async def _run_agent_3(self, file_path: str, risk_enumeration: Dict[str, Any], file_content: str) -> Tuple[Dict[str, Any], Dict[str, int]]:
         """运行Agent 3：漏洞验证
-        
+
         Args:
             file_path: 文件路径
             risk_enumeration: 风险枚举结果
             file_content: 文件内容
-            
+
         Returns:
             (漏洞验证结果, token使用信息)
         """
+        print(f"[DEBUG] 运行Agent 3 (漏洞验证) on: {file_path}")
         risk_list = json.dumps(risk_enumeration.get('risks', []), ensure_ascii=False)
         prompt = self.prompt_templates.AGENT_3_VULNERABILITY_VERIFICATION.format(
             file_path=file_path,
@@ -260,18 +271,21 @@ class MultiAgentPipeline:
         )
         
         response, token_usage = await self._generate_with_retry(prompt)
-        return self._parse_json_response(response), token_usage
+        result = self._parse_json_response(response)
+        print(f"[DEBUG] Agent 3 完成，token使用: {token_usage['total_tokens']}")
+        return result, token_usage
     
     async def _run_agent_4(self, file_path: str, vulnerability_verification: Dict[str, Any]) -> Tuple[Dict[str, Any], Dict[str, int]]:
         """运行Agent 4：攻击链分析
-        
+
         Args:
             file_path: 文件路径
             vulnerability_verification: 漏洞验证结果
-            
+
         Returns:
             (攻击链分析结果, token使用信息)
         """
+        print(f"[DEBUG] 运行Agent 4 (攻击链分析) on: {file_path}")
         verification_results = json.dumps(vulnerability_verification, ensure_ascii=False)
         prompt = self.prompt_templates.AGENT_4_ATTACK_CHAIN_ANALYSIS.format(
             file_path=file_path,
@@ -279,19 +293,22 @@ class MultiAgentPipeline:
         )
         
         response, token_usage = await self._generate_with_retry(prompt)
-        return self._parse_json_response(response), token_usage
+        result = self._parse_json_response(response)
+        print(f"[DEBUG] Agent 4 完成，token使用: {token_usage['total_tokens']}")
+        return result, token_usage
     
     async def _run_agent_5(self, file_path: str, attack_chain_analysis: Dict[str, Any], file_content: str) -> Tuple[Dict[str, Any], Dict[str, int]]:
         """运行Agent 5：对抗验证
-        
+
         Args:
             file_path: 文件路径
             attack_chain_analysis: 攻击链分析结果
             file_content: 文件内容
-            
+
         Returns:
             (对抗验证结果, token使用信息)
         """
+        print(f"[DEBUG] 运行Agent 5 (对抗验证) on: {file_path}")
         attack_chain_json = json.dumps(attack_chain_analysis, ensure_ascii=False)
         prompt = self.prompt_templates.AGENT_5_ADVERSARIAL_VALIDATION.format(
             file_path=file_path,
@@ -300,19 +317,22 @@ class MultiAgentPipeline:
         )
         
         response, token_usage = await self._generate_with_retry(prompt)
-        return self._parse_json_response(response), token_usage
+        result = self._parse_json_response(response)
+        print(f"[DEBUG] Agent 5 完成，token使用: {token_usage['total_tokens']}")
+        return result, token_usage
     
     async def _run_agent_6(self, file_path: str, adversarial_validation: Dict[str, Any], vulnerability_verification: Dict[str, Any]) -> Tuple[Dict[str, Any], Dict[str, int]]:
         """运行Agent 6：最终裁决
-        
+
         Args:
             file_path: 文件路径
             adversarial_validation: 对抗验证结果
             vulnerability_verification: 漏洞验证结果
-            
+
         Returns:
             (最终裁决结果, token使用信息)
         """
+        print(f"[DEBUG] 运行Agent 6 (最终裁决) on: {file_path}")
         adversarial_results = json.dumps(adversarial_validation, ensure_ascii=False)
         verification_results = json.dumps(vulnerability_verification, ensure_ascii=False)
         prompt = self.prompt_templates.AGENT_6_FINAL_DECISION.format(
@@ -322,7 +342,9 @@ class MultiAgentPipeline:
         )
         
         response, token_usage = await self._generate_with_retry(prompt)
-        return self._parse_json_response(response), token_usage
+        result = self._parse_json_response(response)
+        print(f"[DEBUG] Agent 6 完成，token使用: {token_usage['total_tokens']}")
+        return result, token_usage
     
     async def _generate_with_retry(self, prompt: str) -> Tuple[str, Dict[str, int]]:
         """带重试的生成

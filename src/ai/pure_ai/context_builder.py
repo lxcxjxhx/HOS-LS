@@ -1,4 +1,5 @@
 import ast
+import os
 from pathlib import Path
 from typing import Dict, List, Optional, Any
 
@@ -25,13 +26,15 @@ class ContextBuilder:
     
     def build_context(self, file_path: str) -> Dict[str, Any]:
         """构建文件的分析上下文
-        
+
         Args:
             file_path: 文件路径
-            
+
         Returns:
             包含上下文信息的字典
         """
+        print(f"[DEBUG] 开始构建上下文: {file_path}")
+        
         context = {
             'current_file': file_path,
             'file_content': self._read_file(file_path),
@@ -43,41 +46,52 @@ class ContextBuilder:
         
         # 提取导入信息
         context['imports'] = self._extract_imports(file_path)
+        print(f"[DEBUG] 提取到 {len(context['imports'])} 个导入语句")
         
         # 提取函数调用
         context['function_calls'] = self._extract_function_calls(file_path)
+        print(f"[DEBUG] 提取到 {len(context['function_calls'])} 个函数调用")
         
         # 加载相关文件
         context['related_files'] = self._load_related_files(file_path)
+        print(f"[DEBUG] 加载了 {len(context['related_files'])} 个相关文件")
         
         # 提取文件结构
         context['file_structure'] = self._extract_file_structure(file_path)
+        print(f"[DEBUG] 提取文件结构完成")
         
+        print(f"[DEBUG] 上下文构建完成，文件内容长度: {len(context['file_content'])} 字符")
         return context
     
     def _read_file(self, file_path: str, max_size: int = 1048576) -> str:
         """读取文件内容
-        
+
         Args:
             file_path: 文件路径
             max_size: 最大读取大小（字节），默认1MB
-            
+
         Returns:
             文件内容
         """
         try:
             # 检查文件大小
             file_size = os.path.getsize(file_path)
+            print(f"[DEBUG] 读取文件: {file_path}, 大小: {file_size} 字节")
+            
             if file_size > max_size:
                 # 文件过大，只读取前max_size字节
+                print(f"[DEBUG] 文件过大，截断为 {max_size} 字节")
                 with open(file_path, 'r', encoding='utf-8', errors='replace') as f:
                     content = f.read(max_size)
                 return content + "\n... [文件过大，已截断]"
             else:
                 # 文件大小正常，读取全部内容
                 with open(file_path, 'r', encoding='utf-8', errors='replace') as f:
-                    return f.read()
-        except Exception:
+                    content = f.read()
+                print(f"[DEBUG] 成功读取文件，内容长度: {len(content)} 字符")
+                return content
+        except Exception as e:
+            print(f"[DEBUG] 读取文件失败: {file_path}, 错误: {e}")
             return ''
     
     def _extract_imports(self, file_path: str) -> List[str]:

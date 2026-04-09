@@ -150,54 +150,64 @@ class PureAIAnalyzer:
         Returns:
             漏洞发现列表
         """
+        print(f"[DEBUG] 开始分析: {file_path}")
         # 检查缓存
         cached_result = self.cache_manager.get(file_path)
         if cached_result:
             print(f"[PURE-AI] 使用缓存结果: {file_path}")
-            return self._convert_to_findings(cached_result)
+            findings = self._convert_to_findings(cached_result)
+            print(f"[DEBUG] 从缓存获取 {len(findings)} 个问题")
+            return findings
 
         # 执行多Agent分析
         result = await self.pipeline.run_pipeline(file_path)
+        print(f"[DEBUG] 多Agent分析完成，结果类型: {type(result)}")
 
         # 缓存结果
         self.cache_manager.set(file_path, result)
 
-        return self._convert_to_findings(result)
+        findings = self._convert_to_findings(result)
+        print(f"[DEBUG] 转换为 {len(findings)} 个漏洞发现")
+        return findings
 
     def _convert_to_findings(self, result: Dict[str, Any]) -> List[VulnerabilityFinding]:
         """将分析结果转换为漏洞发现列表
 
         Args:
             result: 分析结果
-            
+
         Returns:
             漏洞发现列表
         """
         findings = []
         try:
+            print(f"[DEBUG] 开始转换结果，结果包含: {list(result.keys())}")
             final_decision = result.get('final_decision', {})
+            print(f"[DEBUG] final_decision 类型: {type(final_decision)}")
             final_findings = final_decision.get('final_findings', [])
-            
+            print(f"[DEBUG] 找到 {len(final_findings)} 个最终发现")
+
             for finding in final_findings:
+                print(f"[DEBUG] 处理发现: {finding.get('vulnerability')}, 状态: {finding.get('status')}")
                 if finding.get('status') == 'VALID':
                     # 提取详细信息
                     vulnerability_desc = finding.get('vulnerability', 'unknown')
                     location = finding.get('location', 'unknown')
                     recommendation = finding.get('recommendation', '')
                     evidence = finding.get('evidence', '')
-                    
+
                     # 生成更具体的规则名称
                     rule_name = vulnerability_desc
                     if location:
                         rule_name = f"{vulnerability_desc} (位于 {location})"
-                    
+
                     # 生成详细的描述
                     description = vulnerability_desc
                     if evidence:
                         description = f"{vulnerability_desc}。{evidence}"
                     if recommendation:
                         description = f"{description} 建议：{recommendation}"
-                    
+
                     vulnerability = VulnerabilityFinding(
                         rule_id=finding.get('vulnerability', 'unknown'),
                         rule_name=rule_name,
@@ -206,14 +216,16 @@ class PureAIAnalyzer:
                         location={'file': location},
                         description=description,
                         fix_suggestion=recommendation,
-                        evidence=json.dumps(finding, ensure_ascii=False)
+                        explanation=json.dumps(finding, ensure_ascii=False)
                     )
                     findings.append(vulnerability)
+                    print(f"[DEBUG] 添加漏洞发现: {rule_name}")
         except Exception as e:
             print(f"[PURE-AI] 转换结果失败: {e}")
             import traceback
             traceback.print_exc()
-        
+
+        print(f"[DEBUG] 转换完成，生成 {len(findings)} 个漏洞发现")
         return findings
 
     def _detect_language(self, file_path: str) -> str:
@@ -255,13 +267,16 @@ class PureAIAnalyzer:
             漏洞发现列表
         """
         try:
+            print(f"[DEBUG] 分析文件: {file_info.path}")
             # 检查pipeline是否初始化
             if not self.pipeline:
                 console.print(f"[dim][DEBUG] 纯AI分析器未初始化，跳过分析: {file_info.path}[/dim]")
                 return []
 
             # 分析文件
-            return await self.analyze(file_info.path, "")
+            findings = await self.analyze(file_info.path, "")
+            print(f"[DEBUG] 分析完成，发现 {len(findings)} 个问题")
+            return findings
         except Exception as e:
             console.print(f"[dim][DEBUG] 纯AI分析文件失败: {e}[/dim]")
             import traceback
