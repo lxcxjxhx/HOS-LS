@@ -63,7 +63,7 @@ class MultiAgentPipeline:
             }
             
             # 使用统一的Progress管理器，避免多个status/print混合导致的混乱
-            # 修复进度条闪烁问题：使用稳定的描述，只在完成时更新
+            # 修复进度条闪烁和重复输出问题
             with Progress(
                 SpinnerColumn(),
                 TextColumn("[progress.description]{task.description}"),
@@ -71,7 +71,8 @@ class MultiAgentPipeline:
                 TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
                 TimeElapsedColumn(),
                 console=console,
-                transient=True  # 完成后自动清除进度条
+                transient=True,  # 完成后自动清除进度条
+                refresh_per_second=1  # 减少刷新频率，避免重复输出
             ) as progress:
                 # 主任务：7个步骤（上下文构建 + 6个Agent）
                 main_task = progress.add_task(f"[cyan]分析: {Path(file_path).name}[/cyan]", total=7)

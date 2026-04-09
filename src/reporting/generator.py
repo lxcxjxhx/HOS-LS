@@ -209,11 +209,23 @@ class HTMLReportGenerator(BaseReportGenerator):
 
         for result in results:
             for finding in result.findings:
+                # 确保使用正确的字段
+                location = getattr(finding, 'location', 'unknown')
+                if isinstance(location, dict):
+                    location = location.get('file', 'unknown')
+                
+                description = getattr(finding, 'description', getattr(finding, 'message', '无描述'))
+                
+                # 处理修复建议
+                fix_suggestion = getattr(finding, 'fix_suggestion', '')
+                fix_suggestion_html = f"<p><strong>修复建议:</strong> {fix_suggestion}</p>" if fix_suggestion else ""
+                
                 html += f"""
     <div class="finding severity-{finding.severity.value}">
         <h3>{finding.rule_name} ({finding.rule_id})</h3>
-        <p><strong>位置:</strong> {finding.location}</p>
-        <p><strong>描述:</strong> {finding.message}</p>
+        <p><strong>位置:</strong> {location}</p>
+        <p><strong>描述:</strong> {description}</p>
+        {fix_suggestion_html}
     </div>
                 """
 

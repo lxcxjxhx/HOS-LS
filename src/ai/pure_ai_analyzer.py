@@ -40,8 +40,8 @@ class PureAIAnalyzer:
         self.client = None
         self.pipeline = None
         self.cache_manager = CacheManager()
-        # 异步初始化
-        asyncio.run(self._initialize())
+        # 不再在__init__中调用asyncio.run()，而是由调用方手动调用_initialize()
+        # 这样可以避免在异步函数中调用asyncio.run()的问题
     
     async def _initialize(self):
         """异步初始化"""
@@ -163,6 +163,10 @@ class PureAIAnalyzer:
         result = await self.pipeline.run_pipeline(file_path)
         print(f"[DEBUG] 多Agent分析完成，结果类型: {type(result)}")
 
+        # 验证结果完整性
+        if not self._validate_results(result):
+            print(f"[DEBUG] 结果验证失败，可能存在遗漏")
+
         # 缓存结果
         self.cache_manager.set(file_path, result)
 
@@ -187,39 +191,52 @@ class PureAIAnalyzer:
             final_findings = final_decision.get('final_findings', [])
             print(f"[DEBUG] 找到 {len(final_findings)} 个最终发现")
 
+            # 计算总漏洞数
+            total_vulnerabilities = len(final_findings)
+            
             for finding in final_findings:
                 print(f"[DEBUG] 处理发现: {finding.get('vulnerability')}, 状态: {finding.get('status')}")
-                if finding.get('status') == 'VALID':
-                    # 提取详细信息
-                    vulnerability_desc = finding.get('vulnerability', 'unknown')
-                    location = finding.get('location', 'unknown')
-                    recommendation = finding.get('recommendation', '')
-                    evidence = finding.get('evidence', '')
+                # 处理所有状态的发现，包括INVALID
+                status = finding.get('status', 'UNKNOWN')
+                
+                # 提取详细信息
+                vulnerability_desc = finding.get('vulnerability', 'unknown')
+                location = finding.get('location', 'unknown')
+                recommendation = finding.get('recommendation', '')
+                evidence = finding.get('evidence', '')
 
-                    # 生成更具体的规则名称
-                    rule_name = vulnerability_desc
-                    if location:
-                        rule_name = f"{vulnerability_desc} (位于 {location})"
+                # 生成更具体的规则名称
+                rule_name = vulnerability_desc
+                if status == 'INVALID' and total_vulnerabilities < 10:
+                    # 当漏洞数小于10时，为INVALID状态添加特殊标识
+                    rule_name = f"[需人工复核] {vulnerability_desc}"
+                elif location:
+                    rule_name = f"{vulnerability_desc} (位于 {location})"
 
-                    # 生成详细的描述
-                    description = vulnerability_desc
-                    if evidence:
-                        description = f"{vulnerability_desc}。{evidence}"
-                    if recommendation:
-                        description = f"{description} 建议：{recommendation}"
+                # 生成详细的描述
+                description = vulnerability_desc
+                if evidence:
+                    description = f"{vulnerability_desc}。{evidence}"
+                if recommendation:
+                    description = f"{description} 建议：{recommendation}"
+                
+                # 根据状态设置严重程度
+                severity = finding.get('severity', 'medium')
+                if status == 'INVALID':
+                    severity = 'info'  # INVALID状态设为info级别
 
-                    vulnerability = VulnerabilityFinding(
-                        rule_id=finding.get('vulnerability', 'unknown'),
-                        rule_name=rule_name,
-                        severity=finding.get('severity', 'medium'),
-                        confidence=float(finding.get('confidence', 50)) / 100.0,
-                        location={'file': location},
-                        description=description,
-                        fix_suggestion=recommendation,
-                        explanation=json.dumps(finding, ensure_ascii=False)
-                    )
-                    findings.append(vulnerability)
-                    print(f"[DEBUG] 添加漏洞发现: {rule_name}")
+                vulnerability = VulnerabilityFinding(
+                    rule_id=finding.get('vulnerability', 'unknown'),
+                    rule_name=rule_name,
+                    severity=severity,
+                    confidence=float(finding.get('confidence', 50)) / 100.0,
+                    location={'file': location},
+                    description=description,
+                    fix_suggestion=recommendation,
+                    explanation=json.dumps(finding, ensure_ascii=False)
+                )
+                findings.append(vulnerability)
+                print(f"[DEBUG] 添加漏洞发现: {rule_name}")
         except Exception as e:
             print(f"[PURE-AI] 转换结果失败: {e}")
             import traceback
@@ -256,6 +273,39 @@ class PureAIAnalyzer:
             ".rs": "rust",
         }
         return language_map.get(ext, "unknown")
+
+    def _validate_results(self, result: Dict[str, Any]) -> bool:
+        """验证分析结果的完整性
+
+        Args:
+            result: 分析结果
+
+        Returns:
+            bool: 结果是否完整
+        """
+        # 检查结果是否包含所有必要的字段
+        required_fields = ['file_path', 'context_analysis', 'code_understanding', 
+                          'risk_enumeration', 'vulnerability_verification', 
+                          'attack_chain_analysis', 'adversarial_validation', 'final_decision']
+        
+        for field in required_fields:
+            if field not in result:
+                print(f"[DEBUG] 结果验证失败: 缺少字段 {field}")
+                return False
+        
+        # 检查final_decision是否包含final_findings
+        final_decision = result.get('final_decision', {})
+        if 'final_findings' not in final_decision:
+            print(f"[DEBUG] 结果验证失败: final_decision缺少final_findings字段")
+            return False
+        
+        # 检查final_findings是否为空
+        final_findings = final_decision.get('final_findings', [])
+        if len(final_findings) == 0:
+            print(f"[DEBUG] 结果验证警告: final_findings为空，可能存在遗漏")
+            # 不返回False，因为可能确实没有漏洞
+        
+        return True
 
     async def analyze_file(self, file_info) -> List[VulnerabilityFinding]:
         """分析文件信息对象
