@@ -214,8 +214,15 @@ class AIFilePrioritizer:
         Returns:
             优先级评估结果
         """
+        # 处理优先级分数，避免类型转换错误
+        priority_score_value = data.get('priority_score', 0.5)
+        try:
+            priority_score = float(priority_score_value)
+        except (ValueError, TypeError):
+            priority_score = 0.5
+        
         return PriorityEvaluation(
-            priority_score=float(data.get('priority_score', 0.5)),
+            priority_score=priority_score,
             priority_level=str(data.get('priority_level', 'medium')),
             analysis_summary=str(data.get('analysis_summary', '')),
             key_risk_factors=list(data.get('key_risk_factors', [])),

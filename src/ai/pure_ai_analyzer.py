@@ -40,6 +40,7 @@ class PureAIAnalyzer:
         self.client = None
         self.pipeline = None
         self.cache_manager = CacheManager()
+        self.initialized = False  # 初始化状态标志
         # 不再在__init__中调用asyncio.run()，而是由调用方手动调用_initialize()
         # 这样可以避免在异步函数中调用asyncio.run()的问题
     
@@ -49,7 +50,7 @@ class PureAIAnalyzer:
             if self.config.debug:
                 console.print(f"[dim][DEBUG] 开始初始化纯AI分析器，使用提供商: {self.ai_provider}[/dim]")
                 console.print(f"[dim][DEBUG] 使用模型: {self.ai_model}[/dim]")
-            
+
             # 检查API密钥
             api_key = getattr(self.config, "pure_ai_api_key", None)
             if not api_key:
@@ -58,30 +59,30 @@ class PureAIAnalyzer:
                 api_key = os.getenv("HOS_LS_AI_API_KEY")
             if not api_key:
                 api_key = os.getenv("DEEPSEEK_API_KEY")
-            
+
             if not api_key:
-                if self.config.debug:
-                    console.print(f"[dim][DEBUG] 警告: API 密钥未设置[/dim]")
+                console.print(f"[yellow]⚠ 警告: API 密钥未设置，纯AI分析器可能无法正常工作[/yellow]")
+                console.print(f"[dim]请设置环境变量 HOS_LS_AI_API_KEY 或 DEEPSEEK_API_KEY[/dim]")
             else:
                 if self.config.debug:
                     console.print(f"[dim][DEBUG] API 密钥已设置 (长度: {len(api_key)})[/dim]")
-            
+
             # 为纯AI模式创建临时配置
             from src.ai.client import AIModelManager
             from src.core.config import get_config
-            
+
             # 创建临时配置，使用纯AI的提供商和模型
             temp_config = get_config()
             temp_config.ai.provider = self.ai_provider
             temp_config.ai.model = self.ai_model
             temp_config.ai.api_key = api_key
-            
+
             # 初始化模型管理器
             self.model_manager = AIModelManager()
             await self.model_manager.initialize(temp_config)
             if self.config.debug:
-                console.print(f"[dim][DEBUG] 模型管理器初始化成功: {self.model_manager}[/dim]")
-            
+                console.print(f"[dim][DEBUG] 模型管理器初始化成功[/dim]")
+
             # 映射提供商名称到AIProvider枚举
             from src.ai.client import AIProvider
             provider_map = {
@@ -93,12 +94,12 @@ class PureAIAnalyzer:
             provider = provider_map.get(self.ai_provider, AIProvider.DEEPSEEK)
             if self.config.debug:
                 console.print(f"[dim][DEBUG] 使用提供商: {provider}[/dim]")
-            
+
             # 获取客户端
             self.client = self.model_manager.get_client(provider)
             if self.config.debug:
                 console.print(f"[dim][DEBUG] 获取客户端: {self.client}[/dim]")
-            
+
             if not self.client:
                 # 尝试获取默认客户端
                 if self.config.debug:
@@ -106,7 +107,7 @@ class PureAIAnalyzer:
                 self.client = self.model_manager.get_default_client()
                 if self.config.debug:
                     console.print(f"[dim][DEBUG] 默认客户端: {self.client}[/dim]")
-            
+
             if self.client:
                 # 验证API访问
                 if self.config.debug:
@@ -114,31 +115,29 @@ class PureAIAnalyzer:
                 try:
                     is_available, error_msg = await self.client.validate_api_access()
                     if is_available:
-                        if self.config.debug:
-                            console.print(f"[dim][DEBUG] API访问验证成功[/dim]")
+                        console.print(f"[green]✓ API访问验证成功[/green]")
                     else:
-                        if self.config.debug:
-                            console.print(f"[dim][DEBUG] API访问验证失败: {error_msg}[/dim]")
+                        console.print(f"[red]✗ API访问验证失败: {error_msg}[/red]")
+                        console.print(f"[yellow]⚠ 纯AI分析器将以降级模式运行[/yellow]")
                 except Exception as e:
-                    if self.config.debug:
-                        console.print(f"[dim][DEBUG] API访问验证异常: {e}[/dim]")
-                
+                    console.print(f"[yellow]⚠ API访问验证异常: {e}[/yellow]")
+
                 # 创建pipeline配置，包含模型信息
                 pipeline_config = {
                     'max_retries': 3,
                     'model': self.ai_model
                 }
                 self.pipeline = MultiAgentPipeline(self.client, pipeline_config)
-                if self.config.debug:
-                    console.print(f"[dim][DEBUG] 纯AI分析器初始化成功，使用客户端: {self.ai_provider}, 模型: {self.ai_model}[/dim]")
+                self.initialized = True  # 标记初始化成功
+                console.print(f"[green]✓ 纯AI分析器初始化成功[/green] (提供商: {self.ai_provider}, 模型: {self.ai_model})")
             else:
-                if self.config.debug:
-                    console.print(f"[dim][DEBUG] 纯AI分析器初始化失败：无法获取AI客户端[/dim]")
+                console.print(f"[red]✗ 纯AI分析器初始化失败：无法获取AI客户端[/red]")
+                console.print(f"[dim]请检查API密钥配置和网络连接[/dim]")
         except Exception as e:
-            if self.config.debug:
-                console.print(f"[dim][DEBUG] 纯AI分析器初始化失败: {e}[/dim]")
-                import traceback
-                traceback.print_exc()
+            console.print(f"[red]✗ 纯AI分析器初始化失败: {e}[/red]")
+            import traceback
+            traceback.print_exc()
+            self.initialized = False
 
     async def analyze(self, file_path: str, file_content: str) -> List[VulnerabilityFinding]:
         """分析文件
@@ -195,48 +194,59 @@ class PureAIAnalyzer:
             total_vulnerabilities = len(final_findings)
             
             for finding in final_findings:
-                print(f"[DEBUG] 处理发现: {finding.get('vulnerability')}, 状态: {finding.get('status')}")
-                # 处理所有状态的发现，包括INVALID
-                status = finding.get('status', 'UNKNOWN')
-                
-                # 提取详细信息
-                vulnerability_desc = finding.get('vulnerability', 'unknown')
-                location = finding.get('location', 'unknown')
-                recommendation = finding.get('recommendation', '')
-                evidence = finding.get('evidence', '')
+                try:
+                    print(f"[DEBUG] 处理发现: {finding.get('vulnerability')}, 状态: {finding.get('status')}")
+                    # 处理所有状态的发现，包括INVALID
+                    status = finding.get('status', 'UNKNOWN')
+                    
+                    # 提取详细信息
+                    vulnerability_desc = finding.get('vulnerability', 'unknown')
+                    location = finding.get('location', 'unknown')
+                    recommendation = finding.get('recommendation', '')
+                    evidence = finding.get('evidence', '')
 
-                # 生成更具体的规则名称
-                rule_name = vulnerability_desc
-                if status == 'INVALID' and total_vulnerabilities < 10:
-                    # 当漏洞数小于10时，为INVALID状态添加特殊标识
-                    rule_name = f"[需人工复核] {vulnerability_desc}"
-                elif location:
-                    rule_name = f"{vulnerability_desc} (位于 {location})"
+                    # 生成更具体的规则名称
+                    rule_name = vulnerability_desc
+                    if status == 'INVALID' and total_vulnerabilities < 10:
+                        # 当漏洞数小于10时，为INVALID状态添加特殊标识
+                        rule_name = f"[需人工复核] {vulnerability_desc}"
+                    elif location:
+                        rule_name = f"{vulnerability_desc} (位于 {location})"
 
-                # 生成详细的描述
-                description = vulnerability_desc
-                if evidence:
-                    description = f"{vulnerability_desc}。{evidence}"
-                if recommendation:
-                    description = f"{description} 建议：{recommendation}"
-                
-                # 根据状态设置严重程度
-                severity = finding.get('severity', 'medium')
-                if status == 'INVALID':
-                    severity = 'info'  # INVALID状态设为info级别
+                    # 生成详细的描述
+                    description = vulnerability_desc
+                    if evidence:
+                        description = f"{vulnerability_desc}。{evidence}"
+                    if recommendation:
+                        description = f"{description} 建议：{recommendation}"
+                    
+                    # 根据状态设置严重程度
+                    severity = finding.get('severity', 'medium')
+                    if status == 'INVALID':
+                        severity = 'info'  # INVALID状态设为info级别
 
-                vulnerability = VulnerabilityFinding(
-                    rule_id=finding.get('vulnerability', 'unknown'),
-                    rule_name=rule_name,
-                    severity=severity,
-                    confidence=float(finding.get('confidence', 50)) / 100.0,
-                    location={'file': location},
-                    description=description,
-                    fix_suggestion=recommendation,
-                    explanation=json.dumps(finding, ensure_ascii=False)
-                )
-                findings.append(vulnerability)
-                print(f"[DEBUG] 添加漏洞发现: {rule_name}")
+                    # 处理置信度，避免空字符串转换错误
+                    confidence_value = finding.get('confidence', 50)
+                    try:
+                        confidence = float(confidence_value) / 100.0
+                    except (ValueError, TypeError):
+                        confidence = 0.5
+                    
+                    vulnerability = VulnerabilityFinding(
+                        rule_id=finding.get('vulnerability', 'unknown'),
+                        rule_name=rule_name,
+                        severity=severity,
+                        confidence=confidence,
+                        location={'file': location},
+                        description=description,
+                        fix_suggestion=recommendation,
+                        explanation=json.dumps(finding, ensure_ascii=False)
+                    )
+                    findings.append(vulnerability)
+                    print(f"[DEBUG] 添加漏洞发现: {rule_name}")
+                except Exception as e:
+                    print(f"[DEBUG] 处理单个发现失败: {e}")
+                    continue
         except Exception as e:
             print(f"[PURE-AI] 转换结果失败: {e}")
             import traceback
@@ -296,8 +306,9 @@ class PureAIAnalyzer:
         # 检查final_decision是否包含final_findings
         final_decision = result.get('final_decision', {})
         if 'final_findings' not in final_decision:
-            print(f"[DEBUG] 结果验证失败: final_decision缺少final_findings字段")
-            return False
+            # 创建空的final_findings
+            final_decision['final_findings'] = []
+            print(f"[DEBUG] 结果验证警告: final_decision缺少final_findings字段，已创建空列表")
         
         # 检查final_findings是否为空
         final_findings = final_decision.get('final_findings', [])
@@ -317,18 +328,87 @@ class PureAIAnalyzer:
             漏洞发现列表
         """
         try:
-            print(f"[DEBUG] 分析文件: {file_info.path}")
-            # 检查pipeline是否初始化
+            if self.config.debug:
+                print(f"[DEBUG] 分析文件: {file_info.path}")
+
+            # 确保已初始化
+            if not self.initialized:
+                if self.config.debug:
+                    console.print(f"[dim][DEBUG] 纯AI分析器未初始化，正在初始化...[/dim]")
+                await self._initialize()
+                if not self.initialized:
+                    console.print(f"[red]✗ 纯AI分析器初始化失败，跳过分析: {file_info.path}[/red]")
+                    return []
+
+            # 检查pipeline
             if not self.pipeline:
-                console.print(f"[dim][DEBUG] 纯AI分析器未初始化，跳过分析: {file_info.path}[/dim]")
+                console.print(f"[red]✗ Pipeline未创建，跳过分析: {file_info.path}[/red]")
                 return []
 
             # 分析文件
             findings = await self.analyze(file_info.path, "")
-            print(f"[DEBUG] 分析完成，发现 {len(findings)} 个问题")
+            if self.config.debug:
+                print(f"[DEBUG] 分析完成，发现 {len(findings)} 个问题")
             return findings
         except Exception as e:
-            console.print(f"[dim][DEBUG] 纯AI分析文件失败: {e}[/dim]")
-            import traceback
-            traceback.print_exc()
+            console.print(f"[red]✗ 纯AI分析文件失败: {e}[/red]")
+            if self.config.debug:
+                import traceback
+                traceback.print_exc()
             return []
+
+    async def analyze_batch(self, file_infos: List[Any], max_concurrent: int = 5) -> List[List[VulnerabilityFinding]]:
+        """批量分析文件
+        
+        Args:
+            file_infos: 文件信息列表
+            max_concurrent: 最大并发数，默认5
+        
+        Returns:
+            漏洞发现列表的列表
+        """
+        import asyncio
+        import time
+        
+        # 确保已初始化
+        if not self.initialized:
+            await self._initialize()
+            if not self.initialized:
+                return [[] for _ in file_infos]
+        
+        # 优化并发处理，增加默认并发数
+        start_time = time.time()
+        total_files = len(file_infos)
+        
+        if total_files == 0:
+            return []
+        
+        # 动态调整并发数，根据文件数量
+        if total_files < 10:
+            max_concurrent = min(max_concurrent, 3)
+        elif total_files < 50:
+            max_concurrent = min(max_concurrent, 5)
+        else:
+            max_concurrent = min(max_concurrent, 8)
+        
+        # 创建任务
+        tasks = []
+        semaphore = asyncio.Semaphore(max_concurrent)
+        
+        async def analyze_with_limit(file_info, index):
+            async with semaphore:
+                if self.config.debug:
+                    print(f"[DEBUG] 分析文件 {index+1}/{total_files}: {file_info.path}")
+                return await self.analyze_file(file_info)
+        
+        for i, file_info in enumerate(file_infos):
+            tasks.append(analyze_with_limit(file_info, i))
+        
+        # 执行任务
+        results = await asyncio.gather(*tasks)
+        
+        if self.config.debug:
+            elapsed_time = time.time() - start_time
+            print(f"[DEBUG] 批量分析完成，处理 {total_files} 个文件，耗时 {elapsed_time:.2f} 秒")
+        
+        return results

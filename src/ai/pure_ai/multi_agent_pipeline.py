@@ -201,7 +201,7 @@ class MultiAgentPipeline:
             function_calls=self.prompt_templates.format_function_calls(context['function_calls'])
         )
         
-        response, token_usage = await self._generate_with_retry(prompt)
+        response, token_usage = await self._generate_with_retry(prompt, "Agent 0", temperature=0.2)
         result = self._parse_json_response(response)
         print(f"[DEBUG] Agent 0 完成，token使用: {token_usage['total_tokens']}")
         return result, token_usage
@@ -225,7 +225,7 @@ class MultiAgentPipeline:
             context_info=context_info
         )
         
-        response, token_usage = await self._generate_with_retry(prompt)
+        response, token_usage = await self._generate_with_retry(prompt, "Agent 1", temperature=0.2)
         result = self._parse_json_response(response)
         print(f"[DEBUG] Agent 1 完成，token使用: {token_usage['total_tokens']}")
         return result, token_usage
@@ -247,7 +247,7 @@ class MultiAgentPipeline:
             structured_data=structured_data
         )
         
-        response, token_usage = await self._generate_with_retry(prompt)
+        response, token_usage = await self._generate_with_retry(prompt, "Agent 2", temperature=0.3)
         result = self._parse_json_response(response)
         print(f"[DEBUG] Agent 2 完成，token使用: {token_usage['total_tokens']}")
         return result, token_usage
@@ -271,7 +271,7 @@ class MultiAgentPipeline:
             file_content=file_content
         )
         
-        response, token_usage = await self._generate_with_retry(prompt)
+        response, token_usage = await self._generate_with_retry(prompt, "Agent 3", temperature=0.1)
         result = self._parse_json_response(response)
         print(f"[DEBUG] Agent 3 完成，token使用: {token_usage['total_tokens']}")
         return result, token_usage
@@ -293,7 +293,7 @@ class MultiAgentPipeline:
             verification_results=verification_results
         )
         
-        response, token_usage = await self._generate_with_retry(prompt)
+        response, token_usage = await self._generate_with_retry(prompt, "Agent 4", temperature=0.2)
         result = self._parse_json_response(response)
         print(f"[DEBUG] Agent 4 完成，token使用: {token_usage['total_tokens']}")
         return result, token_usage
@@ -317,7 +317,7 @@ class MultiAgentPipeline:
             file_content=file_content
         )
         
-        response, token_usage = await self._generate_with_retry(prompt)
+        response, token_usage = await self._generate_with_retry(prompt, "Agent 5", temperature=0.1)
         result = self._parse_json_response(response)
         print(f"[DEBUG] Agent 5 完成，token使用: {token_usage['total_tokens']}")
         return result, token_usage
@@ -342,28 +342,32 @@ class MultiAgentPipeline:
             verification_results=verification_results
         )
         
-        response, token_usage = await self._generate_with_retry(prompt)
+        response, token_usage = await self._generate_with_retry(prompt, "Agent 6", temperature=0.2)
         result = self._parse_json_response(response)
         print(f"[DEBUG] Agent 6 完成，token使用: {token_usage['total_tokens']}")
         return result, token_usage
     
-    async def _generate_with_retry(self, prompt: str) -> Tuple[str, Dict[str, int]]:
+    async def _generate_with_retry(self, prompt: str, agent_name: str = "unknown", temperature: float = 0.0) -> Tuple[str, Dict[str, int]]:
         """带重试的生成
         
         Args:
             prompt: 提示词
+            agent_name: Agent名称
+            temperature: 温度值
             
         Returns:
             (生成的响应, token使用信息)
         """
         for i in range(self.max_retries):
             try:
+                # JSON Guard: 在prompt顶部添加JSON输出强制约束
+                json_guard_prompt = "只输出JSON，否则视为失败\n\n" + prompt
+                
                 # 创建AIRequest对象
                 request = AIRequest(
-                    prompt=prompt,
+                    prompt=json_guard_prompt,
                     model=self.model,
-                    temperature=0.0,
-                    max_tokens=4096
+                    temperature=temperature
                 )
                 
                 # 调用客户端生成
@@ -387,7 +391,7 @@ class MultiAgentPipeline:
                     return str(response), token_usage
                     
             except Exception as e:
-                console.print(f"[bold cyan][PURE-AI][/bold cyan] [yellow]生成失败 (尝试 {i+1}/{self.max_retries}): {e}[/yellow]")
+                console.print(f"[bold cyan][PURE-AI][/bold cyan] [yellow]生成失败 (Agent: {agent_name}, 尝试 {i+1}/{self.max_retries}): {e}[/yellow]")
                 import traceback
                 traceback.print_exc()
                 if i == self.max_retries - 1:

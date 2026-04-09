@@ -135,10 +135,10 @@ class SecurityScanner:
             扫描结果
         """
         from tqdm import tqdm
-        
+
         # 开始时间
         start_time = time.time()
-        
+
         # 验证目标路径解析
         resolved_target = Path(target).resolve()
         if self.config.debug:
@@ -146,9 +146,30 @@ class SecurityScanner:
             console.print(f"[dim][DEBUG] 解析后目标路径: {resolved_target}[/dim]")
             console.print(f"[dim][DEBUG] 目标是否存在: {resolved_target.exists()}[/dim]")
             console.print(f"[dim][DEBUG] 目标是否为目录: {resolved_target.is_dir()}[/dim]")
-        
+
         console.print(f"[bold cyan]🔍 开始扫描目标:[/bold cyan] [bold green]{target}[/bold green]")
         console.print(f"[bold cyan]⏱️ 开始时间:[/bold cyan] [bold]{time.strftime('%Y-%m-%d %H:%M:%S')}[/bold]")
+
+        # 纯AI模式下确保分析器已初始化
+        if self.config.pure_ai and self.pure_ai_analyzer:
+            if not self.pure_ai_analyzer.initialized:
+                console.print("[cyan]🔄 正在初始化纯AI分析器...[/cyan]")
+                try:
+                    await asyncio.wait_for(
+                        self.pure_ai_analyzer._initialize(),
+                        timeout=60.0
+                    )
+                    if not self.pure_ai_analyzer.initialized:
+                        console.print("[red]✗ 纯AI分析器初始化失败，扫描将跳过AI分析[/red]")
+                        console.print("[yellow]⚠ 请检查API密钥配置和网络连接[/yellow]")
+                except asyncio.TimeoutError:
+                    console.print("[red]✗ 纯AI分析器初始化超时[/red]")
+                    console.print("[yellow]⚠ 请检查网络连接或增加超时时间[/yellow]")
+                except Exception as e:
+                    console.print(f"[red]✗ 纯AI分析器初始化错误: {e}[/red]")
+                    if self.config.debug:
+                        import traceback
+                        traceback.print_exc()
         
         # 发现文件
         with console.status("[bold blue]📁 正在发现文件...[/bold blue]", spinner="dots"):
@@ -197,11 +218,16 @@ class SecurityScanner:
                     ai_findings = []
                     for finding in result.findings:
                         # 创建VulnerabilityFinding对象
+                        # 处理 severity 可能是字符串或枚举对象的情况
+                        if hasattr(finding.severity, 'name'):
+                            severity_value = finding.severity.name.lower()
+                        else:
+                            severity_value = str(finding.severity).lower()
                         vuln_finding = VulnerabilityFinding(
                             rule_id=finding.rule_id,
                             rule_name=finding.rule_name,
                             description=finding.description,
-                            severity=finding.severity.name.lower(),
+                            severity=severity_value,
                             confidence=finding.confidence,
                             location={
                                 "file": finding.location.file,
@@ -310,11 +336,16 @@ class SecurityScanner:
                     ai_findings = []
                     for finding in result.findings:
                         # 创建VulnerabilityFinding对象
+                        # 处理 severity 可能是字符串或枚举对象的情况
+                        if hasattr(finding.severity, 'name'):
+                            severity_value = finding.severity.name.lower()
+                        else:
+                            severity_value = str(finding.severity).lower()
                         vuln_finding = VulnerabilityFinding(
                             rule_id=finding.rule_id,
                             rule_name=finding.rule_name,
                             description=finding.description,
-                            severity=finding.severity.name.lower(),
+                            severity=severity_value,
                             confidence=finding.confidence,
                             location={
                                 "file": finding.location.file,
@@ -446,9 +477,18 @@ class SecurityScanner:
         # 统计不同优先级的漏洞数量
         priority_counts = {'critical': 0, 'high': 0, 'medium': 0, 'low': 0, 'info': 0}
         for finding in result.findings:
-            severity_name = finding.severity.name.lower()
-            if severity_name in priority_counts:
-                priority_counts[severity_name] += 1
+            try:
+                # 处理 severity 可能是字符串或枚举对象的情况
+                if hasattr(finding.severity, 'name'):
+                    severity_name = finding.severity.name.lower()
+                else:
+                    severity_name = str(finding.severity).lower()
+                if severity_name in priority_counts:
+                    priority_counts[severity_name] += 1
+            except Exception as e:
+                if self.config.debug:
+                    console.print(f"[dim][DEBUG] 处理严重性级别失败: {e}[/dim]")
+                continue
         
         console.print()
         console.print(f"[bold cyan]⏱️ 扫描耗时:[/bold cyan] [bold]{scan_time:.2f}[/bold] 秒")
@@ -680,39 +720,51 @@ class SecurityScanner:
         if not self.config.quiet:
             console.print("[bold cyan]🔧 正在分析文件...[/bold cyan]")
         
-        for file_info, score, priority in prioritized_files:
+        # 纯AI模式：使用批量分析
+        if self.config.pure_ai:
             if self.config.debug:
-                console.print(f"[dim][DEBUG] 分析文件: {file_info.path} (优先级: {priority}, 分数: {score:.2f})[/dim]")
+                console.print(f"[dim][DEBUG] 纯AI模式：使用批量分析[/dim]")
             
-            # 获取文件类型配置
-            file_type = file_info.language.value if file_info.language else 'unknown'
-            analysis_config = file_type_analysis_config.get(file_type, file_type_analysis_config['unknown'])
-            
-            if self.config.debug:
-                console.print(f"[dim][DEBUG] 文件类型: {file_type}, 分析配置: {analysis_config}[/dim]")
-            
-            # 纯AI模式：只执行AI分析
-            if self.config.pure_ai:
-                if self.config.debug:
-                    console.print(f"[dim][DEBUG] 纯AI模式：只执行AI分析[/dim]")
+            # 批量分析文件
+            ai_findings = []
+            if self.pure_ai_analyzer:
+                # 显示实时扫描信息
+                console.print(f"Scanning {len(prioritized_files)} files in batch")
                 
-                # 纯AI分析 - 对所有文件类型执行AI分析
-                ai_findings = []
-                if self.pure_ai_analyzer:
-                    # 显示实时扫描信息
-                    console.print(f"Scanning file: {Path(file_info.path).name}")
-                    ai_findings = await self.pure_ai_analyzer.analyze_file(file_info)
-                    findings.extend(ai_findings)
+                # 执行批量分析
+                batch_results = await self.pure_ai_analyzer.analyze_batch(
+                    [file_info for file_info, _, _ in prioritized_files],
+                    max_concurrent=3
+                )
+                
+                # 收集结果
+                for i, (file_info, _, _) in enumerate(prioritized_files):
+                    result = batch_results[i]
+                    ai_findings.extend(result)
                     
                     # 实时显示发现的问题
-                    if ai_findings:
-                        for finding in ai_findings:
+                    if result:
+                        console.print(f"Scanning file: {Path(file_info.path).name}")
+                        for finding in result:
                             severity_color = "red" if finding.severity in ["critical", "high"] else "yellow" if finding.severity == "medium" else "blue"
                             console.print(f"→ [{severity_color}]Found {finding.rule_name}[/{severity_color}]")
+            
+            findings.extend(ai_findings)
+            if self.config.debug:
+                console.print(f"[dim][DEBUG] 纯AI模式批量分析完成，发现 {len(ai_findings)} 个问题[/dim]")
+        else:
+            # 正常模式：逐个文件分析
+            for file_info, score, priority in prioritized_files:
+                if self.config.debug:
+                    console.print(f"[dim][DEBUG] 分析文件: {file_info.path} (优先级: {priority}, 分数: {score:.2f})[/dim]")
+                
+                # 获取文件类型配置
+                file_type = file_info.language.value if file_info.language else 'unknown'
+                analysis_config = file_type_analysis_config.get(file_type, file_type_analysis_config['unknown'])
                 
                 if self.config.debug:
-                    console.print(f"[dim][DEBUG] 纯AI模式分析完成，发现 {len(ai_findings)} 个问题[/dim]")
-            else:
+                    console.print(f"[dim][DEBUG] 文件类型: {file_type}, 分析配置: {analysis_config}[/dim]")
+                
                 # 正常模式：执行所有分析
                 # 显示实时扫描信息
                 console.print(f"Scanning file: {Path(file_info.path).name}")
@@ -1799,7 +1851,12 @@ class SecurityScanner:
                 'LOW': 3,
                 'INFO': 1
             }
-            score += severity_score.get(finding.severity.name, 3)
+            # 处理 severity 可能是字符串或枚举对象的情况
+            if hasattr(finding.severity, 'name'):
+                severity_key = finding.severity.name
+            else:
+                severity_key = str(finding.severity).upper()
+            score += severity_score.get(severity_key, 3)
             
             # 基于置信度
             score += finding.confidence * 2

@@ -86,12 +86,13 @@ graph LR
 
 ### 快速上手（30秒）
 
-#### 1. 安装
+#### 1. 准备
 
-```bash
-# 使用 pip 安装
-pip install hos-ls
-```
+当前项目处于开发阶段，暂未打包发布，直接使用源码运行：
+
+1. 克隆项目到本地
+2. 确保已安装 Python 3.8+
+3. 安装项目依赖（如果有）
 
 #### 2. 配置 API 密钥
 
@@ -106,20 +107,23 @@ export DEEPSEEK_API_KEY=sk-your-api-key-here
 #### 3. 开始扫描
 
 ```bash
-# 测试命令
-cd PATH && python -m src.cli.main --debug scan PATH/anobot-0.1.4.post6 --pure-ai -o nanobot-security-report
+# 真实测试命令（用户提供）
+python -m src.cli.main scan c:\1AAA_PROJECT\HOS\HOS-LS\real-project\crewAI-main --pure-ai --test 5 -o crewai_test
 
 # 扫描当前目录（纯净AI模式）
-hos-ls scan --pure-ai
+python -m src.cli.main scan . --pure-ai
 
 # 扫描指定项目
-hos-ls scan /path/to/project --pure-ai
+python -m src.cli.main scan /path/to/project --pure-ai
 
 # 生成 HTML 报告
-hos-ls scan --pure-ai --format html --output report.html
+python -m src.cli.main scan --pure-ai --format html --output report.html
 
 # 测试模式（只扫描前10个文件）
-hos-ls scan --pure-ai --test 10
+python -m src.cli.main scan --pure-ai --test 10
+
+# 调试模式
+python -m src.cli.main --debug scan /path/to/project --pure-ai
 ```
 
 ### 详细使用指南
