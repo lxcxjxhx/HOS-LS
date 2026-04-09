@@ -413,14 +413,14 @@ class SecurityScanner:
                             continue
                         
                         # 创建知识内容
-                        content = f"{finding.rule_name}: {finding.description}\n\n严重级别: {finding.severity.value}\n置信度: {finding.confidence}\n\n修复建议: {finding.fix_suggestion}"
+                        content = f"{finding.rule_name}: {finding.description}\n\n严重级别: {finding.severity}\n置信度: {finding.confidence}\n\n修复建议: {finding.fix_suggestion}"
                         
                         learning_results.append({
                             "content": content,
                             "knowledge_type": "ai_learning",
                             "source": "auto_learning",
                             "confidence": finding.confidence,
-                            "tags": [finding.severity.value, finding.rule_name],
+                            "tags": [finding.severity, finding.rule_name],
                             "metadata": {
                                 "rule_id": finding.rule_id,
                                 "file_path": finding.location.file,
@@ -516,22 +516,73 @@ class SecurityScanner:
                 pure_ai_prioritizer = PureAIFilePrioritizer()
                 if self.config.debug:
                     console.print("[dim][DEBUG] 使用纯净AI模式的文件优先级评估器[/dim]")
+                
+                # 第一步：使用传统评估快速筛选出高优先级文件
+                quick_prioritized = []
                 for file_info in files:
-                    priority_result = pure_ai_prioritizer.calculate_priority(file_info.path)
-                    score = priority_result['priority_score']
-                    # 根据分数确定优先级级别
-                    if score >= 0.7:
-                        priority = 'high'
-                    elif score >= 0.4:
-                        priority = 'medium'
+                    score, priority = self.file_prioritizer.evaluate_file_priority(Path(file_info.path))
+                    quick_prioritized.append((file_info, score, priority))
+                
+                # 按传统分数排序，取前20个文件进行AI评估（减少数量）
+                quick_prioritized.sort(key=lambda x: x[1], reverse=True)
+                top_files = quick_prioritized[:20]  # 只对前20个文件进行AI评估
+                
+                if self.config.debug:
+                    console.print(f"[dim][DEBUG] 快速筛选后，对前{len(top_files)}个文件进行AI优先级评估[/dim]")
+                
+                # 第二步：对筛选出的文件进行AI优先级评估（分批处理）
+                async def calculate_ai_priorities():
+                    results = []
+                    batch_size = 5  # 每次处理5个文件
+                    
+                    for i in range(0, len(top_files), batch_size):
+                        batch = top_files[i:i+batch_size]
+                        if self.config.debug:
+                            console.print(f"[dim][DEBUG] 处理文件批次 {i//batch_size + 1}/{(len(top_files)+batch_size-1)//batch_size}[/dim]")
+                        
+                        tasks = []
+                        for file_info, _, _ in batch:
+                            tasks.append(pure_ai_prioritizer.calculate_priority(file_info.path))
+                        
+                        # 处理当前批次
+                        batch_results = await asyncio.gather(*tasks, return_exceptions=True)
+                        results.extend(batch_results)
+                    
+                    return results
+                
+                # 执行异步计算
+                ai_results = await calculate_ai_priorities()
+                
+                # 处理AI评估结果
+                for (file_info, _, _), ai_result in zip(top_files, ai_results):
+                    if isinstance(ai_result, Exception):
+                        # 处理异常，使用传统评估结果
+                        if self.config.debug:
+                            console.print(f"[dim][DEBUG] AI评估失败: {ai_result}，使用传统评估结果[/dim]")
+                        score, priority = self.file_prioritizer.evaluate_file_priority(Path(file_info.path))
                     else:
-                        priority = 'low'
+                        # 正常处理AI评估结果
+                        score = ai_result['priority_score']
+                        # 根据分数确定优先级级别
+                        if score >= 0.7:
+                            priority = 'high'
+                        elif score >= 0.4:
+                            priority = 'medium'
+                        else:
+                            priority = 'low'
                     prioritized_files.append((file_info, score, priority))
+                
+                # 确保至少有一些文件
+                if not prioritized_files:
+                    # 回退到传统评估
+                    for file_info in files[:10]:  # 只评估前10个
+                        score, priority = self.file_prioritizer.evaluate_file_priority(Path(file_info.path))
+                        prioritized_files.append((file_info, score, priority))
             except Exception as e:
                 if self.config.debug:
                     console.print(f"[dim][DEBUG] 纯净AI文件优先级评估器初始化失败，使用传统评估: {e}[/dim]")
                 # 回退到传统评估
-                for file_info in files:
+                for file_info in files[:20]:  # 只评估前20个
                     score, priority = self.file_prioritizer.evaluate_file_priority(Path(file_info.path))
                     prioritized_files.append((file_info, score, priority))
         else:
@@ -656,7 +707,7 @@ class SecurityScanner:
                     # 实时显示发现的问题
                     if ai_findings:
                         for finding in ai_findings:
-                            severity_color = "red" if finding.severity.value in ["critical", "high"] else "yellow" if finding.severity.value == "medium" else "blue"
+                            severity_color = "red" if finding.severity in ["critical", "high"] else "yellow" if finding.severity == "medium" else "blue"
                             console.print(f"→ [{severity_color}]Found {finding.rule_name}[/{severity_color}]")
                 
                 if self.config.debug:
@@ -675,7 +726,7 @@ class SecurityScanner:
                     # 实时显示发现的问题
                     if static_findings:
                         for finding in static_findings:
-                            severity_color = "red" if finding.severity.value in ["critical", "high"] else "yellow" if finding.severity.value == "medium" else "blue"
+                            severity_color = "red" if finding.severity in ["critical", "high"] else "yellow" if finding.severity == "medium" else "blue"
                             console.print(f"→ [{severity_color}]Found {finding.rule_name}[/{severity_color}]")
                 
                 # 本地语义分析（始终启用，轻量级）
@@ -687,7 +738,7 @@ class SecurityScanner:
                     # 实时显示发现的问题
                     if semantic_findings:
                         for finding in semantic_findings:
-                            severity_color = "red" if finding.severity.value in ["critical", "high"] else "yellow" if finding.severity.value == "medium" else "blue"
+                            severity_color = "red" if finding.severity in ["critical", "high"] else "yellow" if finding.severity == "medium" else "blue"
                             console.print(f"→ [{severity_color}]Found {finding.rule_name}[/{severity_color}]")
                 
                 # 库匹配分析
@@ -699,7 +750,7 @@ class SecurityScanner:
                     # 实时显示发现的问题
                     if library_findings:
                         for finding in library_findings:
-                            severity_color = "red" if finding.severity.value in ["critical", "high"] else "yellow" if finding.severity.value == "medium" else "blue"
+                            severity_color = "red" if finding.severity in ["critical", "high"] else "yellow" if finding.severity == "medium" else "blue"
                             console.print(f"→ [{severity_color}]Found {finding.rule_name}[/{severity_color}]")
                 
                 # AI 分析（如果启用 --ai 参数，对所有文件进行分析）
@@ -711,7 +762,7 @@ class SecurityScanner:
                     # 实时显示发现的问题
                     if ai_findings:
                         for finding in ai_findings:
-                            severity_color = "red" if finding.severity.value in ["critical", "high"] else "yellow" if finding.severity.value == "medium" else "blue"
+                            severity_color = "red" if finding.severity in ["critical", "high"] else "yellow" if finding.severity == "medium" else "blue"
                             console.print(f"→ [{severity_color}]Found {finding.rule_name}[/{severity_color}]")
                 
                 # 规则分析（结合AI分析结果）
@@ -723,7 +774,7 @@ class SecurityScanner:
                     # 实时显示发现的问题
                     if rule_findings:
                         for finding in rule_findings:
-                            severity_color = "red" if finding.severity.value in ["critical", "high"] else "yellow" if finding.severity.value == "medium" else "blue"
+                            severity_color = "red" if finding.severity in ["critical", "high"] else "yellow" if finding.severity == "medium" else "blue"
                             console.print(f"→ [{severity_color}]Found {finding.rule_name}[/{severity_color}]")
                 
                 # 网络搜索分析（结合AI分析结果）
@@ -738,7 +789,7 @@ class SecurityScanner:
                     # 实时显示发现的问题
                     if web_findings:
                         for finding in web_findings:
-                            severity_color = "red" if finding.severity.value in ["critical", "high"] else "yellow" if finding.severity.value == "medium" else "blue"
+                            severity_color = "red" if finding.severity in ["critical", "high"] else "yellow" if finding.severity == "medium" else "blue"
                             console.print(f"→ [{severity_color}]Found {finding.rule_name}[/{severity_color}]")
                 
                 if self.config.debug:

@@ -1,5 +1,12 @@
+import asyncio
+import json
 from pathlib import Path
-from typing import Dict, Any
+from typing import Dict, Any, Optional
+
+from src.ai.client import get_model_manager, AIProvider
+from src.ai.pure_ai.prompt_templates import PromptTemplates
+from src.ai.pure_ai.cache import CacheManager
+from src.ai.models import AIRequest
 
 class FilePrioritizer:
     """文件优先级分析器
@@ -286,9 +293,274 @@ class FilePrioritizer:
         self.importance_weight = 0.3  # 文件重要性权重
         self.problem_probability_weight = 0.7  # 出现问题的可能性权重
         self.content_weight = 0.2  # 内容分析权重
+        
+        # AI相关初始化
+        self.ai_client = None
+        self.model_manager = None
+        self.enabled = False
+        self.ai_initialized = False
+        self.prompt_templates = PromptTemplates()
+        self.cache_manager = CacheManager()  # 缓存管理器
     
-    def calculate_priority(self, file_path: str) -> Dict[str, Any]:
-        """计算文件优先级
+    async def _ensure_ai_initialized(self):
+        """确保AI客户端已初始化"""
+        if self.ai_initialized:
+            return
+        
+        try:
+            from src.core.config import get_config
+            config = get_config()
+            
+            # 异步获取模型管理器
+            from src.ai.client import get_model_manager
+            self.model_manager = await get_model_manager(config)
+            
+            # 获取AI客户端
+            from src.ai.client import AIProvider
+            provider = AIProvider.DEEPSEEK  # 使用deepseek-reasoner模型
+            self.ai_client = self.model_manager.get_client(provider)
+            
+            if not self.ai_client:
+                # 尝试获取默认客户端
+                self.ai_client = self.model_manager.get_default_client()
+                
+            self.enabled = self.ai_client is not None
+            self.ai_initialized = True
+            if self.enabled:
+                print("[DEBUG] AI文件优先级评估器初始化成功")
+            else:
+                print("[DEBUG] AI文件优先级评估器初始化失败：无法获取AI客户端")
+        except Exception as e:
+            print(f"[DEBUG] AI初始化失败: {e}")
+            self.enabled = False
+            self.ai_initialized = True
+    
+    async def _async_initialize_ai(self):
+        """异步初始化AI客户端"""
+        try:
+            from src.core.config import get_config
+            config = get_config()
+            
+            # 初始化模型管理器
+            self.model_manager = get_model_manager()
+            await self.model_manager.initialize(config)
+            
+            # 获取AI客户端
+            provider = AIProvider.DEEPSEEK  # 使用deepseek-reasoner模型
+            self.ai_client = self.model_manager.get_client(provider)
+            
+            if not self.ai_client:
+                # 尝试获取默认客户端
+                self.ai_client = self.model_manager.get_default_client()
+                
+        except Exception as e:
+            print(f"[DEBUG] AI客户端初始化失败: {e}")
+    
+    async def _generate_with_retry(self, prompt: str, max_retries: int = 2) -> str:
+        """带重试的AI生成
+        
+        Args:
+            prompt: 提示词
+            max_retries: 最大重试次数
+            
+        Returns:
+            生成的响应
+        """
+        import asyncio
+        
+        for i in range(max_retries):
+            try:
+                if not self.ai_client:
+                    raise Exception("AI客户端未初始化")
+                
+                # 创建AIRequest对象
+                request = AIRequest(
+                    prompt=prompt,
+                    model="deepseek-reasoner",
+                    temperature=0.0,
+                    max_tokens=256  # 进一步减少token使用
+                )
+                
+                # 调用客户端生成（添加超时）
+                response = await asyncio.wait_for(
+                    self.ai_client.generate(request),
+                    timeout=10.0  # 10秒超时
+                )
+                
+                # 返回响应内容
+                if hasattr(response, 'content'):
+                    return response.content
+                else:
+                    return str(response)
+                    
+            except asyncio.TimeoutError:
+                if i == max_retries - 1:
+                    print("[DEBUG] AI生成超时")
+                    raise
+                # 快速重试，不等待
+                continue
+            except Exception as e:
+                if i == max_retries - 1:
+                    print(f"[DEBUG] AI生成最终失败: {e}")
+                    raise
+                # 快速重试，不等待
+                continue
+    
+    def _parse_json_response(self, response: str) -> Dict[str, Any]:
+        """解析JSON响应
+        
+        Args:
+            response: 响应字符串
+            
+        Returns:
+            解析后的JSON对象
+        """
+        try:
+            # 清理响应字符串
+            cleaned_response = response.strip()
+            
+            # 首先尝试直接解析
+            try:
+                return json.loads(cleaned_response)
+            except json.JSONDecodeError:
+                pass
+            
+            # 提取JSON部分（处理markdown代码块）
+            import re
+            # 尝试匹配 ```json ... ``` 格式
+            json_match = re.search(r'```json\s*([\s\S]*?)```', cleaned_response)
+            if json_match:
+                json_str = json_match.group(1).strip()
+                try:
+                    return json.loads(json_str)
+                except json.JSONDecodeError:
+                    pass
+            
+            # 尝试匹配 ``` ... ``` 格式
+            json_match = re.search(r'```\s*([\s\S]*?)```', cleaned_response)
+            if json_match:
+                json_str = json_match.group(1).strip()
+                try:
+                    return json.loads(json_str)
+                except json.JSONDecodeError:
+                    pass
+            
+            # 尝试匹配 { ... } 格式
+            json_match = re.search(r'\{[\s\S]*\}', cleaned_response)
+            if json_match:
+                json_str = json_match.group(0)
+                try:
+                    return json.loads(json_str)
+                except json.JSONDecodeError:
+                    pass
+            
+            # 尝试更宽松的JSON提取和修复
+            # 1. 提取可能的JSON部分
+            possible_json = cleaned_response
+            # 找到第一个 { 和最后一个 }
+            first_brace = possible_json.find('{')
+            last_brace = possible_json.rfind('}')
+            if first_brace != -1 and last_brace != -1 and last_brace > first_brace:
+                json_str = possible_json[first_brace:last_brace+1]
+                # 尝试修复常见的JSON问题
+                # 1. 修复未转义的引号
+                json_str = re.sub(r'(?<!\\)\'', '"', json_str)
+                # 2. 修复属性名缺少引号
+                json_str = re.sub(r'(\w+)\s*:', '"\1":', json_str)
+                try:
+                    return json.loads(json_str)
+                except json.JSONDecodeError:
+                    pass
+            
+            # 如果没有找到JSON，返回原始响应
+            return {'raw_response': response}
+        except Exception as e:
+            print(f"[DEBUG] JSON解析失败: {e}")
+            return {'raw_response': response, 'error': str(e)}
+    
+    async def calculate_priority_ai(self, file_path: str) -> Dict[str, Any]:
+        """使用AI计算文件优先级
+        
+        Args:
+            file_path: 文件路径
+            
+        Returns:
+            包含AI优先级评估结果的字典
+        """
+        try:
+            # 确保AI客户端已初始化
+            await self._ensure_ai_initialized()
+            
+            # 检查AI是否可用
+            if not self.enabled or not self.ai_client:
+                return {
+                    'priority_score': 0.5,
+                    'priority_level': 'medium',
+                    'analysis_summary': 'AI客户端未初始化，使用默认优先级',
+                    'key_risk_factors': [],
+                    'security_sensitivity': 'medium',
+                    'code_complexity': 'medium',
+                    'error': 'AI客户端未初始化'
+                }
+            
+            # 检查缓存
+            cache_key = f"priority_ai_{file_path}"
+            cached_result = self.cache_manager.get(cache_key)
+            if cached_result:
+                print(f"[DEBUG] 使用缓存的AI优先级评估结果: {file_path}")
+                return cached_result
+            
+            path = Path(file_path)
+            
+            # 构建极简提示词，只基于文件路径
+            prompt = f"快速评估文件路径 '{file_path}' 的安全优先级。只看文件名和路径，不考虑内容。\n\n返回：{{\"priority_score\":0-1数字,\"priority_level\":\"high\"|\"medium\"|\"low\"}}"
+            
+            # 调用AI生成
+            response = await self._generate_with_retry(prompt)
+            
+            # 解析响应
+            result = self._parse_json_response(response)
+            
+            # 提取优先级分数
+            priority_score = result.get('priority_score', 0.5)
+            priority_level = result.get('priority_level', 'medium')
+            analysis_summary = result.get('analysis_summary', 'AI快速评估')
+            
+            # 构建结果
+            final_result = {
+                'file_path': file_path,
+                'priority_score': priority_score,
+                'priority_level': priority_level,
+                'analysis_summary': analysis_summary,
+                'key_risk_factors': [],
+                'security_sensitivity': 'medium',
+                'code_complexity': 'medium',
+                'impact_scope': 'local',
+                'raw_result': result
+            }
+            
+            # 缓存结果
+            self.cache_manager.set(cache_key, final_result)
+            
+            return final_result
+            
+        except Exception as e:
+            print(f"[DEBUG] AI优先级评估失败: {e}")
+            # 失败时返回默认值
+            return {
+                'file_path': file_path,
+                'priority_score': 0.5,
+                'priority_level': 'medium',
+                'analysis_summary': 'AI评估失败，使用默认值',
+                'key_risk_factors': [],
+                'security_sensitivity': 'medium',
+                'code_complexity': 'medium',
+                'impact_scope': 'local',
+                'error': str(e)
+            }
+    
+    async def calculate_priority(self, file_path: str) -> Dict[str, Any]:
+        """计算文件优先级（混合方法）
         
         Args:
             file_path: 文件路径
@@ -298,34 +570,43 @@ class FilePrioritizer:
         """
         path = Path(file_path)
         
-        # 1. 计算文件重要性
+        # 1. 计算传统规则的优先级
         importance_score = self._calculate_importance(path)
-        
-        # 2. 计算出现问题的概率
         problem_probability = self._calculate_problem_probability(path)
-        
-        # 3. 计算内容分析分数
         content_score = self._calculate_content_score(path)
-        
-        # 4. 获取动态权重调整
         weights = self._get_dynamic_weights(path, content_score)
         
-        # 5. 计算最终优先级（动态加权）
-        priority_score = (
+        traditional_score = (
             importance_score * weights['importance'] +
             problem_probability * weights['problem_probability'] +
             content_score * weights['content']
         )
+        traditional_score = self._apply_nonlinear_adjustment(traditional_score, content_score)
         
-        # 6. 应用非线性调整，对高风险文件给予更高权重
-        priority_score = self._apply_nonlinear_adjustment(priority_score, content_score)
+        # 2. 尝试使用AI评估
+        ai_score = 0.5
+        ai_analysis = {}
+        try:
+            ai_result = await self.calculate_priority_ai(file_path)
+            ai_score = ai_result.get('priority_score', 0.5)
+            ai_analysis = ai_result
+        except Exception as e:
+            print(f"[DEBUG] AI评估失败，使用传统规则: {e}")
+        
+        # 3. 混合计算（AI权重为0.6，传统规则权重为0.4）
+        final_score = traditional_score * 0.4 + ai_score * 0.6
+        
+        # 4. 确保分数在0-1范围内
+        final_score = max(0.0, min(1.0, final_score))
         
         return {
             'file_path': file_path,
-            'priority_score': round(priority_score, 3),
+            'priority_score': round(final_score, 3),
             'importance_score': round(importance_score, 3),
             'problem_probability': round(problem_probability, 3),
             'content_score': round(content_score, 3),
+            'ai_score': round(ai_score, 3),
+            'traditional_score': round(traditional_score, 3),
             'analysis': {
                 'directory_score': round(self._calculate_directory_score(path), 3),
                 'file_name_score': round(self._calculate_file_name_score(path), 3),
@@ -334,7 +615,8 @@ class FilePrioritizer:
                 'security_patterns': self._detect_security_patterns(path),
                 'file_size': self._get_file_size(path),
                 'file_complexity': self._calculate_file_complexity(path),
-                'dynamic_weights': weights
+                'dynamic_weights': weights,
+                'ai_analysis': ai_analysis
             }
         }
     
