@@ -1,1 +1,69 @@
-[]
+[
+  {
+    "id": "priority_WEB-SEARCH-HARDCODED__1",
+    "knowledge_type": "ai_learning",
+    "content": "网络搜索: hardcoded_credentials: 优先级 1, 得分 0.85",
+    "source": "auto_priority_evaluation",
+    "confidence": 0.85,
+    "tags": [
+      "网络搜索: hardcoded_credentials",
+      "priority_1"
+    ],
+    "created_at": "2026-04-10T19:24:17.096635",
+    "updated_at": "2026-04-10T19:24:17.096637"
+  },
+  {
+    "id": "priority_WEB-SEARCH-HARDCODED__2",
+    "knowledge_type": "ai_learning",
+    "content": "网络搜索: hardcoded_credentials: 优先级 2, 得分 0.65",
+    "source": "auto_priority_evaluation",
+    "confidence": 0.65,
+    "tags": [
+      "网络搜索: hardcoded_credentials",
+      "priority_2"
+    ],
+    "created_at": "2026-04-10T19:24:17.104024",
+    "updated_at": "2026-04-10T19:24:17.104026"
+  },
+  {
+    "id": "priority_WEB-SEARCH-HARDCODED__3",
+    "knowledge_type": "ai_learning",
+    "content": "网络搜索: hardcoded_credentials: 优先级 3, 得分 0.45",
+    "source": "auto_priority_evaluation",
+    "confidence": 0.45,
+    "tags": [
+      "网络搜索: hardcoded_credentials",
+      "priority_3"
+    ],
+    "created_at": "2026-04-10T19:24:17.110089",
+    "updated_at": "2026-04-10T19:24:17.110090"
+  },
+  {
+    "id": "c4ec40f823a7f8d0",
+    "knowledge_type": "ai_learning",
+    "content": "网络搜索: hardcoded_credentials: 优先级 4, 得分 0.25 返回敏感信息: 优先级 4, 得分 0.25 网络搜索: hardcoded_credentials: 优先级 4, 得分 0.25 返回敏感信息: 优先级 4, 得分 0.25",
+    "source": "merged_learning",
+    "confidence": 0.25,
+    "tags": [
+      "priority_4",
+      "网络搜索: hardcoded_credentials",
+      "返回敏感信息"
+    ],
+    "created_at": "2026-04-10T19:24:17.115901",
+    "updated_at": "2026-04-10T19:24:17.115903"
+  },
+  {
+    "id": "93f7113801e596f8",
+    "knowledge_type": "ai_learning",
+    "content": "类缺少文档字符串: 优先级 5, 得分 0.1 函数缺少文档字符串: 优先级 5, 得分 0.1 类缺少文档字符串: 优先级 5, 得分 0.1 函数缺少文档字符串: 优先级 5, 得分 0.1",
+    "source": "merged_learning",
+    "confidence": 0.10000000000000002,
+    "tags": [
+      "类缺少文档字符串",
+      "priority_5",
+      "函数缺少文档字符串"
+    ],
+    "created_at": "2026-04-10T19:24:17.122347",
+    "updated_at": "2026-04-10T19:24:17.122349"
+  }
+]

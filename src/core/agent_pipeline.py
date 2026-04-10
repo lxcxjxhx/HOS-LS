@@ -11,6 +11,8 @@ from typing import List, Dict, Any, Optional, Callable
 from dataclasses import dataclass
 from enum import Enum
 
+from src.core.plan import Plan, PlanStepType
+
 
 class AgentType(Enum):
     """Agent类型枚举"""
@@ -238,3 +240,34 @@ class PipelineBuilder:
         }
         
         return plan
+    
+    @classmethod
+    def from_plan(cls, plan: Plan) -> List[AgentNode]:
+        """从Plan创建Pipeline"""
+        # 映射PlanStepType到AgentType
+        step_type_map = {
+            PlanStepType.SCAN: AgentType.SCANNER,
+            PlanStepType.AUTH_ANALYSIS: AgentType.REASONER,
+            PlanStepType.POC: AgentType.POC,
+            PlanStepType.REASON: AgentType.REASONER,
+            PlanStepType.ATTACK_CHAIN: AgentType.ATTACK_CHAIN,
+            PlanStepType.VERIFY: AgentType.VERIFIER,
+            PlanStepType.FIX: AgentType.FIX,
+            PlanStepType.REPORT: AgentType.REPORT
+        }
+        
+        nodes = []
+        for step in plan.steps:
+            if step.type in step_type_map:
+                agent_type = step_type_map[step.type]
+                params = step.config.copy()
+                # 处理特殊参数
+                if step.type == PlanStepType.SCAN and "depth" in params:
+                    params["strategy"] = params.pop("depth")
+                nodes.append(AgentNode(type=agent_type, params=params))
+        
+        # 自动补全和去重
+        completed_nodes = cls.auto_complete(nodes)
+        unique_nodes = cls.deduplicate(completed_nodes)
+        
+        return unique_nodes

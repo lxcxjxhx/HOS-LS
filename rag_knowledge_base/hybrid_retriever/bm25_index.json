@@ -1,5 +1,75 @@
 {
-  "document_ids": [],
-  "corpus": [],
-  "documents": {}
+  "document_ids": [
+    "priority_WEB-SEARCH-HARDCODED__1",
+    "priority_WEB-SEARCH-HARDCODED__2",
+    "priority_WEB-SEARCH-HARDCODED__3",
+    "c4ec40f823a7f8d0",
+    "93f7113801e596f8"
+  ],
+  "corpus": [
+    "网络搜索: hardcoded_credentials: 优先级 1, 得分 0.85",
+    "网络搜索: hardcoded_credentials: 优先级 2, 得分 0.65",
+    "网络搜索: hardcoded_credentials: 优先级 3, 得分 0.45",
+    "网络搜索: hardcoded_credentials: 优先级 4, 得分 0.25 返回敏感信息: 优先级 4, 得分 0.25 网络搜索: hardcoded_credentials: 优先级 4, 得分 0.25 返回敏感信息: 优先级 4, 得分 0.25",
+    "类缺少文档字符串: 优先级 5, 得分 0.1 函数缺少文档字符串: 优先级 5, 得分 0.1 类缺少文档字符串: 优先级 5, 得分 0.1 函数缺少文档字符串: 优先级 5, 得分 0.1"
+  ],
+  "documents": {
+    "priority_WEB-SEARCH-HARDCODED__1": {
+      "content": "网络搜索: hardcoded_credentials: 优先级 1, 得分 0.85",
+      "metadata": {
+        "type": "ai_learning",
+        "source": "auto_priority_evaluation",
+        "tags": [
+          "网络搜索: hardcoded_credentials",
+          "priority_1"
+        ]
+      }
+    },
+    "priority_WEB-SEARCH-HARDCODED__2": {
+      "content": "网络搜索: hardcoded_credentials: 优先级 2, 得分 0.65",
+      "metadata": {
+        "type": "ai_learning",
+        "source": "auto_priority_evaluation",
+        "tags": [
+          "网络搜索: hardcoded_credentials",
+          "priority_2"
+        ]
+      }
+    },
+    "priority_WEB-SEARCH-HARDCODED__3": {
+      "content": "网络搜索: hardcoded_credentials: 优先级 3, 得分 0.45",
+      "metadata": {
+        "type": "ai_learning",
+        "source": "auto_priority_evaluation",
+        "tags": [
+          "网络搜索: hardcoded_credentials",
+          "priority_3"
+        ]
+      }
+    },
+    "c4ec40f823a7f8d0": {
+      "content": "网络搜索: hardcoded_credentials: 优先级 4, 得分 0.25 返回敏感信息: 优先级 4, 得分 0.25 网络搜索: hardcoded_credentials: 优先级 4, 得分 0.25 返回敏感信息: 优先级 4, 得分 0.25",
+      "metadata": {
+        "type": "ai_learning",
+        "source": "merged_learning",
+        "tags": [
+          "priority_4",
+          "网络搜索: hardcoded_credentials",
+          "返回敏感信息"
+        ]
+      }
+    },
+    "93f7113801e596f8": {
+      "content": "类缺少文档字符串: 优先级 5, 得分 0.1 函数缺少文档字符串: 优先级 5, 得分 0.1 类缺少文档字符串: 优先级 5, 得分 0.1 函数缺少文档字符串: 优先级 5, 得分 0.1",
+      "metadata": {
+        "type": "ai_learning",
+        "source": "merged_learning",
+        "tags": [
+          "类缺少文档字符串",
+          "priority_5",
+          "函数缺少文档字符串"
+        ]
+      }
+    }
+  }
 }

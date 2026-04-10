@@ -25,6 +25,7 @@ warnings.filterwarnings("ignore", category=RuntimeWarning, message="'src.cli.mai
 
 from src import __version__
 from src.core.config import Config, ConfigManager
+from src.cli.plan_commands import plan
 
 console = Console()
 
@@ -210,6 +211,7 @@ def cli(ctx: click.Context, config: Optional[str], verbose: bool, quiet: bool, d
 @click.option("--explain", is_flag=True, help="解释执行流程")
 @click.option("--ask", help="自然语言查询")
 @click.option("--focus", help="关注特定文件或目录")
+@click.option("--plan", help="使用指定的Plan执行")
 # 向后兼容
 @click.option("--ai", is_flag=True, help="启用 AI 分析")
 @click.option("--pure-ai-fast", is_flag=True, help="使用纯AI快速模式")
@@ -263,6 +265,7 @@ def scan(
     explain: bool,
     ask: Optional[str],
     focus: Optional[str],
+    plan: Optional[str],
     # 向后兼容
     ai: bool,
     pure_ai_fast: bool,
@@ -281,6 +284,31 @@ def scan(
 ) -> None:
     """扫描代码安全漏洞"""
     config: Config = ctx.obj["config"]
+    
+    # 处理Plan选项
+    if plan:
+        from src.core.plan_manager import PlanManager
+        from src.cli.plan_commands import _plan_to_cli_args
+        
+        plan_manager = PlanManager(config)
+        try:
+            # 加载Plan
+            loaded_plan = plan_manager.load_plan(plan)
+            
+            # 转换为CLI参数
+            plan_args = _plan_to_cli_args(loaded_plan)
+            
+            # 显示执行的Plan
+            console.print(Panel("执行Plan", border_style="green"))
+            from src.core.plan_dsl import PlanDSLParser
+            console.print(PlanDSLParser.format_plan_for_display(loaded_plan))
+            
+            # 执行扫描
+            ctx.invoke(scan, **plan_args)
+            return
+        except Exception as e:
+            console.print(f"[bold red]错误: {e}[/bold red]")
+            sys.exit(1)
     
     # 设置语言
     if cn and en:
@@ -1130,6 +1158,10 @@ def chat(ctx: click.Context, session: Optional[str], model: Optional[str]) -> No
         except Exception as e:
             console.print(f"[bold red]错误: {e}[/bold red]")
             continue
+
+
+# 添加plan命令组
+cli.add_command(plan)
 
 
 def main() -> None:

@@ -7,6 +7,8 @@ from src.core.config import Config
 from src.core.langgraph_flow import analyze_code
 from src.core.scanner import create_scanner
 from src.ai.pure_ai.multi_agent_pipeline import MultiAgentPipeline
+from src.core.plan_manager import PlanManager
+from src.core.plan_dsl import PlanDSLParser
 
 
 class ConversationalSecurityAgent:
@@ -46,6 +48,9 @@ class ConversationalSecurityAgent:
         
         self.multi_agent_pipeline = MultiAgentPipeline(ai_client, config)
         
+        # 初始化Plan管理器
+        self.plan_manager = PlanManager(config)
+        
         # 生成项目摘要
         self._generate_project_summary()
     
@@ -78,6 +83,8 @@ class ConversationalSecurityAgent:
                 result = self._handle_info(user_input)
             elif intent == "git":
                 result = self._handle_git_operations(user_input)
+            elif intent == "plan":
+                result = self._handle_plan(user_input)
             else:
                 result = self._handle_general(user_input)
             
@@ -118,6 +125,8 @@ class ConversationalSecurityAgent:
             return "info"
         elif any(keyword in user_input_lower for keyword in ["git", "commit", "提交", "branch", "分支", "diff", "差异", "status", "状态"]):
             return "git"
+        elif any(keyword in user_input_lower for keyword in ["plan", "方案", "计划", "生成方案"]):
+            return "plan"
         else:
             return "general"
     
@@ -751,6 +760,136 @@ class ConversationalSecurityAgent:
         except Exception:
             return None
     
+    def _handle_plan(self, user_input: str) -> Dict[str, Any]:
+        """处理Plan相关命令
+        
+        Args:
+            user_input: 用户输入
+            
+        Returns:
+            Plan处理结果
+        """
+        user_input_lower = user_input.lower()
+        
+        # 生成Plan
+        if any(keyword in user_input_lower for keyword in ["生成方案", "创建方案", "generate plan"]):
+            # 提取目标
+            target = user_input
+            # 生成Plan
+            plan = self.plan_manager.generate_from_natural_language(target)
+            
+            # 格式化显示
+            plan_display = PlanDSLParser.format_plan_for_display(plan)
+            
+            return {
+                "type": "plan_generated",
+                "plan": plan.to_dict(),
+                "display": plan_display,
+                "message": "我为你生成了一个执行方案:\n" + plan_display + "\n\n是否执行？你也可以修改，比如：\n- '加上POC'\n- '只扫描登录模块'\n- '改成深度扫描'"
+            }
+        
+        # 修改Plan
+        elif any(keyword in user_input_lower for keyword in ["修改方案", "更新方案", "modify plan"]):
+            # 假设我们有一个当前Plan
+            # 这里简化处理，实际应该从对话历史中获取
+            plan = self.plan_manager.generate_from_natural_language("分析安全漏洞")
+            modified_plan = self.plan_manager.modify_plan(plan, user_input)
+            
+            plan_display = PlanDSLParser.format_plan_for_display(modified_plan)
+            
+            return {
+                "type": "plan_modified",
+                "plan": modified_plan.to_dict(),
+                "display": plan_display,
+                "message": "方案已修改:\n" + plan_display + "\n\n是否执行？"
+            }
+        
+        # 执行Plan
+        elif any(keyword in user_input_lower for keyword in ["执行方案", "运行方案", "run plan"]):
+            # 从用户输入中提取Plan名称
+            import re
+            plan_name_match = re.search(r"(执行|运行)方案(.*?)(?:的|$)", user_input)
+            plan_name = plan_name_match.group(2).strip() if plan_name_match else "default"
+            
+            try:
+                # 加载Plan
+                plan = self.plan_manager.load_plan(plan_name)
+                
+                # 执行Plan
+                # 这里简化处理，实际应该调用scan命令
+                from src.cli.main import scan
+                from click.testing import Context
+                
+                # 转换为CLI参数
+                from src.cli.plan_commands import _plan_to_cli_args
+                cli_args = _plan_to_cli_args(plan)
+                
+                return {
+                    "type": "plan_executed",
+                    "plan_name": plan_name,
+                    "plan": plan.to_dict(),
+                    "message": f"正在执行方案: {plan_name}\n" + PlanDSLParser.format_plan_for_display(plan)
+                }
+            except Exception as e:
+                return {
+                    "type": "error",
+                    "error": f"执行方案失败: {str(e)}"
+                }
+        
+        # 列出Plan
+        elif any(keyword in user_input_lower for keyword in ["列出方案", "查看方案", "list plans"]):
+            plans = self.plan_manager.list_plans()
+            
+            if not plans:
+                return {
+                    "type": "plan_list",
+                    "plans": [],
+                    "message": "没有保存的方案"
+                }
+            
+            return {
+                "type": "plan_list",
+                "plans": plans,
+                "message": "保存的方案:\n" + "\n".join([f"- {plan_name}" for plan_name in plans])
+            }
+        
+        # 保存Plan
+        elif any(keyword in user_input_lower for keyword in ["保存方案", "save plan"]):
+            # 从用户输入中提取Plan名称
+            import re
+            plan_name_match = re.search(r"(保存|save)方案(.*?)(?:的|$)", user_input)
+            plan_name = plan_name_match.group(2).strip() if plan_name_match else "default"
+            
+            # 生成一个默认Plan
+            plan = self.plan_manager.generate_from_natural_language("分析安全漏洞")
+            
+            try:
+                file_path = self.plan_manager.save_plan(plan, plan_name)
+                return {
+                    "type": "plan_saved",
+                    "plan_name": plan_name,
+                    "file_path": file_path,
+                    "message": f"方案已保存: {plan_name} (路径: {file_path})"
+                }
+            except Exception as e:
+                return {
+                    "type": "error",
+                    "error": f"保存方案失败: {str(e)}"
+                }
+        
+        # 默认处理
+        else:
+            # 生成一个默认Plan
+            plan = self.plan_manager.generate_from_natural_language(user_input)
+            plan_display = PlanDSLParser.format_plan_for_display(plan)
+            
+            return {
+                "type": "plan_generated",
+                "plan": plan.to_dict(),
+                "display": plan_display,
+                "message": "我为你生成了一个执行方案:\n" + plan_display + "\n\n是否执行？你也可以修改，比如：\n- '加上POC'\n- '只扫描登录模块'\n- '改成深度扫描'"
+            }
+    
     def _handle_info(self, user_input: str) -> Dict[str, Any]:
         """处理信息查询命令
         
@@ -768,6 +907,7 @@ class ConversationalSecurityAgent:
                       "- 分析命令: 例如 '分析这个项目的漏洞'\n" +
                       "- 利用命令: 例如 '生成漏洞的 POC'\n" +
                       "- 修复命令: 例如 '提供修复建议'\n" +
+                      "- Plan命令: 例如 '生成方案'、'修改方案'、'执行方案'\n" +
                       "- 特殊命令: /help, /exit, /clear\n" +
                       "- CLI转换: 例如 '转换为CLI命令' 或 '解释CLI命令'"
         }

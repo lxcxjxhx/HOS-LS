@@ -1,4 +1,136 @@
 {
-  "nodes": [],
-  "edges": []
+  "nodes": [
+    {
+      "id": "priority_WEB-SEARCH-HARDCODED__1",
+      "type": "knowledge",
+      "content": "网络搜索: hardcoded_credentials: 优先级 1, 得分 0.85",
+      "metadata": {
+        "type": "ai_learning",
+        "source": "auto_priority_evaluation",
+        "confidence": 0.85,
+        "tags": [
+          "网络搜索: hardcoded_credentials",
+          "priority_1"
+        ],
+        "created_at": "2026-04-10T19:24:17.096635",
+        "updated_at": "2026-04-10T19:24:17.096637"
+      }
+    },
+    {
+      "id": "priority_WEB-SEARCH-HARDCODED__2",
+      "type": "knowledge",
+      "content": "网络搜索: hardcoded_credentials: 优先级 2, 得分 0.65",
+      "metadata": {
+        "type": "ai_learning",
+        "source": "auto_priority_evaluation",
+        "confidence": 0.65,
+        "tags": [
+          "网络搜索: hardcoded_credentials",
+          "priority_2"
+        ],
+        "created_at": "2026-04-10T19:24:17.104024",
+        "updated_at": "2026-04-10T19:24:17.104026"
+      }
+    },
+    {
+      "id": "priority_WEB-SEARCH-HARDCODED__3",
+      "type": "knowledge",
+      "content": "网络搜索: hardcoded_credentials: 优先级 3, 得分 0.45",
+      "metadata": {
+        "type": "ai_learning",
+        "source": "auto_priority_evaluation",
+        "confidence": 0.45,
+        "tags": [
+          "网络搜索: hardcoded_credentials",
+          "priority_3"
+        ],
+        "created_at": "2026-04-10T19:24:17.110089",
+        "updated_at": "2026-04-10T19:24:17.110090"
+      }
+    },
+    {
+      "id": "c4ec40f823a7f8d0",
+      "type": "knowledge",
+      "content": "网络搜索: hardcoded_credentials: 优先级 4, 得分 0.25 返回敏感信息: 优先级 4, 得分 0.25 网络搜索: hardcoded_credentials: 优先级 4, 得分 0.25 返回敏感信息: 优先级 4, 得分 0.25",
+      "metadata": {
+        "type": "ai_learning",
+        "source": "merged_learning",
+        "confidence": 0.25,
+        "tags": [
+          "priority_4",
+          "网络搜索: hardcoded_credentials",
+          "返回敏感信息"
+        ],
+        "created_at": "2026-04-10T19:24:17.115901",
+        "updated_at": "2026-04-10T19:24:17.115903"
+      }
+    },
+    {
+      "id": "93f7113801e596f8",
+      "type": "knowledge",
+      "content": "类缺少文档字符串: 优先级 5, 得分 0.1 函数缺少文档字符串: 优先级 5, 得分 0.1 类缺少文档字符串: 优先级 5, 得分 0.1 函数缺少文档字符串: 优先级 5, 得分 0.1",
+      "metadata": {
+        "type": "ai_learning",
+        "source": "merged_learning",
+        "confidence": 0.10000000000000002,
+        "tags": [
+          "类缺少文档字符串",
+          "priority_5",
+          "函数缺少文档字符串"
+        ],
+        "created_at": "2026-04-10T19:24:17.122347",
+        "updated_at": "2026-04-10T19:24:17.122349"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "04aba077cf37c862",
+      "source": "priority_WEB-SEARCH-HARDCODED__1",
+      "target": "priority_WEB-SEARCH-HARDCODED__2",
+      "relationship": "related_to",
+      "weight": 0.5555555555555556,
+      "created_at": "2026-04-10T19:53:16.390334"
+    },
+    {
+      "id": "ffdc3755abde7137",
+      "source": "priority_WEB-SEARCH-HARDCODED__1",
+      "target": "priority_WEB-SEARCH-HARDCODED__3",
+      "relationship": "related_to",
+      "weight": 0.5555555555555556,
+      "created_at": "2026-04-10T19:53:16.390364"
+    },
+    {
+      "id": "995b169030ce2949",
+      "source": "priority_WEB-SEARCH-HARDCODED__2",
+      "target": "priority_WEB-SEARCH-HARDCODED__1",
+      "relationship": "related_to",
+      "weight": 0.5555555555555556,
+      "created_at": "2026-04-10T19:53:16.390438"
+    },
+    {
+      "id": "123e3567524ee436",
+      "source": "priority_WEB-SEARCH-HARDCODED__2",
+      "target": "priority_WEB-SEARCH-HARDCODED__3",
+      "relationship": "related_to",
+      "weight": 0.5555555555555556,
+      "created_at": "2026-04-10T19:53:16.390463"
+    },
+    {
+      "id": "0abce500df35d4f5",
+      "source": "priority_WEB-SEARCH-HARDCODED__3",
+      "target": "priority_WEB-SEARCH-HARDCODED__1",
+      "relationship": "related_to",
+      "weight": 0.5555555555555556,
+      "created_at": "2026-04-10T19:53:16.390534"
+    },
+    {
+      "id": "9dae7e4f4377f8c5",
+      "source": "priority_WEB-SEARCH-HARDCODED__3",
+      "target": "priority_WEB-SEARCH-HARDCODED__2",
+      "relationship": "related_to",
+      "weight": 0.5555555555555556,
+      "created_at": "2026-04-10T19:53:16.390558"
+    }
+  ]
 }
