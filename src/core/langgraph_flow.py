@@ -1374,6 +1374,105 @@ async def analyze_code(code: str) -> Dict[str, Any]:
         return {'error': str(e)}
 
 
+def build_pipeline_graph(agent_nodes):
+    """根据Agent节点构建LangGraph流程
+    
+    Args:
+        agent_nodes: Agent节点列表
+        
+    Returns:
+        CompiledGraph: 编译后的流程图
+    """
+    from src.core.agent_pipeline import AgentType
+    
+    # 创建状态图
+    graph = StateGraph(AgentState)
+    
+    # 添加基础节点
+    graph.add_node("retrieve", retrieval_node)
+    graph.add_node("build_graph", graph_node)
+    graph.add_node("reason", reasoning_node)
+    graph.add_node("critic", critic_node)
+    graph.add_node("repair", repair_node)
+    
+    # 设置入口点
+    graph.set_entry_point("retrieve")
+    
+    # 构建边
+    agent_types = [node.type for node in agent_nodes]
+    
+    # 基础流程：retrieve → reason → critic → repair
+    current_node = "retrieve"
+    
+    # 检查是否需要构建攻击链
+    if AgentType.ATTACK_CHAIN in agent_types:
+        graph.add_conditional_edges(
+            current_node,
+            should_build_graph,
+            {"yes": "build_graph", "no": "reason"}
+        )
+        current_node = "build_graph"
+        graph.add_edge(current_node, "reason")
+        current_node = "reason"
+    else:
+        graph.add_edge(current_node, "reason")
+        current_node = "reason"
+    
+    # 添加推理节点
+    graph.add_edge(current_node, "critic")
+    current_node = "critic"
+    
+    # 添加Critic循环
+    graph.add_conditional_edges(
+        current_node,
+        lambda state: "reason" if state.get('final_report') is None else "repair",
+        {"reason": "reason", "repair": "repair"}
+    )
+    current_node = "repair"
+    
+    # 结束节点
+    graph.add_edge(current_node, END)
+    
+    return graph.compile()
+
+
+async def run_pipeline(agent_nodes, code: str, ask: Optional[str] = None, focus: Optional[str] = None) -> Dict[str, Any]:
+    """运行Agent Pipeline
+    
+    Args:
+        agent_nodes: Agent节点列表
+        code: 代码内容
+        ask: 自然语言查询
+        focus: 关注的文件或目录
+        
+    Returns:
+        Dict[str, Any]: 运行结果
+    """
+    try:
+        # 创建初始状态
+        initial_state: AgentState = {
+            'input_code': code,
+            'cve_candidates': [],
+            'graph_subgraph': {},
+            'analysis_result': '',
+            'final_report': {},
+            'iteration': 0,
+            'ask': ask,
+            'focus': focus
+        }
+        
+        # 构建并编译图
+        app = build_pipeline_graph(agent_nodes)
+        
+        # 运行流程
+        result = await app.ainvoke(initial_state)
+        
+        return result
+        
+    except Exception as e:
+        return {'error': str(e)}
+
+
 async def process_conversation(message: str, conversation_history: List[Dict[str, str]] = None) -> Dict[str, Any]:
     """处理对话
     

@@ -8,7 +8,6 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from src.ai.client import AIClient, AIModelManager, get_model_manager
 from src.ai.models import (
     AIProvider,
     AIRequest,
@@ -39,6 +38,7 @@ class AIAnalyzer:
     """AI 安全分析器"""
 
     def __init__(self, config: Optional[Config] = None) -> None:
+        from src.ai.client import AIModelManager
         self.config = config or get_config()
         self._manager: Optional[AIModelManager] = None
         self._json_parser = SmartJSONParser()
@@ -77,6 +77,7 @@ class AIAnalyzer:
 
     async def initialize(self) -> None:
         """初始化分析器"""
+        from src.ai.client import get_model_manager
         # 获取模型管理器实例，使用单例模式
         self._manager = await get_model_manager(self.config)
 

@@ -12,7 +12,6 @@ from typing import Dict, List, Optional, Any
 
 from src.utils.logger import get_logger
 from src.learning.self_learning import Knowledge, KnowledgeType
-from src.storage.rag_knowledge_base import get_rag_knowledge_base
 
 logger = get_logger(__name__)
 
@@ -29,6 +28,7 @@ class CVECrawler:
         """
         self.base_url = base_url
         self.session: Optional[aiohttp.ClientSession] = None
+        from src.storage.rag_knowledge_base import get_rag_knowledge_base
         self.rag_knowledge_base = get_rag_knowledge_base()
 
     async def __aenter__(self):

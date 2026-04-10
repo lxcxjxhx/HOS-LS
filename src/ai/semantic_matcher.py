@@ -9,7 +9,6 @@ from pathlib import Path
 from typing import Dict, List, Optional, Union, Any
 
 from src.storage.vector_store import VectorStore
-from src.storage.rag_knowledge_base import get_rag_knowledge_base
 from src.utils.logger import get_logger
 from src.core.config import Config, get_config
 
@@ -55,6 +54,7 @@ class SemanticMatcher:
         """
         self.config = config or get_config()
         self._vector_store = VectorStore(Path("./vector_store"))
+        from src.storage.rag_knowledge_base import get_rag_knowledge_base
         self._rag_knowledge_base = get_rag_knowledge_base()
         self._initialized = False
 

@@ -8,10 +8,8 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Dict, List, Optional, Set, Tuple, Any
 
-from src.ai.client import AIModelManager, get_model_manager
 from src.ai.models import AIRequest, SecurityAnalysisResult, VulnerabilityFinding
 from src.ai.prompts import get_prompt_manager
-from src.storage.rag_knowledge_base import get_rag_knowledge_base
 from src.utils.logger import get_logger
 from src.core.config import Config, get_config
 
@@ -74,13 +72,14 @@ class AttackChainAnalyzer:
             config: 配置对象
         """
         self.config = config or get_config()
-        self._manager: Optional[AIModelManager] = None
+        self._manager: Optional['AIModelManager'] = None
         self._prompt_manager = get_prompt_manager(self.config)
         self._system_prompt = self._load_system_prompt()
         # 纯AI模式下跳过RAG知识库初始化
         if hasattr(self.config, 'pure_ai') and self.config.pure_ai:
             self._rag_knowledge_base = None
         else:
+            from src.storage.rag_knowledge_base import get_rag_knowledge_base
             self._rag_knowledge_base = get_rag_knowledge_base()
 
     def _load_system_prompt(self) -> str:
@@ -89,8 +88,7 @@ class AttackChainAnalyzer:
 
     async def initialize(self) -> None:
         """初始化攻击链路分析器"""
-        from src.ai.client import _manager
-        _manager = None
+        from src.ai.client import get_model_manager
         self._manager = await get_model_manager(self.config)
 
     async def analyze(self, findings: List[VulnerabilityFinding]) -> AttackChainResult:
@@ -303,9 +301,86 @@ class AttackChainAnalyzer:
 
         # 过滤和排序路径
         filtered_paths = self._filter_paths(paths)
-        sorted_paths = sorted(filtered_paths, key=lambda p: p.risk_score, reverse=True)[:10]  # 只保留前10个最高风险路径
+        
+        # 分析路径类型（特权提升、横向移动等）
+        analyzed_paths = self._analyze_path_types(filtered_paths, node_map, edges)
+        
+        # 排序路径
+        sorted_paths = sorted(analyzed_paths, key=lambda p: p.risk_score, reverse=True)[:10]  # 只保留前10个最高风险路径
 
         return sorted_paths
+
+    def _analyze_path_types(self, paths: List[AttackPath], node_map: Dict[str, AttackNode], edges: List[AttackEdge]) -> List[AttackPath]:
+        """分析攻击路径类型
+
+        Args:
+            paths: 攻击路径列表
+            node_map: 节点映射
+            edges: 攻击边列表
+
+        Returns:
+            分析后的攻击路径列表
+        """
+        analyzed_paths = []
+        
+        for path in paths:
+            # 分析路径类型
+            path_type = self._determine_path_type(path, node_map, edges)
+            
+            # 更新路径元数据
+            path.metadata['type'] = path_type
+            
+            # 根据路径类型调整风险评分
+            if path_type == 'privilege_escalation':
+                path.risk_score *= 1.2  # 特权提升路径风险更高
+            elif path_type == 'lateral_movement':
+                path.risk_score *= 1.1  # 横向移动路径风险较高
+            
+            analyzed_paths.append(path)
+        
+        return analyzed_paths
+
+    def _determine_path_type(self, path: AttackPath, node_map: Dict[str, AttackNode], edges: List[AttackEdge]) -> str:
+        """确定攻击路径类型
+
+        Args:
+            path: 攻击路径
+            node_map: 节点映射
+            edges: 攻击边列表
+
+        Returns:
+            路径类型
+        """
+        # 检查是否包含特权提升相关漏洞
+        privilege_escalation_keywords = ['privilege', 'escalation', 'admin', 'root', 'sudo', 'permission']
+        
+        # 检查是否包含横向移动相关漏洞
+        lateral_movement_keywords = ['lateral', 'movement', 'network', 'remote', 'access']
+        
+        # 检查路径中的漏洞
+        for node_id in path.nodes:
+            node = node_map.get(node_id)
+            if node:
+                rule_name = node.vulnerability.rule_name.lower()
+                description = node.vulnerability.description.lower()
+                
+                # 检查特权提升
+                for keyword in privilege_escalation_keywords:
+                    if keyword in rule_name or keyword in description:
+                        return 'privilege_escalation'
+                
+                # 检查横向移动
+                for keyword in lateral_movement_keywords:
+                    if keyword in rule_name or keyword in description:
+                        return 'lateral_movement'
+        
+        # 检查路径长度和关系
+        if len(path.nodes) >= 3:
+            return 'complex_attack_chain'
+        elif len(path.nodes) == 2:
+            return 'simple_attack_path'
+        else:
+            return 'single_vulnerability'
 
     def _dfs(self, current: str, visited: Set[str], path_nodes: List[str], path_edges: List[str], adjacency: Dict[str, List[Tuple[str, float, str]]], node_map: Dict[str, AttackNode], paths: List[AttackPath]):
         """深度优先搜索寻找攻击路径"""
@@ -398,10 +473,42 @@ class AttackChainAnalyzer:
             "info": 0.1
         }
 
+        # 基础评分
         severity_score = severity_scores.get(finding.severity, 0.5)
         confidence = finding.confidence
+        base_score = severity_score * confidence
 
-        return severity_score * confidence
+        # 漏洞类型权重
+        vulnerability_weights = {
+            'sql_injection': 1.2,
+            'command_injection': 1.3,
+            'xss': 0.8,
+            'authentication_bypass': 1.4,
+            'privilege_escalation': 1.5,
+            'remote_code_execution': 1.6,
+            'buffer_overflow': 1.4,
+            'csrf': 0.7,
+            'sensitive_data_exposure': 0.9
+        }
+
+        # 提取漏洞类型
+        rule_name = finding.rule_name.lower()
+        weight = 1.0
+        for vuln_type, vuln_weight in vulnerability_weights.items():
+            if vuln_type in rule_name:
+                weight = vuln_weight
+                break
+
+        # 复杂度调整
+        complexity_score = 1.0
+        if 'complex' in rule_name or 'advanced' in rule_name:
+            complexity_score = 1.1
+        elif 'simple' in rule_name or 'basic' in rule_name:
+            complexity_score = 0.9
+
+        # 综合评分
+        final_score = base_score * weight * complexity_score
+        return min(final_score, 1.0)
 
     def _calculate_overall_risk(self, paths: List[AttackPath]) -> float:
         """计算总体风险评分

@@ -136,7 +136,7 @@ class ConversationalSecurityAgent:
         
         # 尝试提取路径（支持绝对路径）
         # 改进的 Windows 路径匹配，支持包含空格的路径
-        path_pattern = r"[a-zA-Z]:\\[\\\w\s.-]+?(?=\s+(?:测试|test|模式|pure|纯|个文件|文件)|")"  # 匹配 Windows 绝对路径，直到特定关键词
+        path_pattern = r"[a-zA-Z]:\\[\\\w\s.-]+?(?=\s+(?:测试|test|模式|pure|纯|个文件|文件)|$)"  # 匹配 Windows 绝对路径，直到特定关键词
         path_match = re.search(path_pattern, user_input)
         if path_match:
             target = path_match.group(0).strip()
@@ -210,7 +210,7 @@ class ConversationalSecurityAgent:
         import re
         
         # 尝试提取路径（支持绝对路径）
-        path_pattern = r"[a-zA-Z]:\\[\\\w\s.-]+?(?=\s+(?:分析|analyze|评估|风险)|")"
+        path_pattern = r"[a-zA-Z]:\\[\\\w\s.-]+?(?=\s+(?:分析|analyze|评估|风险)|$)"
         path_match = re.search(path_pattern, user_input)
         if path_match:
             target = path_match.group(0).strip()
@@ -267,7 +267,7 @@ class ConversationalSecurityAgent:
         import re
         
         # 尝试提取路径
-        path_pattern = r"[a-zA-Z]:\\[\\\w\s.-]+?(?=\s+(?:攻击|exploit|poc|利用)|")"
+        path_pattern = r"[a-zA-Z]:\\[\\\w\s.-]+?(?=\s+(?:攻击|exploit|poc|利用)|$)"
         path_match = re.search(path_pattern, user_input)
         if path_match:
             target = path_match.group(0).strip()
@@ -632,7 +632,7 @@ class ConversationalSecurityAgent:
         import re
         
         # 尝试提取路径
-        path_pattern = r"[a-zA-Z]:\\[\\\w\s.-]+?(?=\s+(?:修复|fix|patch)|")"
+        path_pattern = r"[a-zA-Z]:\\[\\\w\s.-]+?(?=\s+(?:修复|fix|patch)|$)"
         path_match = re.search(path_pattern, user_input)
         if path_match:
             target = path_match.group(0).strip()
@@ -768,8 +768,117 @@ class ConversationalSecurityAgent:
                       "- 分析命令: 例如 '分析这个项目的漏洞'\n" +
                       "- 利用命令: 例如 '生成漏洞的 POC'\n" +
                       "- 修复命令: 例如 '提供修复建议'\n" +
-                      "- 特殊命令: /help, /exit, /clear"
+                      "- 特殊命令: /help, /exit, /clear\n" +
+                      "- CLI转换: 例如 '转换为CLI命令' 或 '解释CLI命令'"
         }
+    
+    def natural_language_to_cli(self, natural_language: str) -> str:
+        """将自然语言转换为CLI命令
+        
+        Args:
+            natural_language: 自然语言输入
+            
+        Returns:
+            CLI命令字符串
+        """
+        # 分析自然语言意图
+        intent = self.parse_intent(natural_language)
+        
+        # 基础命令
+        cli_command = "hos-ls"
+        
+        # 根据意图构建CLI命令
+        if intent == "scan":
+            cli_command += " --scan"
+            # 检查是否需要纯AI模式
+            if "pure" in natural_language.lower() or "纯" in natural_language:
+                cli_command += " --pure-ai"
+            # 检查是否需要POC生成
+            if "poc" in natural_language.lower() or "利用" in natural_language:
+                cli_command += " --poc"
+        elif intent == "analyze":
+            cli_command += " --scan --reason"
+            # 检查是否需要攻击链分析
+            if "攻击链" in natural_language or "attack chain" in natural_language.lower():
+                cli_command += " --attack-chain"
+        elif intent == "exploit":
+            cli_command += " --scan --reason --poc"
+            # 检查是否需要验证
+            if "验证" in natural_language or "verify" in natural_language.lower():
+                cli_command += " --verify"
+        elif intent == "fix":
+            cli_command += " --scan --reason --fix"
+        
+        # 添加目标路径
+        target = "."
+        import re
+        # 尝试提取路径
+        path_pattern = r"[a-zA-Z]:\\[\\\w\s.-]+?(?=\s+(?:测试|test|模式|pure|纯|个文件|文件)|$)"
+        path_match = re.search(path_pattern, natural_language)
+        if path_match:
+            target = path_match.group(0).strip()
+        cli_command += f" {target}"
+        
+        return cli_command
+    
+    def cli_to_natural_language(self, cli_command: str) -> str:
+        """将CLI命令转换为自然语言
+        
+        Args:
+            cli_command: CLI命令
+            
+        Returns:
+            自然语言描述
+        """
+        # 解析CLI命令
+        import shlex
+        parts = shlex.split(cli_command)
+        
+        # 移除命令名
+        if parts and parts[0] == "hos-ls":
+            parts = parts[1:]
+        
+        # 分析参数
+        actions = []
+        target = "."
+        
+        for part in parts:
+            if part.startswith("--"):
+                flag = part[2:]
+                if flag == "scan":
+                    actions.append("扫描代码")
+                elif flag == "reason":
+                    actions.append("分析漏洞")
+                elif flag == "attack-chain":
+                    actions.append("分析攻击链")
+                elif flag == "poc":
+                    actions.append("生成漏洞利用代码")
+                elif flag == "verify":
+                    actions.append("验证漏洞")
+                elif flag == "fix":
+                    actions.append("提供修复建议")
+                elif flag == "report":
+                    actions.append("生成报告")
+                elif flag == "pure-ai":
+                    actions.append("使用纯AI模式")
+                elif flag == "full-audit":
+                    actions.append("执行完整安全审计")
+                elif flag == "quick-scan":
+                    actions.append("执行快速扫描")
+            else:
+                # 假设是目标路径
+                target = part
+        
+        # 构建自然语言描述
+        if not actions:
+            return "执行安全扫描"
+        
+        description = ""
+        if actions:
+            description = "、".join(actions)
+            description += f"，目标路径为 {target}"
+        
+        return description
     
     def _handle_general(self, user_input: str) -> Dict[str, Any]:
         """处理通用命令
@@ -815,6 +924,33 @@ class ConversationalSecurityAgent:
                 "type": "project_summary",
                 **self.project_context
             }
+        elif "转换为CLI命令" in user_input or "转为CLI命令" in user_input:
+            # 处理自然语言转CLI命令
+            # 提取实际的自然语言请求
+            import re
+            request_match = re.search(r"(转换为CLI命令|转为CLI命令)\s*(.*?)(?:的|$)", user_input)
+            if request_match:
+                natural_language = request_match.group(2).strip() or user_input
+                cli_command = self.natural_language_to_cli(natural_language)
+                return {
+                    "type": "cli_conversion",
+                    "natural_language": natural_language,
+                    "cli_command": cli_command
+                }
+        elif "解释CLI命令" in user_input or "解释命令" in user_input:
+            # 处理CLI命令转自然语言
+            # 提取CLI命令
+            import re
+            command_match = re.search(r"(解释CLI命令|解释命令)\s*(.*?)(?:的|$)", user_input)
+            if command_match:
+                cli_command = command_match.group(2).strip()
+                if cli_command:
+                    natural_language = self.cli_to_natural_language(cli_command)
+                    return {
+                        "type": "cli_explanation",
+                        "cli_command": cli_command,
+                        "natural_language": natural_language
+                    }
         
         # 使用多 Agent 管道处理通用查询
         result = self.multi_agent_pipeline.process_query(user_input)

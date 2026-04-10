@@ -32,6 +32,8 @@ class GraphStore:
         self._store_nodes(nodes)
         # 存储边
         self._store_edges(edges)
+        # 清空缓存，因为图谱已更新
+        self.clear_cache()
 
     def _store_nodes(self, nodes: List[GraphNode]) -> None:
         """存储节点
@@ -145,12 +147,75 @@ class GraphStore:
         Returns:
             节点列表
         """
+        # 检查缓存
+        cache_key = f"nodes_by_label_{label}_{limit}"
+        if cache_key in self._cache:
+            return self._cache[cache_key]
+
         query = f"""
         MATCH (n:{label})
         RETURN n
         LIMIT $limit
         """
         result = self._neo4j_manager.execute_cypher(query, {"limit": limit})
+        nodes = [record.get("n", {}) for record in result]
+
+        # 缓存结果
+        self._cache[cache_key] = nodes
+        return nodes
+
+    def get_nodes_by_ids(self, node_ids: List[str]) -> List[Dict[str, Any]]:
+        """批量获取节点
+
+        Args:
+            node_ids: 节点 ID 列表
+
+        Returns:
+            节点列表
+        """
+        if not node_ids:
+            return []
+
+        # 构建参数
+        parameters = {"node_ids": node_ids}
+
+        # 构建查询
+        query = """
+        MATCH (n)
+        WHERE n.id IN $node_ids
+        RETURN n
+        """
+
+        result = self._neo4j_manager.execute_cypher(query, parameters)
+        return [record.get("n", {}) for record in result]
+
+    def find_nodes_by_property(self, label: str, property_name: str, property_value: Any, limit: int = 100) -> List[Dict[str, Any]]:
+        """根据属性查询节点
+
+        Args:
+            label: 节点标签
+            property_name: 属性名
+            property_value: 属性值
+            limit: 返回数量限制
+
+        Returns:
+            节点列表
+        """
+        # 构建参数
+        parameters = {
+            "property_value": property_value,
+            "limit": limit
+        }
+
+        # 构建查询
+        query = f"""
+        MATCH (n:{label})
+        WHERE n.{property_name} = $property_value
+        RETURN n
+        LIMIT $limit
+        """
+
+        result = self._neo4j_manager.execute_cypher(query, parameters)
         return [record.get("n", {}) for record in result]
 
     def get_edges(self, node_id: str, edge_type: Optional[str] = None) -> List[Dict[str, Any]]:
@@ -197,7 +262,8 @@ class GraphStore:
         Returns:
             路径列表
         """
-        query = """
+        # 构建带深度的查询
+        query = f"""
         MATCH path = (s {{id: $source_id}})-[*1..{max_depth}]->(t {{id: $target_id}})
         RETURN path
         LIMIT 10
@@ -273,6 +339,11 @@ class GraphStore:
         Returns:
             统计信息
         """
+        # 检查缓存
+        cache_key = "graph_statistics"
+        if cache_key in self._cache:
+            return self._cache[cache_key]
+
         # 统计节点数量
         node_count_query = """
         MATCH (n)
@@ -313,71 +384,20 @@ class GraphStore:
             count = record.get("count", 0)
             edge_counts[edge_type] = count
 
-        return {
+        statistics = {
             "total_nodes": total_nodes,
             "total_edges": total_edges,
             "node_counts": node_counts,
             "edge_counts": edge_counts
         }
+
+        # 缓存结果
+        self._cache[cache_key] = statistics
+        return statistics
 
     def clear_cache(self) -> None:
         """清空缓存"""
         self._cache.clear()
-
-
-
-    def get_graph_statistics(self) -> Dict[str, Any]:
-        """获取图谱统计信息
-
-        Returns:
-            统计信息
-        """
-        # 统计节点数量
-        node_count_query = """
-        MATCH (n)
-        RETURN count(n) AS total_nodes
-        """
-        node_count_result = self._neo4j_manager.execute_cypher(node_count_query)
-        total_nodes = node_count_result[0].get("total_nodes", 0)
-
-        # 统计边数量
-        edge_count_query = """
-        MATCH ()-[r]->()
-        RETURN count(r) AS total_edges
-        """
-        edge_count_result = self._neo4j_manager.execute_cypher(edge_count_query)
-        total_edges = edge_count_result[0].get("total_edges", 0)
-
-        # 统计节点类型
-        node_types_query = """
-        MATCH (n)
-        RETURN labels(n)[0] AS label, count(n) AS count
-        """
-        node_types_result = self._neo4j_manager.execute_cypher(node_types_query)
-        node_counts = {}
-        for record in node_types_result:
-            label = record.get("label", "Unknown")
-            count = record.get("count", 0)
-            node_counts[label] = count
-
-        # 统计边类型
-        edge_types_query = """
-        MATCH ()-[r]->()
-        RETURN type(r) AS type, count(r) AS count
-        """
-        edge_types_result = self._neo4j_manager.execute_cypher(edge_types_query)
-        edge_counts = {}
-        for record in edge_types_result:
-            edge_type = record.get("type", "Unknown")
-            count = record.get("count", 0)
-            edge_counts[edge_type] = count
-
-        return {
-            "total_nodes": total_nodes,
-            "total_edges": total_edges,
-            "node_counts": node_counts,
-            "edge_counts": edge_counts
-        }
 
     def close(self) -> None:
         """关闭连接"""

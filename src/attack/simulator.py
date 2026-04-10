@@ -7,6 +7,8 @@ import asyncio
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
+from src.sandbox.executor import SandboxExecutor, ExecutionLanguage, ExecutionResult
+
 
 @dataclass
 class AttackScenario:
@@ -95,11 +97,26 @@ class AttackSimulator:
             attack_type="ai",
             expected_findings=["PROMPT_INJECTION"],
         ),
+        AttackScenario(
+            id="jwt_injection",
+            name="JWT 注入测试",
+            description="测试 JWT 令牌注入漏洞",
+            attack_type="auth",
+            expected_findings=["JWT_INJECTION"],
+        ),
+        AttackScenario(
+            id="deserialization",
+            name="反序列化测试",
+            description="测试反序列化漏洞",
+            attack_type="injection",
+            expected_findings=["DESERIALIZATION"],
+        ),
     ]
     
     def __init__(self) -> None:
         self.scenarios: Dict[str, AttackScenario] = {}
         self._load_builtin_scenarios()
+        self.sandbox_executor = SandboxExecutor()  # 沙盒执行器
     
     def _load_builtin_scenarios(self) -> None:
         """加载内置场景"""
@@ -151,6 +168,8 @@ class AttackSimulator:
             # 根据攻击类型执行不同的测试
             if scenario.attack_type == "injection":
                 findings = await self._test_injection(target_code, language)
+                # 补充反序列化测试
+                findings.extend(await self._test_deserialization(target_code, language))
             elif scenario.attack_type == "xss":
                 findings = await self._test_xss(target_code, language)
             elif scenario.attack_type == "traversal":
@@ -159,6 +178,8 @@ class AttackSimulator:
                 findings = await self._test_ssrf(target_code, language)
             elif scenario.attack_type == "auth":
                 findings = await self._test_auth(target_code, language)
+                # 补充JWT测试
+                findings.extend(await self._test_jwt_injection(target_code, language))
             elif scenario.attack_type == "data":
                 findings = await self._test_data_exposure(target_code, language)
             elif scenario.attack_type == "ai":
@@ -359,6 +380,64 @@ class AttackSimulator:
                     })
         
         return findings
+
+    async def _test_jwt_injection(
+        self, code: str, language: str
+    ) -> List[Dict[str, Any]]:
+        """测试 JWT 注入漏洞"""
+        findings = []
+        
+        jwt_patterns = [
+            "jwt", "token", "decode", "encode",
+            "secret", "key", "algorithm",
+        ]
+        
+        for pattern in jwt_patterns:
+            if pattern in code.lower():
+                # 检查是否有硬编码的密钥或不安全的算法
+                if "secret" in code.lower() or "key" in code.lower():
+                    if '"' in code or "'" in code:
+                        findings.append({
+                            "type": "JWT_INJECTION",
+                            "pattern": pattern,
+                            "severity": "critical",
+                            "message": f"发现潜在的 JWT 注入漏洞: 硬编码密钥",
+                        })
+                # 检查是否使用了不安全的算法
+                if "none" in code.lower() or "HS256" in code:
+                    findings.append({
+                        "type": "JWT_INJECTION",
+                        "pattern": pattern,
+                        "severity": "high",
+                        "message": f"发现潜在的 JWT 注入漏洞: 不安全的算法",
+                    })
+        
+        return findings
+
+    async def _test_deserialization(
+        self, code: str, language: str
+    ) -> List[Dict[str, Any]]:
+        """测试反序列化漏洞"""
+        findings = []
+        
+        deserialization_patterns = [
+            "pickle", "loads", "load",
+            "unserialize", "deserialize",
+            "json.loads", "yaml.load",
+        ]
+        
+        for pattern in deserialization_patterns:
+            if pattern in code:
+                # 检查是否有用户输入直接传递给反序列化函数
+                if "request" in code or "input" in code or "args" in code:
+                    findings.append({
+                        "type": "DESERIALIZATION",
+                        "pattern": pattern,
+                        "severity": "critical",
+                        "message": f"发现潜在的反序列化漏洞: {pattern}",
+                    })
+        
+        return findings
     
     async def run_all_scenarios(
         self, target_code: str, language: str = "python"
@@ -369,3 +448,64 @@ class AttackSimulator:
             result = await self.run_scenario(scenario_id, target_code, language)
             results.append(result)
         return results
+
+    async def execute_poc(self, poc_code: str, language: str = "python", network_access: bool = False) -> ExecutionResult:
+        """在沙盒中执行POC代码
+        
+        Args:
+            poc_code: POC代码
+            language: 语言
+            network_access: 是否允许网络访问
+            
+        Returns:
+            执行结果
+        """
+        return self.sandbox_executor.execute(
+            code=poc_code,
+            language=language,
+            network_access=network_access
+        )
+
+    async def test_vulnerability_with_poc(self, scenario_id: str, poc_code: str, language: str = "python") -> AttackResult:
+        """使用POC测试漏洞
+        
+        Args:
+            scenario_id: 场景ID
+            poc_code: POC代码
+            language: 语言
+            
+        Returns:
+            攻击结果
+        """
+        scenario = self.get_scenario(scenario_id)
+        if not scenario:
+            return AttackResult(
+                scenario_id=scenario_id,
+                success=False,
+                error_message=f"场景 '{scenario_id}' 不存在",
+            )
+        
+        # 执行POC代码
+        execution_result = await self.execute_poc(poc_code, language)
+        
+        # 分析执行结果
+        findings = []
+        if execution_result.status.value in ["success", "failed"]:
+            # 检查输出中是否包含预期的漏洞特征
+            if "vulnerable" in execution_result.output.lower() or "exploit" in execution_result.output.lower():
+                findings.append({
+                    "type": scenario.expected_findings[0] if scenario.expected_findings else "VULNERABILITY",
+                    "severity": "high",
+                    "message": f"POC执行成功，验证了漏洞的存在",
+                    "output": execution_result.output
+                })
+        
+        success = len(findings) > 0
+        
+        return AttackResult(
+            scenario_id=scenario_id,
+            success=success,
+            findings=findings,
+            execution_time=execution_result.execution_time,
+            error_message=execution_result.error if execution_result.status.value == "error" else ""
+        )

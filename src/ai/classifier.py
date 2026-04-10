@@ -7,7 +7,6 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Dict, List, Optional, Tuple, Any
 
-from src.ai.client import AIClient, AIModelManager, get_model_manager
 from src.ai.models import (
     AIRequest,
     AIResponse,
@@ -16,7 +15,6 @@ from src.ai.models import (
     AnalysisContext,
 )
 from src.ai.prompts import get_prompt_manager
-from src.storage.rag_knowledge_base import get_rag_knowledge_base
 from src.utils.logger import get_logger
 from src.core.config import Config, get_config
 
@@ -69,10 +67,12 @@ class VulnerabilityClassifier:
     """漏洞分类器"""
 
     def __init__(self, config: Optional[Config] = None) -> None:
+        from src.ai.client import AIModelManager
         self.config = config or get_config()
         self._manager: Optional[AIModelManager] = None
         self._prompt_manager = get_prompt_manager(self.config)
         self._system_prompt = self._load_system_prompt()
+        from src.storage.rag_knowledge_base import get_rag_knowledge_base
         self._rag_knowledge_base = get_rag_knowledge_base()
         self._classification_rules = self._load_classification_rules()
 
@@ -127,7 +127,7 @@ class VulnerabilityClassifier:
 
     async def initialize(self) -> None:
         """初始化分类器"""
-        from src.ai.client import _manager
+        from src.ai.client import _manager, get_model_manager
         _manager = None
         self._manager = await get_model_manager(self.config)
 

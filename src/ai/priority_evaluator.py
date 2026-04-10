@@ -6,7 +6,6 @@
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Any
 
-from src.ai.client import AIModelManager, get_model_manager
 from src.ai.models import (
     AIRequest,
     SecurityAnalysisResult,
@@ -52,6 +51,7 @@ class VulnerabilityPriorityEvaluator:
         Args:
             config: 配置对象
         """
+        from src.ai.client import AIModelManager
         self.config = config or get_config()
         self._manager: Optional[AIModelManager] = None
         self._prompt_manager = get_prompt_manager(self.config)
@@ -90,7 +90,7 @@ class VulnerabilityPriorityEvaluator:
 
     async def initialize(self) -> None:
         """初始化优先级评估器"""
-        from src.ai.client import _manager
+        from src.ai.client import _manager, get_model_manager
         _manager = None
         self._manager = await get_model_manager(self.config)
 

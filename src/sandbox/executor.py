@@ -15,6 +15,13 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
+# 尝试导入截图模块
+try:
+    import pyautogui
+    SCREENSHOT_AVAILABLE = True
+except ImportError:
+    SCREENSHOT_AVAILABLE = False
+
 try:
     import psutil
 
@@ -66,6 +73,7 @@ class ExecutionResult:
     execution_time: float = 0.0
     memory_used: Optional[int] = None
     cpu_used: Optional[float] = None
+    screenshot: Optional[str] = None  # 截图路径
     metadata: Dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> Dict[str, Any]:
@@ -78,6 +86,7 @@ class ExecutionResult:
             "execution_time": self.execution_time,
             "memory_used": self.memory_used,
             "cpu_used": self.cpu_used,
+            "screenshot": self.screenshot,
             "metadata": self.metadata,
         }
 
@@ -93,6 +102,8 @@ class SandboxConfig:
     file_system_access: bool = True
     temp_dir_prefix: str = "sandbox_"
     env_vars: Dict[str, str] = field(default_factory=dict)
+    capture_screenshot: bool = False  # 是否捕获截图
+    screenshot_dir: Optional[str] = None  # 截图保存目录
 
 
 class SandboxExecutor:
@@ -181,6 +192,12 @@ class SandboxExecutor:
                 output="",
                 error=f"Unsupported language: {language}",
             )
+
+        # 捕获截图
+        if self.config.capture_screenshot and SCREENSHOT_AVAILABLE:
+            screenshot_path = self._capture_screenshot()
+            if screenshot_path:
+                result.screenshot = screenshot_path
 
         self.cleanup_sandbox()
         return result
@@ -559,6 +576,30 @@ class SandboxExecutor:
             execution_time=execution_time,
             metadata={"type": "function"},
         )
+
+    def _capture_screenshot(self) -> Optional[str]:
+        """捕获屏幕截图
+        
+        Returns:
+            截图路径
+        """
+        try:
+            # 创建截图保存目录
+            screenshot_dir = self.config.screenshot_dir or os.path.join(os.getcwd(), "screenshots")
+            os.makedirs(screenshot_dir, exist_ok=True)
+            
+            # 生成截图文件名
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            screenshot_path = os.path.join(screenshot_dir, f"screenshot_{timestamp}.png")
+            
+            # 捕获截图
+            screenshot = pyautogui.screenshot()
+            screenshot.save(screenshot_path)
+            
+            return screenshot_path
+        except Exception as e:
+            print(f"捕获截图失败: {e}")
+            return None
 
     def shutdown(self) -> None:
         """关闭执行器"""

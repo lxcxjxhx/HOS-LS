@@ -5,7 +5,6 @@
 
 from typing import List, Optional
 
-from src.ai.client import AIModelManager, get_model_manager
 from src.ai.filters.base import BaseFilter
 from src.ai.json_parser import SmartJSONParser
 from src.ai.models import AIRequest, VulnerabilityFinding
@@ -49,6 +48,7 @@ class AIFalsePositiveFilter(BaseFilter):
         self, findings: List[VulnerabilityFinding]
     ) -> List[VulnerabilityFinding]:
         """过滤发现"""
+        from src.ai.client import get_model_manager
         manager = await get_model_manager(self.config)
         filtered = []
 
@@ -59,7 +59,7 @@ class AIFalsePositiveFilter(BaseFilter):
         return filtered
 
     async def _is_false_positive(
-        self, manager: AIModelManager, finding: VulnerabilityFinding
+        self, manager: 'AIModelManager', finding: VulnerabilityFinding
     ) -> bool:
         """判断是否为误报"""
         prompt = self._build_prompt(finding)

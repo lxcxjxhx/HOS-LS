@@ -176,18 +176,46 @@ def cli(ctx: click.Context, config: Optional[str], verbose: bool, quiet: bool, d
 
 @cli.command()
 @click.argument("target", required=False, default=".", type=click.Path(exists=True))
+# 行为类Flag（Agent）
+@click.option("--scan", is_flag=True, help="代码扫描（Scanner Agent）")
+@click.option("--reason", is_flag=True, help="漏洞推理（Reasoning Agent）")
+@click.option("--attack-chain", is_flag=True, help="攻击链分析（AttackGraph Agent）")
+@click.option("--poc", is_flag=True, help="生成利用（Exploit Agent）")
+@click.option("--verify", is_flag=True, help="验证漏洞（Verifier Agent）")
+@click.option("--fix", is_flag=True, help="修复建议（Fix Agent）")
+@click.option("--report", is_flag=True, help="报告生成（Report Agent）")
+# 模式类Flag（Mode）
+@click.option("--pure-ai", is_flag=True, help="纯AI模式")
+@click.option("--fast", is_flag=True, help="快速模式")
+@click.option("--deep", is_flag=True, help="深度模式")
+@click.option("--stealth", is_flag=True, help="stealth模式")
+# 控制类Flag（Control）
 @click.option("--format", "-f", "output_format", default="html", help="输出格式 (html, markdown, json, sarif)")
 @click.option("--output", "-o", help="输出文件路径")
 @click.option("--ruleset", "-r", help="规则集")
 @click.option("--diff", is_flag=True, help="扫描 Git 差异")
 @click.option("--workers", "-w", type=int, default=4, help="工作线程数")
+@click.option("--threads", type=int, default=4, help="线程数")
+@click.option("--timeout", type=int, help="超时时间")
+@click.option("--scope", help="扫描范围")
+@click.option("--exclude", help="排除目录")
+# 宏命令
+@click.option("--full-audit", is_flag=True, help="完整审计（scan + reason + attack-chain + poc + verify + report）")
+@click.option("--quick-scan", is_flag=True, help="快速扫描（scan + reason + report）")
+@click.option("--deep-audit", is_flag=True, help="深度审计（scan + reason=deep + attack-chain + poc + verify）")
+@click.option("--red-team", is_flag=True, help="红队模式（scan + reason + attack-chain + poc + verify）")
+@click.option("--bug-bounty", is_flag=True, help="漏洞赏金模式（scan + reason + poc + report）")
+@click.option("--compliance", is_flag=True, help="合规模式（scan + reason + report）")
+# 特殊功能
+@click.option("--explain", is_flag=True, help="解释执行流程")
+@click.option("--ask", help="自然语言查询")
+@click.option("--focus", help="关注特定文件或目录")
+# 向后兼容
 @click.option("--ai", is_flag=True, help="启用 AI 分析")
-@click.option("--pure-ai", is_flag=True, help="启用纯AI深度语义解析模式，只执行AI分析和报告导出")
 @click.option("--pure-ai-fast", is_flag=True, help="使用纯AI快速模式")
 @click.option("--pure-ai-batch-size", type=int, default=8, help="纯AI批量大小")
 @click.option("--pure-ai-cache-ttl", default="7d", help="纯AI缓存TTL")
 @click.option("--pure-ai-provider", help="纯AI提供商 (anthropic, openai, deepseek, local, ollama)")
-@click.option("--poc", is_flag=True, help="启用POC生成")
 @click.option("--poc-dir", default="./generated_pocs", help="POC输出目录")
 @click.option("--poc-severity", default="high", help="POC生成的严重级别过滤")
 @click.option("--poc-max", type=int, default=10, help="最大POC生成数量")
@@ -201,18 +229,46 @@ def cli(ctx: click.Context, config: Optional[str], verbose: bool, quiet: bool, d
 def scan(
     ctx: click.Context,
     target: str,
+    # 行为类Flag
+    scan: bool,
+    reason: bool,
+    attack_chain: bool,
+    poc: bool,
+    verify: bool,
+    fix: bool,
+    report: bool,
+    # 模式类Flag
+    pure_ai: bool,
+    fast: bool,
+    deep: bool,
+    stealth: bool,
+    # 控制类Flag
     output_format: str,
     output: Optional[str],
     ruleset: Optional[str],
     diff: bool,
     workers: int,
+    threads: int,
+    timeout: Optional[int],
+    scope: Optional[str],
+    exclude: Optional[str],
+    # 宏命令
+    full_audit: bool,
+    quick_scan: bool,
+    deep_audit: bool,
+    red_team: bool,
+    bug_bounty: bool,
+    compliance: bool,
+    # 特殊功能
+    explain: bool,
+    ask: Optional[str],
+    focus: Optional[str],
+    # 向后兼容
     ai: bool,
-    pure_ai: bool,
     pure_ai_fast: bool,
     pure_ai_batch_size: int,
     pure_ai_cache_ttl: str,
     pure_ai_provider: Optional[str],
-    poc: bool,
     poc_dir: str,
     poc_severity: str,
     poc_max: int,
@@ -235,9 +291,63 @@ def scan(
     elif en:
         config.language = "en"
     
+    # 收集行为类Flag
+    behavior_flags = []
+    if scan:
+        behavior_flags.append("scan")
+    if reason:
+        behavior_flags.append("reason")
+    if attack_chain:
+        behavior_flags.append("attack-chain")
+    if poc:
+        behavior_flags.append("poc")
+    if verify:
+        behavior_flags.append("verify")
+    if fix:
+        behavior_flags.append("fix")
+    if report:
+        behavior_flags.append("report")
+    
+    # 收集宏命令
+    macro_flags = []
+    if full_audit:
+        macro_flags.append("full-audit")
+    if quick_scan:
+        macro_flags.append("quick-scan")
+    if deep_audit:
+        macro_flags.append("deep-audit")
+    if red_team:
+        macro_flags.append("red-team")
+    if bug_bounty:
+        macro_flags.append("bug-bounty")
+    if compliance:
+        macro_flags.append("compliance")
+    
+    # 合并所有flags
+    all_flags = behavior_flags + macro_flags
+    
+    # 导入Pipeline构建器
+    from src.core.agent_pipeline import PipelineBuilder
+    
+    # 构建Pipeline
+    try:
+        pipeline = PipelineBuilder.build_pipeline(all_flags)
+    except ValueError as e:
+        console.print(f"[bold red]错误: {e}[/bold red]")
+        sys.exit(1)
+    
+    # 生成执行计划
+    execution_plan = PipelineBuilder.create_execution_plan(pipeline, config)
+    
+    # 显示执行计划（如果需要）
+    if explain:
+        explanation = PipelineBuilder.generate_explanation(pipeline)
+        console.print(Panel(explanation))
+        return
+    
     # 显示 Claude 风格的输入提示
     if not config.quiet:
-        console.print("[bold cyan]> hosls scan " + target + "[/bold cyan]")
+        console.print("[bold cyan]> hosls " + " ".join(f"--{flag}" for flag in all_flags) + " " + target + "[/bold cyan]")
 
     # 提前检查纯AI模式
     if pure_ai:
@@ -318,7 +428,7 @@ def scan(
     config.report.format = output_format
     if output:
         config.report.output = output
-    config.ai.enabled = ai
+    config.ai.enabled = ai or any(flag in all_flags for flag in ["reason", "attack-chain", "poc"])
     config.pure_ai = False
     
     if ai_provider:
@@ -339,9 +449,9 @@ def scan(
 
     # 执行扫描
     try:
-        if langgraph:
+        if langgraph or any(flag in all_flags for flag in ["reason", "attack-chain", "poc"]):
             # 使用 LangGraph 多Agent流程
-            from src.core.langgraph_flow import analyze_code
+            from src.core.langgraph_flow import run_pipeline
             # 读取目标文件内容
             target_path = Path(target)
             if target_path.is_file():
@@ -350,7 +460,7 @@ def scan(
             else:
                 code = f"目录扫描: {target}"
             # 运行多Agent分析
-            result = asyncio.run(analyze_code(code))
+            result = asyncio.run(run_pipeline(pipeline, code, ask=ask, focus=focus))
             # 显示结果
             if not config.quiet:
                 console.print(Panel("[bold]LangGraph 多Agent分析结果[/bold]"))

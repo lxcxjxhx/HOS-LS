@@ -51,6 +51,10 @@ class MultiAgentPipeline:
                 self.model = 'deepseek-reasoner'
             self.language = getattr(config, 'language', 'cn')
             self.max_tokens_per_file = getattr(config, 'max_tokens_per_file', 8000)
+        # Agent协作相关
+        self.agent_memory = {}  # 存储Agent之间共享的信息
+        self.agent_dependencies = self._build_agent_dependencies()  # 构建Agent依赖关系
+        self.agent_performance = {}  # 记录Agent性能指标
     
     async def run_pipeline(self, file_path: str, fast_mode: bool = False) -> Dict[str, Any]:
         """运行完整的多Agent流水线
@@ -74,6 +78,9 @@ class MultiAgentPipeline:
                 'total_tokens': 0
             }
             
+            # 清空Agent内存
+            self.agent_memory = {}
+            
             # 使用统一的Progress管理器，避免多个status/print混合导致的混乱
             # 修复进度条闪烁和重复输出问题
             with Progress(
@@ -96,90 +103,119 @@ class MultiAgentPipeline:
                     # 快速模式：3个Agent
                     main_task = progress.add_task(f"[cyan]快速分析: {Path(file_path).name}[/cyan]", total=3)
                     
-                    # 1. ContextCompressor: 代码摘要压缩
+                    # 1. Scanner Agent: 扫描漏洞
                     start_time = time.time()
-                    context_compression, token_usage = await self._run_context_compressor(file_path, context['file_content'])
+                    scanner_result, token_usage = await self._run_scanner_agent(file_path, context['file_content'])
                     elapsed = time.time() - start_time
-                    agent_timings['context_compressor'] = elapsed
+                    agent_timings['scanner_agent'] = elapsed
                     total_token_usage['prompt_tokens'] += token_usage['prompt_tokens']
                     total_token_usage['completion_tokens'] += token_usage['completion_tokens']
                     total_token_usage['total_tokens'] += token_usage['total_tokens']
+                    # 更新Agent内存
+                    self._update_agent_memory('scanner', scanner_result)
                     progress.advance(main_task)
                     
-                    # 2. RiskValidator: 风险枚举 + 漏洞验证
+                    # 2. Reasoning Agent: 推理漏洞
                     start_time = time.time()
-                    code_understanding = context_compression  # 使用压缩结果作为代码理解
-                    risk_validation, token_usage = await self._run_risk_validator(file_path, code_understanding, context['file_content'])
+                    # 获取依赖数据
+                    reasoning_deps = self._get_dependency_data('reasoning')
+                    reasoning_result, token_usage = await self._run_reasoning_agent(file_path, scanner_result, context['file_content'])
                     elapsed = time.time() - start_time
-                    agent_timings['risk_validator'] = elapsed
+                    agent_timings['reasoning_agent'] = elapsed
                     total_token_usage['prompt_tokens'] += token_usage['prompt_tokens']
                     total_token_usage['completion_tokens'] += token_usage['completion_tokens']
                     total_token_usage['total_tokens'] += token_usage['total_tokens']
+                    # 更新Agent内存
+                    self._update_agent_memory('reasoning', reasoning_result)
                     progress.advance(main_task)
                     
-                    # 3. FinalJudge: 最终裁决
+                    # 3. Report Agent: 生成报告
                     start_time = time.time()
-                    # 快速模式下直接使用risk_validation作为输入
-                    final_decision, token_usage = await self._run_agent_6(file_path, risk_validation, risk_validation)
+                    # 获取依赖数据
+                    report_deps = self._get_dependency_data('report')
+                    final_report, token_usage = await self._run_report_agent(file_path, reasoning_result, reasoning_result)
                     elapsed = time.time() - start_time
-                    agent_timings['final_judge'] = elapsed
+                    agent_timings['report_agent'] = elapsed
                     total_token_usage['prompt_tokens'] += token_usage['prompt_tokens']
                     total_token_usage['completion_tokens'] += token_usage['completion_tokens']
                     total_token_usage['total_tokens'] += token_usage['total_tokens']
+                    # 更新Agent内存
+                    self._update_agent_memory('report', final_report)
                     progress.advance(main_task)
                 else:
-                    # 标准模式：5个Agent
+                    # 完整模式：5个Agent
                     main_task = progress.add_task(f"[cyan]分析: {Path(file_path).name}[/cyan]", total=5)
                     
-                    # 1. ContextCompressor: 代码摘要压缩
+                    # 1. Scanner Agent: 扫描漏洞
                     start_time = time.time()
-                    context_compression, token_usage = await self._run_context_compressor(file_path, context['file_content'])
+                    scanner_result, token_usage = await self._run_scanner_agent(file_path, context['file_content'])
                     elapsed = time.time() - start_time
-                    agent_timings['context_compressor'] = elapsed
+                    agent_timings['scanner_agent'] = elapsed
                     total_token_usage['prompt_tokens'] += token_usage['prompt_tokens']
                     total_token_usage['completion_tokens'] += token_usage['completion_tokens']
                     total_token_usage['total_tokens'] += token_usage['total_tokens']
+                    # 更新Agent内存
+                    self._update_agent_memory('scanner', scanner_result)
                     progress.advance(main_task)
                     
-                    # 2. CodeUnderstanding: 代码理解
+                    # 2. Reasoning Agent: 推理漏洞
                     start_time = time.time()
-                    code_understanding, token_usage = await self._run_agent_1(file_path, context, context_compression)
+                    # 获取依赖数据
+                    reasoning_deps = self._get_dependency_data('reasoning')
+                    reasoning_result, token_usage = await self._run_reasoning_agent(file_path, scanner_result, context['file_content'])
                     elapsed = time.time() - start_time
-                    agent_timings['code_understanding'] = elapsed
+                    agent_timings['reasoning_agent'] = elapsed
                     total_token_usage['prompt_tokens'] += token_usage['prompt_tokens']
                     total_token_usage['completion_tokens'] += token_usage['completion_tokens']
                     total_token_usage['total_tokens'] += token_usage['total_tokens']
+                    # 更新Agent内存
+                    self._update_agent_memory('reasoning', reasoning_result)
                     progress.advance(main_task)
                     
-                    # 3. RiskValidator: 风险枚举 + 漏洞验证
+                    # 3. Exploit Agent: 生成POC
                     start_time = time.time()
-                    risk_validation, token_usage = await self._run_risk_validator(file_path, code_understanding, context['file_content'])
+                    # 获取依赖数据
+                    exploit_deps = self._get_dependency_data('exploit')
+                    exploit_result, token_usage = await self._run_exploit_agent(file_path, reasoning_result, context['file_content'])
                     elapsed = time.time() - start_time
-                    agent_timings['risk_validator'] = elapsed
+                    agent_timings['exploit_agent'] = elapsed
                     total_token_usage['prompt_tokens'] += token_usage['prompt_tokens']
                     total_token_usage['completion_tokens'] += token_usage['completion_tokens']
                     total_token_usage['total_tokens'] += token_usage['total_tokens']
+                    # 更新Agent内存
+                    self._update_agent_memory('exploit', exploit_result)
                     progress.advance(main_task)
                     
-                    # 4. AttackSimulator: 攻击链分析 + 对抗验证
+                    # 4. Fix Agent: 修复建议
                     start_time = time.time()
-                    attack_simulation, token_usage = await self._run_attack_simulator(file_path, risk_validation, context['file_content'])
+                    # 获取依赖数据
+                    fix_deps = self._get_dependency_data('fix')
+                    fix_result, token_usage = await self._run_fix_agent(file_path, reasoning_result, context['file_content'])
                     elapsed = time.time() - start_time
-                    agent_timings['attack_simulator'] = elapsed
+                    agent_timings['fix_agent'] = elapsed
                     total_token_usage['prompt_tokens'] += token_usage['prompt_tokens']
                     total_token_usage['completion_tokens'] += token_usage['completion_tokens']
                     total_token_usage['total_tokens'] += token_usage['total_tokens']
+                    # 更新Agent内存
+                    self._update_agent_memory('fix', fix_result)
                     progress.advance(main_task)
                     
-                    # 5. FinalJudge: 最终裁决
+                    # 5. Report Agent: 生成报告
                     start_time = time.time()
-                    final_decision, token_usage = await self._run_agent_6(file_path, attack_simulation, risk_validation)
+                    # 获取依赖数据
+                    report_deps = self._get_dependency_data('report')
+                    final_report, token_usage = await self._run_report_agent(file_path, reasoning_result, fix_result)
                     elapsed = time.time() - start_time
-                    agent_timings['final_judge'] = elapsed
+                    agent_timings['report_agent'] = elapsed
                     total_token_usage['prompt_tokens'] += token_usage['prompt_tokens']
                     total_token_usage['completion_tokens'] += token_usage['completion_tokens']
                     total_token_usage['total_tokens'] += token_usage['total_tokens']
+                    # 更新Agent内存
+                    self._update_agent_memory('report', final_report)
                     progress.advance(main_task)
+            
+            # 更新Agent性能指标
+            self._update_agent_performance(agent_timings, total_token_usage)
             
             # Progress结束后输出最终结果
             total_elapsed = time.time() - total_start_time
@@ -193,23 +229,24 @@ class MultiAgentPipeline:
             
             result = {
                 'file_path': file_path,
-                'final_decision': final_decision,
+                'final_report': final_report,
                 'token_usage': total_token_usage,
-                'timings': agent_timings
+                'timings': agent_timings,
+                'agent_memory': self.agent_memory
             }
             
-            # 添加其他结果字段（兼容旧格式）
+            # 添加其他结果字段
             if not fast_mode:
                 result.update({
-                    'context_compression': context_compression,
-                    'code_understanding': code_understanding,
-                    'risk_validation': risk_validation,
-                    'attack_simulation': attack_simulation
+                    'scanner_result': scanner_result,
+                    'reasoning_result': reasoning_result,
+                    'exploit_result': exploit_result,
+                    'fix_result': fix_result
                 })
             else:
                 result.update({
-                    'context_compression': context_compression,
-                    'risk_validation': risk_validation
+                    'scanner_result': scanner_result,
+                    'reasoning_result': reasoning_result
                 })
             
             return result
@@ -221,6 +258,129 @@ class MultiAgentPipeline:
                 'file_path': file_path,
                 'error': str(e)
             }
+    
+    async def _run_scanner_agent(self, file_path: str, file_content: str) -> Tuple[Dict[str, Any], Dict[str, int]]:
+        """运行Scanner Agent：扫描漏洞
+
+        Args:
+            file_path: 文件路径
+            file_content: 文件内容
+
+        Returns:
+            (扫描结果, token使用信息)
+        """
+        print(f"[DEBUG] 运行Scanner Agent on: {file_path}")
+        prompt = self.prompt_templates.AGENT_SCANNER.format(
+            file_path=file_path,
+            file_content=file_content
+        )
+        prompt = self.prompt_templates.apply_language_instruction(prompt, self.language)
+        
+        response, token_usage = await self._generate_with_retry(prompt, "Scanner Agent", temperature=0.2)
+        result = self._parse_json_response(response)
+        print(f"[DEBUG] Scanner Agent 完成，token使用: {token_usage['total_tokens']}")
+        return result, token_usage
+    
+    async def _run_reasoning_agent(self, file_path: str, scanner_result: Dict[str, Any], file_content: str) -> Tuple[Dict[str, Any], Dict[str, int]]:
+        """运行Reasoning Agent：推理漏洞
+
+        Args:
+            file_path: 文件路径
+            scanner_result: 扫描结果
+            file_content: 文件内容
+
+        Returns:
+            (推理结果, token使用信息)
+        """
+        print(f"[DEBUG] 运行Reasoning Agent on: {file_path}")
+        scanner_json = json.dumps(scanner_result, ensure_ascii=False)
+        prompt = self.prompt_templates.AGENT_REASONING.format(
+            file_path=file_path,
+            scanner_result=scanner_json,
+            file_content=file_content
+        )
+        prompt = self.prompt_templates.apply_language_instruction(prompt, self.language)
+        
+        response, token_usage = await self._generate_with_retry(prompt, "Reasoning Agent", temperature=0.3)
+        result = self._parse_json_response(response)
+        print(f"[DEBUG] Reasoning Agent 完成，token使用: {token_usage['total_tokens']}")
+        return result, token_usage
+    
+    async def _run_exploit_agent(self, file_path: str, reasoning_result: Dict[str, Any], file_content: str) -> Tuple[Dict[str, Any], Dict[str, int]]:
+        """运行Exploit Agent：生成POC
+
+        Args:
+            file_path: 文件路径
+            reasoning_result: 推理结果
+            file_content: 文件内容
+
+        Returns:
+            (POC生成结果, token使用信息)
+        """
+        print(f"[DEBUG] 运行Exploit Agent on: {file_path}")
+        reasoning_json = json.dumps(reasoning_result, ensure_ascii=False)
+        prompt = self.prompt_templates.AGENT_EXPLOIT.format(
+            file_path=file_path,
+            reasoning_result=reasoning_json,
+            file_content=file_content
+        )
+        prompt = self.prompt_templates.apply_language_instruction(prompt, self.language)
+        
+        response, token_usage = await self._generate_with_retry(prompt, "Exploit Agent", temperature=0.4)
+        result = self._parse_json_response(response)
+        print(f"[DEBUG] Exploit Agent 完成，token使用: {token_usage['total_tokens']}")
+        return result, token_usage
+    
+    async def _run_fix_agent(self, file_path: str, reasoning_result: Dict[str, Any], file_content: str) -> Tuple[Dict[str, Any], Dict[str, int]]:
+        """运行Fix Agent：修复建议
+
+        Args:
+            file_path: 文件路径
+            reasoning_result: 推理结果
+            file_content: 文件内容
+
+        Returns:
+            (修复建议结果, token使用信息)
+        """
+        print(f"[DEBUG] 运行Fix Agent on: {file_path}")
+        reasoning_json = json.dumps(reasoning_result, ensure_ascii=False)
+        prompt = self.prompt_templates.AGENT_FIX.format(
+            file_path=file_path,
+            reasoning_result=reasoning_json,
+            file_content=file_content
+        )
+        prompt = self.prompt_templates.apply_language_instruction(prompt, self.language)
+        
+        response, token_usage = await self._generate_with_retry(prompt, "Fix Agent", temperature=0.2)
+        result = self._parse_json_response(response)
+        print(f"[DEBUG] Fix Agent 完成，token使用: {token_usage['total_tokens']}")
+        return result, token_usage
+    
+    async def _run_report_agent(self, file_path: str, reasoning_result: Dict[str, Any], fix_result: Dict[str, Any]) -> Tuple[Dict[str, Any], Dict[str, int]]:
+        """运行Report Agent：生成报告
+
+        Args:
+            file_path: 文件路径
+            reasoning_result: 推理结果
+            fix_result: 修复建议结果
+
+        Returns:
+            (报告结果, token使用信息)
+        """
+        print(f"[DEBUG] 运行Report Agent on: {file_path}")
+        reasoning_json = json.dumps(reasoning_result, ensure_ascii=False)
+        fix_json = json.dumps(fix_result, ensure_ascii=False)
+        prompt = self.prompt_templates.AGENT_REPORT.format(
+            file_path=file_path,
+            reasoning_result=reasoning_json,
+            fix_result=fix_json
+        )
+        prompt = self.prompt_templates.apply_language_instruction(prompt, self.language)
+        
+        response, token_usage = await self._generate_with_retry(prompt, "Report Agent", temperature=0.2)
+        result = self._parse_json_response(response)
+        print(f"[DEBUG] Report Agent 完成，token使用: {token_usage['total_tokens']}")
+        return result, token_usage
     
     async def _run_agent_0(self, file_path: str, context: Dict[str, Any]) -> Tuple[Dict[str, Any], Dict[str, int]]:
         """运行Agent 0：上下文构建
@@ -904,6 +1064,81 @@ class MultiAgentPipeline:
                 }
             }
     
+    def _build_agent_dependencies(self) -> Dict[str, List[str]]:
+        """构建Agent之间的依赖关系
+        
+        Returns:
+            Agent依赖关系字典
+        """
+        return {
+            'scanner': [],  # Scanner Agent 没有依赖
+            'reasoning': ['scanner'],  # Reasoning Agent 依赖 Scanner Agent
+            'exploit': ['reasoning'],  # Exploit Agent 依赖 Reasoning Agent
+            'fix': ['reasoning'],  # Fix Agent 依赖 Reasoning Agent
+            'report': ['reasoning', 'fix']  # Report Agent 依赖 Reasoning Agent 和 Fix Agent
+        }
+
+    def _update_agent_memory(self, agent_name: str, data: Dict[str, Any]) -> None:
+        """更新Agent内存
+        
+        Args:
+            agent_name: Agent名称
+            data: 要存储的数据
+        """
+        if agent_name not in self.agent_memory:
+            self.agent_memory[agent_name] = []
+        self.agent_memory[agent_name].append(data)
+
+    def _get_agent_memory(self, agent_name: str) -> List[Dict[str, Any]]:
+        """获取Agent内存
+        
+        Args:
+            agent_name: Agent名称
+            
+        Returns:
+            Agent内存数据
+        """
+        return self.agent_memory.get(agent_name, [])
+
+    def _get_dependency_data(self, agent_name: str) -> Dict[str, Any]:
+        """获取Agent依赖的数据
+        
+        Args:
+            agent_name: Agent名称
+            
+        Returns:
+            依赖数据
+        """
+        dependency_data = {}
+        dependencies = self.agent_dependencies.get(agent_name, [])
+        for dependency in dependencies:
+            dependency_data[dependency] = self._get_agent_memory(dependency)
+        return dependency_data
+
+    def _update_agent_performance(self, agent_timings: Dict[str, float], token_usage: Dict[str, int]) -> None:
+        """更新Agent性能指标
+        
+        Args:
+            agent_timings: Agent执行时间
+            token_usage: Token使用情况
+        """
+        for agent_name, timing in agent_timings.items():
+            if agent_name not in self.agent_performance:
+                self.agent_performance[agent_name] = {
+                    'total_executions': 0,
+                    'total_time': 0,
+                    'avg_time': 0,
+                    'total_tokens': 0
+                }
+            
+            performance = self.agent_performance[agent_name]
+            performance['total_executions'] += 1
+            performance['total_time'] += timing
+            performance['avg_time'] = performance['total_time'] / performance['total_executions']
+            
+        # 更新总体token使用
+        self.agent_performance['total_tokens'] = token_usage['total_tokens']
+
     def process_query(self, query: str) -> str:
         """处理自然语言查询
         

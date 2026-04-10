@@ -8,7 +8,6 @@ from typing import Dict, Any, List, Tuple, Optional, Pattern
 import time
 from dataclasses import dataclass, field
 
-from src.ai.client import get_model_manager
 from src.ai.models import AIRequest
 from src.utils.logger import get_logger
 
@@ -339,6 +338,7 @@ class EnhancedFindingsFilter:
         """
         try:
             # 获取模型管理器
+            from src.ai.client import get_model_manager
             manager = await get_model_manager()
             
             # 构建提示
