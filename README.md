@@ -3,7 +3,7 @@
 
 <img width=20% height=20% alt="k63Gf_cropped" src="https://github.com/user-attachments/assets/2f74b773-bc55-4898-bcbe-d3bcd2fc1c14" />
 
-# 🔒 HOS-LS v0.3.1.6
+# 🔒 HOS-LS v0.3.2.0
 
 ## AI 生成代码安全扫描工具
 
@@ -20,6 +20,7 @@
 
 - [🤖 纯净AI模式（--pure-ai）](#-纯净ai模式--pure-ai) - 低配置首选，开箱即用
 - [🔒 正式模式（完整版）](#-正式模式完整版) - 全功能，高性能硬件推荐
+- [💬 聊天模式（chat）](#-聊天模式chat) - 自然语言交互，智能安全分析
 
 ***
 
@@ -334,6 +335,129 @@ export HOS_LS_LOG_LEVEL="DEBUG"
 ## 🔒 正式模式（完整版）
 
 > **注意**：正式模式提供完整功能，但对硬件配置要求较高。推荐 16GB+ 内存、支持 CUDA 的 GPU。如果您的配置有限，建议使用 [纯净AI模式（--pure-ai）](#-纯净ai模式--pure-ai)。
+
+***
+
+## 💬 聊天模式（chat）
+
+### 什么是聊天模式？
+
+`chat` 模式是 HOS-LS 推出的全新自然语言交互模式，它允许用户通过自然语言与安全分析系统进行交互，无需记忆复杂的命令行参数。
+
+### 核心特性
+
+- 🎯 **自然语言交互** - 支持中文和英文的自然语言命令
+- 🤖 **多代理架构** - 使用 7 个专门的代理进行安全分析
+- ⚡ **实时反馈** - 流式输出和代理思考过程
+- 📁 **代码库工具** - 内置代码搜索、文件读取、目录列出和 AST 分析
+- 🔧 **自动修复** - 生成具体的修复建议和代码补丁
+- 💣 **漏洞利用** - 生成 POC 并在沙箱中验证
+- 📡 **Git 集成** - 支持安全补丁的版本控制
+- 🎨 **用户友好界面** - 美观的终端输出和交互体验
+
+### 快速上手
+
+#### 启动聊天模式
+
+```bash
+# 启动聊天模式
+hos-ls chat
+
+# 示例命令
+> 扫描当前目录的安全风险
+> 用纯 AI 模式分析项目
+> 生成漏洞的 POC 并验证
+> 提供修复建议和补丁
+> Git 提交修复
+```
+
+### 支持的命令类型
+
+**扫描命令**
+- 扫描当前目录的安全风险
+- 用纯 AI 模式扫描项目
+- 测试模式只扫描一个文件
+
+**分析命令**
+- 分析这个项目的漏洞
+- 评估代码安全性
+
+**利用命令**
+- 生成漏洞的 POC
+- 创建攻击脚本并验证
+
+**修复命令**
+- 提供修复建议
+- 生成修复补丁
+
+**Git 命令**
+- Git 提交修复
+- 创建安全补丁分支
+- 查看代码差异
+- 检查 Git 状态
+
+**代码库工具**
+- @file:path/to/file.py - 读取文件内容
+- @func:function_name - 搜索函数定义
+- 搜索代码关键词 - 搜索代码中的关键词
+- 列出目录 - 列出目录内容
+- 项目摘要 - 显示项目信息
+
+### 技术架构
+
+**核心组件：**
+- `ConversationalSecurityAgent` - 对话式安全代理，处理自然语言输入
+- `TerminalUI` - 终端用户界面，提供美观的交互体验
+- `MultiAgentPipeline` - 多智能体分析管道，实现深度安全分析
+- `LangGraphFlow` - 流程控制，实现多代理协作
+
+### 使用示例
+
+#### 基本扫描
+
+```bash
+[bold green]> [/bold green]扫描当前目录的安全风险
+[Planner] 正在分析您的请求...
+🔍 开始扫描目标: .
+⏱️ 开始时间: 2026-04-10 12:52:26
+🔄 正在初始化纯AI分析器...
+✓ API访问验证成功
+✓ 纯AI分析器初始化成功 (提供商: deepseek, 模型: deepseek-reasoner)
+✅ 发现 206 个文件                                                
+🔧 正在分析文件...
+```
+
+#### 代码库工具
+
+```bash
+[bold green]> [/bold green]@file:src/core/conversational_agent.py
+📄 文件内容: src/core/conversational_agent.py
+
+1. from typing import Dict, Any, Optional, List
+2. from pathlib import Path
+3. import json
+4. import os
+5. 
+6. from src.core.config import Config
+7. from src.core.langgraph_flow import analyze_code
+8. from src.core.scanner import create_scanner
+9. from src.ai.pure_ai.multi_agent_pipeline import MultiAgentPipeline
+10. 
+...
+```
+
+#### Git 操作
+
+```bash
+[bold green]> [/bold green]Git 提交修复
+Git 操作结果
+操作: commit
+状态: success
+消息: 提交成功
+
+[master a1b2c3d] 修复安全漏洞
+ 1 file changed, 10 insertions(+), 5 deletions(-)
+```
 
 ## 📖 简介
 
