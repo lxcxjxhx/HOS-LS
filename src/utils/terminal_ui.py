@@ -739,3 +739,155 @@ class TerminalUI:
             for step in steps:
                 final_table.add_row(step, "[green]Done")
             live.update(final_table)
+    
+    def show_pipeline_preview(self, nodes):
+        """显示Pipeline预览
+        
+        Args:
+            nodes: AgentNode列表
+        """
+        from rich.table import Table
+        
+        agent_descriptions = {
+            "scan": "代码扫描",
+            "reason": "漏洞推理",
+            "attack-chain": "攻击链分析",
+            "poc": "POC生成",
+            "verify": "漏洞验证",
+            "fix": "修复建议",
+            "report": "报告生成"
+        }
+        
+        table = Table(title="🔧 生成的执行Pipeline", show_header=True)
+        table.add_column("#", style="cyan", width=4)
+        table.add_column("Agent", style="green", width=15)
+        table.add_column("说明", style="yellow", width=20)
+        table.add_column("状态", style="blue", width=10)
+        
+        for i, node in enumerate(nodes, 1):
+            desc = agent_descriptions.get(node.type.value, node.type.value)
+            params_info = ""
+            if hasattr(node, 'params') and node.params:
+                params_info = f" ({node.params})"
+            
+            table.add_row(
+                str(i),
+                f"[bold]{node.type.value}[/bold]",
+                f"{desc}{params_info}",
+                "[green]待执行[/green]"
+            )
+        
+        self.console.print(table)
+        self.console.print("\n[dim]是否执行？(y/n) 或 输入修改意见[/dim]\n")
+    
+    def show_ai_suggestion(self, suggestion: str, confidence: float = 1.0):
+        """显示AI建议
+        
+        Args:
+            suggestion: 建议内容
+            confidence: 置信度 (0.0 - 1.0)
+        """
+        if confidence > 0.8:
+            color = "bold green"
+        elif confidence > 0.5:
+            color = "bold yellow"
+        else:
+            color = "bold red"
+            
+        self.console.print(f"\n[{color}]💡 AI建议:[/{color}] {suggestion}")
+        self.console.print(f"[dim]置信度: {confidence:.0%}[/dim]\n")
+    
+    def show_unified_help(self):
+        """显示统一交互模式的增强帮助"""
+        help_text = """
+[bold cyan]🔒 HOS-LS 智能交互模式帮助[/bold cyan]
+
+[dim]整合了聊天模式和Agent编排语言的统一体验[/dim]
+
+[bold]📌 核心能力:[/bold]
+• [green]自然语言命令[/green]: '扫描当前目录'、'全面审计项目'
+• [green]Agent Pipeline[/green]: '执行 --scan+reason+poc'
+• [green]方案管理[/green]: '生成审计方案'、'修改方案'
+• [green]双向转换[/green]: '转换为CLI: 完整审计'
+
+[bold]🎯 快速示例:[/bold]
+1. [cyan]'扫描当前项目并生成报告'[/cyan]
+   → 自动构建: scan → reason → report
+   
+2. [cyan]'用纯AI模式分析认证模块'[/cyan]
+   → 启用PureAI + 聚焦认证逻辑
+   
+3. [cyan]'生成完整审计方案'[/cyan]
+   → AI生成Plan，可修改后执行
+
+4. [cyan]'解释CLI: --full-audit'[/cyan]
+   → 显示: 扫描→分析→攻击链→POC→验证→报告
+
+5. [cyan]'@file:src/main.py'[/cyan]
+   → 读取文件内容
+
+6. [cyan]'转换为CLI: 深度审计+POC验证'[/cyan]
+   → 输出: hos-ls scan --deep-audit --verify
+
+[bold]⚙️ 特殊命令:[/bold]
+• /help      - 显示此帮助
+• /exit      - 退出对话
+• /clear     - 清除屏幕
+• /context   - 查看当前上下文
+• /history   - 查看对话历史
+
+[bold]💡 提示:[/bold]
+• 支持中英文混合输入
+• AI会智能理解您的意图
+• 可随时切换到CLI命令格式
+"""
+        self.console.print(help_text)
+    
+    def show_context_summary(self, context_data):
+        """显示上下文摘要
+        
+        Args:
+            context_data: 上下文数据字典
+        """
+        from rich.panel import Panel
+        
+        parts = []
+        
+        if hasattr(context_data, 'root'):
+            parts.append(f"📁 项目根目录: {context_data.root}")
+        if hasattr(context_data, 'total_files') and context_data.total_files > 0:
+            parts.append(f"📄 文件总数: {context_data.total_files}")
+        if hasattr(context_data, 'languages') and context_data.languages:
+            top_langs = sorted(context_data.languages.items(), 
+                            key=lambda x: x[1], reverse=True)[:3]
+            lang_str = ", ".join([f"{l}({c})" for l, c in top_langs])
+            parts.append(f"💻 主要语言: {lang_str}")
+        if hasattr(context_data, 'key_files') and context_data.key_files:
+            parts.append(f"🔑 关键文件数: {len(context_data.key_files)}")
+            
+        if parts:
+            panel = Panel(
+                "\n".join(parts),
+                title="[bold blue]📊 当前项目上下文[/bold blue]",
+                border_style="blue"
+            )
+            self.console.print(panel)
+    
+    def show_welcome_banner(self):
+        """显示统一交互模式的欢迎横幅"""
+        from rich.panel import Panel
+        
+        banner = Panel(
+            "[bold green]🔒 HOS-LS 智能交互模式[/bold green]\n\n"
+            "[dim]✨ 整合聊天模式 + Agent 编排语言[/dim]\n"
+            "[dim]🤖 支持自然语言 + CLI命令 + Plan管理[/dim]\n\n"
+            "[bold]快速开始:[/bold]\n"
+            "• 输入自然语言: '[green]扫描当前目录[/green]'\n"
+            "• 使用CLI命令: '[green]--full-audit[/green]'\n"
+            "• 管理执行方案: '[green]生成审计方案[/green]'\n\n"
+            "[dim]输入 '/help' 查看更多命令[/dim]",
+            title="Welcome",
+            border_style="cyan",
+            padding=(1, 2)
+        )
+        self.console.print(banner)

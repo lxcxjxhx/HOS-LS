@@ -68,6 +68,7 @@ def generate(ctx, description, template):
     elif description:
         if config.debug:
             console.print("[DEBUG] 从自然语言生成Plan")
+        console.print("[bold cyan][Planner] 分析完成，开始执行...[/bold cyan]")
         plan = plan_manager.generate_from_natural_language(description)
     else:
         console.print("[bold red]错误: 请提供任务描述或使用模板[/bold red]")
@@ -82,16 +83,38 @@ def generate(ctx, description, template):
     console.print(Panel("生成的执行方案", border_style="cyan"))
     console.print(PlanDSLParser.format_plan_for_display(plan))
     
-    # 询问是否保存
-    if click.confirm("是否保存此方案？"):
-        name = click.prompt("请输入方案名称")
-        try:
-            if config.debug:
-                console.print(f"[DEBUG] 保存Plan到: {name}")
-            file_path = plan_manager.save_plan(plan, name)
-            console.print(f"[bold green]方案已保存: {file_path}[/bold green]")
-        except Exception as e:
-            console.print(f"[bold red]保存失败: {e}[/bold red]")
+    # 交互式流程：询问用户反馈
+    while True:
+        feedback = click.prompt("请输入您的反馈或建议，输入 'confirm' 确认执行，输入 'save' 保存方案，输入 'exit' 退出")
+        
+        if feedback.strip().lower() == "exit":
+            console.print("[bold cyan]再见！[/bold cyan]")
+            return
+        elif feedback.strip().lower() == "confirm":
+            # 执行方案
+            console.print("[bold green]开始执行方案...[/bold green]")
+            cli_args = _plan_to_cli_args(plan)
+            from src.cli.main import scan
+            ctx.invoke(scan, **cli_args)
+            return
+        elif feedback.strip().lower() == "save":
+            # 保存方案
+            name = click.prompt("请输入方案名称")
+            try:
+                if config.debug:
+                    console.print(f"[DEBUG] 保存Plan到: {name}")
+                file_path = plan_manager.save_plan(plan, name)
+                console.print(f"[bold green]方案已保存: {file_path}[/bold green]")
+                return
+            except Exception as e:
+                console.print(f"[bold red]保存失败: {e}[/bold red]")
+                continue
+        else:
+            # 根据反馈修改方案
+            console.print("[bold cyan][Planner] 分析反馈，调整方案...[/bold cyan]")
+            plan = plan_manager.modify_plan(plan, feedback)
+            console.print(Panel("调整后的执行方案", border_style="cyan"))
+            console.print(PlanDSLParser.format_plan_for_display(plan))
 
 
 @plan.command()
@@ -314,6 +337,87 @@ def delete(ctx, name):
         console.print(f"[bold green]方案已删除: {name}[/bold green]")
     else:
         console.print(f"[bold red]方案不存在: {name}[/bold red]")
+
+
+@plan.command()
+@click.pass_context
+def interactive(ctx):
+    """交互式方案生成和执行
+    
+    通过交互式对话生成和执行方案。
+    """
+    config: Config = ctx.obj["config"]
+    plan_manager = PlanManager(config)
+    
+    # 显示欢迎信息
+    console.print(Panel("交互式方案生成", border_style="cyan"))
+    console.print("请输入您的安全分析需求，或输入 'exit' 退出。")
+    console.print("示例: '扫描当前目录的安全漏洞并生成报告'")
+    console.print()
+    
+    while True:
+        # 获取用户输入
+        user_input = click.prompt("[bold green]> [/bold green]")
+        
+        if user_input.strip().lower() == "exit":
+            console.print("[bold cyan]再见！[/bold cyan]")
+            return
+        
+        # 检查API密钥配置
+        if not config.ai.api_key:
+            console.print(Panel("[注意] API密钥未配置", border_style="yellow"))
+            console.print("将使用规则-based回退机制生成Plan。")
+            console.print("如需使用AI生成功能，请配置API密钥:")
+            console.print("1. 通过环境变量: HOS_LS_AI__API_KEY")
+            console.print("2. 通过配置文件: ai.api_key")
+            console.print("3. 通过命令行: --ai-provider 和 --ai-api-key")
+            console.print()
+        
+        # 生成方案
+        console.print("[bold cyan][Planner] 分析完成，开始执行...[/bold cyan]")
+        plan = plan_manager.generate_from_natural_language(user_input)
+        
+        # 显示方案
+        console.print(Panel("生成的执行方案", border_style="cyan"))
+        console.print(PlanDSLParser.format_plan_for_display(plan))
+        
+        # 询问用户反馈
+        while True:
+            feedback = click.prompt("请输入您的反馈或建议，输入 'confirm' 确认执行，输入 'save' 保存方案，输入 'exit' 退出，输入 'new' 重新输入需求")
+            
+            if feedback.strip().lower() == "exit":
+                console.print("[bold cyan]再见！[/bold cyan]")
+                return
+            elif feedback.strip().lower() == "confirm":
+                # 执行方案
+                console.print("[bold green]开始执行方案...[/bold green]")
+                cli_args = _plan_to_cli_args(plan)
+                from src.cli.main import scan
+                ctx.invoke(scan, **cli_args)
+                return
+            elif feedback.strip().lower() == "save":
+                # 保存方案
+                name = click.prompt("请输入方案名称")
+                try:
+                    file_path = plan_manager.save_plan(plan, name)
+                    console.print(f"[bold green]方案已保存: {file_path}[/bold green]")
+                except Exception as e:
+                    console.print(f"[bold red]保存失败: {e}[/bold red]")
+                    continue
+                # 询问是否继续
+                if click.confirm("是否继续使用交互式模式？"):
+                    break
+                else:
+                    return
+            elif feedback.strip().lower() == "new":
+                # 重新输入需求
+                break
+            else:
+                # 根据反馈修改方案
+                console.print("[bold cyan][Planner] 分析反馈，调整方案...[/bold cyan]")
+                plan = plan_manager.modify_plan(plan, feedback)
+                console.print(Panel("调整后的执行方案", border_style="cyan"))
+                console.print(PlanDSLParser.format_plan_for_display(plan))
 
 
 def _plan_to_cli_args(plan):

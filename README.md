@@ -3,12 +3,14 @@
 
 <img width=20% height=20% alt="k63Gf_cropped" src="https://github.com/user-attachments/assets/2f74b773-bc55-4898-bcbe-d3bcd2fc1c14" />
 
-# 🔒 HOS-LS v0.3.2.1
+# 🔒 HOS-LS v0.3.2.3
 
 ## AI 生成代码安全扫描工具
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+[![GitHub Release](https://img.shields.io/github/v/release/lxcxjxhx/HOS-LS)](https://github.com/lxcxjxhx/HOS-LS/releases)
+[![Stars](https://img.shields.io/github/stars/lxcxjxhx/HOS-LS?style=social)](https://github.com/lxcxjxhx/HOS-LS)
 
 **English** | [中文](README_CN.md)
 
@@ -19,8 +21,8 @@
 ## 📋 快速导航
 
 - [🤖 纯净AI模式（--pure-ai）](#-纯净ai模式--pure-ai) - 低配置首选，开箱即用
-- [🔒 正式模式（完整版）](#-正式模式完整版) - 全功能，高性能硬件推荐
-- [💬 聊天模式（chat）](#-聊天模式chat) - 自然语言交互，智能安全分析
+- [� 智能交互模式（chat + agent）](#-智能交互模式-chat--agent) - 自然语言交互，Agent编排，智能安全分析
+- [� 重型模式（--ai）](#-重型模式--ai) - 全功能，高性能硬件推荐
 
 ***
 
@@ -34,7 +36,7 @@
 
 ### 为什么推出 --pure-ai 模式？
 
-根据客户反馈，正式模式对于电脑性能依赖过高，需要较高配置的硬件才能流畅运行。为了让更多开发者能够轻松使用 HOS-LS，我们特别推出了 `--pure-ai` 模式，它具有以下特点：
+根据客户反馈，重型模式对于电脑性能依赖过高，需要较高配置的硬件才能流畅运行。为了让更多开发者能够轻松使用 HOS-LS，我们特别推出了 `--pure-ai` 模式，它具有以下特点：
 
 - **低性能依赖**：不依赖图数据库、向量存储等重型组件
 - **开箱即用**：只需配置 API 密钥即可开始使用
@@ -51,7 +53,7 @@
 
 ### 核心优势对比
 
-| 特性 | 纯净AI模式（--pure-ai） | 正式模式（完整版） |
+| 特性 | 纯净AI模式（--pure-ai） | 重型模式（--ai） |
 |------|---------------------|-----------------|
 | **硬件要求** | 普通配置即可 | 推荐高性能配置 |
 | **依赖组件** | 仅需 AI API | Neo4j、FAISS、PostgreSQL 等 |
@@ -328,15 +330,15 @@ export HOS_LS_LOG_LEVEL="DEBUG"
 
 ***
 
-## 🔒 正式模式（完整版）
+## � 重型模式（--ai）
 
-### 什么是正式模式？
+### 什么是重型模式？
 
-`正式模式` 是 HOS-LS 的完整功能模式，提供最全面的安全分析能力。它集成了 Neo4j、FAISS、PostgreSQL 等重型组件，支持完整的 RAG 知识库和攻击链分析。
+`重型模式（--ai）` 是 HOS-LS 的完整功能模式，提供最全面的安全分析能力。它集成了 Neo4j、FAISS、PostgreSQL 等重型组件，支持完整的 RAG 知识库和攻击链分析。
 
-### 为什么选择正式模式？
+### 为什么选择重型模式？
 
-正式模式为需要深度安全审计的场景提供了完整的解决方案：
+重型模式为需要深度安全审计的场景提供了完整的解决方案：
 
 - **深度安全分析**：完整的 RAG 知识库和攻击链分析
 - **企业级功能**：支持大型项目的全面安全评估
@@ -355,14 +357,14 @@ export HOS_LS_LOG_LEVEL="DEBUG"
 
 ### 硬件要求
 
-> **注意**：正式模式提供完整功能，但对硬件配置要求较高。推荐 16GB+ 内存、支持 CUDA 的 GPU。如果您的配置有限，建议使用 [纯净AI模式（--pure-ai）](#-纯净ai模式--pure-ai)。
+> **注意**：重型模式提供完整功能，但对硬件配置要求较高。推荐 16GB+ 内存、支持 CUDA 的 GPU。如果您的配置有限，建议使用 [纯净AI模式（--pure-ai）](#-纯净ai模式--pure-ai)。
 
 ### 快速上手
 
-#### 启动正式模式
+#### 启动重型模式
 
 ```bash
-# 扫描当前目录（默认正式模式）
+# 扫描当前目录（默认重型模式）
 hos-ls scan
 
 # 扫描指定项目
@@ -391,7 +393,7 @@ hos-ls analyze --attack-chain
 ### 配置示例
 
 ```yaml
-# 正式模式配置
+# 重型模式配置
 ai:
   provider: deepseek
   model: deepseek-chat
@@ -433,15 +435,15 @@ attack_chain:
 
 ***
 
-## 💬 聊天模式（chat）
+## 💬 智能交互模式（chat + agent）
 
-### 什么是聊天模式？
+### 什么是智能交互模式？
 
-`chat` 模式是 HOS-LS 推出的全新自然语言交互模式，它允许用户通过自然语言与安全分析系统进行交互，无需记忆复杂的命令行参数。
+`智能交互模式` 是 HOS-LS v0.3.2.3 推出的全新统一交互模式，它将**自然语言聊天**和 **Agent 编排语言**完美融合为一体。用户既可以通过自然语言与安全分析系统对话，也可以使用强大的 Agent Pipeline 构建器进行精细化控制。
 
 ### 核心特性
 
-- 🎯 **自然语言交互** - 支持中文和英文的自然语言命令
+#### 🎯 自然语言交互能力
 - 🤖 **多代理架构** - 使用 7 个专门的代理进行安全分析
 - ⚡ **实时反馈** - 流式输出和代理思考过程
 - 📁 **代码库工具** - 内置代码搜索、文件读取、目录列出和 AST 分析
@@ -450,12 +452,22 @@ attack_chain:
 - 📡 **Git 集成** - 支持安全补丁的版本控制
 - 🎨 **用户友好界面** - 美观的终端输出和交互体验
 
+#### 🔧 Agent 编排语言
+- **Agent Pipeline 构建器** - 将 CLI flag 转换为 Agent 节点，构建执行管道
+- **自动补全 pipeline** - 根据依赖关系自动添加缺失的 Agent 节点
+- **宏命令支持** - 如 `--full-audit`、`--quick-scan` 等常用组合
+- **链式 Flag 表达** - 如 `--scan+reason+poc`
+- **CLI ↔ Chat 双向转换** - 自然语言与 CLI 命令的无缝切换
+- **轻量对话能力** - 支持 `--ask` 和 `--focus` 选项
+- **--explain 模式** - 展示执行流程
+- **进程隔离** - 确保并行执行的稳定性
+
 ### 快速上手
 
 #### 启动聊天模式
 
 ```bash
-# 启动聊天模式
+# 启动交互式聊天
 hos-ls chat
 
 # 示例命令
@@ -464,6 +476,56 @@ hos-ls chat
 > 生成漏洞的 POC 并验证
 > 提供修复建议和补丁
 > Git 提交修复
+```
+
+#### 使用 Agent 编排命令
+
+```bash
+# 基本扫描
+python -m src.cli.main scan --scan .
+
+# 带原因分析
+python -m src.cli.main scan --scan --reason .
+
+# 带 POC 生成
+python -m src.cli.main scan --scan --reason --poc .
+```
+
+#### 宏命令（常用组合）
+
+```bash
+# 快速扫描（scan + reason + report）
+python -m src.cli.main scan --quick-scan .
+
+# 完整审计（scan + reason + attack-chain + poc + verify + report）
+python -m src.cli.main scan --full-audit .
+```
+
+#### 链式 Flag 表达
+
+```bash
+# 链式表达
+python -m src.cli.main scan --scan+reason .
+
+# 复杂链式表达
+python -m src.cli.main scan --scan+reason+poc .
+```
+
+#### Explain 模式
+
+```bash
+# 显示执行流程
+python -m src.cli.main scan --scan --reason --explain .
+```
+
+#### 轻量对话（在扫描时聚焦特定方面）
+
+```bash
+# 重点关注认证逻辑
+python -m src.cli.main scan --scan --ask "重点看认证逻辑" .
+
+# 聚焦特定目录
+python -m src.cli.main scan --scan --focus "src" .
 ```
 
 ### 支持的命令类型
@@ -505,6 +567,18 @@ hos-ls chat
 - `TerminalUI` - 终端用户界面，提供美观的交互体验
 - `MultiAgentPipeline` - 多智能体分析管道，实现深度安全分析
 - `LangGraphFlow` - 流程控制，实现多代理协作
+- `PipelineBuilder` - Agent 管道构建器，支持 flag 解析和宏展开
+- `AgentNode` - Agent 节点，代表执行流程中的一个步骤
+
+### 宏命令列表
+
+| 宏命令 | 展开为 | 说明 |
+|-------|-------|------|
+| `--full-audit` | `--scan --reason --attack-chain --poc --verify --report` | 完整安全审计 |
+| `--quick-scan` | `--scan --reason --report` | 快速扫描 |
+| `--poc-only` | `--scan --reason --poc` | 仅生成 POC |
+| `--attack-chain` | `--scan --reason --attack-chain` | 攻击链分析 |
+| `--verify-only` | `--scan --reason --verify` | 仅验证漏洞 |
 
 ### 使用示例
 
@@ -553,95 +627,6 @@ Git 操作结果
 [master a1b2c3d] 修复安全漏洞
  1 file changed, 10 insertions(+), 5 deletions(-)
 ```
-
-***
-
-## 🚀 Agent 编排语言
-
-### 什么是 Agent 编排语言？
-
-HOS-LS v0.3.2.1 引入了全新的 Agent 编排语言，将 CLI 命令转变为可组合的 Agent 节点，构建执行管道。
-
-### 核心特性
-
-- **Agent Pipeline 构建器** - 将 CLI flag 转换为 Agent 节点
-- **自动补全 pipeline** - 根据依赖关系自动添加缺失的 Agent 节点
-- **宏命令支持** - 如 `--full-audit`、`--quick-scan` 等常用组合
-- **链式 Flag 表达** - 如 `--scan+reason+poc`
-- **CLI ↔ Chat 双向转换** - 自然语言与 CLI 命令的无缝切换
-- **轻量对话能力** - 支持 `--ask` 和 `--focus` 选项
-- **--explain 模式** - 展示执行流程
-- **进程隔离** - 确保并行执行的稳定性
-
-### 快速上手
-
-#### 基本扫描命令
-
-```bash
-# 基本扫描
-python -m src.cli.main scan --scan .
-
-# 带原因分析
-python -m src.cli.main scan --scan --reason .
-
-# 带 POC 生成
-python -m src.cli.main scan --scan --reason --poc .
-```
-
-#### 宏命令
-
-```bash
-# 快速扫描（scan + reason + report）
-python -m src.cli.main scan --quick-scan .
-
-# 完整审计（scan + reason + attack-chain + poc + verify + report）
-python -m src.cli.main scan --full-audit .
-```
-
-#### 链式 Flag
-
-```bash
-# 链式表达
-python -m src.cli.main scan --scan+reason .
-
-# 复杂链式表达
-python -m src.cli.main scan --scan+reason+poc .
-```
-
-#### Explain 模式
-
-```bash
-# 显示执行流程
-python -m src.cli.main scan --scan --reason --explain .
-```
-
-#### 轻量对话
-
-```bash
-# 重点关注认证逻辑
-python -m src.cli.main scan --scan --ask "重点看认证逻辑" .
-
-# 聚焦特定目录
-python -m src.cli.main scan --scan --focus "src" .
-```
-
-### 技术架构
-
-**核心组件：**
-- `PipelineBuilder` - Agent 管道构建器，支持 flag 解析和宏展开
-- `AgentNode` - Agent 节点，代表执行流程中的一个步骤
-- `ConversationalSecurityAgent` - 对话式安全代理，处理自然语言转换
-- `LangGraphFlow` - 流程控制，实现多代理协作
-
-### 宏命令列表
-
-| 宏命令 | 展开为 | 说明 |
-|-------|-------|------|
-| `--full-audit` | `--scan --reason --attack-chain --poc --verify --report` | 完整安全审计 |
-| `--quick-scan` | `--scan --reason --report` | 快速扫描 |
-| `--poc-only` | `--scan --reason --poc` | 仅生成 POC |
-| `--attack-chain` | `--scan --reason --attack-chain` | 攻击链分析 |
-| `--verify-only` | `--scan --reason --verify` | 仅验证漏洞 |
 
 ## 📖 简介
 
@@ -2119,7 +2104,7 @@ HOS-LS 会自动检测 GPU 并启用加速：
 <details>
 <summary><b>如何配置 Neo4j？</b></summary>
 
-Neo4j 是 HOS-LS 正式模式中用于构建攻击图的图数据库。配置步骤如下：
+Neo4j 是 HOS-LS **重型模式（--ai）** 中用于构建攻击图的图数据库。配置步骤如下：
 
 1. **安装 Neo4j**
    - 下载并安装 Neo4j Desktop：https://neo4j.com/download/
@@ -2355,7 +2340,10 @@ HOS-LS 是一款专为 AI 生成代码设计的安全扫描工具，通过结合
 
 ### 核心优势
 
-- **双模式设计**：纯净AI模式（轻量级）和正式模式（全功能）
+- **三大模式体系**：
+  - 🤖 **纯净AI模式（--pure-ai）**：轻量级，低配置需求，开箱即用
+  - 💬 **智能交互模式（chat + agent）**：自然语言交互 + Agent编排，统一体验
+  - 🔧 **重型模式（--ai）**：全功能，企业级安全审计
 - **强 Multi-Agent 架构**：多Agent协同工作，提供深度安全分析
 - **函数级代码切片**：AST精准切片，每个函数独立分析
 - **两阶段扫描**：大幅节省Token，同时保持高准确率
@@ -2372,16 +2360,61 @@ HOS-LS 是一款专为 AI 生成代码设计的安全扫描工具，通过结合
 
 ### 版本更新说明
 
-v0.3.2.1 带来了以下重大改进：
+**v0.3.2.3 (2026-04-11) - 最新版本**
 
-1. **Agent 编排语言**：将 CLI 命令转变为可组合的 Agent 节点，构建执行管道
-2. **GraphRAG 增强**：支持多种图结构、图结构之间的关联分析、增量更新等
-3. **多 Agent 系统**：完整的多 Agent 协作系统，支持 Agent 内存管理和依赖关系管理
-4. **攻击模拟与利用**：攻击模拟引擎、沙箱执行环境、多种利用方式支持
-5. **可视化与集成**：攻击链可视化界面、IDE 插件/LSP 集成、CI/CD 集成
-6. **数据集与评估**：安全漏洞数据集、数据集管理系统、Prompt 市场和 Benchmark 体系
+v0.3.2.3 带来了以下重大改进：
 
-这些新功能使 HOS-LS 从一个 RAG 工具进化为一个完整的 Security Brain，能够提供更全面、更深入的安全分析服务。
+1. **聊天模式增强**：
+   - 新增自然语言交互模式，支持中文和英文命令
+   - 7 个专门的代理进行深度安全分析
+   - 流式输出和实时反馈，展示代理思考过程
+   - 内置代码库工具（搜索、文件读取、AST 分析）
+
+2. **Agent 编排系统优化**：
+   - 自动修复功能：生成具体的修复建议和代码补丁
+   - 漏洞利用生成：自动生成 POC 并在沙箱中验证
+   - Git 集成增强：支持安全补丁的版本控制
+   - 用户友好界面：美观的终端输出和交互体验
+
+3. **语义识别改进**：
+   - 增强对话代理处理复杂路径的能力
+   - 支持 Windows 路径和带引号的路径
+   - 改进路径解析准确性
+
+4. **多代理流水线优化**：
+   - 确保 final_findings 字段始终存在于代理响应中
+   - 优化多代理协作流程
+   - 提升结果生成的稳定性
+
+5. **终端 UI 体验升级**：
+   - 更好的格式化和语法高亮
+   - 增强的交互功能
+   - LangGraph 流程可视化
+
+6. **问题修复**：
+   - 修复路径解析失败问题
+   - 修复聊天模式初始化问题
+   - 修复 TerminalUI 中的重复方法问题
+
+---
+
+**v0.3.2.2 历史版本亮点：**
+
+1. **模式重命名与优化**：正式模式更名为**重型模式（--ai）**，更直观体现其定位；纯净AI模式保持不变
+2. **智能交互模式**：合并聊天模式和 Agent 编排语言为统一的**智能交互模式（chat + agent）**，提供自然语言 + Agent Pipeline 的完整交互体验
+3. **结构优化**：重新组织文档结构，建立清晰的**三大模式体系**（纯净AI → 智能交互 → 重型），提升可读性和易用性
+4. **Agent 编排增强**：保留所有宏命令（--full-audit, --quick-scan等）、链式Flag表达（--scan+reason+poc）、CLI ↔ Chat双向转换等强大功能
+5. **体验升级**：整合CLI命令和Chat对话能力，用户可根据场景自由选择交互方式
+
+**历史版本亮点（v0.3.2.1）：**
+- Agent 编排语言：将 CLI 命令转变为可组合的 Agent 节点
+- GraphRAG 增强：支持多种图结构、关联分析、增量更新
+- 多 Agent 系统：完整的协作系统，支持内存管理和依赖管理
+- 攻击模拟与利用：攻击模拟引擎、沙箱执行环境
+- 可视化与集成：攻击链可视化、IDE/LSP 集成、CI/CD 集成
+- 数据集与评估：安全漏洞数据集、Prompt 市场、Benchmark 体系
+
+这些持续改进使 HOS-LS 从一个 RAG 工具进化为一个完整的 **Security Brain**，能够提供更全面、更深入、更易用的安全分析服务。
 
 ## 🤝 贡献指南
 

@@ -168,5 +168,9 @@ test-results/
 tmp/
 temp/
 *.tmp
-.benchmarks 
-AAA-PROJECT-TEST/ 
+.benchmarks/
+AAA-PROJECT-TEST/
+
+# IDE and development directories
+.trae/
+.github/

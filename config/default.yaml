@@ -141,3 +141,35 @@ batch_processing:
 debug: true
 verbose: true
 quiet: false
+
+# ========== Memory 系统配置（新增） ==========
+memory:
+  enabled: true
+  storage_backend: json  # json | sqlite (未来支持)
+  retention_days: 90  # 数据保留天数
+  auto_backup: true
+  backup_interval_hours: 24
+  cache_ttl: 300  # 内存缓存有效期（秒）
+
+# ========== Strategy Engine 配置（新增） ==========
+strategy:
+  enabled: true
+  auto_mode: false  # 是否默认启用AI自动策略模式（可通过 --auto-strategy 或 strategy auto --on 开启）
+  weights:
+    user_preference: 0.4  # 用户偏好权重
+    project_risk: 0.3     # 项目风险权重
+    intent: 0.2           # 意图匹配权重
+    history: 0.1          # 历史反馈权重
+  ai_provider: default    # AI提供商（default表示使用ai.provider配置）
+  ai_model: default       # AI模型（default表示使用ai.model配置）
+  safety_constraints:
+    max_time: 600         # 最大执行时间限制（秒）
+    production_safe_mode: true  # 生产环境强制安全模式
+  debug_output: true      # 是否显示决策过程（--debug时生效）
+
+# ========== Feedback 反馈系统配置（新增） ==========
+feedback:
+  collect_auto: true      # 自动收集执行数据
+  prompt_user: false      # 是否主动询问用户满意度（Chat模式下可开启）
+  optimize_interval: 50   # 每N次执行后触发一次权重优化
+  min_samples: 10         # 最小样本数要求

@@ -232,43 +232,8 @@ class PureAIAnalyzer:
         console.print(f"[green]✓ POC生成完成，共生成 {len(results)} 个POC[/green]")
         return results
 
-    def _normalize_confidence(self, confidence_value) -> float:
-        """标准化置信度值（支持多种格式）
-        
-        Args:
-            confidence_value: 置信度值（可能是字符串、数字、百分比等）
-            
-        Returns:
-            float: 标准化的置信度 (0.0 - 1.0)
-        """
-        try:
-            confidence = float(confidence_value)
-            # 如果是百分比格式 (>1)，转换为 0-1 范围
-            if confidence > 1.0:
-                confidence = confidence / 100.0
-            return max(0.0, min(confidence, 1.0))
-        except (ValueError, TypeError):
-            if isinstance(confidence_value, str):
-                if '%' in confidence_value:
-                    try:
-                        return float(confidence_value.replace('%', '')) / 100.0
-                    except:
-                        return 0.5
-                elif confidence_value.lower() in ['高', 'high']:
-                    return 0.8
-                elif confidence_value.lower() in ['中', 'medium']:
-                    return 0.5
-                elif confidence_value.lower() in ['低', 'low']:
-                    return 0.2
-            return 0.5
-
     def _convert_to_findings(self, result: Dict[str, Any]) -> List[VulnerabilityFinding]:
-        """将分析结果转换为漏洞发现列表（混合模式：新架构优先 + 旧逻辑兜底）
-
-        策略：
-        - 优先使用新的 FinalDecisionBuilder 架构（简洁高效）
-        - 如果新架构失败或数据不完整，回退到旧的完整逻辑（健壮兜底）
-        - 双重保障，100%稳定
+        """将分析结果转换为漏洞发现列表
 
         Args:
             result: 分析结果
@@ -278,44 +243,6 @@ class PureAIAnalyzer:
         """
         findings = []
         try:
-            # ========== 新架构（优先尝试） ==========
-            try:
-                from src.core.final_decision_builder import ensure_final_decision
-                
-                result = ensure_final_decision(result)
-                final_decision = result.get('final_decision', {})
-                vulnerabilities = final_decision.get('vulnerabilities', [])
-                
-                if vulnerabilities and len(vulnerabilities) > 0:
-                    print(f"[DEBUG] ✓ 使用新架构提取: {len(vulnerabilities)} 个漏洞")
-                    
-                    for vuln in vulnerabilities:
-                        try:
-                            finding = VulnerabilityFinding(
-                                rule_id=vuln.get('rule_id', ''),
-                                rule_name=vuln.get('vulnerability') or vuln.get('type', 'Unknown'),
-                                severity=vuln.get('severity', 'medium'),
-                                confidence=self._normalize_confidence(vuln.get('confidence', 'medium')),
-                                location={'file': vuln.get('location', result.get('file_path', 'unknown'))},
-                                description=vuln.get('description') or vuln.get('potential_impact', ''),
-                                fix_suggestion=vuln.get('recommendation') or vuln.get('fix_suggestion', ''),
-                                explanation=json.dumps(vuln, ensure_ascii=False, default=str)
-                            )
-                            findings.append(finding)
-                        except Exception as e:
-                            print(f"[DEBUG] 新架构处理单个漏洞失败: {e}")
-                            continue
-                    
-                    if findings:
-                        print(f"[DEBUG] ✓ 新架构成功: {len(findings)} 个发现")
-                        return findings
-                        
-            except Exception as new_arch_error:
-                print(f"[DEBUG] ⚠ 新架构不可用，回退到旧逻辑: {new_arch_error}")
-            
-            # ========== 旧逻辑（完整兜底） ==========
-            print(f"[DEBUG] 使用旧逻辑（兼容模式）")
-            
             print(f"[DEBUG] 开始转换结果，结果包含: {list(result.keys())}")
             final_decision = result.get('final_decision', {})
             print(f"[DEBUG] final_decision 类型: {type(final_decision)}")
@@ -547,42 +474,14 @@ class PureAIAnalyzer:
         return language_map.get(ext, "unknown")
 
     def _validate_results(self, result: Dict[str, Any]) -> bool:
-        """验证分析结果的完整性（混合模式：新架构优先 + 旧逻辑兜底）
-
-        策略：
-        - 优先使用新的 ensure_final_decision 保证数据完整
-        - 如果新架构失败，回退到旧的验证逻辑
-        - 永远返回 True（避免上层崩溃）
+        """验证分析结果的完整性
 
         Args:
             result: 分析结果
 
         Returns:
-            bool: 结果是否完整（永远返回True）
+            bool: 结果是否完整
         """
-        # ========== 新架构（优先尝试） ==========
-        try:
-            from src.core.final_decision_builder import ensure_final_decision
-            
-            result = ensure_final_decision(result)
-            
-            final_decision = result.get('final_decision', {})
-            vuln_count = len(final_decision.get('vulnerabilities', []))
-            risk_level = final_decision.get('risk_level', 'unknown')
-            
-            print(f"[DEBUG] ✓ 新架构验证完成: "
-                  f"{vuln_count} 个漏洞, "
-                  f"风险等级: {risk_level}, "
-                  f"置信度: {final_decision.get('confidence', 0):.0%}")
-            
-            return True  # 新架构成功
-            
-        except Exception as new_arch_error:
-            print(f"[DEBUG] ⚠ 新架构验证失败，回退到旧逻辑: {new_arch_error}")
-        
-        # ========== 旧逻辑（完整兜底） ==========
-        print(f"[DEBUG] 使用旧逻辑验证（兼容模式）")
-        
         # 检查结果是否包含基本字段
         required_fields = ['file_path', 'final_decision']
         

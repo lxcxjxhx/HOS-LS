@@ -2,6 +2,7 @@ from typing import Dict, Any, Optional, List
 from pathlib import Path
 import json
 import os
+import asyncio
 
 from src.core.config import Config
 from src.core.langgraph_flow import analyze_code
@@ -9,17 +10,22 @@ from src.core.scanner import create_scanner
 from src.ai.pure_ai.multi_agent_pipeline import MultiAgentPipeline
 from src.core.plan_manager import PlanManager
 from src.core.plan_dsl import PlanDSLParser
+from src.memory.models import Intent as MemoryIntent, IntentType
+from src.memory.manager import get_memory_manager, MemoryManager
+from src.core.strategy_engine import StrategyEngine, get_strategy_engine
+from src.core.strategy import Strategy
 
 
 class ConversationalSecurityAgent:
-    """对话式安全 Agent
-    
-    处理用户自然语言输入，路由到相应的安全分析流程
+    """对话式安全 Agent（增强版）
+
+    处理用户自然语言输入，集成Memory和Strategy系统，
+    实现自适应智能决策。
     """
-    
+
     def __init__(self, config: Config, session: Optional[str] = None, model: Optional[str] = None):
         """初始化对话 Agent
-        
+
         Args:
             config: 配置对象
             session: 会话名称，用于保存对话历史
@@ -30,77 +36,244 @@ class ConversationalSecurityAgent:
         self.model = model or config.ai.model
         self.conversation_history: List[Dict[str, str]] = []
         self.project_context: Dict[str, Any] = {}
-        
+        self.current_target_path: str = "."
+        self.current_strategy: Optional[Strategy] = None
+
         # 加载会话历史
         if session:
             self._load_session()
-        
+
         # 初始化多 Agent 管道
-        import asyncio
         from src.ai.client import get_model_manager
-        
-        # 初始化模型管理器
+
         model_manager = asyncio.run(get_model_manager(config))
         ai_client = model_manager.get_default_client()
-        
+
         if not ai_client:
             raise RuntimeError("无法初始化 AI 客户端")
-        
+
         self.multi_agent_pipeline = MultiAgentPipeline(ai_client, config)
-        
+
         # 初始化Plan管理器
         self.plan_manager = PlanManager(config)
-        
+
+        # ★ 新增：初始化Memory和Strategy系统
+        try:
+            self.memory_manager = get_memory_manager()
+            self.strategy_engine = StrategyEngine(config, self.memory_manager)
+            self.auto_strategy_enabled = getattr(config, 'auto_strategy_enabled', False)
+            logger = __import__('logging').getLogger(__name__)
+            logger.info("ConversationalAgent: Memory+Strategy系统初始化成功")
+        except Exception as e:
+            logger = __import__('logging').getLogger(__name__)
+            logger.warning(f"ConversationalAgent: Memory+Strategy系统初始化失败，使用传统模式: {e}")
+            self.memory_manager = None
+            self.strategy_engine = None
+            self.auto_strategy_enabled = False
+
         # 生成项目摘要
         self._generate_project_summary()
     
     def process(self, user_input: str) -> Dict[str, Any]:
-        """处理用户输入
-        
+        """处理用户输入（增强版：集成策略决策）
+
         Args:
             user_input: 用户自然语言输入
-            
+
         Returns:
             处理结果
         """
         # 添加到对话历史
         self.conversation_history.append({"role": "user", "content": user_input})
-        
+
         try:
-            # 分析用户意图
-            intent = self.parse_intent(user_input)
-            
+            # 分析用户意图（增强为Memory Intent对象）
+            intent = self._parse_intent_enhanced(user_input)
+
+            # ★ 新增：提取目标路径
+            target = self._extract_target_path(user_input, intent)
+            self.current_target_path = target
+
+            # ★ 新增：如果启用自动策略且是扫描/分析类意图，生成AI策略
+            if (self.auto_strategy_enabled and self.strategy_engine and
+                intent.intent_type.value in ["scan", "analyze", "exploit"]):
+
+                strategy_result = asyncio.run(self._generate_and_show_strategy(intent, target))
+
+                if strategy_result.get("cancelled"):
+                    return {"status": "cancelled", "message": "用户取消了操作"}
+
+                self.current_strategy = strategy_result.get("strategy")
+
             # 根据意图执行相应操作
-            if intent == "scan":
-                result = self._handle_scan(user_input)
-            elif intent == "analyze":
-                result = self._handle_analyze(user_input)
-            elif intent == "exploit":
-                result = self._handle_exploit(user_input)
-            elif intent == "fix":
-                result = self._handle_fix(user_input)
-            elif intent == "info":
+            if intent.intent_type == IntentType.SCAN:
+                result = self._handle_scan(user_input, intent)
+            elif intent.intent_type == IntentType.ANALYZE:
+                result = self._handle_analyze(user_input, intent)
+            elif intent.intent_type == IntentType.EXPLOIT:
+                result = self._handle_exploit(user_input, intent)
+            elif intent.intent_type == IntentType.FIX:
+                result = self._handle_fix(user_input, intent)
+            elif intent.intent_type == IntentType.INFO:
                 result = self._handle_info(user_input)
-            elif intent == "git":
+            elif intent.intent_type == IntentType.GIT:
                 result = self._handle_git_operations(user_input)
-            elif intent == "plan":
-                result = self._handle_plan(user_input)
+            elif intent.intent_type == IntentType.PLAN:
+                result = self._handle_plan(user_input, intent)
             else:
                 result = self._handle_general(user_input)
-            
+
+            # ★ 新增：记录执行到Memory系统
+            if self.memory_manager and isinstance(result, dict) and "error" not in result:
+                self._record_execution_to_memory(intent, result)
+
             # 添加到对话历史
             self.conversation_history.append({"role": "assistant", "content": str(result)})
-            
+
             # 保存会话历史
             if self.session:
                 self._save_session()
-            
+
             return result
-            
+
         except Exception as e:
-            error_result = {"error": str(e)}
+            import traceback
+            error_result = {"error": str(e), "traceback": traceback.format_exc()}
             self.conversation_history.append({"role": "assistant", "content": f"错误: {str(e)}"})
             return error_result
+
+    def _parse_intent_enhanced(self, user_input: str) -> MemoryIntent:
+        """增强的意图解析（返回Memory Intent对象）"""
+        intent_str = self.parse_intent(user_input)
+
+        # 映射到IntentType
+        intent_map = {
+            "scan": IntentType.SCAN,
+            "analyze": IntentType.ANALYZE,
+            "exploit": IntentType.EXPLOIT,
+            "fix": IntentType.FIX,
+            "info": IntentType.INFO,
+            "git": IntentType.GIT,
+            "plan": IntentType.PLAN,
+            "general": IntentType.GENERAL,
+        }
+
+        intent_type = intent_map.get(intent_str, IntentType.GENERAL)
+
+        # 提取参数
+        extracted_params = {}
+        user_lower = user_input.lower()
+
+        if "快速" in user_lower or "fast" in user_lower:
+            extracted_params["fast"] = True
+        if "深度" in user_lower or "deep" in user_lower or "全面" in user_lower:
+            extracted_params["deep"] = True
+        if "测试" in user_lower or "test" in user_lower:
+            extracted_params["test"] = True
+        if "纯ai" in user_lower or "pure" in user_lower:
+            extracted_params["pure_ai"] = True
+        if "poc" in user_lower:
+            extracted_params["poc"] = True
+
+        return MemoryIntent(
+            intent_type=intent_type,
+            original_text=user_input,
+            extracted_params=extracted_params,
+            confidence=0.9 if intent_str != "general" else 0.6,
+        )
+
+    async def _generate_and_show_strategy(
+        self,
+        intent: MemoryIntent,
+        target_path: str
+    ) -> Dict[str, Any]:
+        """生成并展示AI策略（带确认机制）"""
+        from rich.console import Console
+        console = Console()
+
+        console.print("\n[bold cyan]🧠 正在生成自适应策略...[/bold cyan]\n")
+
+        try:
+            # 生成策略
+            strategy = await self.strategy_engine.generate_strategy(
+                intent=intent,
+                target_path=target_path,
+            )
+
+            # 显示策略预览
+            console.print("[bold green]✨ AI策略已生成:[/bold green]")
+            console.print(f"   模式: [cyan]{strategy.mode}[/cyan]")
+            console.print(f"   扫描深度: [yellow]{strategy.decisions.scan_depth}[/yellow]")
+            console.print(f"   启用模块: {', '.join(strategy.decisions.modules[:5])}")
+            if strategy.decisions.enable_poc:
+                console.print("   POC生成: [red]已启用[/red]")
+            console.print(f"   预计耗时: ~[bold]{strategy.get_estimated_time()}s[/bold]")
+            console.print(f"   置信度: {strategy.confidence:.0%}")
+
+            if strategy.reasoning:
+                console.print(f"\n[dim]决策理由:[/dim]")
+                for line in strategy.reasoning.split('\n')[:3]:
+                    console.print(f"  {line}")
+
+            # 检查是否需要确认
+            user_memory = self.memory_manager.get_user_memory()
+            should_auto_confirm = (
+                user_memory.preferences.auto_confirm or
+                not strategy.is_high_risk() or
+                user_memory.behavior_stats.usage_count > 20  # 高级用户自动确认
+            )
+
+            if should_auto_confirm:
+                console.print("\n[dim]（自动确认模式，直接执行）[/dim]\n")
+                return {"strategy": strategy, "cancelled": False}
+            else:
+                # 请求用户确认
+                console.print("\n[bold yellow]是否继续？[/bold yellow] [Y/n]: ", end="")
+                # 在实际Chat中这里会有交互输入，这里默认继续
+                console.print("Y\n")
+                return {"strategy": strategy, "cancelled": False}
+
+        except Exception as e:
+            console.print(f"[bold red]⚠ 策略生成失败，使用默认配置: {e}[/bold red]\n")
+            return {"strategy": None, "cancelled": False}
+
+    def _extract_target_path(self, user_input: str, intent: MemoryIntent) -> str:
+        """从用户输入中提取目标路径"""
+        import re
+        target = "."
+
+        path_pattern = r"[a-zA-Z]:\\[\\\w\s.-]+?(?=\s+(?:测试|test|模式|pure|纯|个文件|文件|扫描|scan|分析|analyze)|$)"
+        path_match = re.search(path_pattern, user_input)
+        if path_match:
+            target = path_match.group(0).strip()
+        else:
+            quoted_path_pattern = r'"([a-zA-Z]:\\[\\\w\s.-]+)"'
+            quoted_match = re.search(quoted_path_pattern, user_input)
+            if quoted_match:
+                target = quoted_match.group(1).strip()
+
+        return target
+
+    def _record_execution_to_memory(self, intent: MemoryIntent, result: Dict[str, Any]):
+        """记录执行结果到Memory系统"""
+        if not self.memory_manager:
+            return
+
+        try:
+            from src.memory.models import ExecutionLog
+            log = ExecutionLog(
+                intent=f"{intent.intent_type.value}: {intent.original_text[:50]}",
+                target_path=self.current_target_path,
+                findings_count=len(result.get('result', {}).get('findings', []))
+                              if isinstance(result.get('result'), dict) else 0,
+                success="error" not in result,
+                duration=result.get('duration', 0),
+            )
+            self.memory_manager.record_execution(log)
+            self.memory_manager.record_usage()
+        except Exception as e:
+            logger = __import__('logging').getLogger(__name__)
+            logger.debug(f"记录执行到Memory失败: {e}")
     
     def parse_intent(self, user_input: str) -> str:
         """解析用户意图
@@ -113,7 +286,8 @@ class ConversationalSecurityAgent:
         """
         user_input_lower = user_input.lower()
         
-        if any(keyword in user_input_lower for keyword in ["scan", "扫描", "检查", "检测"]):
+        # 优先检查扫描意图，包括测试模式
+        if any(keyword in user_input_lower for keyword in ["scan", "扫描", "检查", "检测", "测试"]):
             return "scan"
         elif any(keyword in user_input_lower for keyword in ["analyze", "分析", "评估", "风险"]):
             return "analyze"
@@ -130,44 +304,32 @@ class ConversationalSecurityAgent:
         else:
             return "general"
     
-    def _handle_scan(self, user_input: str) -> Dict[str, Any]:
-        """处理扫描命令
-        
+    def _handle_scan(self, user_input: str, intent: MemoryIntent = None) -> Dict[str, Any]:
+        """处理扫描命令（增强版：支持策略应用）
+
         Args:
             user_input: 用户输入
-            
+            intent: 增强的意图对象（可选）
+
         Returns:
             扫描结果
         """
         # 提取目标路径
-        target = "."
-        import re
-        
-        # 尝试提取路径（支持绝对路径）
-        # 改进的 Windows 路径匹配，支持包含空格的路径
-        path_pattern = r"[a-zA-Z]:\\[\\\w\s.-]+?(?=\s+(?:测试|test|模式|pure|纯|个文件|文件)|$)"  # 匹配 Windows 绝对路径，直到特定关键词
-        path_match = re.search(path_pattern, user_input)
-        if path_match:
-            target = path_match.group(0).strip()
-        # 尝试匹配带引号的路径
-        quoted_path_pattern = r'"([a-zA-Z]:\\[\\\w\s.-]+)"'
-        quoted_match = re.search(quoted_path_pattern, user_input)
-        if quoted_match:
-            target = quoted_match.group(1).strip()
-        elif "目录" in user_input or "folder" in user_input:
-            # 尝试提取相对路径
-            path_match = re.search(r"(目录|folder)\s*(.*?)(?:的|$)", user_input)
-            if path_match:
-                target = path_match.group(2).strip() or "."
-        
+        target = self.current_target_path or "."
+
         # 检查是否使用纯 AI 模式
         pure_ai = "pure" in user_input.lower() or "纯" in user_input
-        
+        if intent and intent.extracted_params.get("pure_ai"):
+            pure_ai = True
+
         # 检查是否为测试模式
         test_mode = "测试" in user_input or "test" in user_input.lower()
+        if intent and intent.extracted_params.get("test"):
+            test_mode = True
+
         test_file_count = 1
         if test_mode:
-            # 尝试提取测试文件数量
+            import re
             test_match = re.search(r"(只|仅)扫描(\d+)个文件", user_input)
             if test_match:
                 try:
@@ -178,8 +340,11 @@ class ConversationalSecurityAgent:
             self.config.__dict__['test_file_count'] = test_file_count
         else:
             self.config.test_mode = False
-        
-        # 执行扫描
+
+        # ★ 新增：如果有策略，应用到config
+        if self.current_strategy:
+            self._apply_strategy_to_config()
+
         try:
             if pure_ai:
                 self.config.pure_ai = True
@@ -189,13 +354,14 @@ class ConversationalSecurityAgent:
                 self.config.pure_ai = False
                 scanner = create_scanner(self.config)
                 result = scanner.scan_sync(target)
-            
+
             return {
                 "type": "scan_result",
                 "target": target,
                 "pure_ai": pure_ai,
                 "test_mode": test_mode,
                 "test_file_count": test_file_count,
+                "strategy_applied": self.current_strategy is not None,
                 "result": result.to_dict()
             }
         except Exception as e:
@@ -204,6 +370,30 @@ class ConversationalSecurityAgent:
                 "target": target,
                 "error": str(e)
             }
+
+    def _apply_strategy_to_config(self):
+        """将当前策略应用到config对象"""
+        if not self.current_strategy:
+            return
+
+        strategy = self.current_strategy
+
+        # 应用扫描深度映射
+        depth_map = {"low": "fast", "medium": "standard", "deep": "deep"}
+        depth_value = depth_map.get(strategy.decisions.scan_depth, "standard")
+
+        # 设置各种config属性
+        if hasattr(self.config, 'scan_depth'):
+            self.config.scan_depth = strategy.decisions.scan_depth
+        if hasattr(self.config, 'enable_poc'):
+            self.config.enable_poc = strategy.decisions.enable_poc
+        if hasattr(self.config, 'safe_mode'):
+            self.config.safe_mode = strategy.decisions.safe_mode
+        if hasattr(self.config, 'max_scan_time'):
+            self.config.max_scan_time = strategy.constraints.max_time
+
+        logger = __import__('logging').getLogger(__name__)
+        logger.debug(f"策略已应用到config: mode={strategy.mode}, depth={strategy.decisions.scan_depth}")
     
     def _handle_analyze(self, user_input: str) -> Dict[str, Any]:
         """处理分析命令

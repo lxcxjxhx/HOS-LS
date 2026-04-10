@@ -4,9 +4,25 @@ HOS-LS 的命令行入口。
 """
 
 import sys
-import asyncio
 import os
+import io
+import contextlib
+
+# 捕获并丢弃所有第三方库的启动噪声输出（triton/torch 的 print/warnings）
+_devnull = open(os.devnull, 'w')
+_old_stdout = sys.stdout
+_old_stderr = sys.stderr
+sys.stdout = _devnull
+sys.stderr = _devnull
+
+# 现在安全地执行所有导入（它们的输出会被丢弃）
 import warnings
+warnings.filterwarnings("ignore", message=".*Failed to find CUDA.*")
+warnings.filterwarnings("ignore", message=".*Skipping import of cpp extensions due to incompatible torch version.*")
+warnings.filterwarnings("ignore", category=RuntimeWarning, message=".*Redirects are currently not supported.*")
+warnings.filterwarnings("ignore", category=RuntimeWarning, message=".*found in sys.modules after import of package.*")
+
+import asyncio
 from pathlib import Path
 from typing import Optional, List, Dict, Any
 from concurrent.futures import ThreadPoolExecutor
@@ -19,13 +35,24 @@ from rich.table import Table
 from rich.live import Live
 from rich.progress import Progress, SpinnerColumn, BarColumn, TextColumn
 
-warnings.filterwarnings("ignore", message="Failed to find CUDA.")
-warnings.filterwarnings("ignore", category=RuntimeWarning, message="Redirects are currently not supported in Windows or MacOs.")
-warnings.filterwarnings("ignore", category=RuntimeWarning, message="'src.cli.main' found in sys.modules after import of package 'src.cli'")
-
 from src import __version__
 from src.core.config import Config, ConfigManager
 from src.cli.plan_commands import plan
+
+# 导入统一 Agent 系统（新增）
+from src.cli.agent_integration import (
+    initialize_cli_agent_system,
+    get_unified_engine,
+    collect_behavior_flags_from_kwargs,
+    execute_with_unified_engine,
+    display_unified_result,
+    LegacyFallbackExecutor
+)
+
+# 导入完成，恢复正常的 stdout/stderr
+sys.stdout = _old_stdout
+sys.stderr = _old_stderr
+_devnull.close()
 
 console = Console()
 
@@ -155,9 +182,12 @@ def show_risk_bar(percentage: float) -> None:
 @click.option("--debug", "-d", is_flag=True, help="调试模式")
 @click.pass_context
 def cli(ctx: click.Context, config: Optional[str], verbose: bool, quiet: bool, debug: bool) -> None:
-    """HOS-LS: AI 生成代码安全扫描工具"""
+    """HOS-LS: AI 生成代码安全扫描工具（统一 Agent 架构）"""
     # 确保上下文对象是字典
     ctx.ensure_object(dict)
+
+    # 🔥 初始化统一 Agent 系统（新增）
+    initialize_cli_agent_system()
 
     # 加载配置
     config_manager = ConfigManager()
@@ -353,6 +383,47 @@ def scan(
     
     # 合并所有flags
     all_flags = behavior_flags + macro_flags
+
+    # 🔥 使用统一 Agent 系统的新架构（优先）
+    if all_flags:  # 如果有行为类 flags，使用新架构
+        try:
+            import asyncio
+
+            # 收集 flags（使用新的辅助函数）
+            unified_flags = [f"--{flag}" for flag in all_flags]
+
+            # 确定执行模式
+            exec_mode = "pure-ai" if pure_ai else "auto"
+
+            # 🔥🔥🔥 调用统一执行引擎（核心改动！）
+            result = asyncio.run(execute_with_unified_engine(
+                config=config,
+                target=target,
+                behavior_flags=unified_flags,
+                mode=exec_mode,
+                ask=ask,
+                focus=focus
+            ))
+
+            # 显示结果
+            display_unified_result(result, console, quiet=config.quiet)
+
+            # 生成报告（如果需要）
+            if output:
+                _generate_unified_report(result, output, output_format, config)
+
+            # 设置退出码
+            if not result.success and result.total_findings > 0:
+                sys.exit(1)
+            return  # ✅ 新架构执行完成，直接返回
+
+        except Exception as e:
+            # 新架构失败时回退到旧逻辑（向后兼容）
+            if config.debug:
+                console.print(f"[yellow][DEBUG] 新架构执行失败，回退到旧逻辑: {e}[/yellow]")
+            pass  # 继续执行下面的旧代码
+    
+    # === 以下是旧的硬编码逻辑（作为 fallback）===
     
     # 导入Pipeline构建器
     from src.core.agent_pipeline import PipelineBuilder
@@ -397,9 +468,9 @@ def scan(
         config.ai.enabled = True
         config.pure_ai = True
         
-        # 纯AI模式默认使用deepseek-chat
-        config.pure_ai_provider = "deepseek"
-        config.pure_ai_model = "deepseek-chat"
+        # 纯AI模式配置（从Config动态加载，零硬编码）
+        config.pure_ai_provider = config.ai.provider or "deepseek"  # 从配置读取，有默认值
+        config.pure_ai_model = config.ai.model or "deepseek-chat"  # 从配置读取，有默认值
         
         # 测试模式
         if test > 0:
@@ -1081,10 +1152,10 @@ def _display_result(result) -> None:
 
 
 def _generate_report(result, output: str, format: str, config=None) -> None:
-    """生成报告"""
+    """生成报告（旧版）"""
     # 导入报告生成器
     from src.reporting.generator import ReportGenerator
-    
+
     try:
         generator = ReportGenerator(config)
         report_path = generator.generate([result], output, format)
@@ -1093,34 +1164,100 @@ def _generate_report(result, output: str, format: str, config=None) -> None:
         console.print(f"[bold red]报告生成失败: {e}[/bold red]")
 
 
+def _generate_unified_report(result, output: str, format: str, config=None) -> None:
+    """生成统一执行引擎的报告（新版）
+
+    Args:
+        result: ExecutionResult 对象
+        output: 输出路径
+        format: 输出格式 (html/json/markdown)
+        config: 配置对象
+    """
+    try:
+        import json
+
+        if format == 'json':
+            with open(output, 'w', encoding='utf-8') as f:
+                report_data = {
+                    'success': result.success,
+                    'mode': result.mode,
+                    'pipeline': result.pipeline_used,
+                    'execution_time': result.execution_time,
+                    'total_findings': result.total_findings,
+                    'message': result.message,
+                    'agents_results': {
+                        name: r.to_dict()
+                        for name, r in result.results.items()
+                    },
+                    'timestamp': __import__('datetime').datetime.now().isoformat()
+                }
+                json.dump(report_data, f, ensure_ascii=False, indent=2)
+            console.print(f"[bold green]JSON报告已生成: {output}[/bold green]")
+
+        else:
+            # 对于其他格式，尝试使用旧的报告生成器或生成简单文本
+            with open(output, 'w', encoding='utf-8') as f:
+                f.write("# HOS-LS 安全扫描报告\n\n")
+                f.write(f"**模式**: {result.mode.upper()}\n")
+                f.write(f"**Pipeline**: {' → '.join(result.pipeline_used)}\n")
+                f.write(f"**耗时**: {result.execution_time:.2f}秒\n")
+                f.write(f"**发现问题**: {result.total_findings}个\n\n")
+
+                if result.results:
+                    f.write("## Agent 执行详情\n\n")
+                    for name, r in result.results.items():
+                        status = "✅" if r.is_success else "❌"
+                        f.write(f"### {status} {name}\n")
+                        f.write(f"- 状态: {r.status.value}\n")
+                        f.write(f"- 消息: {r.message}\n")
+                        f.write(f"- 置信度: {r.confidence:.0%}\n")
+                        if r.error:
+                            f.write(f"- 错误: {r.error}\n")
+                        f.write("\n")
+
+            console.print(f"[bold green]报告已生成: {output}[/bold green]")
+
+    except Exception as e:
+        console.print(f"[bold red]统一报告生成失败: {e}[/bold red]")
+
+
+
 @cli.command()
 @click.option("--session", help="会话名称，用于保存对话历史")
 @click.option("--model", help="AI 模型名称")
 @click.pass_context
 def chat(ctx: click.Context, session: Optional[str], model: Optional[str]) -> None:
-    """进入交互式对话模式
+    """进入智能交互模式（统一聊天+Agent编排）
     
-    在对话模式中，你可以使用自然语言与 HOS-LS 安全 Agent 进行交互。
-    例如："帮我分析当前目录的安全风险并生成报告"
+    整合了聊天模式和Agent编排语言的统一体验：
+    - 支持自然语言命令：'扫描当前目录'、'全面审计项目'
+    - 支持CLI命令：'--full-audit'、'--scan+reason+poc'
+    - 支持方案管理：'生成审计方案'、'执行方案'
+    - 支持双向转换：'转换为CLI: 完整审计'
+    
+    示例:
+    - '扫描当前目录并生成报告'
+    - '用纯AI模式分析认证模块'
+    - '生成完整审计方案'
+    - '解释CLI: --full-audit'
     """
     config: Config = ctx.obj["config"]
     
     # 显示欢迎信息
     print_banner()
-    console.print("[bold cyan]🔒 HOS-LS 安全对话模式[/bold cyan]")
-    console.print("[dim]输入自然语言命令，例如: '帮我分析当前目录的安全风险'[/dim]")
-    console.print("[dim]输入 '/help' 查看可用命令，输入 '/exit' 退出[/dim]")
-    console.print()
     
-    # 导入对话相关模块
-    from src.core.conversational_agent import ConversationalSecurityAgent
+    # 使用增强的TerminalUI
     from src.utils.terminal_ui import TerminalUI
-    
-    # 初始化终端 UI
     terminal_ui = TerminalUI()
+    terminal_ui.show_welcome_banner()
     
-    # 初始化对话 Agent
-    agent = ConversationalSecurityAgent(config, session=session, model=model)
+    # 验证AI配置
+    from src.core.ai_config_validator import AIConfigValidator
+    AIConfigValidator.ensure_configured(config)
+    
+    # 初始化统一交互引擎
+    from src.core.unified_interaction_engine import UnifiedInteractionEngine
+    engine = UnifiedInteractionEngine(config, session=session)
     
     # 对话循环
     while True:
@@ -1129,31 +1266,46 @@ def chat(ctx: click.Context, session: Optional[str], model: Optional[str]) -> No
             user_input = terminal_ui.get_input("[bold green]> [/bold green]")
             
             # 处理特殊命令
-            if user_input.strip() == "/exit":
+            if user_input.strip() in ["/exit", "/quit"]:
+                engine.save_session()
+                console.print("[bold cyan]💾 会话已保存[/bold cyan]")
                 console.print("[bold cyan]再见！[/bold cyan]")
                 break
             elif user_input.strip() == "/help":
-                terminal_ui.show_help()
+                terminal_ui.show_unified_help()
                 continue
             elif user_input.strip() == "/clear":
                 terminal_ui.clear_screen()
+                continue
+            elif user_input.strip() == "/context":
+                terminal_ui.show_context_summary(engine.conversation_manager.project_context)
+                continue
+            elif user_input.strip() == "/history":
+                history = engine.get_conversation_history()
+                console.print(f"[dim]共 {len(history.messages)} 条消息[/dim]")
+                for msg in history.messages[-5:]:
+                    role_label = "👤" if msg.role == "user" else "🤖"
+                    content_preview = msg.content[:50] + "..." if len(msg.content) > 50 else msg.content
+                    console.print(f"  {role_label} {content_preview}")
                 continue
             
             # 处理空输入
             if not user_input.strip():
                 continue
             
-            # 处理用户命令
+            # 显示思考状态
             terminal_ui.show_thinking()
             
-            # 执行 Agent 处理
-            result = agent.process(user_input)
+            # 使用统一引擎处理
+            result = engine.process(user_input)
             
             # 显示结果
             terminal_ui.show_result(result)
             
         except KeyboardInterrupt:
-            console.print("\n[bold cyan]再见！[/bold cyan]")
+            engine.save_session()
+            console.print("\n[bold cyan]💾 会话已保存[/bold cyan]")
+            console.print("[bold cyan]再见！[/bold cyan]")
             break
         except Exception as e:
             console.print(f"[bold red]错误: {e}[/bold red]")

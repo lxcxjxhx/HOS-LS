@@ -35,13 +35,16 @@ class MultiAgentPipeline:
         if hasattr(config, 'get'):
             # 配置是字典
             self.max_retries = config.get('max_retries', 3)
-            self.model = config.get('model', 'deepseek-reasoner')
+            self.model = config.get('model', config.get('pure_ai_model', 'deepseek-reasoner'))
             self.language = config.get('language', 'cn')
             self.max_tokens_per_file = config.get('max_tokens_per_file', 8000)
         else:
             # 配置是对象
             self.max_retries = getattr(config, 'max_retries', 3)
-            if hasattr(config, 'ai'):
+            # 优先使用 pure_ai_model，然后使用 ai.model，最后使用默认值
+            if hasattr(config, 'pure_ai_model'):
+                self.model = getattr(config, 'pure_ai_model', 'deepseek-reasoner')
+            elif hasattr(config, 'ai'):
                 ai_config = getattr(config, 'ai')
                 if hasattr(ai_config, 'model'):
                     self.model = getattr(ai_config, 'model', 'deepseek-reasoner')
@@ -248,6 +251,38 @@ class MultiAgentPipeline:
                     'scanner_result': scanner_result,
                     'reasoning_result': reasoning_result
                 })
+            
+            # 【核心修复】构建结构化的 final_decision（不再依赖 Report Agent）
+            from src.core.final_decision_builder import FinalDecisionBuilder, ensure_final_decision
+            
+            try:
+                if not fast_mode:
+                    final_decision_schema = FinalDecisionBuilder.build(
+                        scanner_result=scanner_result,
+                        reasoning_result=reasoning_result,
+                        exploit_result=exploit_result,
+                        fix_result=fix_result,
+                        file_path=file_path
+                    )
+                else:
+                    final_decision_schema = FinalDecisionBuilder.build(
+                        scanner_result=scanner_result,
+                        reasoning_result=reasoning_result,
+                        file_path=file_path
+                    )
+                
+                is_valid, errors = final_decision_schema.validate()
+                if is_valid:
+                    result['final_decision'] = final_decision_schema.to_dict()
+                    print(f"[DEBUG] ✓ final_decision 构建成功: "
+                          f"{len(final_decision_schema.vulnerabilities)} 个漏洞, "
+                          f"风险等级: {final_decision_schema.risk_level}")
+                else:
+                    print(f"[DEBUG] ⚠ Schema 验证警告: {errors}")
+                    result = ensure_final_decision(result)
+            except Exception as e:
+                print(f"[DEBUG] 构建 final_decision 异常: {e}")
+                result = ensure_final_decision(result)
             
             return result
         except Exception as e:

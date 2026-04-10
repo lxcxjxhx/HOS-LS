@@ -280,6 +280,9 @@ class ConfigManager:
             self._config_cache[path_str] = data
             self._config_mtime[path_str] = current_mtime
 
+        # 直接用配置文件数据创建Config
+        # BaseSettings 会自动处理环境变量覆盖（通过 env_prefix + env_nested_delimiter）
+        # 优先级：环境变量 > 配置文件值 > 默认值
         self._config = Config(**data)
         return self._config
 

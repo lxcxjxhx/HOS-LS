@@ -39,15 +39,15 @@ class AIPlanGenerator:
             生成的Plan对象
         """
         try:
-            # 检查AI配置
+            # 确保AI功能启用
             if not self.config.ai.enabled:
-                logger.warning("AI功能未启用，使用回退机制")
-                return self._fallback_plan(natural_language)
+                logger.info("强制启用AI功能")
+                self.config.ai.enabled = True
             
-            # 检查API密钥
+            # 确保API密钥配置
             if not self.config.ai.api_key:
-                logger.warning("API密钥未配置，使用回退机制")
-                return self._fallback_plan(natural_language)
+                logger.error("API密钥未配置，无法使用AI生成方案")
+                raise ValueError("API密钥未配置，请在配置文件中设置ai.api_key")
             
             # 获取AI模型管理器
             logger.debug("获取AI模型管理器")
@@ -78,17 +78,20 @@ class AIPlanGenerator:
             
             # 验证Plan
             if not self.validator.validate(plan):
-                # 如果验证失败，使用回退机制
-                logger.warning("Plan验证失败，使用回退机制")
-                return self._fallback_plan(natural_language)
+                # 如果验证失败，重新生成
+                logger.warning("Plan验证失败，重新生成")
+                # 重新生成Plan
+                response = await model_manager.generate(request)
+                plan_data = self._parse_ai_output(response.content)
+                plan = Plan.from_dict(plan_data)
             
             logger.info("Plan生成成功")
             return plan
             
         except Exception as e:
-            # 发生错误时使用回退机制
+            # 发生错误时抛出异常，不使用回退机制
             logger.error(f"AI Plan生成失败: {e}")
-            return self._fallback_plan(natural_language)
+            raise
     
     async def modify_plan(self, plan: Plan, modification: str) -> Plan:
         """使用AI修改Plan
@@ -101,15 +104,15 @@ class AIPlanGenerator:
             修改后的Plan对象
         """
         try:
-            # 检查AI配置
+            # 确保AI功能启用
             if not self.config.ai.enabled:
-                logger.warning("AI功能未启用，返回原始Plan")
-                return plan
+                logger.info("强制启用AI功能")
+                self.config.ai.enabled = True
             
-            # 检查API密钥
+            # 确保API密钥配置
             if not self.config.ai.api_key:
-                logger.warning("API密钥未配置，返回原始Plan")
-                return plan
+                logger.error("API密钥未配置，无法使用AI修改方案")
+                raise ValueError("API密钥未配置，请在配置文件中设置ai.api_key")
             
             # 获取AI模型管理器
             logger.debug("获取AI模型管理器")
@@ -143,17 +146,20 @@ class AIPlanGenerator:
             
             # 验证Plan
             if not self.validator.validate(modified_plan):
-                # 如果验证失败，返回原始Plan
-                logger.warning("Plan验证失败，返回原始Plan")
-                return plan
+                # 如果验证失败，重新生成
+                logger.warning("Plan验证失败，重新生成")
+                # 重新生成Plan
+                response = await model_manager.generate(request)
+                modified_plan_data = self._parse_ai_output(response.content)
+                modified_plan = Plan.from_dict(modified_plan_data)
             
             logger.info("Plan修改成功")
             return modified_plan
             
         except Exception as e:
-            # 发生错误时返回原始Plan
+            # 发生错误时抛出异常，不返回原始Plan
             logger.error(f"AI Plan修改失败: {e}")
-            return plan
+            raise
     
     def _parse_ai_output(self, content: str) -> Dict[str, Any]:
         """解析AI的输出
