@@ -51,7 +51,7 @@ class CVECrawler:
             CVE漏洞列表
         """
         if not self.session:
-            self.session = aiohttp.ClientSession()
+            raise RuntimeError("Client session not initialized. Use context manager or initialize session first.")
 
         cves = []
         try:
@@ -87,7 +87,7 @@ class CVECrawler:
             CVE漏洞详情
         """
         if not self.session:
-            self.session = aiohttp.ClientSession()
+            raise RuntimeError("Client session not initialized. Use context manager or initialize session first.")
 
         try:
             url = f"{self.base_url}/cgi-bin/cvename.cgi?name={cve_id}"

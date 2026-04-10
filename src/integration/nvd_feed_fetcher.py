@@ -66,7 +66,7 @@ class NVDFeedFetcher:
     async def _fetch_json(self, url: str) -> Optional[Dict[str, Any]]:
         """获取 JSON 数据"""
         if not self.session:
-            raise RuntimeError("Session not initialized")
+            raise RuntimeError("Client session not initialized. Use context manager or initialize session first.")
 
         try:
             proxy = self._get_proxy()

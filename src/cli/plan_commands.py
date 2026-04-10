@@ -29,9 +29,25 @@ def generate(ctx, description, template):
     """生成执行方案
     
     DESCRIPTION: 自然语言描述任务目标
+    
+    注意: 如需使用AI生成功能，请确保配置了AI API密钥。
+    配置方式:
+    1. 通过环境变量: HOS_LS_AI__API_KEY
+    2. 通过配置文件: ai.api_key
+    3. 通过命令行: --ai-provider 和 --ai-api-key
     """
     config: Config = ctx.obj["config"]
     plan_manager = PlanManager(config)
+    
+    # 检查API密钥配置
+    if description and not config.ai.api_key:
+        console.print(Panel("[注意] API密钥未配置", border_style="yellow"))
+        console.print("将使用规则-based回退机制生成Plan。")
+        console.print("如需使用AI生成功能，请配置API密钥:")
+        console.print("1. 通过环境变量: HOS_LS_AI__API_KEY")
+        console.print("2. 通过配置文件: ai.api_key")
+        console.print("3. 通过命令行: --ai-provider 和 --ai-api-key")
+        console.print()
     
     if config.debug:
         console.print(Panel("[DEBUG] 开始生成方案", border_style="yellow"))
@@ -39,6 +55,7 @@ def generate(ctx, description, template):
             console.print(f"[DEBUG] 输入描述: {description}")
         if template:
             console.print(f"[DEBUG] 使用模板: {template}")
+        console.print(f"[DEBUG] AI配置: provider={config.ai.provider}, api_key={'已配置' if config.ai.api_key else '未配置'}")
     
     if template:
         try:
@@ -131,6 +148,12 @@ def run(ctx, name):
     """执行方案
     
     NAME: 方案名称
+    
+    注意: 如需使用AI相关功能，请确保配置了AI API密钥。
+    配置方式:
+    1. 通过环境变量: HOS_LS_AI__API_KEY
+    2. 通过配置文件: ai.api_key
+    3. 通过命令行: --ai-provider 和 --ai-api-key
     """
     config: Config = ctx.obj["config"]
     plan_manager = PlanManager(config)
@@ -138,6 +161,7 @@ def run(ctx, name):
     if config.debug:
         console.print(Panel("[DEBUG] 开始执行方案", border_style="yellow"))
         console.print(f"[DEBUG] 方案名称: {name}")
+        console.print(f"[DEBUG] AI配置: provider={config.ai.provider}, api_key={'已配置' if config.ai.api_key else '未配置'}")
     
     try:
         # 加载Plan
@@ -153,6 +177,18 @@ def run(ctx, name):
         # 显示执行计划
         console.print(Panel("执行方案", border_style="green"))
         console.print(PlanDSLParser.format_plan_for_display(plan))
+        
+        # 检查Plan中是否包含AI相关步骤
+        has_ai_steps = any(step.type.value in ["poc", "reason", "attack_chain"] for step in plan.steps)
+        if has_ai_steps and not config.ai.api_key:
+            console.print(Panel("[注意] API密钥未配置", border_style="yellow"))
+            console.print("Plan包含AI相关步骤，但API密钥未配置。")
+            console.print("部分功能可能无法正常工作。")
+            console.print("如需使用完整功能，请配置API密钥:")
+            console.print("1. 通过环境变量: HOS_LS_AI__API_KEY")
+            console.print("2. 通过配置文件: ai.api_key")
+            console.print("3. 通过命令行: --ai-provider 和 --ai-api-key")
+            console.print()
         
         # 转换为CLI参数
         if config.debug:

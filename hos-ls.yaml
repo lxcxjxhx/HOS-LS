@@ -14,7 +14,7 @@ rules:
 
 # AI 配置
 ai:
-  enabled: false
+  enabled: true
   provider: deepseek
   model: deepseek-chat  # 正确的 DeepSeek 模型名称
   api_key: "sk-b235bbdc776f47c3bee2e8e8d4ec1232"

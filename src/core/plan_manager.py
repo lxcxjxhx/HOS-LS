@@ -11,90 +11,49 @@ from pathlib import Path
 from src.core.plan import Plan, PlanProfile, PlanStepType
 from src.core.plan_dsl import PlanDSLParser
 from src.core.config import Config
+from src.core.ai_plan_generator import AIPlanGenerator
 
 
 class PlanManager:
     """Plan管理器"""
     
     def __init__(self, config: Optional[Config] = None):
+        # 确保配置正确传递
         self.config = config
         self.plan_dir = Path.home() / ".hos-ls" / "plans"
         self.plan_dir.mkdir(parents=True, exist_ok=True)
+        # 传递配置给AI Plan生成器
+        self.ai_generator = AIPlanGenerator(config)
     
     def generate_from_natural_language(self, natural_language: str) -> Plan:
         """从自然语言生成Plan"""
-        # 简单的规则匹配
-        goal = natural_language
-        profile = PlanProfile.STANDARD
-        steps = []
-        
-        # 解析目标
-        if "认证" in natural_language or "auth" in natural_language.lower():
-            goal = "分析认证漏洞"
-            steps.append({
-                "type": PlanStepType.SCAN,
-                "config": {"path": ".", "depth": "medium"}
-            })
-            steps.append({
-                "type": PlanStepType.AUTH_ANALYSIS,
-                "config": {"detect": ["jwt", "session", "oauth"]}
-            })
-            steps.append({
-                "type": PlanStepType.POC,
-                "config": {"generate": False}
-            })
-        
-        elif "漏洞" in natural_language or "vulnerability" in natural_language.lower():
-            goal = "全面漏洞扫描"
-            profile = PlanProfile.FULL
-            steps.append({
-                "type": PlanStepType.SCAN,
-                "config": {"path": ".", "depth": "high"}
-            })
-            steps.append({
-                "type": PlanStepType.POC,
-                "config": {"generate": True}
-            })
-            steps.append({
-                "type": PlanStepType.ATTACK_CHAIN,
-                "config": {"enabled": True}
-            })
-        
-        elif "快速" in natural_language or "fast" in natural_language.lower():
-            goal = "快速安全检查"
-            profile = PlanProfile.FAST
-            steps.append({
-                "type": PlanStepType.SCAN,
-                "config": {"path": ".", "depth": "low"}
-            })
-            steps.append({
-                "type": PlanStepType.REPORT,
-                "config": {"format": "html"}
-            })
-        
-        else:
+        # 使用AI生成Plan
+        try:
+            plan = self.ai_generator.generate_plan_sync(natural_language)
+            # 应用配置文件
+            plan.apply_profile()
+            return plan
+        except Exception as e:
+            # 发生错误时使用回退机制
+            print(f"AI Plan生成失败，使用回退机制: {e}")
             # 默认Plan
             goal = natural_language
-            steps.append({
-                "type": PlanStepType.SCAN,
-                "config": {"path": ".", "depth": "medium"}
-            })
-            steps.append({
-                "type": PlanStepType.REPORT,
-                "config": {"format": "html"}
-            })
-        
-        # 创建Plan
-        plan = Plan(goal=goal, profile=profile)
-        
-        # 添加步骤
-        for step_data in steps:
-            plan.add_step(step_data["type"], step_data["config"])
-        
-        # 应用配置文件
-        plan.apply_profile()
-        
-        return plan
+            profile = PlanProfile.STANDARD
+            steps = [
+                {
+                    "type": PlanStepType.SCAN,
+                    "config": {"path": ".", "depth": "medium"}
+                },
+                {
+                    "type": PlanStepType.REPORT,
+                    "config": {"format": "html"}
+                }
+            ]
+            plan = Plan(goal=goal, profile=profile)
+            for step_data in steps:
+                plan.add_step(step_data["type"], step_data["config"])
+            plan.apply_profile()
+            return plan
     
     def generate_from_cli_args(self, args: Dict[str, Any]) -> Plan:
         """从CLI参数生成Plan"""
@@ -288,43 +247,52 @@ class PlanManager:
     
     def modify_plan(self, plan: Plan, modification: str) -> Plan:
         """通过自然语言修改Plan"""
-        # 简单的规则匹配
-        if "加上POC" in modification or "add poc" in modification.lower():
-            plan.update_step(PlanStepType.POC, {"generate": True})
-        
-        elif "移除POC" in modification or "remove poc" in modification.lower():
-            plan.remove_step(PlanStepType.POC)
-        
-        elif "深度改成最高" in modification or "depth high" in modification.lower():
-            scan_step = plan.get_step(PlanStepType.SCAN)
-            if scan_step:
-                scan_step.config["depth"] = "high"
-        
-        elif "深度改成中等" in modification or "depth medium" in modification.lower():
-            scan_step = plan.get_step(PlanStepType.SCAN)
-            if scan_step:
-                scan_step.config["depth"] = "medium"
-        
-        elif "深度改成最低" in modification or "depth low" in modification.lower():
-            scan_step = plan.get_step(PlanStepType.SCAN)
-            if scan_step:
-                scan_step.config["depth"] = "low"
-        
-        elif "只扫描登录模块" in modification or "scan login" in modification.lower():
-            scan_step = plan.get_step(PlanStepType.SCAN)
-            if scan_step:
-                scan_step.config["path"] = "./login"
-        
-        elif "安全模式" in modification:
-            if "启用" in modification or "enable" in modification.lower():
-                plan.constraints.safe_mode = True
-            elif "禁用" in modification or "disable" in modification.lower():
-                plan.constraints.safe_mode = False
-        
-        # 更新版本
-        self.update_plan_version(plan)
-        
-        return plan
+        # 使用AI修改Plan
+        try:
+            modified_plan = self.ai_generator.modify_plan_sync(plan, modification)
+            # 更新版本
+            self.update_plan_version(modified_plan)
+            return modified_plan
+        except Exception as e:
+            # 发生错误时使用回退机制
+            print(f"AI Plan修改失败，使用回退机制: {e}")
+            # 简单的规则匹配作为回退
+            if "加上POC" in modification or "add poc" in modification.lower():
+                plan.update_step(PlanStepType.POC, {"generate": True})
+            
+            elif "移除POC" in modification or "remove poc" in modification.lower():
+                plan.remove_step(PlanStepType.POC)
+            
+            elif "深度改成最高" in modification or "depth high" in modification.lower():
+                scan_step = plan.get_step(PlanStepType.SCAN)
+                if scan_step:
+                    scan_step.config["depth"] = "high"
+            
+            elif "深度改成中等" in modification or "depth medium" in modification.lower():
+                scan_step = plan.get_step(PlanStepType.SCAN)
+                if scan_step:
+                    scan_step.config["depth"] = "medium"
+            
+            elif "深度改成最低" in modification or "depth low" in modification.lower():
+                scan_step = plan.get_step(PlanStepType.SCAN)
+                if scan_step:
+                    scan_step.config["depth"] = "low"
+            
+            elif "只扫描登录模块" in modification or "scan login" in modification.lower():
+                scan_step = plan.get_step(PlanStepType.SCAN)
+                if scan_step:
+                    scan_step.config["path"] = "./login"
+            
+            elif "安全模式" in modification:
+                if "启用" in modification or "enable" in modification.lower():
+                    plan.constraints.safe_mode = True
+                elif "禁用" in modification or "disable" in modification.lower():
+                    plan.constraints.safe_mode = False
+            
+            # 更新版本
+            self.update_plan_version(plan)
+            
+            return plan
     
     def get_plan_directory(self) -> str:
         """获取Plan目录"""

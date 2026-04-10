@@ -39,6 +39,15 @@ class WebSearcher:
         self.config = config or get_config()
         self.session = None
     
+    async def __aenter__(self):
+        """进入上下文管理器"""
+        await self.initialize()
+        return self
+    
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        """退出上下文管理器"""
+        await self.close()
+    
     async def initialize(self):
         """初始化网络搜索器"""
         try:
@@ -65,7 +74,7 @@ class WebSearcher:
         """
         try:
             if not self.session:
-                await self.initialize()
+                raise RuntimeError("Client session not initialized. Use context manager or initialize session first.")
             
             # 使用 Google 搜索 API (需要 API 密钥)
             # 这里使用一个简单的模拟实现

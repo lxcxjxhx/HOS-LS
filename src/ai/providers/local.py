@@ -37,6 +37,15 @@ class LocalClient(AIClient):
         """提供商"""
         return AIProvider.LOCAL
     
+    async def __aenter__(self):
+        """进入上下文管理器"""
+        await self.initialize()
+        return self
+    
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        """退出上下文管理器"""
+        await self.close()
+    
     async def initialize(self) -> None:
         """初始化客户端"""
         if not self._initialized:
