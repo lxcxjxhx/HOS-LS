@@ -3,7 +3,7 @@
 
 <img width=20% height=20% alt="k63Gf_cropped" src="https://github.com/user-attachments/assets/2f74b773-bc55-4898-bcbe-d3bcd2fc1c14" />
 
-# 🔒 HOS-LS v0.3.3.0
+# 🔒 HOS-LS v0.3.2.1
 
 ## AI 生成代码安全扫描工具
 
@@ -560,7 +560,7 @@ Git 操作结果
 
 ### 什么是 Agent 编排语言？
 
-HOS-LS v0.3.3.0 引入了全新的 Agent 编排语言，将 CLI 命令转变为可组合的 Agent 节点，构建执行管道。
+HOS-LS v0.3.2.1 引入了全新的 Agent 编排语言，将 CLI 命令转变为可组合的 Agent 节点，构建执行管道。
 
 ### 核心特性
 
@@ -2372,7 +2372,7 @@ HOS-LS 是一款专为 AI 生成代码设计的安全扫描工具，通过结合
 
 ### 版本更新说明
 
-v0.3.3.0 带来了以下重大改进：
+v0.3.2.1 带来了以下重大改进：
 
 1. **Agent 编排语言**：将 CLI 命令转变为可组合的 Agent 节点，构建执行管道
 2. **GraphRAG 增强**：支持多种图结构、图结构之间的关联分析、增量更新等
