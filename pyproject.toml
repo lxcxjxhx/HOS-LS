@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "hos-ls"
-version = "0.3.0.4"
+version = "0.3.2.4"
 description = "HOS-LS: AI生成代码安全扫描工具"
 authors = ["HOS Team <team@hos-ls.com>"]
 readme = "README.md"

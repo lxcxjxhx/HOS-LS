@@ -60,7 +60,7 @@ def _suppress_startup_messages():
 
 _suppress_startup_messages()
 
-__version__ = "0.3.1.6"
+__version__ = "0.3.2.4"
 __author__ = "HOS Team"
 __license__ = "MIT"
 
