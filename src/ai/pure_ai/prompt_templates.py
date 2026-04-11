@@ -971,13 +971,18 @@ impact_scope: "system-wide", "module-wide", "local"
 扫描文件中的安全漏洞。
 
 [OUTPUT PROTOCOL]
-- 只允许输出 JSON
-- 必须严格符合 schema
-- 不允许缺失字段
-- 不允许多余字段
-- 必须可被 json.loads 解析
+⚠️ CRITICAL OUTPUT RULES ⚠️
+1. 你的输出必须 **且只能是** 一个完整的JSON对象
+2. 禁止输出任何解释性文字、注释或说明
+3. 禁止输出 "```json" 或 "```" 标记
+4. 禁止输出推理过程或中间步骤
+5. JSON必须以 `{{` 开始，以 `}}` 结束
+6. 所有字符串值必须使用双引号（不要使用单引号）
+7. 不要使用 Python 风格的 True/False/None（使用 true/false/null）
+8. 必须可被 json.loads 解析
 
 [OUTPUT FORMAT]
+直接输出以下JSON结构（不要包含任何其他文本）：
 {{
   "vulnerabilities": [
     {{
@@ -989,6 +994,11 @@ impact_scope: "system-wide", "module-wide", "local"
     }}
   ]
 }}
+
+[EXAMPLES OF CORRECT OUTPUT]
+✅ 正确: {{"vulnerabilities": [{{"type": "SQLi", ...}}]}}
+❌ 错误: 以下是分析结果：{{"vulnerabilities": [...]}}
+❌ 错误: ```json\n{{"vulnerabilities": [...]}}\n```
 
 [FAILSAFE]
 如果信息不足：
@@ -1036,13 +1046,18 @@ impact_scope: "system-wide", "module-wide", "local"
 推理漏洞的真实性和严重性。
 
 [OUTPUT PROTOCOL]
-- 只允许输出 JSON
-- 必须严格符合 schema
-- 不允许缺失字段
-- 不允许多余字段
-- 必须可被 json.loads 解析
+⚠️ CRITICAL OUTPUT RULES ⚠️
+1. 你的输出必须 **且只能是** 一个完整的JSON对象
+2. 禁止输出任何解释性文字、注释或说明
+3. 禁止输出 "```json" 或 "```" 标记
+4. 禁止输出推理过程或中间步骤
+5. JSON必须以 `{{` 开始，以 `}}` 结束
+6. 所有字符串值必须使用双引号（不要使用单引号）
+7. 不要使用 Python 风格的 True/False/None（使用 true/false/null）
+8. 必须可被 json.loads 解析
 
 [OUTPUT FORMAT]
+直接输出以下JSON结构（不要包含任何其他文本）：
 {{
   "findings": [
     {{
@@ -1056,6 +1071,11 @@ impact_scope: "system-wide", "module-wide", "local"
     }}
   ]
 }}
+
+[EXAMPLES OF CORRECT OUTPUT]
+✅ 正确: {{"findings": [{{"vulnerability": "SQLi", ...}}]}}
+❌ 错误: 经过分析，我发现：{{"findings": [...]}}
+❌ 错误: ```json\n{{"findings": [...]}}\n```
 
 [FAILSAFE]
 如果信息不足：

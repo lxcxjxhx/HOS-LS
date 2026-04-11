@@ -1515,61 +1515,298 @@ def _generate_report(result, output: str, format: str, config=None) -> None:
         console.print(f"[bold red]报告生成失败: {e}[/bold red]")
 
 
+def _convert_execution_result_to_scan_results(execution_result) -> List:
+    """将 ExecutionResult 转换为 ScanResult 列表
+
+    Args:
+        execution_result: 统一执行结果对象
+
+    Returns:
+        ScanResult 列表，用于报告生成器
+    """
+    from src.core.engine import ScanResult, Finding, Severity, Location, ScanStatus
+
+    scan_results = []
+    target_path = getattr(execution_result, 'target', 'unknown')
+
+    for agent_name, agent_result in execution_result.results.items():
+        findings_list = []
+
+        if hasattr(agent_result, 'findings') and agent_result.findings:
+            for finding_data in agent_result.findings:
+                try:
+                    if isinstance(finding_data, dict):
+                        finding = Finding(
+                            rule_id=finding_data.get('rule_id', agent_name),
+                            rule_name=finding_data.get('rule_name', agent_name),
+                            description=finding_data.get('description', finding_data.get('message', '')),
+                            severity=Severity(finding_data.get('severity', 'medium')),
+                            location=Location(
+                                file=finding_data.get('location', {}).get('file', finding_data.get('file', target_path)),
+                                line=finding_data.get('location', {}).get('line', finding_data.get('line', 0)),
+                                column=finding_data.get('location', {}).get('column', 0)
+                            ),
+                            confidence=float(finding_data.get('confidence', agent_result.confidence or 0.8)),
+                            message=finding_data.get('message', ''),
+                            code_snippet=finding_data.get('code_snippet', ''),
+                            fix_suggestion=finding_data.get('fix_suggestion', ''),
+                            metadata=finding_data.get('metadata', {})
+                        )
+                    elif hasattr(finding_data, 'rule_id'):
+                        finding = finding_data
+                    else:
+                        continue
+
+                    findings_list.append(finding)
+
+                except (ValueError, TypeError, AttributeError) as e:
+                    console.print(f"[yellow][WARN] 转换 finding 失败: {e}[/yellow]")
+                    continue
+
+        scan_result = ScanResult(
+            target=target_path,
+            status=ScanStatus.COMPLETED if agent_result.is_success else ScanStatus.FAILED,
+            findings=findings_list,
+            metadata={
+                'agent_name': agent_name,
+                'agent_status': agent_result.status.value if hasattr(agent_result.status, 'value') else str(agent_result.status),
+                'execution_time': agent_result.execution_time,
+                'message': agent_result.message
+            }
+        )
+
+        scan_results.append(scan_result)
+
+    return scan_results
+
+
+def _ensure_output_extension(output_path: str, format: str) -> str:
+    """确保输出文件有正确的扩展名
+
+    Args:
+        output_path: 原始输出路径
+        format: 报告格式
+
+    Returns:
+        带正确扩展名的路径
+    """
+    from pathlib import Path
+
+    path = Path(output_path)
+    format_extensions = {
+        'html': '.html',
+        'htm': '.html',
+        'markdown': '.md',
+        'md': '.md',
+        'json': '.json',
+        'sarif': '.sarif',
+        'sarif-json': '.sarif'
+    }
+
+    ext = format_extensions.get(format.lower())
+
+    if ext and path.suffix.lower() != ext:
+        if path.is_dir() or not path.suffix:
+            if format.lower() in ['html', 'htm']:
+                return str(path / 'report.html')
+            return str(path.with_suffix(ext))
+        elif format.lower() == 'html':
+            html_path = path.parent / f'{path.stem}.html'
+            return str(html_path)
+
+    return output_path
+
+
+def _generate_json_report(result, output: str) -> None:
+    """生成 JSON 格式的报告（保留原有逻辑）
+
+    Args:
+        result: ExecutionResult 对象
+        output: 输出文件路径
+    """
+    import json
+    from datetime import datetime
+
+    report_data = {
+        'success': result.success,
+        'mode': result.mode,
+        'pipeline': result.pipeline_used,
+        'execution_time': result.execution_time,
+        'total_findings': result.total_findings,
+        'message': result.message,
+        'agents_results': {
+            name: r.to_dict()
+            for name, r in result.results.items()
+        },
+        'timestamp': datetime.now().isoformat()
+    }
+
+    with open(output, 'w', encoding='utf-8') as f:
+        json.dump(report_data, f, ensure_ascii=False, indent=2)
+
+    console.print(f"[bold green]JSON报告已生成: {output}[/bold green]")
+
+
+def _generate_simple_text_report(result, output: str, format: str) -> None:
+    """生成简单文本报告（降级方案）
+
+    当无法转换为 ScanResult 时使用此方法
+
+    Args:
+        result: ExecutionResult 对象
+        output: 输出文件路径
+        format: 输出格式 (html/markdown)
+    """
+    from datetime import datetime
+
+    timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+    if format.lower() in ['html', 'htm']:
+        content = f"""<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>HOS-LS 安全扫描报告</title>
+    <style>
+        body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; margin: 40px; line-height: 1.6; color: #333; }}
+        h1 {{ color: #2563eb; border-bottom: 2px solid #e5e7eb; padding-bottom: 10px; }}
+        .summary {{ background: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0; }}
+        .info {{ margin: 10px 0; }}
+        .label {{ font-weight: bold; color: #6b7280; }}
+        .value {{ color: #111827; }}
+        .agent {{ border-left: 4px solid #3b82f6; padding: 15px; margin: 15px 0; background: #f9fafb; }}
+        .success {{ border-left-color: #10b981; }}
+        .error {{ border-left-color: #ef4444; }}
+    </style>
+</head>
+<body>
+    <h1>🔒 HOS-LS 安全扫描报告</h1>
+    <div class="summary">
+        <div class="info"><span class="label">生成时间:</span> <span class="value">{timestamp}</span></div>
+        <div class="info"><span class="label">扫描模式:</span> <span class="value">{result.mode.upper()}</span></div>
+        <div class="info"><span class="label">执行 Pipeline:</span> <span class="value">{' → '.join(result.pipeline_used)}</span></div>
+        <div class="info"><span class="label">总耗时:</span> <span class="value">{result.execution_time:.2f}秒</span></div>
+        <div class="info"><span class="label">发现问题数:</span> <span class="value">{result.total_findings}</span></div>
+        <div class="info"><span class="label">状态:</span> <span class="value">{'✅ 成功' if result.success else '❌ 失败'}</span></div>
+    </div>
+
+    <h2>🤖 Agent 执行详情</h2>
+"""
+
+        if result.results:
+            for name, r in result.results.items():
+                status_class = "success" if r.is_success else "error"
+                status_icon = "✅" if r.is_success else "❌"
+                content += f"""
+    <div class="agent {status_class}">
+        <h3>{status_icon} {name}</h3>
+        <div class="info"><span class="label">状态:</span> <span class="value">{r.status.value if hasattr(r.status, 'value') else r.status}</span></div>
+        <div class="info"><span class="label">消息:</span> <span class="value">{r.message}</span></div>
+        <div class="info"><span class="label">置信度:</span> <span class="value">{r.confidence:.0%}</span></div>
+        <div class="info"><span class="label">耗时:</span> <span class="value">{r.execution_time:.2f}秒</span></div>
+        {'<div class="info"><span class="label">错误:</span> <span class="value" style="color:red;">{r.error}</span></div>' if r.error else ''}
+    </div>
+"""
+
+        content += """
+</body>
+</html>
+"""
+    else:
+        content = f"""# HOS-LS 安全扫描报告
+
+**生成时间**: {timestamp}
+
+## 扫描摘要
+
+- **模式**: {result.mode.upper()}
+- **Pipeline**: {' → '.join(result.pipeline_used)}
+- **耗时**: {result.execution_time:.2f}秒
+- **发现问题**: {result.total_findings}个
+- **状态**: {'✅ 成功' if result.success else '❌ 失败'}
+
+## Agent 执行详情
+
+"""
+
+        if result.results:
+            for name, r in result.results.items():
+                status_icon = "✅" if r.is_success else "❌"
+                content += f"""### {status_icon} {name}
+
+- **状态**: {r.status.value if hasattr(r.status, 'value') else r.status}
+- **消息**: {r.message}
+- **置信度**: {r.confidence:.0%}
+- **耗时**: {r.execution_time:.2f}秒
+{'- **错误**: ' + r.error + '\n' if r.error else ''}
+
+"""
+
+    with open(output, 'w', encoding='utf-8') as f:
+        f.write(content)
+
+    console.print(f"[bold green]{format.upper()}报告已生成: {output}[/bold green]")
+
+
 def _generate_unified_report(result, output: str, format: str, config=None) -> None:
     """生成统一执行引擎的报告（新版）
+
+    支持 html/json/markdown/sarif 格式，使用 ReportGenerator 生成完整报告
 
     Args:
         result: ExecutionResult 对象
         output: 输出路径
-        format: 输出格式 (html/json/markdown)
+        format: 输出格式 (html/json/markdown/sarif)
         config: 配置对象
     """
     try:
-        import json
+        from src.reporting.generator import ReportGenerator
 
-        if format == 'json':
-            with open(output, 'w', encoding='utf-8') as f:
-                report_data = {
-                    'success': result.success,
-                    'mode': result.mode,
-                    'pipeline': result.pipeline_used,
-                    'execution_time': result.execution_time,
-                    'total_findings': result.total_findings,
-                    'message': result.message,
-                    'agents_results': {
-                        name: r.to_dict()
-                        for name, r in result.results.items()
-                    },
-                    'timestamp': __import__('datetime').datetime.now().isoformat()
-                }
-                json.dump(report_data, f, ensure_ascii=False, indent=2)
-            console.print(f"[bold green]JSON报告已生成: {output}[/bold green]")
+        format_lower = format.lower() if format else 'html'
 
-        else:
-            # 对于其他格式，尝试使用旧的报告生成器或生成简单文本
-            with open(output, 'w', encoding='utf-8') as f:
-                f.write("# HOS-LS 安全扫描报告\n\n")
-                f.write(f"**模式**: {result.mode.upper()}\n")
-                f.write(f"**Pipeline**: {' → '.join(result.pipeline_used)}\n")
-                f.write(f"**耗时**: {result.execution_time:.2f}秒\n")
-                f.write(f"**发现问题**: {result.total_findings}个\n\n")
+        if format_lower == 'json':
+            _generate_json_report(result, output)
+            return
 
-                if result.results:
-                    f.write("## Agent 执行详情\n\n")
-                    for name, r in result.results.items():
-                        status = "✅" if r.is_success else "❌"
-                        f.write(f"### {status} {name}\n")
-                        f.write(f"- 状态: {r.status.value}\n")
-                        f.write(f"- 消息: {r.message}\n")
-                        f.write(f"- 置信度: {r.confidence:.0%}\n")
-                        if r.error:
-                            f.write(f"- 错误: {r.error}\n")
-                        f.write("\n")
+        scan_results = _convert_execution_result_to_scan_results(result)
 
-            console.print(f"[bold green]报告已生成: {output}[/bold green]")
+        if not scan_results or all(len(sr.findings) == 0 for sr in scan_results):
+            console.print("[dim][INFO] 未发现安全问题，生成简化版报告[/dim]")
+            output_path = _ensure_output_extension(output, format_lower)
+            _generate_simple_text_report(result, output_path, format_lower)
+            return
+
+        generator = ReportGenerator(config)
+        output_path = _ensure_output_extension(output, format_lower)
+
+        report_path = generator.generate(scan_results, output_path, format_lower)
+        console.print(f"[bold green]{format_upper(format_lower)}报告已生成: {report_path}[/bold green]")
 
     except Exception as e:
         console.print(f"[bold red]统一报告生成失败: {e}[/bold red]")
+        if config and config.debug:
+            import traceback
+            traceback.print_exc()
+
+        console.print("[yellow][WARN] 尝试生成简化版报告...[/yellow]")
+        try:
+            output_path = _ensure_output_extension(output, format if format else 'html')
+            _generate_simple_text_report(result, output_path, format if format else 'html')
+        except Exception as fallback_error:
+            console.print(f"[bold red]简化版报告也生成失败: {fallback_error}[/bold red]")
+
+
+def format_upper(fmt: str) -> str:
+    """格式化显示名称"""
+    format_names = {
+        'html': 'HTML',
+        'htm': 'HTML',
+        'markdown': 'Markdown',
+        'md': 'Markdown',
+        'json': 'JSON',
+        'sarif': 'SARIF'
+    }
+    return format_names.get(fmt.lower(), fmt.upper())
 
 
 def _parse_jump_host(host_str: str) -> Dict[str, Any]:

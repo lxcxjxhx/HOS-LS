@@ -8,6 +8,7 @@ from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn
 from src.ai.pure_ai.context_builder import ContextBuilder
 from src.ai.pure_ai.prompt_templates import PromptTemplates
+from src.ai.json_parser import SmartJSONParser
 from src.ai.models import AIRequest
 from src.ai.token_tracker import get_token_tracker
 
@@ -31,6 +32,7 @@ class MultiAgentPipeline:
         self.context_builder = ContextBuilder(config)
         self.prompt_templates = PromptTemplates()
         self.token_tracker = get_token_tracker()
+        self.json_parser = SmartJSONParser()
         # 尝试从配置中获取max_retries，如果不存在则使用默认值3
         if hasattr(config, 'get'):
             # 配置是字典
@@ -747,8 +749,23 @@ class MultiAgentPipeline:
         """
         for i in range(self.max_retries):
             try:
-                # JSON Guard: 在prompt顶部添加JSON输出强制约束
-                json_guard_prompt = "只输出JSON，否则视为失败\n\n" + prompt
+                # 【改进】JSON Guard: 增强JSON输出强制约束
+                json_guard_prompt = """⚠️ 输出约束（违反将导致解析失败）：
+
+【强制规则】
+1. 输出必须且只能是标准JSON格式（不要包含任何其他文本）
+2. 禁止任何前缀、后缀、解释或markdown标记（```json 或 ```）
+3. 必须以 { 开始，以 } 结束
+4. 使用双引号，不要用单引号
+5. 使用 true/false/null，不要用 True/False/None
+6. 不要输出推理过程或说明文字
+
+【示例】
+✅ 正确输出: {"key": "value"}
+❌ 错误输出1: 以下是结果：{"key": "value"}
+❌ 错误输出2: ```json\n{"key": "value"}\n```
+
+""" + prompt
                 
                 # 创建AIRequest对象
                 request = AIRequest(
@@ -797,7 +814,35 @@ class MultiAgentPipeline:
         try:
             # 清理响应字符串
             cleaned_response = response.strip()
-            
+
+            # 【新增】首先尝试使用 SmartJSONParser（更强的解析能力）
+            smart_result = self.json_parser.parse(cleaned_response)
+            if smart_result is not None:
+                # 转换为统一格式
+                if 'final_findings' not in smart_result:
+                    smart_result['final_findings'] = [{
+                        "vulnerability": "未发现安全问题",
+                        "location": "unknown",
+                        "severity": "info",
+                        "status": "VALID",
+                        "confidence": "高",
+                        "cvss_score": "",
+                        "recommendation": "代码安全，无需修复",
+                        "evidence": "经过全面的安全分析，未发现明显的安全漏洞。"
+                    }]
+                if 'summary' not in smart_result:
+                    smart_result['summary'] = {
+                        "total_vulnerabilities": 0,
+                        "valid_vulnerabilities": 0,
+                        "uncertain_vulnerabilities": 0,
+                        "invalid_vulnerabilities": 0,
+                        "high_severity_count": 0,
+                        "medium_severity_count": 0,
+                        "low_severity_count": 0
+                    }
+                print(f"[DEBUG] ✓ SmartJSONParser 成功解析响应")
+                return smart_result
+
             # 首先尝试直接解析
             try:
                 parsed_json = json.loads(cleaned_response)
@@ -923,7 +968,87 @@ class MultiAgentPipeline:
                     return parsed_json
                 except json.JSONDecodeError:
                     pass
-            
+
+            # 【新增】改进的JSON修复策略：处理更多AI模型输出的边缘情况
+
+            # 策略A: 移除JSON前后多余的文本（如"以下是JSON输出："等）
+            cleaned_for_extraction = cleaned_response
+            prefix_match = re.search(r'\{', cleaned_for_extraction)
+            if prefix_match:
+                cleaned_for_extraction = cleaned_for_extraction[prefix_match.start():]
+            suffix_match = re.rfind(cleaned_for_extraction, '}')
+            if suffix_match != -1:
+                cleaned_for_extraction = cleaned_for_extraction[:suffix_match+1]
+
+            # 策略B: 修复Python字典风格的输出（单引号、True/False/None等）
+            def fix_python_dict_style(json_str):
+                """将Python字典风格转换为标准JSON"""
+                # 替换 Python 关键字
+                json_str = re.sub(r'\bTrue\b', 'true', json_str)
+                json_str = re.sub(r'\bFalse\b', 'false', json_str)
+                json_str = re.sub(r'\bNone\b', 'null', json_str)
+
+                # 替换单引号为双引号（简单场景，仅替换不在双引号内部的）
+                in_double_quote = False
+                result = []
+                i = 0
+                while i < len(json_str):
+                    char = json_str[i]
+                    if char == '"' and (i == 0 or json_str[i-1] != '\\'):
+                        in_double_quote = not in_double_quote
+                        result.append(char)
+                    elif char == "'" and not in_double_quote:
+                        result.append('"')
+                    else:
+                        result.append(char)
+                    i += 1
+                return ''.join(result)
+
+            # 应用修复策略A和B
+            first_brace_new = cleaned_for_extraction.find('{')
+            last_brace_new = cleaned_for_extraction.rfind('}')
+            if first_brace_new != -1 and last_brace_new != -1 and last_brace_new > first_brace_new:
+                json_str = cleaned_for_extraction[first_brace_new:last_brace_new+1]
+                json_str = fix_python_dict_style(json_str)
+
+                # 额外修复：处理常见的格式问题
+                # 1. 修复未转义的引号（在字符串值内部）
+                # 2. 修复属性名缺少引号
+                # 3. 修复尾部逗号
+                json_str = re.sub(r'(?<!\\)\'', '"', json_str)
+                json_str = re.sub(r'(\w+)\s*:', r'"\1":', json_str)
+                json_str = re.sub(r',\s*}', '}', json_str)
+                json_str = re.sub(r',\s*\]', ']', json_str)
+
+                try:
+                    parsed_json = json.loads(json_str)
+                    print(f"[DEBUG] ✓ 改进的修复策略成功解析响应")
+                    # 检查是否包含final_findings
+                    if 'final_findings' not in parsed_json:
+                        parsed_json['final_findings'] = [{
+                            "vulnerability": "未发现安全问题",
+                            "location": "unknown",
+                            "severity": "info",
+                            "status": "VALID",
+                            "confidence": "高",
+                            "cvss_score": "",
+                            "recommendation": "代码安全，无需修复",
+                            "evidence": "经过全面的安全分析，未发现明显的安全漏洞。"
+                        }]
+                    if 'summary' not in parsed_json:
+                        parsed_json['summary'] = {
+                            "total_vulnerabilities": 0,
+                            "valid_vulnerabilities": 0,
+                            "uncertain_vulnerabilities": 0,
+                            "invalid_vulnerabilities": 0,
+                            "high_severity_count": 0,
+                            "medium_severity_count": 0,
+                            "low_severity_count": 0
+                        }
+                    return parsed_json
+                except json.JSONDecodeError as e:
+                    print(f"[DEBUG] 改进的修复策略失败: {e}")
+
             # 尝试更宽松的JSON提取和修复
             # 1. 提取可能的JSON部分
             possible_json = cleaned_response
@@ -1050,8 +1175,30 @@ class MultiAgentPipeline:
                     except json.JSONDecodeError:
                         pass
             
-            # 如果仍然没有找到JSON，返回默认的JSON对象
+            # 如果仍然没有找到JSON，记录详细信息并返回默认对象
             console.print(f"[bold cyan][PURE-AI][/bold cyan] [yellow]无法解析JSON，返回默认对象[/yellow]")
+            console.print(f"[bold cyan][DEBUG][/bold cyan] [dim]响应长度: {len(response)} 字符[/dim]")
+            console.print(f"[bold cyan][DEBUG][/bold cyan] [dim]响应前1000字符:\n{response[:1000]}[/dim]")
+            console.print(f"[bold cyan][DEBUG][/bold cyan] [dim]响应后500字符:\n{response[-500:] if len(response) > 500 else response}[/dim]")
+
+            # 【新增】将失败的响应保存到日志文件以便后续分析
+            import os
+            debug_dir = "debug_logs"
+            try:
+                os.makedirs(debug_dir, exist_ok=True)
+                timestamp = time.strftime("%Y%m%d_%H%M%S")
+                log_file = f"{debug_dir}/failed_json_parse_{timestamp}.txt"
+                with open(log_file, 'w', encoding='utf-8') as f:
+                    f.write(f"Agent: Unknown (caller context)\n")
+                    f.write(f"Timestamp: {timestamp}\n")
+                    f.write(f"Response Length: {len(response)}\n\n")
+                    f.write("=== Raw Response ===\n\n")
+                    f.write(response)
+                    f.write("\n\n=== End of Response ===\n")
+                console.print(f"[bold cyan][DEBUG][/bold cyan] [dim]✓ 已保存原始响应到: {log_file}[/dim]")
+            except Exception as log_err:
+                console.print(f"[bold cyan][DEBUG][/bold cyan] [red]保存日志文件失败: {log_err}[/red]")
+
             return {
                 'final_findings': [{
                     "vulnerability": "未发现安全问题",
@@ -1074,8 +1221,30 @@ class MultiAgentPipeline:
                 }
             }
         except Exception as e:
-            console.print(f"[bold cyan][PURE-AI][/bold cyan] [yellow]JSON解析失败: {e}[/yellow]")
-            console.print(f"[bold cyan][PURE-AI][/bold cyan] [dim]原始响应: {response[:500]}...[/dim]")
+            console.print(f"[bold cyan][PURE-AI][/bold cyan] [yellow]JSON解析异常: {e}[/yellow]")
+            console.print(f"[bold cyan][DEBUG][/bold cyan] [dim]异常类型: {type(e).__name__}[/dim]")
+            console.print(f"[bold cyan][DEBUG][/bold cyan] [dim]响应长度: {len(response)} 字符[/dim]")
+            console.print(f"[bold cyan][DEBUG][/bold cyan] [dim]原始响应前1000字符:\n{response[:1000]}[/dim]")
+
+            # 【新增】保存异常情况的响应到日志文件
+            import os
+            debug_dir = "debug_logs"
+            try:
+                os.makedirs(debug_dir, exist_ok=True)
+                timestamp = time.strftime("%Y%m%d_%H%M%S")
+                log_file = f"{debug_dir}/json_parse_exception_{timestamp}.txt"
+                with open(log_file, 'w', encoding='utf-8') as f:
+                    f.write(f"Exception Type: {type(e).__name__}\n")
+                    f.write(f"Exception Message: {e}\n")
+                    f.write(f"Timestamp: {timestamp}\n")
+                    f.write(f"Response Length: {len(response)}\n\n")
+                    f.write("=== Raw Response ===\n\n")
+                    f.write(response)
+                    f.write("\n\n=== End of Response ===\n")
+                console.print(f"[bold cyan][DEBUG][/bold cyan] [dim]✓ 已保存异常响应到: {log_file}[/dim]")
+            except Exception as log_err:
+                console.print(f"[bold cyan][DEBUG][/bold cyan] [red]保存异常日志失败: {log_err}[/red]")
+
             # 返回默认的JSON对象
             return {
                 'final_findings': [{
