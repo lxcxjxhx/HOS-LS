@@ -8,12 +8,15 @@ import os
 import io
 import contextlib
 
-# 捕获并丢弃所有第三方库的启动噪声输出（triton/torch 的 print/warnings）
-_devnull = open(os.devnull, 'w')
+# [TEST MODE] 临时禁用stdout/stderr重定向以捕获完整输出
+# _devnull = open(os.devnull, 'w')
+# _old_stdout = sys.stdout
+# _old_stderr = sys.stderr
+# sys.stdout = _devnull
+# sys.stderr = _devnull
+_devnull = None
 _old_stdout = sys.stdout
 _old_stderr = sys.stderr
-sys.stdout = _devnull
-sys.stderr = _devnull
 
 # 现在安全地执行所有导入（它们的输出会被丢弃）
 import warnings
@@ -50,9 +53,10 @@ from src.cli.agent_integration import (
 )
 
 # 导入完成，恢复正常的 stdout/stderr
-sys.stdout = _old_stdout
-sys.stderr = _old_stderr
-_devnull.close()
+# sys.stdout = _old_stdout  # 已经是原始值
+# sys.stderr = _old_stderr  # 已经是原始值
+if _devnull:
+    _devnull.close()
 
 console = Console()
 
@@ -257,6 +261,53 @@ def cli(ctx: click.Context, config: Optional[str], verbose: bool, quiet: bool, d
 @click.option("--test", type=int, default=0, help="启用测试模式，指定扫描文件数量，默认10")
 @click.option("--cn", is_flag=True, help="使用中文输出所有漏洞信息")
 @click.option("--en", is_flag=True, help="使用英文输出所有漏洞信息")
+# 远程扫描选项 (NEW)
+@click.option("--target-type", "-t", 
+              type=click.Choice(["local", "remote-server", "website", "direct-connect"]),
+              default="local",
+              help="目标类型: local(本地), remote-server(SSH远程服务器), website(网站), direct-connect(设备直连)")
+@click.option("--host", help="远程主机地址 (用于 remote-server 或 website)")
+@click.option("--port", type=int, default=None, help="端口号 (SSH默认22, HTTP默认80/443)")
+@click.option("--username", "-u", help="用户名 (SSH认证)")
+@click.option("--password", "-p", help="密码 (或使用环境变量 REMOTE_PASSWORD)")
+@click.option("--key-file", "-k", type=click.Path(), help="SSH私钥文件路径")
+@click.option("--protocol", 
+              type=click.Choice(["ssh", "sftp", "http", "https", "serial"]),
+              help="连接协议 (自动检测如果未指定)")
+@click.option("--connection-config", "-c", type=click.Path(),
+              help="连接配置文件路径 (.yaml/.json)")
+@click.option("--scan-depth", 
+              type=click.Choice(["shallow", "medium", "deep"]),
+              default="medium",
+              help="扫描深度: shallow(浅), medium(中), deep(深)")
+@click.option("--concurrent-connections", "-n", type=int, default=5,
+              help="并发连接数 (远程扫描)")
+@click.option("--connection-timeout", type=int, default=30,
+              help="连接超时时间（秒）")
+@click.option("--proxy", help="代理服务器地址 (如 socks5://127.0.0.1:1080)")
+@click.option("--serial-port", help="串口端口 (如 /dev/ttyUSB0 或 COM3)")
+@click.option("--baudrate", type=int, default=9600, help="串口波特率")
+# 企业内网/VPN 选项 (NEW - Enterprise)
+@click.option("--vpn-config", type=click.Path(), help="VPN配置文件路径 (.ovpn/.conf)")
+@click.option("--vpn-type",
+              type=click.Choice(["openvpn", "wireguard", "ipsec"]),
+              default=None,
+              help="VPN类型: openvpn, wireguard, ipsec")
+@click.option("--jump-host", multiple=True,
+              help="跳板机地址 (可多次使用，格式: user@host:port 或 host:port)")
+@click.option("--jump-host-key", "-jk", type=click.Path(), multiple=True,
+              help="跳板机SSH密钥 (与--jump-host一一对应)")
+@click.option("--proxy-chain", type=click.Path(),
+              help="代理链配置文件路径 (.yaml)")
+@click.option("--internal-scan", is_flag=True,
+              help="启用内网子网扫描模式 (需要先连接VPN或跳板机)")
+@click.option("--subnet", help="指定要扫描的内网子网 (如 192.168.1.0/24)")
+@click.option("--discover-hosts", is_flag=True,
+              help="自动发现并扫描内网所有主机")
+@click.option("--deep-service-id", is_flag=True,
+              help="深度服务识别 (Banner抓取+版本检测)")
+@click.option("--network-topology", type=click.Path(),
+              help="网络拓扑配置文件 (定义复杂网络环境)")
 @click.pass_context
 def scan(
     ctx: click.Context,
@@ -308,11 +359,57 @@ def scan(
     ai_provider: Optional[str],
     incremental: bool,
     langgraph: bool,
-    test: bool,
+    test: int,
     cn: bool,
     en: bool,
+    # 远程扫描选项 (NEW)
+    target_type: str,
+    host: Optional[str],
+    port: Optional[int],
+    username: Optional[str],
+    password: Optional[str],
+    key_file: Optional[str],
+    protocol: Optional[str],
+    connection_config: Optional[str],
+    scan_depth: str,
+    concurrent_connections: int,
+    connection_timeout: int,
+    proxy: Optional[str],
+    serial_port: Optional[str],
+    baudrate: int,
+    # 企业内网/VPN 选项 (NEW - Enterprise)
+    vpn_config: Optional[str],
+    vpn_type: Optional[str],
+    jump_host: tuple,
+    jump_host_key: tuple,
+    proxy_chain: Optional[str],
+    internal_scan: bool,
+    subnet: Optional[str],
+    discover_hosts: bool,
+    deep_service_id: bool,
+    network_topology: Optional[str],
 ) -> None:
-    """扫描代码安全漏洞"""
+    """扫描代码安全漏洞（支持本地、远程和企业内网）
+    
+    支持的目标类型：
+    - 本地文件系统（默认）：./my-project
+    - SSH远程服务器：ssh://user@host --target-type remote-server
+    - 网站Web应用：https://example.com --target-type website
+    - 物理设备直连：serial:///dev/ttyUSB0 --target-type direct-connect
+    
+    企业内网/VPN支持：
+    - VPN连接：--vpn-config /path/to/vpn.ovpn --vpn-type openvpn
+    - 跳板机：--jump-host user@bastion.com --jump-host-key ~/.ssh/id_rsa
+    - 内网扫描：--internal-scan --subnet 192.168.1.0/24
+    - 自动发现：--discover-hosts (自动发现内网所有主机)
+    
+    示例：
+    \b
+    本地扫描: hos-ls scan ./my-project --pure-ai
+    远程SSH:  hos-ls scan /var/www/html --target-type remote-server --host 192.168.1.100 -u admin
+    网站扫描: hos-ls scan https://example.com --target-type website --full-audit
+    设备扫描: hos-ls scan --target-type direct-connect --serial-port COM3
+    """
     config: Config = ctx.obj["config"]
     
     # 处理Plan选项
@@ -348,6 +445,189 @@ def scan(
         config.language = "cn"
     elif en:
         config.language = "en"
+    
+    # 🔥🔥🔥 远程扫描处理 (NEW)
+    if target_type != 'local':
+        try:
+            import asyncio
+            from src.remote.scanners import create_unified_scanner
+            
+            console.print(Panel(
+                f"[bold cyan]远程扫描模式[/bold cyan]\n"
+                f"目标类型: {target_type}\n"
+                f"目标地址: {host or target}\n"
+                f"AI模式: {'PureAI' if pure_ai else ('Heavy' if ai else 'Standard')}",
+                border_style="cyan"
+            ))
+            
+            remote_scanner = create_unified_scanner(
+                config=config,
+                target_type=target_type,
+                target=target,
+                host=host,
+                port=port or (22 if target_type == 'remote-server' else None),
+                username=username,
+                password=password or os.environ.get('REMOTE_PASSWORD'),
+                key_file=key_file,
+                connection_type='serial' if serial_port else None,
+                serial_port=serial_port,
+                baudrate=baudrate
+            )
+            
+            result = asyncio.run(remote_scanner.scan(target))
+            
+            _display_remote_result(result, console)
+            
+            if output:
+                _generate_unified_report(result, output, output_format, config)
+                
+            sys.exit(1 if result.findings else 0)
+            
+        except ImportError as e:
+            console.print(f"[red]错误: 缺少依赖库 - {e}[/red]")
+            console.print("[yellow]提示: pip install asyncssh httpx pyserial[/yellow]")
+            sys.exit(2)
+        except Exception as e:
+            console.print(f"[bold red]远程扫描失败: {e}[/bold red]")
+            if config.debug:
+                import traceback
+                traceback.print_exc()
+            sys.exit(2)
+    
+    # 🔥🔥🔥 企业内网/VPN扫描处理 (NEW - Enterprise)
+    if vpn_config or jump_host or internal_scan or subnet:
+        try:
+            import asyncio
+            from src.remote.enterprise import (
+                create_vpn_connector,
+                VPNConfig,
+                JumpHostManager,
+                ProxyChain,
+                InternalNetworkScanner
+            )
+            
+            console.print("\n" + "=" * 70)
+            console.print("[bold blue]🏢 企业内网/VPN 安全扫描模式[/bold blue]")
+            console.print("=" * 70)
+            
+            async def _run_enterprise_scan():
+                """执行企业内网/VPN扫描的异步主逻辑"""
+                
+                chain = ProxyChain()
+                
+                # 1. 建立VPN连接（如果配置了）
+                vpn_connector = None
+                if vpn_config:
+                    console.print(f"\n[cyan]📡 正在连接企业VPN...[/cyan]")
+                    
+                    vpn_cfg = VPNConfig(
+                        config_file=vpn_config,
+                        server_address=host,  # 可选：从--host参数获取
+                        username=username,
+                        password=password or os.environ.get('VPN_PASSWORD')
+                    )
+                    
+                    vpn_connector = create_vpn_connector(
+                        vpn_type or 'openvpn',
+                        vpn_cfg
+                    )
+                    
+                    result = await vpn_connector.connect()
+                    
+                    if not result.success:
+                        console.print(f"[red]❌ VPN连接失败: {result.message}[/red]")
+                        sys.exit(3)
+                    
+                    console.print(f"[green]✅ VPN已成功连接[/green]")
+                    
+                    # 显示VPN信息
+                    if vpn_connector.connection_info:
+                        info = vpn_connector.connection_info
+                        console.print(f"   本地IP: {info.local_ip}")
+                        console.print(f"   隧道接口: {info.tunnel_interface}")
+                
+                # 2. 建立跳板机链（如果配置了）
+                if jump_host:
+                    console.print(f"\n[cyan]🔗 正在建立跳板机连接链 ({len(jump_host)} 个跳板)...[/cyan]")
+                    
+                    jump_chain = []
+                    for i, host_str in enumerate(jump_host):
+                        host_info = _parse_jump_host(host_str)
+                        
+                        hop_config = {
+                            'ssh_host': host_info['host'],
+                            'ssh_port': host_info['port'],
+                            'username': host_info['username']
+                        }
+                        
+                        if i < len(jump_host_key):
+                            hop_config['key_file'] = jump_host_key[i]
+                        
+                        jump_chain.append(hop_config)
+                    
+                    success = await chain.add_jump_hosts(jump_chain)
+                    
+                    if not success:
+                        console.print("[red]❌ 跳板机连接失败[/red]")
+                        sys.exit(3)
+                    
+                    console.print(f"[green]✅ 跳板机链已建立 ({len(jump_chain)} hops)[/green]")
+                
+                # 3. 执行内网扫描
+                if internal_scan or subnet or discover_hosts:
+                    targets_to_scan = []
+                    
+                    if subnet:
+                        targets_to_scan.append(subnet)
+                        console.print(f"\n[cyan]🎯 目标子网: [bold]{subnet}[/bold][/cyan]")
+                    
+                    if discover_hosts and not subnet:
+                        console.print("\n[yellow]⚠️ --discover-hosts 需要 --subnet 参数指定基础网络[/yellow]")
+                        console.print("   示例: --discover-hosts --subnet 192.168.0.0/16")
+                    
+                    if targets_to_scan:
+                        console.print("\n[bold cyan]🔍 开始内网安全扫描...[/bold cyan]\n")
+                        
+                        scanner = InternalNetworkScanner(proxy_chain=chain if (jump_host or vpn_config) else None)
+                        
+                        scan_result = await scanner.full_scan(
+                            targets=targets_to_scan,
+                            deep_scan=deep_service_id
+                        )
+                        
+                        # 显示详细结果
+                        _display_internal_scan_result(scan_result, console)
+                        
+                        # 保存报告
+                        if output:
+                            _save_internal_scan_report(scan_result, output, output_format)
+                        
+                        console.print("\n[bold green]✅ 内网扫描完成！[/bold green]")
+                
+                # 拆除代理链和VPN
+                if vpn_connector or jump_host:
+                    console.print("\n[dim]正在清理连接...[/dim]")
+                    await chain.teardown()
+                    
+                    if vpn_connector:
+                        await vpn_connector.disconnect()
+                        console.print("[dim]VPN已断开[/dim]")
+            
+            # 调用异步函数
+            asyncio.run(_run_enterprise_scan())
+            
+            sys.exit(0)
+            
+        except ImportError as e:
+            console.print(f"[red]错误: 缺少依赖库 - {e}[/red]")
+            console.print("[yellow]提示: pip install asyncssh httpx pyyaml[/yellow]")
+            sys.exit(3)
+        except Exception as e:
+            console.print(f"[bold red]内网/VPN扫描失败: {e}[/bold red]")
+            if config.debug:
+                import traceback
+                traceback.print_exc()
+            sys.exit(3)
     
     # 收集行为类Flag
     behavior_flags = []
@@ -1151,6 +1431,77 @@ def _display_result(result) -> None:
                 console.print(f"   状态: {chain['status']}")
 
 
+def _display_remote_result(result, console) -> None:
+    """显示远程扫描结果（增强版）"""
+    from src.core.engine import Severity
+    
+    total_findings = len(result.findings) if hasattr(result, 'findings') else 0
+    
+    critical_count = sum(1 for f in result.findings if f.severity.value == 'critical') if hasattr(result, 'findings') else 0
+    high_count = sum(1 for f in result.findings if f.severity.value == 'high') if hasattr(result, 'findings') else 0
+    medium_count = sum(1 for f in result.findings if f.severity.value == 'medium') if hasattr(result, 'findings') else 0
+    low_count = sum(1 for f in result.findings if f.severity.value == 'low') if hasattr(result, 'findings') else 0
+    
+    console.print("\n" + "=" * 60)
+    console.print("[bold blue]📊 远程扫描报告[/bold blue]")
+    console.print("=" * 60)
+    
+    console.print(f"\n[bold]目标:[/bold] {result.target if hasattr(result, 'target') else 'Unknown'}")
+    console.print(f"[bold]状态:[/bold] {'✅ 完成' if result.status.value == 'COMPLETED' else '❌ 失败'}")
+    console.print(f"[bold]发现的问题:[/bold] {total_findings}")
+    
+    if total_findings > 0:
+        console.print(f"\n[bold]问题分布:[/bold]")
+        console.print(f"  🔴 严重 (Critical): {critical_count}")
+        console.print(f"  🟠 高危 (High):      {high_count}")
+        console.print(f"  🟡 中危 (Medium):    {medium_count}")
+        console.print(f"  🔵 低危 (Low):       {low_count}")
+        
+        risk_percentage = min(1.0, ((critical_count * 3 + high_count * 2 + medium_count) / (total_findings * 3)) if total_findings > 0 else 0)
+        show_risk_bar(risk_percentage)
+        
+        console.print(f"\n[bold]Top 10 问题详情:[/bold]")
+        
+        sorted_findings = sorted(
+            result.findings,
+            key=lambda f: {
+                'critical': 4,
+                'high': 3,
+                'medium': 2,
+                'low': 1,
+                'info': 0
+            }.get(f.severity.value.lower() if hasattr(f.severity, 'value') else str(f.severity), 0),
+            reverse=True
+        )
+        
+        for i, finding in enumerate(sorted_findings[:10], 1):
+            severity_value = finding.severity.value if hasattr(finding.severity, 'value') else str(finding.severity)
+            
+            if severity_value in ['critical', 'high']:
+                color = 'red'
+            elif severity_value == 'medium':
+                color = 'yellow'
+            else:
+                color = 'blue'
+                
+            file_path = finding.location.file if hasattr(finding.location, 'file') else 'Unknown'
+            
+            is_remote = finding.metadata.get('is_remote', False) if hasattr(finding, 'metadata') else False
+            
+            location_info = f" [REMOTE]" if is_remote else ""
+            
+            console.print(
+                f"\n{i}. [{color}][{severity_value.upper()}][/{color}] "
+                f"{finding.rule_name}{location_info}"
+            )
+            console.print(f"   📍 文件: {file_path}:{getattr(finding.location, 'line', '?')}")
+            console.print(f"   📝 描述: {finding.description[:100]}...")
+            if finding.fix_suggestion:
+                console.print(f"   💡 建议: {finding.fix_suggestion[:80]}...")
+    
+    console.print("\n" + "=" * 60)
+
+
 def _generate_report(result, output: str, format: str, config=None) -> None:
     """生成报告（旧版）"""
     # 导入报告生成器
@@ -1220,6 +1571,190 @@ def _generate_unified_report(result, output: str, format: str, config=None) -> N
     except Exception as e:
         console.print(f"[bold red]统一报告生成失败: {e}[/bold red]")
 
+
+def _parse_jump_host(host_str: str) -> Dict[str, Any]:
+    """
+    解析跳板机地址字符串
+    
+    支持格式：
+    - user@host:port
+    - host:port
+    - user@host
+    - host
+    
+    Returns:
+        解析后的字典 {'host': ..., 'port': ..., 'username': ...}
+    """
+    result = {
+        'host': '',
+        'port': 22,
+        'username': None
+    }
+    
+    if '@' in host_str:
+        username, rest = host_str.split('@', 1)
+        result['username'] = username
+        host_str = rest
+    
+    if ':' in host_str and not host_str.startswith('['):
+        parts = host_str.rsplit(':', 1)
+        try:
+            result['host'] = parts[0]
+            result['port'] = int(parts[1])
+        except ValueError:
+            result['host'] = host_str
+    else:
+        result['host'] = host_str
+    
+    return result
+
+
+def _display_internal_scan_result(scan_result: Dict, console) -> None:
+    """
+    显示内网扫描结果（增强版）
+    
+    Args:
+        scan_result: InternalNetworkScanner.full_scan() 返回的结果
+        console: Rich Console 实例
+    """
+    stats = scan_result.get('statistics', {})
+    risks = scan_result.get('risk_assessment', {})
+    
+    console.print("\n" + "━" * 70)
+    console.print("[bold blue]📊 企业内网安全扫描报告[/bold blue]")
+    console.print("━" * 70)
+    
+    # 基本信息
+    scan_time = scan_result.get('scan_time', {})
+    if scan_time.get('duration_seconds'):
+        console.print(f"\n⏱️  扫描耗时: [bold]{scan_time['duration_seconds']:.1f}[/bold] 秒")
+    
+    # 统计信息
+    console.print(f"\n[bold]📈 扫描统计:[/bold]")
+    console.print(f"   🎯 目标总数: {stats.get('total_targets', 0)}")
+    console.print(f"   💚 存活主机: [green]{stats.get('alive_hosts', 0)}[/green]")
+    console.print(f"   🔓 开放端口: [yellow]{stats.get('total_open_ports', 0)}[/yellow]")
+    console.print(f"   🛠️  发现服务: [cyan]{stats.get('unique_services', 0)}[/cyan] 种")
+    
+    # 服务列表
+    services_list = stats.get('services_list', [])
+    if services_list:
+        console.print(f"\n[bold]🔧 发现的服务类型:[/bold]")
+        for service in sorted(services_list)[:20]:
+            console.print(f"   • {service}")
+        if len(services_list) > 20:
+            console.print(f"   ... 以及其他 {len(services_list) - 20} 种服务")
+    
+    # 高风险主机
+    high_risk_hosts = risks.get('high_risk_hosts', [])
+    if high_risk_hosts:
+        console.print(f"\n[bold red]⚠️ 高风险主机 (TOP 10):[/bold red]")
+        
+        for i, host in enumerate(high_risk_hosts[:10], 1):
+            risk_color = 'red' if host.get('risk_score', 0) >= 50 else ('yellow' if host.get('risk_score', 0) >= 20 else 'blue')
+            
+            console.print(
+                f"\n{i}. [{risk_color}][风险分: {host.get('risk_score', 0)}][/{risk_color}] "
+                f"[bold]{host.get('ip', 'Unknown')}[/bold]"
+            )
+            
+            open_ports = host.get('open_ports', [])
+            if open_ports:
+                ports_str = ', '.join(map(str, sorted(open_ports)[:10]))
+                console.print(f"   🔓 开放端口: {ports_str}")
+                if len(open_ports) > 10:
+                    console.print(f"      ... 等共 {len(open_ports)} 个端口")
+            
+            hostname = host.get('hostname')
+            if hostname and hostname != 'Unknown':
+                console.print(f"   🏷️  主机名: {hostname}")
+    
+    # 关键安全发现
+    critical_findings = risks.get('critical_findings', [])
+    if critical_findings:
+        console.print(f"\n[bold red]🔴 关键安全发现:[/bold red]")
+        
+        for finding in critical_findings[:15]:
+            severity_icon = '🔴' if finding.get('severity') == 'HIGH' else '🟡'
+            
+            console.print(
+                f"\n{severity_icon} [bold]{finding.get('host')}:{finding.get('port')}[/bold]"
+                f" - {finding.get('service')}"
+            )
+            console.print(f"   ⚠️  {finding.get('description')}")
+            console.print(f"   💡 建议: {finding.get('recommendation', 'N/A')}")
+        
+        if len(critical_findings) > 15:
+            console.print(f"\n[dim]... 还有 {len(critical_findings) - 15} 个关键发现[/dim]")
+    
+    # 子网详情
+    subnets = scan_result.get('subnets', [])
+    if subnets:
+        console.print(f"\n[bold]🌐 子网详情:[/bold]")
+        
+        for subnet in subnets[:5]:  # 显示前5个子网
+            network = subnet.get('network', 'Unknown')
+            discovered = subnet.get('discovered', 0)
+            alive = subnet.get('alive_hosts', 0)
+            
+            console.print(
+                f"   • [cyan]{network}[/cyan] "
+                f"(发现: {discovered}, 存活: {alive})"
+            )
+        
+        if len(subnets) > 5:
+            console.print(f"   ... 共扫描了 {len(subnets)} 个子网")
+    
+    console.print("\n" + "━" * 70)
+
+
+def _save_internal_scan_report(scan_result: Dict, output_path: str, format: str = 'json'):
+    """
+    保存内网扫描报告到文件
+    
+    Args:
+        scan_result: 扫描结果
+        output_path: 输出文件路径
+        format: 输出格式 (json/html/markdown)
+    """
+    import json
+    from datetime import datetime
+    
+    try:
+        if format.lower() in ['json', '.json']:
+            with open(output_path, 'w', encoding='utf-8') as f:
+                json.dump(scan_result, f, ensure_ascii=False, indent=2)
+                
+        elif format.lower() in ['markdown', '.md']:
+            with open(output_path, 'w', encoding='utf-8') as f:
+                f.write("# HOS-LS 企业内网安全扫描报告\n\n")
+                f.write(f"**生成时间**: {datetime.now().isoformat()}\n\n")
+                
+                stats = scan_result.get('statistics', {})
+                f.write("## 统计摘要\n\n")
+                f.write(f"- 目标总数: {stats.get('total_targets', 0)}\n")
+                f.write(f"- 存活主机: {stats.get('alive_hosts', 0)}\n")
+                f.write(f"- 开放端口: {stats.get('total_open_ports', 0)}\n")
+                f.write(f"- 发现服务: {stats.get('unique_services', 0)} 种\n\n")
+                
+                risks = scan_result.get('risk_assessment', {})
+                findings = risks.get('critical_findings', [])
+                
+                if findings:
+                    f.write("## 关键安全发现\n\n")
+                    for finding in findings[:20]:
+                        f.write(f"### {finding.get('host')}:{finding.get('port')} - {finding.get('service')}\n\n")
+                        f.write(f"**严重性**: {finding.get('severity')}\n\n")
+                        f.write(f"**描述**: {finding.get('description')}\n\n")
+                        f.write(f"**建议**: {finding.get('recommendation')}\n\n")
+                        f.write("---\n\n")
+        
+        from rich.console import Console
+        console = Console()
+        console.print(f"[green]✅ 内网扫描报告已保存: {output_path}[/green]")
+        
+    except Exception as e:
+        console.print(f"[red]保存报告失败: {e}[/red]")
 
 
 @cli.command()

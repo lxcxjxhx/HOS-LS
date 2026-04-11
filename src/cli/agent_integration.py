@@ -9,14 +9,15 @@
 import click
 from typing import Dict, List, Any, Optional
 
-from .agent_registry import get_agent_registry, AgentCapabilityRegistry
-from .agent_initialization import register_builtin_agents, initialize_agent_system
-from .unified_execution_engine import (
+# 🔧 BUG FIX #2: 修正导入路径 - 这些模块在 src/core/ 而非 src/cli/
+from src.core.agent_registry import get_agent_registry, AgentCapabilityRegistry
+from src.core.agent_initialization import register_builtin_agents, initialize_agent_system
+from src.core.unified_execution_engine import (
     UnifiedExecutionEngine,
     ExecutionRequest,
     ExecutionResult
 )
-from .base_agent import ExecutionContext
+from src.core.base_agent import ExecutionContext
 
 
 def initialize_cli_agent_system():

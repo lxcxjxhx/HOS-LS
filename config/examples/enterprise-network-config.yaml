@@ -1,0 +1,225 @@
+# HOS-LS 企业内网/VPN 扫描配置示例
+
+# ============================================
+# 场景1: 简单VPN连接 + 内网扫描
+# ============================================
+vpn:
+  type: openvpn  # 或 wireguard, ipsec
+  config_file: /path/to/company-vpn.ovpn
+  # 可选：如果配置文件中没有服务器地址
+  server_address: vpn.company.com
+  # 可选认证信息（优先使用环境变量）
+  username: ${VPN_USERNAME}
+  password: ${VPN_PASSWORD}
+
+# 目标子网
+targets:
+  - subnet: "192.168.1.0/24"
+    name: "研发部门网络"
+    deep_scan: true
+    
+  - subnet: "10.0.0.0/16"
+    name: "生产环境"
+    deep_scan: false
+
+# ============================================
+# 场景2: 跳板机链（多跳访问）
+# ============================================
+jump_hosts:
+  # 第一跳：公网堡垒机
+  - host: bastion.company.com
+    port: 22
+    username: deploy
+    key_file: ~/.ssh/bastion_key.pem
+    description: "公网入口堡垒机"
+    
+  # 第二跳：内网管理机
+  - host: mgmt.internal.company.com
+    port: 22
+    username: admin
+    key_file: ~/.ssh/mgmt_key.pem
+    description: "内网管理节点"
+    
+  # 第三跳：目标数据库网段
+  - host: db-gateway.internal.company.com
+    port: 22
+    username: dbadmin
+    password: "${DB_GATEWAY_PASSWORD}"
+    description: "数据库网关"
+
+# 通过跳板机的端口转发规则
+port_forwards:
+  - local_port: 3306
+    remote_host: mysql-master.internal.company.com
+    remote_port: 3306
+    description: "MySQL主库"
+    
+  - local_port: 5432
+    remote_host: postgres.internal.company.com
+    remote_port: 5432
+    description: "PostgreSQL"
+    
+  - local_port: 6379
+    remote_host: redis-cluster.internal.company.com
+    remote_port: 6379
+    description: "Redis集群"
+
+# ============================================
+# 场景3: VPN + 跳板机组合
+# ============================================
+complex_topology:
+  # 第一步：连接企业VPN
+  vpn:
+    type: openvpn
+    config_file: /path/to/vpn.ovpn
+    
+  # 第二步：通过VPN连接跳板机
+  jump_hosts:
+    - host: jump.vpn.internal
+      username: admin
+      
+  # 第三步：扫描多个内网子网
+  scan_targets:
+    - subnet: "172.16.0.0/12"  # VPN分配的内部网络
+      name: "VPN内网"
+      
+    - subnet: "192.168.100.0/24"
+      name: "开发测试环境"
+      exclude_hosts:
+        - "192.168.100.254"  # 排除网关
+        
+    - single_host: "10.0.5.100"
+      name: "CI/CD服务器"
+      ports: [22, 80, 443, 8080]
+
+# ============================================
+# 场景4: 代理链配置
+# ============================================
+proxy_chain:
+  # HTTP代理（用于出站流量）
+  http_proxy:
+    host: proxy.company.com
+    port: 8080
+    username: ${PROXY_USER}
+    password: ${PROXY_PASS}
+    
+  # SOCKS5代理（通过SSH隧道）
+  socks5_proxy:
+    via_ssh_tunnel:
+      jump_host: proxy-bastion.company.com
+      local_port: 1080
+      
+# ============================================
+# 扫描策略配置
+# ============================================
+scan_config:
+  # 子网发现方法
+  discovery_method: ping  # ping, arp, dns
+  
+  # 端口扫描设置
+  port_scan:
+    timeout: 2.0          # 单个端口超时时间（秒）
+    max_concurrent: 100   # 最大并发数
+    common_ports_only: false  # 是否只扫常用端口
+    
+  # 服务识别
+  service_identification:
+    enabled: true
+    banner_grab: true     # Banner抓取
+    version_detection: true  # 版本检测
+    max_ports_per_host: 20  # 每台主机最大识别端口数
+    
+  # 性能优化
+  performance:
+    rate_limit: 100       # 每秒请求数限制
+    retry_count: 2        # 失败重试次数
+    retry_delay: 1.0      # 重试延迟（秒）
+    
+# ============================================
+# 安全与合规配置
+# ============================================
+security:
+  # 零信任原则
+  zero_trust:
+    enabled: true
+    validate_certificates: true
+    check_host_keys: strict
+    
+  # 审计日志
+  audit:
+    log_all_connections: true
+    log_file: /var/log/hos-ls-enterprise.log
+    log_level: INFO
+    
+  # 敏感数据处理
+  sensitive_data:
+    mask_passwords: true
+    no_log_credentials: true
+    encrypt_reports: true
+    
+# ============================================
+# 报告生成配置
+# ============================================
+reporting:
+  output_formats:
+    - json
+    - html
+    - markdown
+    
+  output_directory: ./enterprise-scan-reports/
+  
+  include_details:
+    - network_topology
+    - vulnerability_summary
+    - risk_assessment
+    - remediation_recommendations
+    
+  compliance_frameworks:
+    - CIS_Benchmarks
+    - NIST_Cybersecurity_Framework
+    - ISO_27001
+    - PCI_DSS  # 如果涉及支付数据
+
+# ============================================
+# 告警和通知配置
+# ============================================
+alerts:
+  critical_vulnerabilities:
+    enabled: true
+    threshold: HIGH  # 只告警HIGH及以上级别
+    
+  notification_channels:
+    - type: email
+      recipients:
+        - security-team@company.com
+        - admin@company.com
+      subject: "[HOS-LS] 企业内网安全扫描报告"
+      
+    - type: webhook
+      url: https://hooks.slack.com/services/XXX/YYY/ZZZ
+      channel: "#security-alerts"
+      
+    - type: pagerduty
+      service_key: ${PAGERDUTY_KEY}
+
+# ============================================
+# 定时任务配置（可选）
+# ============================================
+scheduled_scans:
+  # 每日凌晨2点执行全量扫描
+  full_scan_daily:
+    schedule: "0 2 * * *"  # Cron表达式
+    targets:
+      - all_subnets
+    options:
+      deep_scan: true
+      generate_report: true
+      send_alerts: true
+      
+  # 每6小时快速扫描关键资产
+  quick_scan_frequent:
+    schedule: "0 */6 * * *"
+    targets:
+      - subnet: "10.0.0.0/8"
+        name: "核心业务网络"
+        priority: high

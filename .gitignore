@@ -172,5 +172,6 @@ temp/
 AAA-PROJECT-TEST/
 
 # IDE and development directories
-.trae/
-.github/
+# WARNING: Do NOT ignore .trae/ or .github/ as they contain tracked files
+# .trae/
+# .github/

@@ -291,12 +291,16 @@ class PureAIAnalyzer:
                     
                     for vuln in vulnerabilities:
                         try:
+                            # 🔧 BUG FIX #4: 确保location字段是字符串
+                            loc = vuln.get('location', result.get('file_path', 'unknown'))
+                            safe_loc = str(loc) if hasattr(loc, '__fspath__') else loc
+
                             finding = VulnerabilityFinding(
                                 rule_id=vuln.get('rule_id', ''),
                                 rule_name=vuln.get('vulnerability') or vuln.get('type', 'Unknown'),
                                 severity=vuln.get('severity', 'medium'),
                                 confidence=self._normalize_confidence(vuln.get('confidence', 'medium')),
-                                location={'file': vuln.get('location', result.get('file_path', 'unknown'))},
+                                location={'file': safe_loc},
                                 description=vuln.get('description') or vuln.get('potential_impact', ''),
                                 fix_suggestion=vuln.get('recommendation') or vuln.get('fix_suggestion', ''),
                                 explanation=json.dumps(vuln, ensure_ascii=False, default=str)
@@ -380,12 +384,26 @@ class PureAIAnalyzer:
             
             print(f"[DEBUG] 最终找到 {len(final_findings)} 个发现")
 
+            # 🔧 BUG FIX #4: 辅助函数 - 递归转换所有Path对象为字符串
+            def _convert_paths_to_strings(obj):
+                """递归将字典/列表中所有的Path对象转换为字符串"""
+                if isinstance(obj, dict):
+                    return {k: _convert_paths_to_strings(v) for k, v in obj.items()}
+                elif isinstance(obj, list):
+                    return [_convert_paths_to_strings(item) for item in obj]
+                elif hasattr(obj, '__fspath__'):  # 检测 Path-like 对象 (WindowsPath, PosixPath等)
+                    return str(obj)
+                else:
+                    return obj
+
             # 计算总漏洞数
             total_vulnerabilities = len(final_findings)
-            
+
             for finding in final_findings:
                 try:
-                    finding_json = json.dumps(finding, ensure_ascii=False, indent=2)
+                    # 先转换所有Path对象为字符串，避免JSON序列化错误
+                    safe_finding = _convert_paths_to_strings(finding)
+                    finding_json = json.dumps(safe_finding, ensure_ascii=False, indent=2)
                     print(f"[DEBUG] 处理发现: {finding_json}")
                     
                     # 智能字段映射：支持所有Agent的输出格式
@@ -499,10 +517,10 @@ class PureAIAnalyzer:
                         rule_name=rule_name,
                         severity=severity,
                         confidence=confidence,
-                        location={'file': location},
+                        location={'file': str(location) if hasattr(location, '__fspath__') else location},  # 确保location是字符串
                         description=description,
                         fix_suggestion=recommendation,
-                        explanation=json.dumps(finding, ensure_ascii=False, default=str)
+                        explanation=json.dumps(safe_finding, ensure_ascii=False, default=str)  # 🔧 使用safe_finding
                     )
                     findings.append(vulnerability)
                     print(f"[DEBUG] 添加漏洞发现: {rule_name}")

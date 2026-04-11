@@ -12,6 +12,7 @@ from src.core.plan import Plan, PlanProfile, PlanStepType
 from src.core.plan_dsl import PlanDSLParser
 from src.core.config import Config
 from src.core.ai_plan_generator import AIPlanGenerator
+from src.core.intent_parser import IntentType  # 🔧 BUG FIX #1: 添加缺失的导入
 
 
 class PlanManager:
