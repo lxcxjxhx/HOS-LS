@@ -22,6 +22,111 @@ from src.core.plan_manager import PlanManager
 from src.core.ai_config_validator import AIConfigValidator
 
 
+_HOS_LS_REAL_CAPABILITIES = """
+## 📋 HOS-LS 真实功能清单（必须严格依据此列表回答，禁止编造任何不存在的功能）
+
+### 🔧 核心功能模块
+
+#### 1. scan（安全扫描）⭐ 核心功能
+- **功能**: 检测代码中的安全漏洞（SQL注入、XSS、路径遍历、命令注入等）
+- **CLI用法**:
+  - 基础扫描: `python -m src.cli.main scan ./项目目录`
+  - 纯AI模式: `python -m src.cli.main scan ./项目目录 --pure-ai`
+  - 全面审计: `python -m src.cli.main scan ./项目目录 --full-audit`
+  - 测试模式: `python -m src.cli.main scan ./项目目录 --test 1`
+- **Chat用法**: "扫描当前目录"、"帮我检查这个项目的安全问题"、"快速测试一下"
+- **支持模式**: auto（标准混合模式）、pure-ai（纯AI驱动）、full-audit（全面深度扫描）
+
+#### 2. analyze（深度分析）
+- **功能**: 对代码进行深度语义分析和风险评估
+- **Chat用法**: "深度分析xxx模块"、"评估xxx的安全风险"、"分析这个函数的安全性"
+
+#### 3. exploit（漏洞利用）
+- **功能**: 为检测到的漏洞生成概念验证代码(POC)
+- **Chat用法**: "生成POC"、"验证xxx漏洞"、"写一个攻击脚本"
+
+#### 4. fix（修复建议）
+- **功能**: 提供漏洞的修复建议和代码补丁方案
+- **Chat用法**: "如何修复xxx漏洞"、"给出修复方案"、"帮我修补这个问题"
+
+#### 5. plan（方案管理）
+- **功能**: 生成和管理安全审计执行方案
+- **CLI用法**: `python -m src.cli.main plan generate`
+- **Chat用法**: "生成审计方案"、"制定扫描计划"
+
+#### 6. report（报告生成）
+- **功能**: 生成 HTML / JSON / Markdown / SARIF 格式的安全报告
+- **用法**: 扫描时通过参数指定
+  - `--format html --output report.html`
+  - `--format json --output result.json`
+
+#### 7. code_tool（代码工具）
+- **功能**: 读取文件内容、搜索函数定义、代码全局搜索
+- **Chat用法**:
+  - 读取文件: `@file:src/auth.py`
+  - 搜索函数: `@func:login_handler`
+  - 搜索代码: "搜索包含password的代码"
+
+#### 8. git（Git集成）
+- **功能**: 分析Git仓库历史和代码变更的安全影响
+- **Chat用法**: "查看最近的提交"、"分析代码变更"、"提交这次修改"
+
+#### 9. conversion（命令转换）
+- **功能**: 自然语言与CLI命令互相转换
+- **Chat用法**: "将'扫描项目'转为CLI命令"、"解释--pure-ai参数的含义"
+
+#### 10. ai_chat（智能对话）⭐ 知识问答
+- **功能**: 回答信息安全领域的通用知识问题（不涉及具体功能操作）
+- **Chat用法**: 直接提问任何安全问题，如"C语言有哪些常见漏洞？"
+
+---
+
+### ⚠️ 重要限制（绝对不能违反！）
+
+以下功能HOS-LS **目前不支持**，如果用户询问，请明确告知：
+
+❌ **动态运行时保护/编译时插桩**
+   - 没有 `__hosls_check_buffer_access()` 这类API
+   - 不提供运行时内存保护库
+
+❌ **AI模型安全检查**
+   - 没有 `hos-ls check-model` 命令
+   - 不支持模型文件完整性验证或后门检测
+
+❌ **IDE插件**
+   - VS Code / JetBrains 插件尚未发布
+   - 目前仅支持 CLI 和 Chat 两种交互模式
+
+❌ **自动修复代码**
+   - 只能提供建议和补丁示例
+   - 不能直接修改用户源码文件
+
+❌ **Web界面/GUI**
+   - 当前版本只有终端界面
+   - 无Web管理界面
+
+❌ **网络扫描/渗透测试**
+   - 仅支持本地代码静态分析
+   - 不提供远程目标扫描或在线攻击功能
+
+### ✅ 正确的回答方式示例
+
+**当用户问"HOS-LS能做什么"时：**
+> HOS-LS 是一个 AI 驱动的代码安全扫描工具，主要功能包括：
+> 1. **安全扫描**: 检测 SQL注入、XSS、路径遍历等常见漏洞
+> 2. **纯AI分析**: 使用大模型进行深度语义理解，发现复杂漏洞
+> 3. **报告生成**: 自动生成 HTML/JSON 格式的专业报告
+> 
+> 基础用法: `python -m src.cli.main scan ./your-project`
+> 详细帮助: 在Chat模式下输入 `/help`
+
+**当用户问不存在功能时：**
+> ⚠️ HOS-LS 目前不支持 [功能名称]。
+> 如需此功能，建议结合其他专业工具使用。
+> 当前版本主要聚焦于静态代码安全分析。
+"""
+
+
 class UnifiedInteractionEngine:
     """统一智能交互引擎
     
@@ -392,14 +497,23 @@ class UnifiedInteractionEngine:
             
             try:
                 # 根据模块类型执行不同的操作
-                if step.module == 'info':
-                    # 执行信息查询
-                    topic = step.parameters.get('topic', '漏洞扫描工作原理')
-                    explanation = self._explain_scan_principle()
-                    results.append({
-                        "type": "info_result",
-                        "message": explanation
-                    })
+                if step.module == 'ai_chat':
+                    # 🔥🔥🔥 新增: AI直接回答模式（用于通用知识问答）
+                    question = step.parameters.get('question', plan.user_input)
+                    ai_result = await self._ai_respond(question)
+                    results.append(ai_result)
+                    
+                elif step.module == 'info':
+                    # 🔥🔥🔥 改进: 动态AI解释（不再使用固定文本）
+                    topic = step.parameters.get('topic', '')
+                    if topic and topic != '漏洞扫描工作原理':
+                        info_result = await self._ai_explain(topic, plan.user_input)
+                        results.append(info_result)
+                    else:
+                        # 如果没有明确主题或还是旧的主题，直接用AI回答用户原始输入
+                        ai_result = await self._ai_respond(plan.user_input)
+                        results.append(ai_result)
+                        
                 elif step.module == 'scan':
                     # 执行扫描
                     # 优先使用code_tool创建的测试文件路径
@@ -823,47 +937,197 @@ def insecure_function():
         
         return final_result
     
-    def _explain_scan_principle(self) -> str:
-        """讲解漏扫实现原理
+    async def _ai_respond(self, question: str) -> Dict[str, Any]:
+        """使用AI直接回答用户问题（核心方法）
         
+        用于处理通用知识问答、技术讲解等场景。
+        不再使用任何硬编码的固定答案。
+        
+        Args:
+            question: 用户的问题
+            
         Returns:
-            漏扫原理的详细讲解
+            AI生成的回答结果
         """
-        explanation = """📚 **漏洞扫描实现原理**
+        if not self.ai_client:
+            return {
+                "type": "ai_response",
+                "message": "⚠️ AI服务暂时不可用，请检查配置后重试。",
+                "error": "ai_client_not_available"
+            }
+        
+        try:
+            from src.ai.models import AIRequest
+            
+            request = AIRequest(
+                prompt=f"""请详细回答用户的问题：
 
-**1. 扫描流程**
-- **文件发现**: 递归遍历目标目录，识别代码文件
-- **文件分析**: 对每个文件进行静态分析
-- **漏洞检测**: 应用规则匹配和AI分析
-- **结果聚合**: 汇总发现的漏洞
+{question}
 
-**2. 技术实现**
-- **静态分析**: 解析代码结构，检测常见漏洞模式
-- **AI增强**: 利用大语言模型识别复杂漏洞
-- **规则引擎**: 基于已知漏洞特征进行匹配
-- **语义分析**: 理解代码上下文和业务逻辑
+## 📋 输出格式要求（必须严格遵守）
 
-**3. 纯AI模式**
-- 直接使用AI模型分析代码
-- 不依赖预定义规则
-- 能够发现未知漏洞
-- 分析深度更深，但速度较慢
+你的回答将被渲染为**终端友好的Markdown格式**，请注意：
 
-**4. 扫描范围**
-- 代码注入漏洞
-- 认证授权问题
-- 敏感信息泄露
-- 配置错误
-- 业务逻辑漏洞
+### 结构要求：
+1. **标题层级清晰**：使用 `#` `##` `###` 分层组织内容
+2. **段落简洁**：每段不超过3-4行，便于阅读
+3. **列表优先**：多用列表（`-` 或 `1.`）而非大段文字
 
-**5. 执行策略**
-- 优先级评估: 先分析高风险文件
-- 并发处理: 提高扫描效率
-- 缓存机制: 避免重复分析
-- 结果验证: 确保漏洞准确性
+### 格式规范：
+- **代码示例**：使用 ```c 或 ```python 等语言标记
+- **重点强调**：使用 **粗体** 标注关键术语
+- **表格使用**：简洁的2-4列对齐表格
+- **分隔线**：适当使用 `---` 分隔不同主题
 
-现在开始执行扫描任务..."""
-        return explanation
+### 内容风格：
+- 专业但易懂，避免过度学术化
+- 提供实际可操作的代码示例
+- 使用emoji作为视觉引导（🔍 🛡️ ⚡ 💡 等）
+- 总长度控制在1500字以内（保持精炼）
+
+### 禁止事项：
+❌ 不要输出过长的单段文字（超过5行）
+❌ 不要使用嵌套超过3层的列表
+❌ 不要使用HTML标签（只使用纯Markdown）
+❌ 不要在开头/结尾添加多余的问候语""",
+                
+                system_prompt=f"""你是 HOS-LS 智能安全助手 🛡️
+
+{_HOS_LS_REAL_CAPABILITIES}
+
+## ⚠️ 绝对规则（最高优先级，必须严格遵守）
+
+1. **功能介绍限制**: 只能介绍上述功能清单中列出的10个模块
+2. **禁止编造功能**: 绝对不能提及"不支持功能"列表中的任何特性
+3. **诚实回答**: 如果用户询问的功能不在清单中，明确说明暂不支持
+4. **命令准确性**: 所有CLI示例必须基于 `python -m src.cli.main` 格式
+5. **不夸大能力**: HOS-LS是静态代码分析工具，不是运行时保护平台
+
+## 你的专业领域
+
+### ✅ 可以深入讲解的话题
+- 🔒 信息安全知识：漏洞类型、攻击技术、防御措施、安全编码实践
+- 💻 编程语言安全：C/C++缓冲区管理、Python注入防护、Java反序列化等
+- 🛡️ 安全最佳实践：OWASP Top 10、CWE Top 25、安全开发生命周期
+
+### ❌ 需要谨慎处理的话题
+- 当用户问"HOS-LS能否做xxx"时，先检查是否在功能清单内
+- 对于不在清单内的功能，推荐其他专业工具而非编造
+
+## 回答风格指南
+
+1. **结构化思维**：先概述 → 分点详述 → 总结建议
+2. **实用导向**：每个理论点都配代码示例或操作步骤
+3. **视觉友好**：善用 emoji、加粗、列表增强可读性
+4. **精准表达**：用最少的字传达最多的信息
+5. **诚实透明**：明确区分"HOS-LS能做到的"和"需要其他工具配合的"
+
+## 当前任务
+根据用户的实际问题，基于上述真实功能清单，生成一个**准确、专业、美观**的Markdown格式回答。""",
+                
+                max_tokens=2500,
+                temperature=0.7
+            )
+            
+            response = await self.ai_client.generate(request)
+            
+            content = response.content
+            
+            content = self._cleanup_markdown(content)
+            
+            return {
+                "type": "ai_response",
+                "message": content,
+                "tokens_used": getattr(response, 'tokens_used', None)
+            }
+            
+        except Exception as e:
+            return {
+                "type": "ai_response",
+                "message": f"❌ AI回答生成失败: {str(e)}",
+                "error": str(e)
+            }
+    
+    def _cleanup_markdown(self, content: str) -> str:
+        """清理和优化AI生成的Markdown内容
+        
+        Args:
+            content: 原始Markdown内容
+            
+        Returns:
+            清理后的优化内容
+        """
+        lines = content.split('\n')
+        cleaned_lines = []
+        prev_blank = False
+        
+        for line in lines:
+            stripped = line.strip()
+            
+            if not stripped:
+                if not prev_blank:
+                    cleaned_lines.append('')
+                    prev_blank = True
+                continue
+            
+            prev_blank = False
+            
+            if stripped.startswith('#'):
+                cleaned_lines.append('')
+                cleaned_lines.append(stripped)
+                cleaned_lines.append('')
+            elif stripped.startswith('```'):
+                cleaned_lines.append(stripped)
+            elif stripped.startswith('|') and '|' in stripped[1:]:
+                cleaned_lines.append(stripped)
+            elif stripped.startswith(('- ', '* ', '+ ')):
+                cleaned_lines.append(stripped)
+            elif stripped and stripped[0].isdigit() and '. ' in stripped[:4]:
+                cleaned_lines.append(stripped)
+            else:
+                cleaned_lines.append(stripped)
+        
+        result = '\n'.join(cleaned_lines)
+        
+        result = result.strip()
+        
+        while '\n\n\n' in result:
+            result = result.replace('\n\n\n', '\n\n')
+        
+        return result
+    
+    async def _ai_explain(self, topic: str, context: str = "") -> Dict[str, Any]:
+        """使用AI动态生成解释内容
+        
+        Args:
+            topic: 要解释的主题
+            context: 用户原始输入的上下文
+            
+        Returns:
+            AI生成的解释内容
+        """
+        question = f"请详细解释: {topic}"
+        if context and context != topic:
+            question += f"\n\n用户背景: {context}"
+        
+        return await self._ai_respond(question)
+    
+    def _explain_scan_principle(self) -> str:
+        """⚠️ 已废弃: 漏洞扫描原理讲解（旧版本固定文本）
+        
+        此方法已被 _ai_respond() 和 _ai_explain() 替代。
+        保留此方法仅为向后兼容，不应再被调用。
+        
+        新版本会使用AI动态生成个性化的讲解内容。
+        """
+        import warnings
+        warnings.warn(
+            "_explain_scan_principle() is deprecated, use _ai_respond() or _ai_explain() instead",
+            DeprecationWarning,
+            stacklevel=2
+        )
+        # 返回提示信息，而不是固定文本
+        return "ℹ️ 正在使用AI为您生成详细的讲解内容..."
     
     def _dispatch_intent(self, intent: ParsedIntent, user_input: str) -> Dict[str, Any]:
         """根据意图分发到对应处理器"""

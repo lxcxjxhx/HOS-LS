@@ -1,11 +1,15 @@
-"""AI计划生成器
+"""AI驱动的智能计划生成器
 
-基于用户命令和解析后的意图，使用AI生成详细的执行计划。
+核心设计理念：
+- 移除所有硬编码的默认值和模板
+- 完全依赖AI根据用户实际输入生成动态计划
+- 新增ai_chat模块类型，用于处理通用知识问答
+- 对于通用问题，直接让AI回答，不再强行映射到固定主题
 """
 
 from typing import Dict, List, Any, Optional
 from dataclasses import dataclass
-from src.core.intent_parser import ParsedIntent
+from src.core.intent_parser import ParsedIntent, IntentType
 from src.core.module_capabilities import get_module_capabilities
 from src.core.config import get_config
 from src.ai.client import get_model_manager
@@ -15,41 +19,40 @@ from src.ai.models import AIRequest
 @dataclass
 class PlanStep:
     """计划步骤"""
-    id: str  # 步骤ID
-    name: str  # 步骤名称
-    description: str  # 步骤描述
-    module: str  # 使用的模块
-    parameters: Dict[str, Any]  # 模块参数
-    dependencies: List[str]  # 依赖的步骤
-    estimated_time: int  # 估计执行时间（秒）
+    id: str
+    name: str
+    description: str
+    module: str  # 可选值: scan, report, code_tool, info, ai_chat (新增)
+    parameters: Dict[str, Any]
+    dependencies: List[str]
+    estimated_time: int
 
 
 @dataclass
 class ExecutionPlan:
     """执行计划"""
-    id: str  # 计划ID
-    name: str  # 计划名称
-    description: str  # 计划描述
-    steps: List[PlanStep]  # 计划步骤
-    estimated_total_time: int  # 估计总执行时间（秒）
-    pure_ai: bool  # 是否使用纯AI模式
-    test_mode: bool  # 是否为测试模式
-    test_file_count: int  # 测试模式下扫描的文件数量
-    user_input: str  # 用户原始输入
+    id: str
+    name: str
+    description: str
+    steps: List[PlanStep]
+    estimated_total_time: int
+    pure_ai: bool
+    test_mode: bool
+    test_file_count: int
+    user_input: str
 
 
 class AIPlanGenerator:
-    """AI计划生成器"""
+    """AI计划生成器（动态版本）
+    
+    不再使用硬编码的默认值，
+    所有计划内容都由AI根据用户实际输入动态生成。
+    """
     
     def __init__(self, config=None):
-        """初始化AI计划生成器
-        
-        Args:
-            config: 配置对象（可选）
-        """
         from src.core.config import get_config
         self.config = config if config else get_config()
-        self.ai_client = None  # 延迟初始化
+        self.ai_client = None
         self.module_capabilities = get_module_capabilities()
     
     async def _get_ai_client(self):
@@ -59,313 +62,184 @@ class AIPlanGenerator:
             self.ai_client = manager.get_default_client()
         return self.ai_client
     
-    def _generate_default_plan(self, intent: ParsedIntent, user_input: str) -> ExecutionPlan:
-        """生成默认执行计划
-        
-        Args:
-            intent: 解析后的意图
-            user_input: 用户原始输入
-            
-        Returns:
-            默认执行计划
-        """
-        import uuid
-        plan_id = str(uuid.uuid4())
-        
-        # 生成默认步骤
-        steps = self._generate_default_steps(intent)
-        estimated_total_time = sum(step.estimated_time for step in steps)
-        
-        # 创建默认执行计划
-        plan = ExecutionPlan(
-            id=plan_id,
-            name="默认执行计划",
-            description="基于用户输入生成的默认执行计划",
-            steps=steps,
-            estimated_total_time=estimated_total_time,
-            pure_ai=False,
-            test_mode=False,
-            test_file_count=1,
-            user_input=user_input
-        )
-        
-        return plan
-    
     async def generate_plan(self, intent: ParsedIntent, user_input: str) -> ExecutionPlan:
         """生成执行计划
         
         Args:
-            intent: 解析后的意图
+            intent: 解析后的意图（来自AI意图解析器）
             user_input: 用户原始输入
             
         Returns:
             生成的执行计划
         """
         try:
-            # 获取模块能力信息
             available_modules = list(self.module_capabilities.get_all_capabilities().keys())
             
-            # 构建计划生成提示词
-            prompt = self._build_plan_prompt(intent, user_input, available_modules)
-            
-            # 生成AI请求
-            request = AIRequest(
-                prompt=prompt,
-                system_prompt="你是一个专业的安全扫描计划生成专家，能够根据用户的需求生成详细、合理的执行计划。",
-                max_tokens=1000,
-                temperature=0.1
-            )
-            
-            # 获取AI客户端
-            ai_client = await self._get_ai_client()
-            if not ai_client:
-                # 如果AI客户端不可用，返回默认计划
-                return self._generate_default_plan(intent, user_input)
-            
-            # 发送AI请求
-            response = await ai_client.generate(request)
-            
-            # 解析AI响应
-            plan_data = self._parse_ai_response(response.content)
-            
-            # 构建执行计划
-            plan = self._build_execution_plan(plan_data, user_input, intent)
+            # 根据意图类型选择不同的提示策略
+            if intent.type == IntentType.AI_CHAT or intent.type == IntentType.GENERAL:
+                plan = await self._generate_ai_chat_plan(intent, user_input)
+            else:
+                plan = await self._generate_action_plan(intent, user_input, available_modules)
             
             return plan
-        except Exception as e:
-            # 如果发生错误，返回默认计划
-            return self._generate_default_plan(intent, user_input)
-    
-    def _build_plan_prompt(self, intent: ParsedIntent, user_input: str, available_modules: List[str]) -> str:
-        """构建计划生成提示词
-        
-        Args:
-            intent: 解析后的意图
-            user_input: 用户原始输入
-            available_modules: 可用模块列表
             
-        Returns:
-            构建的提示词
-        """
-        # 构建任务信息
-        tasks_info = ""
-        if 'tasks' in intent.entities:
-            tasks = intent.entities['tasks']
-            for i, task in enumerate(tasks, 1):
-                task_type = task.get('type', 'unknown')
-                task_content = task.get('content', 'unknown')
-                tasks_info += f"{i}. 任务类型: {task_type}, 内容: {task_content}\n"
+        except Exception as e:
+            return self._generate_fallback_plan(intent, user_input)
+    
+    async def _generate_ai_chat_plan(self, intent: ParsedIntent, user_input: str) -> ExecutionPlan:
+        """生成AI对话类型的计划
         
-        # 构建实体信息
+        对于通用知识问答、闲聊等场景，
+        直接生成ai_chat步骤，让AI自由发挥。
+        """
+        import uuid
+        plan_id = str(uuid.uuid4())
+        
+        user_question = intent.entities.get('user_question', user_input)
+        
+        step = PlanStep(
+            id="step1",
+            name="AI智能回答",
+            description=f"使用AI回答用户的问题: {user_question[:100]}",
+            module="ai_chat",  # 新增的模块类型
+            parameters={
+                'question': user_question,
+                'context': user_input,
+                'max_tokens': 2000
+            },
+            dependencies=[],
+            estimated_time=10  # AI响应通常很快
+        )
+        
+        return ExecutionPlan(
+            id=plan_id,
+            name="AI智能对话",
+            description=f"使用AI回答用户关于'{user_question[:50]}'的问题",
+            steps=[step],
+            estimated_total_time=10,
+            pure_ai=True,
+            test_mode=False,
+            test_file_count=0,
+            user_input=user_input
+        )
+    
+    async def _generate_action_plan(self, intent: ParsedIntent, user_input: str, 
+                                    available_modules: List[str]) -> ExecutionPlan:
+        """生成功能操作类型的计划"""
+        
+        prompt = self._build_action_plan_prompt(intent, user_input, available_modules)
+        
+        request = AIRequest(
+            prompt=prompt,
+            system_prompt="你是HOS-LS的安全扫描计划生成专家。根据用户需求和AI识别出的意图，生成最优的执行计划。",
+            max_tokens=1200,
+            temperature=0.1
+        )
+        
+        ai_client = await self._get_ai_client()
+        if not ai_client:
+            return self._generate_fallback_plan(intent, user_input)
+        
+        response = await ai_client.generate(request)
+        plan_data = self._parse_ai_response(response.content)
+        
+        return self._build_execution_plan(plan_data, user_input, intent)
+    
+    def _build_action_plan_prompt(self, intent: ParsedIntent, user_input: str, 
+                                  available_modules: List[str]) -> str:
+        """构建功能操作计划的提示词"""
+        
         entities_info = ""
         for key, value in intent.entities.items():
-            if key != 'tasks':
-                entities_info += f"{key}: {value}\n"
+            entities_info += f"- {key}: {value}\n"
         
-        # 使用format方法构建提示词（智能增强版）
-        prompt = """你是一个**资深安全扫描专家兼AI助手**，具有丰富的实战经验。你的任务是根据用户需求生成**最优、最简洁、最高效**的执行计划。
+        prompt = f"""你是一个**资深安全扫描专家**，请根据用户需求生成**最优、最简洁**的执行计划。
 
 ## 📥 用户输入
 {user_input}
 
-## 🔍 意图分析
-- **意图类型**: {intent_type}
-- **识别到的任务**:
-{tasks_info}
-- **关键实体**:
-{entities_info}
+## 🔍 AI意图分析结果
+- **意图类型**: {intent.type.value}
+- **置信度**: {intent.confidence:.0%}
+- **提取的实体**:
+{entities_info if entities_info else '  （无特殊实体）'}
 
 ## 🛠️ 可用功能模块
-{available_modules}
+{', '.join(available_modules)}
 
 ---
 
-## 🎯 核心设计原则（必须严格遵守）
+## 📋 模块使用指南
 
-### 1️⃣ **步骤精简原则**
-✅ **推荐**: 将相关操作合并为单个步骤
-- "扫描并生成报告" → 1个步骤（module: scan, 参数包含 auto_report: true）
-- "创建测试文件然后扫描" → 2个步骤（code_tool → scan）
-  
-❌ **禁止**: 不必要的步骤拆分
-- 不要将"扫描结果分析"拆成"获取结果→解析结果→展示结果"3个步骤
-- 不要添加"初始化环境"、"准备配置"等无实质操作的步骤
+### scan模块（代码安全扫描）
+- 适用：漏洞检测、安全检查、代码审计
+- 参数：target(路径), mode("auto"/"pure-ai"), test_mode, test_file_count
 
-### 2️⃣ **意图推断规则**
-当用户使用以下表达时，自动推断隐含参数：
+### report模块（报告生成）  
+- 适用：用户明确要求生成报告时
+- 参数：format(html/json/markdown), output(路径)
 
-| 用户表达 | 推断的参数 |
-|---------|-----------|
-| "快速"、"简单"、"试试"、"测试一下" | test_mode=true, file_count=1 |
-| "纯AI"、"AI模式"、"深度分析" | pure_ai=true |
-| "全面"、"完整"、"详细" | test_mode=false, 扫描全部文件 |
-| "帮我看看"、"查查有没有问题" | 默认scan + 简要报告 |
+### code_tool模块（代码工具）
+- 适用：创建测试文件、准备测试数据
+- 参数：action, file_count
 
-### 3️⃣ **模块选择指南**
+### info模块（信息查询）
+- ⚠️ **重要**: 只有当用户明确询问HOS-LS工具的功能/用法时才使用此模块
+- 如果用户问的是通用技术知识（如"C语言安全问题"），应使用 **ai_chat** 模块
+- 参数：topic（必须是用户真正关心的主题，不要硬编码）
 
-#### scan模块（代码安全扫描）
-- **适用场景**: 所有涉及漏洞检测、安全检查、代码审计的任务
-- **参数说明**:
-  - target: 目标路径（默认"."）
-  - mode: "auto"(标准) / "pure-ai"(纯净AI)
-  - test_mode: 是否测试模式
-  - test_file_count: 测试模式下扫描的文件数
-
-#### report模块（报告生成）
-- **适用场景**: 用户明确要求生成报告时
-- **注意**: 如果用户说"扫描并报告"，优先在scan步骤中设置 auto_report=true，而非单独添加report步骤
-- **参数**: format (html/json/markdown), output (输出路径)
-
-#### code_tool模块（代码工具）
-- **适用场景**: 需要创建测试文件、准备测试数据
-- **参数**: action ("prepare_test_file"), file_count
-
-#### info模块（信息查询）
-- **适用场景**: 解释原理、提供帮助、教学性内容
-- **参数**: topic (主题)
-
-### 4️⃣ **典型场景示例**
-
-#### 示例1: "帮我快速测试一下这个项目"
-```json
-{
-  "name": "快速安全测试",
-  "steps": [
-    {
-      "id": "step1",
-      "name": "快速安全扫描",
-      "description": "使用纯净AI模式对项目进行快速安全测试",
-      "module": "scan",
-      "parameters": {
-        "target": ".",
-        "mode": "pure-ai",
-        "test_mode": true,
-        "test_file_count": 1,
-        "auto_report": true
-      },
-      "dependencies": [],
-      "estimated_time": 30
-    }
-  ],
-  "pure_ai": true,
-  "test_mode": true,
-  "test_file_count": 1
-}
-```
-
-#### 示例2: "解释漏洞扫描原理然后扫描当前目录"
-```json
-{
-  "name": "原理讲解与安全扫描",
-  "steps": [
-    {
-      "id": "step1", 
-      "name": "讲解漏洞扫描原理",
-      "description": "详细解释HOS-LS的漏洞扫描实现机制",
-      "module": "info",
-      "parameters": {"topic": "漏洞扫描工作原理"},
-      "dependencies": [],
-      "estimated_time": 30
-    },
-    {
-      "id": "step2",
-      "name": "执行项目安全扫描",
-      "description": "对当前目录进行全面的安全扫描",
-      "module": "scan",
-      "parameters": {"target": ".", "mode": "auto"},
-      "dependencies": ["step1"],
-      "estimated_time": 120
-    }
-  ],
-  "pure_ai": false,
-  "test_mode": false
-}
-```
-
-#### 示例3: "分析扫描结果并生成简洁报告"
-```json
-{
-  "name": "扫描分析与报告生成",
-  "steps": [
-    {
-      "id": "step1",
-      "name": "扫描并生成报告",
-      "description": "执行安全扫描并自动生成简洁的报告",
-      "module": "scan",
-      "parameters": {
-        "target": ".",
-        "mode": "pure-ai",
-        "auto_report": true,
-        "report_format": "brief",
-        "output_path": "./security-report"
-      },
-      "dependencies": [],
-      "estimated_time": 60
-    }
-  ],
-  "pure_ai": true,
-  "test_mode": false
-}
-```
+### ai_chat模块（AI直接回答）⭐新增
+- 适用：通用知识问答、技术讲解、工具介绍、闲聊
+- 示例场景：
+  * "C语言有哪些安全问题？" → ai_chat
+  * "什么是SQL注入？" → ai_chat  
+  * "HOS-LS能做什么？" → ai_chat
+  * "介绍一下缓冲区溢出" → ai_chat
+- 参数：question（用户的问题）, max_tokens
 
 ---
 
-## 📤 输出格式要求
+## 🎯 输出要求
 
-请返回**严格的JSON格式**（不要包含任何其他文字、注释或markdown标记）:
+返回严格的JSON格式：
 
 ```json
-{
-  "name": "计划名称（简洁明了）",
-  "description": "一句话描述计划目标",
+{{
+  "name": "计划名称",
+  "description": "一句话描述",
   "steps": [
-    {
+    {{
       "id": "step1",
-      "name": "步骤名称（动词开头）",
-      "description": "详细描述该步骤要做什么",
-      "module": "从可用模块中选择",
-      "parameters": {
-        "参数名": "根据模块文档填写"
-      },
-      "dependencies": ["依赖的前置步骤ID，无依赖则为空数组"],
-      "estimated_time": 预估秒数（参考：info=30s, scan=60-180s, report=30s）
-    }
+      "name": "步骤名称",
+      "description": "详细描述",
+      "module": "scan|report|code_tool|info|ai_chat",
+      "parameters": {{
+        "参数名": "值"
+      }},
+      "dependencies": [],
+      "estimated_time": 秒数
+    }}
   ],
-  "estimated_total_time": 总时间（所有步骤时间之和）,
+  "estimated_total_time": 总秒数,
   "pure_ai": true/false,
   "test_mode": true/false,
   "test_file_count": 数字
-}
+}}
 ```
 
-⚠️ **最后提醒**:
-1. 步骤数量控制在2-4个以内（除非确实需要更多）
-2. 每个步骤必须有明确的实际操作意义
-3. 不要创造不存在的模块或参数
-4. 合理估计执行时间
-5. 优先考虑用户体验和执行效率""".format(
-            user_input=user_input,
-            intent_type=intent.type.value,
-            tasks_info=tasks_info if tasks_info else "  （未识别到具体子任务，请根据用户输入推断）",
-            entities_info=entities_info if entities_info else "  （未识别到特殊实体）",
-            available_modules=', '.join(available_modules)
-        )
+⚠️ **关键提醒**:
+1. 步骤数量控制在2-4个
+2. **绝对不要硬编码topic参数**，必须从用户输入中提取真实主题
+3. 对于知识类问题，优先使用ai_chat模块
+4. 合理估计时间"""
         
         return prompt
     
     def _parse_ai_response(self, content: str) -> Dict[str, Any]:
-        """解析AI响应
-        
-        Args:
-            content: AI响应内容
-            
-        Returns:
-            解析后的计划数据
-        """
+        """解析AI响应（增强容错能力）"""
         import json
         import re
         
-        # 清理内容
         content = content.strip()
         
         # 尝试直接解析整个内容
@@ -374,68 +248,55 @@ class AIPlanGenerator:
         except json.JSONDecodeError:
             pass
         
-        # 提取JSON部分
-        json_match = re.search(r'\{[\s\S]*\}', content)
-        if json_match:
-            json_str = json_match.group(0)
-            try:
-                return json.loads(json_str)
-            except json.JSONDecodeError:
-                # 尝试清理JSON字符串
-                json_str = json_str.strip()
-                # 移除可能的多余字符
-                json_str = re.sub(r'[^\{\}\[\]"\\:,.\w\s\-/]', '', json_str)
-                try:
-                    return json.loads(json_str)
-                except json.JSONDecodeError:
-                    pass
+        # 尝试提取JSON部分（处理markdown代码块等情况）
+        patterns = [
+            r'```json\s*([\s\S]*?)\s*```',  # markdown json代码块
+            r'```\s*([\s\S]*?)\s*```',       # 通用代码块
+            r'\{[\s\S]*\}',                    # 直接匹配花括号
+        ]
         
-        # 如果解析失败，返回默认计划
+        for pattern in patterns:
+            match = re.search(pattern, content)
+            if match:
+                json_str = match.group(1) if match.groups() else match.group(0)
+                try:
+                    return json.loads(json_str.strip())
+                except json.JSONDecodeError:
+                    continue
+        
+        # 最终回退
         return {
-            "name": "默认执行计划",
-            "description": "基于用户输入生成的默认执行计划",
-            "steps": [
-                {
-                    "id": "step1",
-                    "name": "分析扫描结果并生成报告",
-                    "description": "分析扫描结果并生成简洁的测试报告",
-                    "module": "report",
-                    "parameters": {"format": "brief", "output": "./security-report"},
-                    "dependencies": [],
-                    "estimated_time": 60
-                }
-            ],
-            "estimated_total_time": 60,
+            "name": "默认计划",
+            "description": "AI解析失败，使用默认配置",
+            "steps": [{
+                "id": "step1",
+                "name": "AI智能处理",
+                "description": "由AI直接处理用户请求",
+                "module": "ai_chat",
+                "parameters": {"question": "auto"},
+                "dependencies": [],
+                "estimated_time": 15
+            }],
+            "estimated_total_time": 15,
             "pure_ai": True,
-            "test_mode": True,
-            "test_file_count": 1
+            "test_mode": False,
+            "test_file_count": 0
         }
     
-    def _build_execution_plan(self, plan_data: Dict[str, Any], user_input: str, intent: ParsedIntent) -> ExecutionPlan:
-        """构建执行计划
-        
-        Args:
-            plan_data: 解析后的计划数据
-            user_input: 用户原始输入
-            intent: 解析后的意图
-            
-        Returns:
-            构建的执行计划
-        """
-        # 生成计划ID
+    def _build_execution_plan(self, plan_data: Dict[str, Any], user_input: str, 
+                              intent: ParsedIntent) -> ExecutionPlan:
+        """构建执行计划对象"""
         import uuid
         plan_id = str(uuid.uuid4())
         
-        # 提取计划信息
         name = plan_data.get("name", "执行计划")
         description = plan_data.get("description", "基于用户输入生成的执行计划")
         steps_data = plan_data.get("steps", [])
         estimated_total_time = plan_data.get("estimated_total_time", 300)
-        pure_ai = plan_data.get("pure_ai", intent.entities.get("pure_ai", False) if intent and hasattr(intent, 'entities') else False)
-        test_mode = plan_data.get("test_mode", intent.entities.get("test_mode", False) if intent and hasattr(intent, 'entities') else False)
-        test_file_count = plan_data.get("test_file_count", intent.entities.get("test_file_count", 1) if intent and hasattr(intent, 'entities') else 1)
+        pure_ai = plan_data.get("pure_ai", intent.entities.get("pure_ai", False))
+        test_mode = plan_data.get("test_mode", intent.entities.get("test_mode", False))
+        test_file_count = plan_data.get("test_file_count", intent.entities.get("test_file_count", 1))
         
-        # 构建计划步骤
         steps = []
         for step_data in steps_data:
             step = PlanStep(
@@ -449,13 +310,18 @@ class AIPlanGenerator:
             )
             steps.append(step)
         
-        # 如果没有步骤，根据意图生成默认步骤
         if not steps:
-            steps = self._generate_default_steps(intent)
-            estimated_total_time = sum(step.estimated_time for step in steps)
+            steps = [PlanStep(
+                id="step1",
+                name="AI智能处理",
+                description="由AI直接处理用户请求",
+                module="ai_chat",
+                parameters={"question": user_input},
+                dependencies=[],
+                estimated_time=15
+            )]
         
-        # 创建执行计划
-        plan = ExecutionPlan(
+        return ExecutionPlan(
             id=plan_id,
             name=name,
             description=description,
@@ -466,98 +332,36 @@ class AIPlanGenerator:
             test_file_count=test_file_count,
             user_input=user_input
         )
-        
-        return plan
     
-    def _generate_default_steps(self, intent: ParsedIntent) -> List[PlanStep]:
-        """生成默认步骤
+    def _generate_fallback_plan(self, intent: ParsedIntent, user_input: str) -> ExecutionPlan:
+        """生成回退计划（当AI完全不可用时）"""
+        import uuid
+        plan_id = str(uuid.uuid4())
         
-        Args:
-            intent: 解析后的意图
-            
-        Returns:
-            默认步骤列表
-        """
-        steps = []
+        step = PlanStep(
+            id="step1",
+            name="AI智能处理",
+            description="由AI直接处理用户请求（回退模式）",
+            module="ai_chat",
+            parameters={"question": user_input},
+            dependencies=[],
+            estimated_time=15
+        )
         
-        # 根据意图类型生成默认步骤
-        if intent.type.value == "scan":
-            steps.append(PlanStep(
-                id="step1",
-                name="初始化扫描",
-                description="初始化扫描环境和配置",
-                module="scan",
-                parameters={"target": ".", "mode": "auto"},
-                dependencies=[],
-                estimated_time=30
-            ))
-            steps.append(PlanStep(
-                id="step2",
-                name="执行扫描",
-                description="执行代码安全扫描",
-                module="scan",
-                parameters={"target": ".", "mode": "auto"},
-                dependencies=["step1"],
-                estimated_time=120
-            ))
-            steps.append(PlanStep(
-                id="step3",
-                name="生成报告",
-                description="生成安全扫描报告",
-                module="report",
-                parameters={"format": "html", "output": "./security-report"},
-                dependencies=["step2"],
-                estimated_time=60
-            ))
-        elif intent.type.value == "info":
-            steps.append(PlanStep(
-                id="step1",
-                name="信息查询",
-                description="查询相关信息",
-                module="info",
-                parameters={"topic": "漏洞扫描工作原理"},
-                dependencies=[],
-                estimated_time=30
-            ))
-        elif 'tasks' in intent.entities:
-            # 为多任务生成步骤
-            tasks = intent.entities['tasks']
-            for i, task in enumerate(tasks, 1):
-                task_type = task.get('type', 'unknown')
-                task_content = task.get('content', 'unknown')
-                
-                if task_type == 'explain':
-                    steps.append(PlanStep(
-                        id=f"step{i}",
-                        name=f"讲解 {task_content}",
-                        description=f"讲解{task_content}",
-                        module="info",
-                        parameters={"topic": task_content},
-                        dependencies=[f"step{i-1}"] if i > 1 else [],
-                        estimated_time=60
-                    ))
-                elif task_type == 'scan':
-                    steps.append(PlanStep(
-                        id=f"step{i}",
-                        name=f"执行扫描",
-                        description=f"执行{task_content}",
-                        module="scan",
-                        parameters={"target": ".", "mode": "pure-ai"},
-                        dependencies=[f"step{i-1}"] if i > 1 else [],
-                        estimated_time=120
-                    ))
-        
-        return steps
+        return ExecutionPlan(
+            id=plan_id,
+            name="默认AI对话",
+            description="AI服务暂时不可用时的回退方案",
+            steps=[step],
+            estimated_total_time=15,
+            pure_ai=True,
+            test_mode=False,
+            test_file_count=0,
+            user_input=user_input
+        )
     
     def generate_human_friendly_plan(self, plan: ExecutionPlan) -> str:
-        """生成人类友好的计划表述
-        
-        Args:
-            plan: 执行计划
-            
-        Returns:
-            人类友好的计划表述
-        """
+        """生成人类友好的计划表述"""
         try:
             plan_text = f"# 执行计划: {getattr(plan, 'name', '未命名计划')}\n\n"
             plan_text += f"## 计划描述\n{getattr(plan, 'description', '无描述')}\n\n"
@@ -574,7 +378,12 @@ class AIPlanGenerator:
                 plan_text += f"### {getattr(step, 'name', '未命名步骤')}\n"
                 plan_text += f"- 描述: {getattr(step, 'description', '无描述')}\n"
                 plan_text += f"- 使用模块: {getattr(step, 'module', '未知模块')}\n"
-                plan_text += f"- 参数: {getattr(step, 'parameters', {})}\n"
+                
+                params = getattr(step, 'parameters', {})
+                if params:
+                    param_str = ', '.join(f'{k}={v}' for k, v in list(params.items())[:5])
+                    plan_text += f"- 参数: {param_str}\n"
+                
                 dependencies = getattr(step, 'dependencies', [])
                 if dependencies:
                     plan_text += f"- 依赖步骤: {', '.join(dependencies)}\n"
@@ -588,76 +397,56 @@ class AIPlanGenerator:
             return f"生成计划表述时出错: {str(e)}"
     
     async def adjust_plan(self, plan: ExecutionPlan, user_feedback: str) -> ExecutionPlan:
-        """根据用户反馈调整计划
+        """根据用户反馈调整计划（增强容错能力）"""
         
-        Args:
-            plan: 原始执行计划
-            user_feedback: 用户反馈
-            
-        Returns:
-            调整后的执行计划
-        """
-        # 构建调整提示词
-        prompt = """你是一个专业的安全扫描计划调整专家。根据用户的反馈，调整执行计划。
+        prompt = f"""你是一个专业的计划调整专家。根据用户的反馈调整执行计划。
 
 原始计划:
-{plan}
+{self.generate_human_friendly_plan(plan)}
 
-用户反馈:
+用户反馈/修改建议:
 {user_feedback}
 
-请根据用户反馈调整计划，返回调整后的计划JSON格式:
-{
-  "name": "计划名称",
+⚠️ **重要**: 用户反馈可能是自然语言描述，不一定是JSON格式。
+请理解用户的真实意图，然后返回调整后的完整计划JSON:
+
+```json
+{{
+  "name": "调整后的计划名称",
   "description": "计划描述",
   "steps": [
-    {
+    {{
       "id": "step1",
       "name": "步骤名称",
       "description": "步骤描述",
-      "module": "使用的模块",
-      "parameters": {
-        "参数名": "参数值"
-      },
-      "dependencies": ["依赖的步骤ID"],
+      "module": "scan|report|info|ai_chat",
+      "parameters": {{}},
+      "dependencies": [],
       "estimated_time": 60
-    }
+    }}
   ],
   "estimated_total_time": 300,
   "pure_ai": true/false,
   "test_mode": true/false,
   "test_file_count": 1
-}
+}}
+```
 
-只返回JSON，不要其他内容。""".format(
-            plan=self.generate_human_friendly_plan(plan),
-            user_feedback=user_feedback
-        )
+只返回JSON格式，不要其他内容。"""
         
-        # 生成AI请求
         request = AIRequest(
             prompt=prompt,
-            system_prompt="你是一个专业的安全扫描计划调整专家，能够根据用户的反馈调整执行计划。",
-            max_tokens=1000,
+            system_prompt="你擅长理解用户的修改意图，并据此调整执行计划。即使反馈是口语化的也能准确理解。",
+            max_tokens=1200,
             temperature=0.1
         )
         
-        # 发送AI请求
         response = await self.ai_client.generate(request)
-        
-        # 解析AI响应
         plan_data = self._parse_ai_response(response.content)
         
-        # 构建调整后的执行计划
-        adjusted_plan = self._build_execution_plan(plan_data, plan.user_input, None)
-        
-        return adjusted_plan
+        return self._build_execution_plan(plan_data, plan.user_input, None)
 
 
 def get_ai_plan_generator() -> AIPlanGenerator:
-    """获取AI计划生成器实例
-    
-    Returns:
-        AI计划生成器实例
-    """
+    """获取AI计划生成器实例"""
     return AIPlanGenerator()

@@ -76,7 +76,7 @@ class GraphVisualizer:
                             x=[pos[source][0], pos[target][0]],
                             y=[pos[source][1], pos[target][1]],
                             mode='lines',
-                            line=dict(width=2, color='gray'),
+                            line=dict(width=2, color='grey'),
                             text=edge_label,
                             textposition='middle center',
                             name=f'Edge {source}->{target}'
@@ -207,7 +207,7 @@ class GraphVisualizer:
                             x=[pos[source][0], pos[target][0]],
                             y=[pos[source][1], pos[target][1]],
                             mode='lines',
-                            line=dict(width=2, color='gray'),
+                            line=dict(width=2, color='grey'),
                             text=edge_label,
                             textposition='middle center',
                             name=f'Edge {source}->{target}'
@@ -337,7 +337,7 @@ class GraphVisualizer:
                             x=[pos[source][0], pos[target][0]],
                             y=[pos[source][1], pos[target][1]],
                             mode='lines',
-                            line=dict(width=2, color='gray'),
+                            line=dict(width=2, color='grey'),
                             name=f'Edge {source}->{target}'
                         ), row=1, col=1)
             
@@ -415,7 +415,7 @@ class GraphVisualizer:
                             x=[pos[source][0], pos[target][0]],
                             y=[pos[source][1], pos[target][1]],
                             mode='lines',
-                            line=dict(width=1, color='gray'),
+                            line=dict(width=1, color='grey'),
                             name=f'Edge {source}->{target}'
                         ), row=2, col=2)
             

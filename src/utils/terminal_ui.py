@@ -7,6 +7,7 @@ from rich.text import Text
 from rich.live import Live
 from rich.progress import SpinnerColumn, TextColumn
 from rich.table import Table
+from rich.markdown import Markdown
 
 
 class TerminalUI:
@@ -967,6 +968,57 @@ class TerminalUI:
         )
         self.console.print(banner)
     
+    def _show_ai_response(self, result: Dict[str, Any], step_num: int = 1):
+        """显示AI智能回答（美化版本）
+        
+        使用Rich的Markdown渲染能力，将AI生成的Markdown内容
+        美化为终端友好的格式。
+        
+        Args:
+            result: AI响应结果字典
+            step_num: 步骤编号
+        """
+        message = result.get("message", "")
+        error = result.get("error")
+        
+        if error and error != "ai_client_not_available":
+            self.console.print(Panel(
+                f"[red]❌ AI响应生成失败[/red]\n\n[dim]{error}[/dim]",
+                border_style="red",
+                title=f"⚠️ 步骤 {step_num}: AI错误",
+                padding=(1, 2)
+            ))
+            return
+        
+        if not message or message.strip() == "":
+            self.console.print(Panel(
+                "[dim]（AI返回空响应）[/dim]",
+                border_style="dim",
+                title=f"步骤 {step_num}: AI响应",
+                padding=(1, 2)
+            ))
+            return
+        
+        try:
+            md = Markdown(message)
+            
+            self.console.print(Panel(
+                md,
+                border_style="bright_blue",
+                title=f"🤖 步骤 {step_num}: AI智能回答",
+                subtitle="[dim]Powered by HOS-LS AI Engine[/dim]",
+                padding=(1, 2),
+                expand=False
+            ))
+            
+        except Exception as e:
+            self.console.print(Panel(
+                f"[bold cyan]🤖 AI智能回答[/bold cyan]\n\n{message}",
+                border_style="cyan",
+                title=f"步骤 {step_num}: AI响应",
+                padding=(1, 2)
+            ))
+    
     def _show_plan_execution_result(self, result: Dict[str, Any]):
         """显示计划执行结果
         
@@ -1037,6 +1089,8 @@ class TerminalUI:
                         border_style="purple",
                         title=f"步骤 {i}: 模块执行"
                     ))
+                elif step_type == "ai_response":
+                    self._show_ai_response(step_result, i)
                 elif step_type == "report_result":
                     # 显示报告结果
                     format = step_result.get("format", "html")
@@ -1053,7 +1107,7 @@ class TerminalUI:
                     # 其他类型结果
                     self.console.print(Panel(
                         step_message,
-                        border_style="gray",
+                        border_style="dim",
                         title=f"步骤 {i}: {step_type}"
                     ))
         
