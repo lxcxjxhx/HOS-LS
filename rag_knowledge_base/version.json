@@ -1,6 +1,63 @@
 {
-  "version": 45,
-  "history": [],
-  "usage_count": 71,
-  "last_updated": "2026-04-10T19:53:21.639004"
+  "version": 53,
+  "history": [
+    {
+      "timestamp": "2026-04-11T16:28:22.377862",
+      "version": 50,
+      "action": "save",
+      "details": {
+        "backup_path": "rag_knowledge_base\\history\\v49_20260411_162822",
+        "knowledge_count": 0,
+        "pattern_count": 0,
+        "graph_nodes_count": 55,
+        "graph_edges_count": 20,
+        "created_backup": true,
+        "built_index": true
+      }
+    },
+    {
+      "timestamp": "2026-04-11T16:34:13.387184",
+      "version": 51,
+      "action": "save",
+      "details": {
+        "backup_path": "rag_knowledge_base\\history\\v50_20260411_163413",
+        "knowledge_count": 10,
+        "pattern_count": 0,
+        "graph_nodes_count": 64,
+        "graph_edges_count": 20,
+        "created_backup": true,
+        "built_index": true
+      }
+    },
+    {
+      "timestamp": "2026-04-11T16:36:32.224752",
+      "version": 52,
+      "action": "save",
+      "details": {
+        "backup_path": "rag_knowledge_base\\history\\v51_20260411_163632",
+        "knowledge_count": 10,
+        "pattern_count": 0,
+        "graph_nodes_count": 64,
+        "graph_edges_count": 20,
+        "created_backup": true,
+        "built_index": true
+      }
+    },
+    {
+      "timestamp": "2026-04-11T16:51:40.333982",
+      "version": 53,
+      "action": "save",
+      "details": {
+        "backup_path": "rag_knowledge_base\\history\\v52_20260411_165140",
+        "knowledge_count": 100,
+        "pattern_count": 0,
+        "graph_nodes_count": 112,
+        "graph_edges_count": 20,
+        "created_backup": true,
+        "built_index": true
+      }
+    }
+  ],
+  "usage_count": 79,
+  "last_updated": "2026-04-11T16:51:40.333992"
 }

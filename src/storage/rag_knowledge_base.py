@@ -1079,17 +1079,19 @@ class RAGKnowledgeBase:
 
     def record_usage(self) -> None:
         """记录知识库使用次数
-        
+
         每次使用知识库时调用此方法，当使用次数达到5的倍数时，自动进行整理。
+        支持通过 _auto_consolidate 属性禁用自动整理（用于 NVD 导入等场景）
         """
         self.usage_count += 1
-        
-        # 检查是否需要整理
-        if self.usage_count % 5 == 0:
+
+        # 检查是否需要整理（支持通过属性禁用）
+        auto_consolidate = getattr(self, '_auto_consolidate', True)
+        if auto_consolidate and self.usage_count % 5 == 0:
             logger.info(f"使用次数达到 {self.usage_count}，触发知识库整理")
             self.consolidate_knowledge()
             self.clean_history()
-        
+
         self.save_version_info()
 
     def consolidate_knowledge(self) -> None:

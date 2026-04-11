@@ -136,6 +136,8 @@ class ExecutionRequest:
     plan: Optional[Any] = None
     mode: str = "auto"  # auto | pure-ai | standard | langgraph
     context: Dict[str, Any] = field(default_factory=dict)
+    test_mode: bool = False
+    test_file_count: int = 1
 
     @property
     def request_type(self) -> str:

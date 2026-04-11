@@ -491,9 +491,19 @@ class UnifiedExecutionEngine:
 
     def _create_context(self, request: ExecutionRequest) -> ExecutionContext:
         """创建执行上下文"""
+        # 复制配置对象，避免修改原始配置
+        import copy
+        config = copy.deepcopy(self.config)
+        
+        # 应用测试模式参数
+        if hasattr(request, 'test_mode') and request.test_mode:
+            config.test_mode = True
+            if hasattr(request, 'test_file_count'):
+                config.test_file_count = request.test_file_count
+        
         context = ExecutionContext(
             target=request.target,
-            config=self.config,
+            config=config,
             user_intent=request.natural_language or str(request.flags),
             user_query=request.context.get('ask'),
             focus=request.context.get('focus')

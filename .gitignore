@@ -175,3 +175,6 @@ AAA-PROJECT-TEST/
 # WARNING: Do NOT ignore .trae/ or .github/ as they contain tracked files
 # .trae/
 # .github/
+.trae/documents/ 
+embeddings_cache/ 
+rag_knowledge_base/history/ 

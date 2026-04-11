@@ -23,6 +23,13 @@ def get_plan_generation_prompt(natural_language: str) -> str:
     prompt += natural_language
     prompt += """
 
+请仔细分析用户的需求，即使是口语化的表达，也要准确理解其意图。以下是一些常见口语化表达的理解示例：
+- "检查一下代码安全": 表示需要进行全面的代码安全扫描
+- "看看有没有认证漏洞": 表示需要进行认证分析
+- "快速过一遍": 表示需要使用fast配置，进行快速扫描
+- "深入分析": 表示需要使用deep配置，进行深度分析
+- "生成漏洞报告": 表示需要在步骤中包含报告生成
+
 请根据用户需求，生成一个完整的安全扫描Plan，包含以下内容：
 1. goal: 扫描目标
 2. profile: 配置文件 (standard, full, fast, deep, stealth)
@@ -117,6 +124,46 @@ def get_plan_generation_prompt(natural_language: str) -> str:
       {
         "report": {
           "format": "html"
+        }
+      }
+    ],
+    "constraints": {
+      "safe_mode": true
+    },
+    "plan_version": "v1.0"
+  }
+}
+```
+
+示例3:
+用户需求: 帮我看看代码有没有问题，特别是认证部分，要详细一点
+
+```json
+{
+  "plan": {
+    "goal": "详细分析代码安全问题，特别是认证部分",
+    "profile": "deep",
+    "steps": [
+      {
+        "scan": {
+          "path": ".",
+          "depth": "high"
+        }
+      },
+      {
+        "auth_analysis": {
+          "detect": ["jwt", "session", "oauth", "basic"]
+        }
+      },
+      {
+        "reason": {
+          "depth": "deep"
+        }
+      },
+      {
+        "report": {
+          "format": "html",
+          "detail_level": "high"
         }
       }
     ],

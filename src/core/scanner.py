@@ -594,9 +594,11 @@ class SecurityScanner:
                     score, priority = self.file_prioritizer.evaluate_file_priority(Path(file_info.path))
                     quick_prioritized.append((file_info, score, priority))
                 
-                # 按传统分数排序，取前20个文件进行AI评估（减少数量）
+                # 按传统分数排序，取指定数量的文件进行AI评估
                 quick_prioritized.sort(key=lambda x: x[1], reverse=True)
-                top_files = quick_prioritized[:20]  # 只对前20个文件进行AI评估
+                # 测试模式下使用配置的文件数量，否则使用默认值20
+                max_files = self.config.test_file_count if getattr(self.config, 'test_mode', False) else 20
+                top_files = quick_prioritized[:max_files]  # 只对指定数量的文件进行AI评估
                 
                 if self.config.debug:
                     console.print(f"[dim][DEBUG] 快速筛选后，对前{len(top_files)}个文件进行AI优先级评估[/dim]")

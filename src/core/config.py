@@ -182,6 +182,7 @@ class Config(BaseSettings):
     quiet: bool = Field(default=False, description="静默模式")
     config_path: Optional[str] = Field(default=None, description="配置文件路径")
     test_mode: bool = Field(default=False, description="测试模式")
+    test_file_count: int = Field(default=1, description="测试模式下扫描的文件数量")
     pure_ai: bool = Field(default=False, description="纯AI深度语义解析模式")
     pure_ai_provider: str = Field(default="deepseek", description="纯AI模式的AI提供商")
     pure_ai_model: str = Field(default="deepseek-reasoner", description="纯AI模式的AI模型")
@@ -208,6 +209,7 @@ class ConfigManager:
     _config_cache: Dict[str, Dict[str, Any]] = {}
     _config_mtime: Dict[str, float] = {}
     _config_write_count: int = 0
+    _last_loaded_path: Optional[str] = None
 
     # 默认配置路径
     DEFAULT_CONFIG_PATHS = [
@@ -229,14 +231,31 @@ class ConfigManager:
 
     def __init__(self) -> None:
         if self._config is None:
-            self._config = Config()
+            self._config = self.auto_load()
 
     @property
     def config(self) -> Config:
-        """获取当前配置"""
+        """获取当前配置
+        
+        自动检测配置文件变更并重新加载
+        """
         if self._config is None:
-            self._config = Config()
+            self._config = self.auto_load()
+        else:
+            # 自动检测配置文件变更
+            self._auto_reload_if_changed()
         return self._config
+
+    def _auto_reload_if_changed(self) -> None:
+        """自动检测配置文件变更并重新加载
+        """
+        if self._last_loaded_path:
+            path = Path(self._last_loaded_path)
+            if path.exists():
+                current_mtime = path.stat().st_mtime
+                if current_mtime != self._config_mtime.get(self._last_loaded_path):
+                    # 配置文件已变更，重新加载
+                    self.load_from_file(path)
 
     def load_from_file(self, path: Union[str, Path]) -> Config:
         """从文件加载配置
@@ -284,6 +303,7 @@ class ConfigManager:
         # BaseSettings 会自动处理环境变量覆盖（通过 env_prefix + env_nested_delimiter）
         # 优先级：环境变量 > 配置文件值 > 默认值
         self._config = Config(**data)
+        self._last_loaded_path = path_str
         return self._config
 
     def load_from_env(self) -> Config:
@@ -293,6 +313,7 @@ class ConfigManager:
             加载的配置对象
         """
         self._config = Config()
+        self._last_loaded_path = None
         return self._config
 
     def auto_load(self) -> Config:
@@ -308,7 +329,11 @@ class ConfigManager:
         # 首先尝试从环境变量加载
         env_path = os.getenv("HOS_LS_CONFIG_PATH")
         if env_path:
-            return self.load_from_file(env_path)
+            try:
+                return self.load_from_file(env_path)
+            except FileNotFoundError:
+                # 环境变量指定的路径不存在，继续尝试默认路径
+                pass
 
         # 然后尝试默认路径
         for path in self.DEFAULT_CONFIG_PATHS:
@@ -318,6 +343,7 @@ class ConfigManager:
 
         # 如果都没有找到，返回默认配置
         self._config = Config()
+        self._last_loaded_path = None
         return self._config
 
     def save_to_file(self, path: Union[str, Path], config: Optional[Config] = None) -> None:
@@ -346,6 +372,7 @@ class ConfigManager:
         self._config_cache[path_str] = data
         self._config_mtime[path_str] = path.stat().st_mtime
         self._config_write_count += 1
+        self._last_loaded_path = path_str
 
     def _create_backup(self, path: Path) -> None:
         """创建配置文件备份
@@ -376,6 +403,7 @@ class ConfigManager:
     def reset(self) -> None:
         """重置配置为默认值"""
         self._config = Config()
+        self._last_loaded_path = None
 
     def update(self, **kwargs: Any) -> Config:
         """更新配置
@@ -406,6 +434,14 @@ class ConfigManager:
         """清除配置缓存"""
         self._config_cache.clear()
         self._config_mtime.clear()
+
+    def get_last_loaded_path(self) -> Optional[str]:
+        """获取最后加载的配置文件路径
+
+        Returns:
+            配置文件路径
+        """
+        return self._last_loaded_path
 
 
 def get_config() -> Config:

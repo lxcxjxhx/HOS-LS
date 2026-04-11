@@ -587,10 +587,15 @@ def run_update(zip_path, rag_base=None, limit=None, batch_size=1000, resume_from
         'imported_to_rag': 0,
         'skipped': 0
     }
-    
+
     # 禁用频繁 GC，避免最后卡死
     import gc
     gc.disable()
+
+    # ★ 新增：禁用 RAG 知识库自动整理功能，防止 CVE 数据被错误合并
+    if rag_base:
+        rag_base._auto_consolidate = False
+        logger.info("✅ 已禁用知识库自动整理功能（NVD导入专用，防止CVE数据被错误合并）")
     
     # 断点续传相关
     existing_temp_dir = None

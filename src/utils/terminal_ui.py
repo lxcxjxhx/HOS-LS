@@ -17,9 +17,52 @@ class TerminalUI:
     
     def __init__(self):
         """初始化终端 UI"""
-        self.console = Console()
+        # 优化Rich控制台配置，确保颜色支持
+        from rich.console import ConsoleOptions, RenderableType
+        from rich.theme import Theme
+        
+        # 自定义主题，确保颜色一致性
+        custom_theme = Theme({
+            "prompt": "bold green",
+            "info": "cyan",
+            "success": "green",
+            "warning": "yellow",
+            "error": "bold red",
+            "debug": "dim",
+            "title": "bold cyan",
+            "subtitle": "bold blue"
+        })
+        
+        # 确保启用颜色支持，即使在不支持的终端中也能优雅降级
+        self.console = Console(
+            force_terminal=True, 
+            color_system="auto",
+            theme=custom_theme,
+            highlight=True,
+            emoji=True
+        )
         self.history = []
         self.history_index = -1
+        
+    def is_color_supported(self) -> bool:
+        """检测终端是否支持颜色"""
+        return self.console.color_system is not None
+    
+    def get_supported_colors(self) -> int:
+        """获取终端支持的颜色数量"""
+        return self.console.size.height
+    
+    def print_with_color(self, text: str, style: str = ""):
+        """带颜色打印文本
+        
+        Args:
+            text: 要打印的文本
+            style: Rich样式字符串
+        """
+        if style:
+            self.console.print(f"[{style}]{text}[/{style}]")
+        else:
+            self.console.print(text)
     
     def get_input(self, prompt: str) -> str:
         """获取用户输入
@@ -109,9 +152,28 @@ class TerminalUI:
         from rich.live import Live
         from rich.text import Text
         
-        with Live(Text("[bold cyan][Planner] 正在分析您的请求...[/bold cyan]"), refresh_per_second=10) as live:
-            # 模拟思考过程
+        # 检查颜色支持
+        if self.is_color_supported():
+            with Live(Text("[bold cyan][Planner] 正在分析您的请求...[/bold cyan]"), refresh_per_second=10) as live:
+                # 模拟思考过程
+                import time
+                steps = [
+                    "分析用户意图...",
+                    "构建分析计划...",
+                    "准备执行步骤...",
+                    "调用相应的安全 Agent..."
+                ]
+                
+                for step in steps:
+                    time.sleep(0.5)
+                    live.update(Text(f"[bold cyan][Planner] {step}[/bold cyan]"))
+                
+                time.sleep(0.5)
+                live.update(Text("[bold cyan][Planner] 分析完成，开始执行...[/bold cyan]"))
+        else:
+            # 无颜色模式
             import time
+            print("[Planner] 正在分析您的请求...")
             steps = [
                 "分析用户意图...",
                 "构建分析计划...",
@@ -121,10 +183,10 @@ class TerminalUI:
             
             for step in steps:
                 time.sleep(0.5)
-                live.update(Text(f"[bold cyan][Planner] {step}[/bold cyan]"))
+                print(f"[Planner] {step}")
             
             time.sleep(0.5)
-            live.update(Text("[bold cyan][Planner] 分析完成，开始执行...[/bold cyan]"))
+            print("[Planner] 分析完成，开始执行...")
     
     def show_result(self, result: Dict[str, Any]):
         """显示处理结果
@@ -160,6 +222,8 @@ class TerminalUI:
             self._show_project_summary(result)
         elif result_type == "git_result":
             self._show_git_result(result)
+        elif result_type == "plan_execution_result":
+            self._show_plan_execution_result(result)
         elif "error" in result:
             self._show_error(result)
         else:
@@ -876,18 +940,123 @@ class TerminalUI:
     def show_welcome_banner(self):
         """显示统一交互模式的欢迎横幅"""
         from rich.panel import Panel
-        
+        from rich.text import Text
+
+        content = Text()
+        content.append("  🔒 HOS-LS 智能交互模式\n", style="bold green")
+        content.append("\n")
+        content.append("  ✨ 整合聊天模式 + Agent 编排语言\n", style="dim")
+        content.append("  🤖 支持自然语言 + CLI命令 + Plan管理\n", style="dim")
+        content.append("\n")
+        content.append("  快速开始:\n", style="bold")
+        content.append("  • 输入自然语言: ", style="white")
+        content.append("'扫描当前目录'\n", style="green")
+        content.append("  • 使用CLI命令: ", style="white")
+        content.append("'--full-audit'\n", style="green")
+        content.append("  • 管理执行方案: ", style="white")
+        content.append("'生成审计方案'\n", style="green")
+        content.append("\n")
+        content.append("  输入 '/help' 查看更多命令", style="dim")
+
         banner = Panel(
-            "[bold green]🔒 HOS-LS 智能交互模式[/bold green]\n\n"
-            "[dim]✨ 整合聊天模式 + Agent 编排语言[/dim]\n"
-            "[dim]🤖 支持自然语言 + CLI命令 + Plan管理[/dim]\n\n"
-            "[bold]快速开始:[/bold]\n"
-            "• 输入自然语言: '[green]扫描当前目录[/green]'\n"
-            "• 使用CLI命令: '[green]--full-audit[/green]'\n"
-            "• 管理执行方案: '[green]生成审计方案[/green]'\n\n"
-            "[dim]输入 '/help' 查看更多命令[/dim]",
-            title="Welcome",
+            content,
+            title="[bold cyan]Welcome[/bold cyan]",
             border_style="cyan",
-            padding=(1, 2)
+            padding=(0, 2),
+            width=70
         )
         self.console.print(banner)
+    
+    def _show_plan_execution_result(self, result: Dict[str, Any]):
+        """显示计划执行结果
+        
+        Args:
+            result: 计划执行结果
+        """
+        plan_name = result.get("plan_name", "执行计划")
+        steps = result.get("steps", [])
+        results = result.get("results", [])
+        message = result.get("message", "")
+        
+        # 显示计划概览
+        self.console.print(Panel(
+            f"[bold]计划执行结果[/bold]\n" +
+            f"计划名称: {plan_name}\n" +
+            f"执行步骤: {len(steps)}\n" +
+            f"状态: {message}",
+            border_style="green",
+            title="📋 执行结果概览"
+        ))
+        
+        # 显示执行步骤
+        if steps:
+            self.console.print("\n[bold green]📝 执行步骤:[/bold green]")
+            for i, step in enumerate(steps, 1):
+                self.console.print(f"[cyan]{i}.[/cyan] [green]✓[/green] {step}")
+        
+        # 显示详细结果
+        if results:
+            self.console.print("\n[bold green]📊 详细执行结果:[/bold green]")
+            for i, step_result in enumerate(results, 1):
+                step_type = step_result.get("type", "unknown")
+                step_message = step_result.get("message", "")
+                
+                if step_type == "info_result":
+                    # 显示信息结果（如漏洞扫描原理讲解）
+                    self.console.print(Panel(
+                        step_message,
+                        border_style="cyan",
+                        title=f"步骤 {i}: 信息展示"
+                    ))
+                elif step_type == "scan_result":
+                    # 显示扫描结果
+                    target = step_result.get("target", ".")
+                    mode = step_result.get("mode", "auto")
+                    test_mode = step_result.get("test_mode", False)
+                    test_file_count = step_result.get("test_file_count", 1)
+                    
+                    scan_info = f"目标: {target}\n模式: {mode}\n测试模式: {'是' if test_mode else '否'}\n文件数量: {test_file_count}\n状态: {step_message}"
+                    
+                    self.console.print(Panel(
+                        scan_info,
+                        border_style="blue",
+                        title=f"步骤 {i}: 扫描结果"
+                    ))
+                elif step_type == "module_result":
+                    # 显示模块执行结果
+                    module = step_result.get("module", "unknown")
+                    parameters = step_result.get("parameters", {})
+                    
+                    module_info = f"模块: {module}\n"
+                    if parameters:
+                        module_info += f"参数: {parameters}\n"
+                    module_info += f"状态: {step_message}"
+                    
+                    self.console.print(Panel(
+                        module_info,
+                        border_style="purple",
+                        title=f"步骤 {i}: 模块执行"
+                    ))
+                elif step_type == "report_result":
+                    # 显示报告结果
+                    format = step_result.get("format", "html")
+                    output = step_result.get("output", "./")
+                    
+                    report_info = f"格式: {format}\n输出路径: {output}\n状态: {step_message}"
+                    
+                    self.console.print(Panel(
+                        report_info,
+                        border_style="green",
+                        title=f"步骤 {i}: 报告生成"
+                    ))
+                else:
+                    # 其他类型结果
+                    self.console.print(Panel(
+                        step_message,
+                        border_style="gray",
+                        title=f"步骤 {i}: {step_type}"
+                    ))
+        
+        # 显示完成提示
+        self.console.print("\n[bold green]🎉 计划执行完成！[/bold green]")
+        self.console.print("[dim]您可以查看生成的报告文件以获取详细信息。[/dim]")

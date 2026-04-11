@@ -2029,7 +2029,7 @@ def chat(ctx: click.Context, session: Optional[str], model: Optional[str]) -> No
     
     # 初始化统一交互引擎
     from src.core.unified_interaction_engine import UnifiedInteractionEngine
-    engine = UnifiedInteractionEngine(config, session=session)
+    engine = UnifiedInteractionEngine(config, session_name=session)
     
     # 对话循环
     while True:

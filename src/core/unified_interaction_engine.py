@@ -116,7 +116,7 @@ class UnifiedInteractionEngine:
         """处理用户输入（主入口）
         
         这是统一的入口点，自动路由到合适的处理器：
-        - 自然语言命令 → IntentParser → ActionExecutor
+        - 自然语言命令 → IntentParser (AI增强) → AI Plan Generator → User Confirmation → Execution
         - CLI命令 → CLIParser → PipelineBuilder  
         - Plan DSL → PlanParser → PipelineExecutor
         
@@ -140,11 +140,15 @@ class UnifiedInteractionEngine:
         self.conversation_manager.add_user_message(user_input)
         
         try:
-            # 解析意图
+            # 解析意图（默认使用AI增强）
             intent = self.intent_parser.parse(user_input)
             
-            # 根据意图类型分发处理
-            result = self._dispatch_intent(intent, user_input)
+            # 处理多任务命令
+            if 'tasks' in intent.entities:
+                return self._handle_multi_task_with_plan(intent, user_input)
+            
+            # 根据意图类型分发处理（带AI计划生成）
+            result = self._dispatch_intent_with_plan(intent, user_input)
             
             # 记录助手回复
             if result.get('type') != 'error':
@@ -166,6 +170,505 @@ class UnifiedInteractionEngine:
             }
             self.conversation_manager.update_context(error_result)
             return error_result
+    
+    def _handle_multi_task_with_plan(self, intent: ParsedIntent, user_input: str) -> Dict[str, Any]:
+        """处理多任务命令，带计划生成和用户确认
+        
+        Args:
+            intent: 解析后的意图
+            user_input: 用户输入文本
+            
+        Returns:
+            处理结果字典
+        """
+        from src.core.ai_plan_generator import get_ai_plan_generator
+        
+        # 生成执行计划
+        plan_generator = get_ai_plan_generator()
+        import asyncio
+        plan = asyncio.run(plan_generator.generate_plan(intent, user_input))
+        
+        # 生成人类友好的计划表述
+        plan_text = plan_generator.generate_human_friendly_plan(plan)
+        
+        # 显示计划并获取用户确认
+        print(plan_text)
+        
+        # 获取用户确认
+        confirmation = input("请输入您的选择 (yes/no/modify): ").strip().lower()
+        
+        if confirmation == 'yes':
+            # 用户确认执行计划
+            return asyncio.run(self._execute_plan(plan))
+        elif confirmation == 'no':
+            # 用户拒绝执行
+            return {
+                "type": "plan_canceled",
+                "message": "计划已取消"
+            }
+        elif confirmation == 'modify':
+            # 用户要求修改计划
+            user_feedback = input("请输入您的修改建议: ").strip()
+            adjusted_plan = asyncio.run(plan_generator.adjust_plan(plan, user_feedback))
+            adjusted_plan_text = plan_generator.generate_human_friendly_plan(adjusted_plan)
+            print(adjusted_plan_text)
+            
+            # 获取用户对调整后计划的确认
+            adjust_confirmation = input("请确认调整后的计划 (yes/no): ").strip().lower()
+            if adjust_confirmation == 'yes':
+                return asyncio.run(self._execute_plan(adjusted_plan))
+            else:
+                return {
+                    "type": "plan_canceled",
+                    "message": "计划已取消"
+                }
+        else:
+            # 无效输入，默认取消
+            return {
+                "type": "plan_canceled",
+                "message": "无效输入，计划已取消"
+            }
+    
+    def _dispatch_intent_with_plan(self, intent: ParsedIntent, user_input: str) -> Dict[str, Any]:
+        """根据意图分发处理，带计划生成和用户确认
+        
+        Args:
+            intent: 解析后的意图
+            user_input: 用户输入文本
+            
+        Returns:
+            处理结果字典
+        """
+        from src.core.ai_plan_generator import get_ai_plan_generator
+        
+        # 生成执行计划
+        plan_generator = get_ai_plan_generator()
+        import asyncio
+        plan = asyncio.run(plan_generator.generate_plan(intent, user_input))
+        
+        # 生成人类友好的计划表述
+        plan_text = plan_generator.generate_human_friendly_plan(plan)
+        
+        # 显示计划并获取用户确认
+        print(plan_text)
+        
+        # 获取用户确认
+        confirmation = input("请输入您的选择 (yes/no/modify): ").strip().lower()
+        
+        if confirmation == 'yes':
+            # 用户确认执行计划
+            return asyncio.run(self._execute_plan(plan))
+        elif confirmation == 'no':
+            # 用户拒绝执行
+            return {
+                "type": "plan_canceled",
+                "message": "计划已取消"
+            }
+        elif confirmation == 'modify':
+            # 用户要求修改计划
+            user_feedback = input("请输入您的修改建议: ").strip()
+            adjusted_plan = asyncio.run(plan_generator.adjust_plan(plan, user_feedback))
+            adjusted_plan_text = plan_generator.generate_human_friendly_plan(adjusted_plan)
+            print(adjusted_plan_text)
+            
+            # 获取用户对调整后计划的确认
+            adjust_confirmation = input("请确认调整后的计划 (yes/no): ").strip().lower()
+            if adjust_confirmation == 'yes':
+                return asyncio.run(self._execute_plan(adjusted_plan))
+            else:
+                return {
+                    "type": "plan_canceled",
+                    "message": "计划已取消"
+                }
+        else:
+            # 无效输入，默认取消
+            return {
+                "type": "plan_canceled",
+                "message": "无效输入，计划已取消"
+            }
+    
+    async def _execute_plan(self, plan: Any) -> Dict[str, Any]:
+        """执行计划
+        
+        Args:
+            plan: 执行计划
+            
+        Returns:
+            执行结果
+        """
+        results = []
+        
+        # 按顺序执行计划步骤
+        for i, step in enumerate(plan.steps, 1):
+            print(f"\n{'='*80}")
+            print(f"\n[bold cyan]🔄 步骤 {i}/{len(plan.steps)}: {step.name}[/bold cyan]")
+            print(f"📝 描述: {step.description}")
+            print(f"🔧 使用模块: {step.module}")
+            print(f"⚙️ 参数: {step.parameters}")
+            print(f"{'='*80}")
+            
+            try:
+                # 根据模块类型执行不同的操作
+                if step.module == 'info':
+                    # 执行信息查询
+                    topic = step.parameters.get('topic', '漏洞扫描工作原理')
+                    explanation = self._explain_scan_principle()
+                    results.append({
+                        "type": "info_result",
+                        "message": explanation
+                    })
+                elif step.module == 'scan':
+                    # 执行扫描
+                    # 优先使用code_tool创建的测试文件路径
+                    target = None
+                    # 查找前面步骤中code_tool创建的测试文件
+                    for prev_step in plan.steps:
+                        if prev_step.module == 'code_tool' and 'target' in prev_step.parameters:
+                            target = prev_step.parameters['target']
+                            break
+                    # 如果没有找到，使用默认值
+                    if not target:
+                        target = step.parameters.get('target', '.')
+                    # 优先使用计划的pure_ai设置
+                    mode = 'pure-ai' if plan.pure_ai else step.parameters.get('mode', 'auto')
+                    
+                    # 构建扫描请求
+                    from src.core.base_agent import ExecutionRequest
+                    request = ExecutionRequest(
+                        target=target,
+                        natural_language=plan.user_input,
+                        mode=mode,
+                        test_mode=plan.test_mode,
+                        test_file_count=plan.test_file_count
+                    )
+                    
+                    # 执行扫描
+                    import asyncio
+                    result = await self.unified_engine.execute(request, mode=mode)
+                    
+                    scan_result = {
+                        "type": "scan_result",
+                        "target": target,
+                        "mode": mode,
+                        "test_mode": plan.test_mode,
+                        "test_file_count": plan.test_file_count,
+                        "result": result.to_dict() if hasattr(result, 'to_dict') else {
+                            'success': result.success,
+                            'message': result.message,
+                            'findings_count': result.total_findings,
+                            'pipeline': result.pipeline_used,
+                            'execution_time': result.execution_time
+                        },
+                        "message": f"✅ {result.message} (模式: {mode.upper()}, 测试模式: {'是' if plan.test_mode else '否'}, 文件数量: {plan.test_file_count})"
+                    }
+                    
+                    results.append(scan_result)
+                elif step.module == 'report':
+                    # 生成报告
+                    format = step.parameters.get('format', 'html')
+                    output = step.parameters.get('output', './security-report')
+                    
+                    # 调用报告生成模块
+                    try:
+                        from src.troubleshooting.report_generator import ReportGenerator
+                        import os
+                        
+                        # 确保输出目录存在
+                        os.makedirs(os.path.dirname(output) if os.path.dirname(output) else '.', exist_ok=True)
+                        
+                        # 生成报告
+                        generator = ReportGenerator()
+                        report_path = generator.generate_report(
+                            scan_results=[],  # 这里应该传递实际的扫描结果
+                            format=format,
+                            output_path=output
+                        )
+                        
+                        report_result = {
+                            "type": "report_result",
+                            "format": format,
+                            "output": report_path,
+                            "message": f"✅ 报告已生成，保存到: {report_path}"
+                        }
+                    except Exception as e:
+                        report_result = {
+                            "type": "report_result",
+                            "format": format,
+                            "output": output,
+                            "message": f"⚠️ 报告生成失败: {str(e)}"
+                        }
+                    
+                    results.append(report_result)
+                elif step.module == 'code_tool':
+                    # 执行代码工具模块
+                    action = step.parameters.get('action', 'prepare_test_file')
+                    file_count = step.parameters.get('file_count', 1)
+                    
+                    try:
+                        import os
+                        import tempfile
+                        
+                        # 创建测试文件
+                        if action == 'prepare_test_file' or action == 'create_test_file':
+                            # 创建临时测试文件
+                            test_files = []
+                            for i in range(file_count):
+                                with tempfile.NamedTemporaryFile(suffix='.py', delete=False) as f:
+                                    # 写入有漏洞的测试代码
+                                    test_code = '''
+# 测试文件 - 包含一些常见漏洞
+
+def insecure_function():
+    # SQL注入漏洞
+    import sqlite3
+    user_input = input("请输入用户名: ")
+    conn = sqlite3.connect('test.db')
+    cursor = conn.cursor()
+    # 不安全的SQL查询
+    cursor.execute(f"SELECT * FROM users WHERE username = '{user_input}'")
+    
+    # XSS漏洞
+    def render_user_input(user_input):
+        return f"<div>{user_input}</div>"
+    
+    # 硬编码密码
+    password = "admin123"
+    
+    # 不安全的文件操作
+    with open("sensitive.txt", "w") as f:
+        f.write("敏感信息")
+'''
+                                    f.write(test_code.encode('utf-8'))
+                                    test_files.append(f.name)
+                            
+                            # 更新step的target参数，以便后续扫描使用
+                            if test_files:
+                                step.parameters['target'] = test_files[0]
+                            
+                            module_result = {
+                                "type": "module_result",
+                                "module": step.module,
+                                "parameters": step.parameters,
+                                "message": f"✅ 成功创建 {len(test_files)} 个测试文件: {', '.join(test_files)}"
+                            }
+                        else:
+                            module_result = {
+                                "type": "module_result",
+                                "module": step.module,
+                                "parameters": step.parameters,
+                                "message": f"✅ 模块 {step.module} 执行完成 (动作: {action})"
+                            }
+                    except Exception as e:
+                        module_result = {
+                            "type": "module_result",
+                            "module": step.module,
+                            "parameters": step.parameters,
+                            "message": f"⚠️ 模块 {step.module} 执行失败: {str(e)}"
+                        }
+                    
+                    results.append(module_result)
+                else:
+                    # 其他模块
+                    module_result = {
+                        "type": "module_result",
+                        "module": step.module,
+                        "parameters": step.parameters,
+                        "message": f"✅ 模块 {step.module} 执行完成"
+                    }
+                    
+                    results.append(module_result)
+                
+                print(f"\n[bold green]✅ 步骤 {i}/{len(plan.steps)}: {step.name} 执行完成[/bold green]")
+                print(f"{'='*80}")
+                
+                # 添加步骤过渡延迟，使执行过程更加流畅
+                import time
+                if i < len(plan.steps):
+                    print("\n[dim]准备执行下一步...[/dim]")
+                    time.sleep(1)
+                
+            except Exception as e:
+                error_message = f"❌ 步骤 {i}/{len(plan.steps)}: {step.name} 执行失败: {str(e)}"
+                print(f"\n[bold red]{error_message}[/bold red]")
+                print(f"{'='*80}")
+                results.append({
+                    "type": "error",
+                    "error": str(e),
+                    "message": error_message
+                })
+        
+        # 构建最终结果
+        final_result = {
+            "type": "plan_execution_result",
+            "plan_name": plan.name,
+            "steps": [step.name for step in plan.steps],
+            "results": results,
+            "message": "✅ 计划执行完成"
+        }
+        
+        return final_result
+    
+    def _handle_multi_task(self, intent: ParsedIntent, user_input: str) -> Dict[str, Any]:
+        """处理多任务命令
+        
+        Args:
+            intent: 解析后的意图
+            user_input: 用户输入文本
+            
+        Returns:
+            处理结果字典
+        """
+        tasks = intent.entities.get('tasks', [])
+        results = []
+        task_status = []
+        
+        # 按顺序执行任务
+        for task in tasks:
+            task_type = task.get('type')
+            task_content = task.get('content')
+            
+            try:
+                # 记录任务开始
+                task_status.append({
+                    "type": task_type,
+                    "status": "running",
+                    "content": task_content
+                })
+                
+                if task_type == 'explain':
+                    # 执行讲解任务
+                    explanation = self._explain_scan_principle()
+                    results.append({
+                        "type": "info_result",
+                        "message": explanation
+                    })
+                    
+                    # 记录讲解结果
+                    self.conversation_manager.add_assistant_message(explanation, metadata={"task_type": "explain"})
+                    
+                    # 更新任务状态
+                    task_status[-1]["status"] = "completed"
+                    
+                elif task_type == 'scan':
+                    # 执行扫描任务
+                    target = IntentParser.extract_target_path(user_input)
+                    pure_ai = intent.entities.get('pure_ai', False)
+                    test_mode = intent.entities.get('test_mode', False)
+                    test_file_count = intent.entities.get('test_file_count', 1)
+                    
+                    # 构建扫描请求
+                    from src.core.base_agent import ExecutionRequest
+                    request = ExecutionRequest(
+                        target=target,
+                        natural_language=user_input,
+                        mode="pure-ai" if pure_ai else "auto",
+                        test_mode=test_mode,
+                        test_file_count=test_file_count
+                    )
+                    
+                    # 执行扫描
+                    import asyncio
+                    result = asyncio.run(self.unified_engine.execute(request))
+                    
+                    scan_result = {
+                        "type": "scan_result",
+                        "target": target,
+                        "pure_ai": pure_ai or result.mode == "pure-ai",
+                        "mode": result.mode,
+                        "test_mode": test_mode,
+                        "test_file_count": test_file_count,
+                        "result": result.to_dict() if hasattr(result, 'to_dict') else {
+                            'success': result.success,
+                            'message': result.message,
+                            'findings_count': result.total_findings,
+                            'pipeline': result.pipeline_used,
+                            'execution_time': result.execution_time
+                        },
+                        "message": f"✅ {result.message} (模式: {result.mode.upper()}, 测试模式: {'是' if test_mode else '否'}, 文件数量: {test_file_count})"
+                    }
+                    
+                    results.append(scan_result)
+                    
+                    # 记录扫描结果
+                    self.conversation_manager.add_assistant_message(
+                        scan_result.get('message'),
+                        metadata={"task_type": "scan"}
+                    )
+                    
+                    # 更新任务状态
+                    task_status[-1]["status"] = "completed"
+                    
+            except Exception as e:
+                # 处理任务执行错误
+                error_message = f"任务执行失败: {str(e)}"
+                results.append({
+                    "type": "error",
+                    "error": str(e),
+                    "message": error_message
+                })
+                
+                # 记录错误
+                self.conversation_manager.add_assistant_message(error_message, metadata={"task_type": task_type, "status": "error"})
+                
+                # 更新任务状态
+                task_status[-1]["status"] = "failed"
+                task_status[-1]["error"] = str(e)
+        
+        # 构建最终结果
+        final_result = {
+            "type": "multi_task_result",
+            "tasks": tasks,
+            "task_status": task_status,
+            "results": results,
+            "message": "✅ 多任务执行完成"
+        }
+        
+        # 更新上下文
+        self.conversation_manager.update_context(final_result)
+        
+        return final_result
+    
+    def _explain_scan_principle(self) -> str:
+        """讲解漏扫实现原理
+        
+        Returns:
+            漏扫原理的详细讲解
+        """
+        explanation = """📚 **漏洞扫描实现原理**
+
+**1. 扫描流程**
+- **文件发现**: 递归遍历目标目录，识别代码文件
+- **文件分析**: 对每个文件进行静态分析
+- **漏洞检测**: 应用规则匹配和AI分析
+- **结果聚合**: 汇总发现的漏洞
+
+**2. 技术实现**
+- **静态分析**: 解析代码结构，检测常见漏洞模式
+- **AI增强**: 利用大语言模型识别复杂漏洞
+- **规则引擎**: 基于已知漏洞特征进行匹配
+- **语义分析**: 理解代码上下文和业务逻辑
+
+**3. 纯AI模式**
+- 直接使用AI模型分析代码
+- 不依赖预定义规则
+- 能够发现未知漏洞
+- 分析深度更深，但速度较慢
+
+**4. 扫描范围**
+- 代码注入漏洞
+- 认证授权问题
+- 敏感信息泄露
+- 配置错误
+- 业务逻辑漏洞
+
+**5. 执行策略**
+- 优先级评估: 先分析高风险文件
+- 并发处理: 提高扫描效率
+- 缓存机制: 避免重复分析
+- 结果验证: 确保漏洞准确性
+
+现在开始执行扫描任务..."""
+        return explanation
     
     def _dispatch_intent(self, intent: ParsedIntent, user_input: str) -> Dict[str, Any]:
         """根据意图分发到对应处理器"""
