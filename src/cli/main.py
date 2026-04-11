@@ -308,6 +308,11 @@ def cli(ctx: click.Context, config: Optional[str], verbose: bool, quiet: bool, d
               help="深度服务识别 (Banner抓取+版本检测)")
 @click.option("--network-topology", type=click.Path(),
               help="网络拓扑配置文件 (定义复杂网络环境)")
+# Phase 2 核心机制参数（新增）
+@click.option("--resume", is_flag=True, help="从上次中断的断点恢复扫描")
+@click.option("--checkpoint-id", type=str, help="指定要恢复的断点ID")
+@click.option("--full-scan", is_flag=True, help="强制全量扫描（忽略增量索引）")
+@click.option("--index-status", is_flag=True, help="显示当前项目索引状态后退出")
 @click.pass_context
 def scan(
     ctx: click.Context,
@@ -388,6 +393,11 @@ def scan(
     discover_hosts: bool,
     deep_service_id: bool,
     network_topology: Optional[str],
+    # Phase 2 核心机制参数（新增）
+    resume: bool,
+    checkpoint_id: Optional[str],
+    full_scan: bool,
+    index_status: bool,
 ) -> None:
     """扫描代码安全漏洞（支持本地、远程和企业内网）
     
@@ -411,6 +421,16 @@ def scan(
     设备扫描: hos-ls scan --target-type direct-connect --serial-port COM3
     """
     config: Config = ctx.obj["config"]
+    
+    # 🔥🔥🔥 Phase 2: 索引状态显示（新增）
+    if index_status:
+        _show_index_status(target, console)
+        return
+    
+    # 🔥🔥🔥 Phase 2: 断点续扫处理（新增）
+    if resume:
+        _handle_resume_scan(target, checkpoint_id, config, console)
+        return
     
     # 处理Plan选项
     if plan:
@@ -2086,6 +2106,273 @@ def chat(ctx: click.Context, session: Optional[str], model: Optional[str]) -> No
 
 # 添加plan命令组
 cli.add_command(plan)
+
+
+# 🔥🔥🔥 Phase 2: 增量索引管理命令组（新增）
+@cli.group()
+def index() -> None:
+    """增量索引管理命令
+    
+    管理项目的增量扫描索引，提高重复扫描效率。
+    
+    示例：
+    \b
+    hos-ls index status ./project      查看索引状态
+    hos-ls index rebuild ./project     重建索引
+    """
+    pass
+
+
+@index.command("status")
+@click.argument("target", required=False, default=".")
+def index_status(target: str) -> None:
+    """显示项目增量索引状态
+    
+    显示当前项目的文件索引信息，包括：
+    - 已索引文件数量
+    - 最后更新时间
+    - 变更统计（新增/修改/删除）
+    - 预计扫描时间节省
+    """
+    _show_index_status(target, console)
+
+
+@index.command("rebuild")
+@click.argument("target", required=False, default=".")
+@click.option("--force", "-f", is_flag=True, help="强制重建，即使索引存在")
+def index_rebuild(target: str, force: bool) -> None:
+    """重建项目增量索引
+    
+    重新扫描目标目录并建立/更新增量索引。
+    重建后，后续扫描将只分析变更的文件。
+    
+    使用场景：
+    - 索引损坏或数据不一致
+    - 项目结构发生重大变化
+    - 首次使用增量扫描功能
+    """
+    from pathlib import Path
+    from rich.progress import Progress, SpinnerColumn, BarColumn, TextColumn
+    
+    target_path = Path(target).resolve()
+    
+    if not target_path.exists():
+        console.print(f"[bold red]错误: 目标路径不存在: {target}[/bold red]")
+        sys.exit(1)
+    
+    console.print(Panel(
+        f"[bold cyan]🔄 重建增量索引[/bold cyan]\n"
+        f"目标: {target_path}\n"
+        f"模式: {'强制重建' if force else '智能更新'}",
+        border_style="cyan"
+    ))
+    
+    try:
+        from src.utils.incremental_index import IncrementalIndexManager
+        
+        with Progress(
+            SpinnerColumn(),
+            BarColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            console=console
+        ) as progress:
+            task = progress.add_task("[cyan]正在建立索引...", total=None)
+            
+            index_manager = IncrementalIndexManager()
+            
+            if force:
+                result = index_manager.build_full_index(str(target_path))
+            else:
+                result = index_manager.update_index(str(target_path))
+            
+            progress.update(task, completed=True)
+        
+        # 显示结果
+        _display_index_rebuild_result(result, console)
+        
+    except ImportError:
+        console.print("[yellow]警告: 增量索引模块未安装，请确保依赖完整[/yellow]")
+        sys.exit(2)
+    except Exception as e:
+        console.print(f"[bold red]索引重建失败: {e}[/bold red]")
+        if config_debug := ctx.obj.get("config"):
+            if config_debug.debug:
+                import traceback
+                traceback.print_exc()
+        sys.exit(1)
+
+
+def _show_index_status(target: str, console: Console) -> None:
+    """显示项目索引状态的内部实现"""
+    from pathlib import Path
+    from rich.table import Table
+    
+    target_path = Path(target).resolve()
+    
+    if not target_path.exists():
+        console.print(f"[bold red]错误: 目标路径不存在: {target}[/bold red]")
+        sys.exit(1)
+    
+    try:
+        from src.utils.incremental_index import IncrementalIndexManager
+        
+        index_manager = IncrementalIndexManager()
+        status = index_manager.get_index_status(str(target_path))
+        
+        if not status.get('exists', False):
+            console.print(Panel(
+                "[bold yellow]⚠️ 未找到增量索引[/bold yellow]\n\n"
+                "该项目尚未建立增量索引。\n"
+                "首次扫描时会自动创建索引。\n\n"
+                "[dim]提示: 使用 'hos-ls index rebuild' 手动创建索引[/dim]",
+                border_style="yellow"
+            ))
+            return
+        
+        # 创建状态表格
+        table = Table(title=f"📊 增量索引状态 - {target_path.name}")
+        table.add_column("项目", style="cyan")
+        table.add_column("值", style="green")
+        
+        table.add_row("📁 索引路径", str(status.get('index_path', 'N/A')))
+        table.add_row("📄 已索引文件数", str(status.get('total_files', 0)))
+        table.add_row("🕐 最后更新", str(status.get('last_updated', 'N/A')))
+        table.add_row("📦 索引大小", f"{status.get('index_size_bytes', 0) / 1024:.1f} KB")
+        
+        # 变更统计
+        changes = status.get('changes', {})
+        if changes:
+            table.add_row("➕ 新增文件", str(changes.get('added', 0)))
+            table.add_row("✏️ 修改文件", str(changes.get('modified', 0)))
+            table.add_row("➖ 删除文件", str(changes.get('deleted', 0)))
+        
+        console.print(table)
+        
+        # 显示变更详情
+        if changes and any(changes.values()):
+            change_table = Table(title="📋 变更文件列表")
+            change_table.add_column("类型", style="cyan")
+            change_table.add_column("文件路径", style="white")
+            
+            for change_type, files in changes.items():
+                if files and change_type in ['added', 'modified', 'deleted']:
+                    type_icon = {"added": "➕", "modified": "✏️", "deleted": "➖"}.get(change_type, "•")
+                    for file_path in files[:10]:  # 只显示前10个
+                        change_table.add_row(f"{type_icon} {change_type}", file_path)
+                    if len(files) > 10:
+                        change_table.add_row("...", f"... 还有 {len(files) - 10} 个文件")
+            
+            if change_table.rows:
+                console.print(change_table)
+        
+        # 性能预估
+        if status.get('estimated_time_saving'):
+            saving = status['estimated_time_saving']
+            console.print(f"\n[bold green]⚡ 预计可节省 ~{saving:.0f}秒 扫描时间[/bold green]")
+        
+    except ImportError:
+        console.print("[yellow]警告: 增量索引模块未安装[/yellow]")
+    except Exception as e:
+        console.print(f"[bold red]获取索引状态失败: {e}[/bold red]")
+
+
+def _handle_resume_scan(target: str, checkpoint_id: Optional[str], 
+                        config: Config, console: Console) -> None:
+    """处理断点续扫请求"""
+    from pathlib import Path
+    from rich.panel import Panel
+    
+    target_path = Path(target).resolve()
+    
+    try:
+        from src.core.checkpoint_manager import CheckpointManager
+        
+        checkpoint_mgr = CheckpointManager(base_dir=str(target_path))
+        
+        # 获取可用断点
+        if checkpoint_id:
+            checkpoint = checkpoint_mgr.load_checkpoint(checkpoint_id)
+            if not checkpoint:
+                console.print(f"[bold red]错误: 未找到断点 ID: {checkpoint_id}[/bold red]")
+                sys.exit(1)
+        else:
+            # 自动查找最新断点
+            checkpoint = checkpoint_mgr.get_latest_checkpoint(target=str(target_path))
+            if not checkpoint:
+                console.print(Panel(
+                    "[bold yellow]⚠️ 未找到可恢复的断点[/bold yellow]\n\n"
+                    "没有找到可以恢复的扫描断点。\n"
+                    "可能的原因：\n"
+                    "• 该项目之前从未进行过扫描\n"
+                    "• 上次扫描正常完成，已自动清理断点\n"
+                    "• 断点文件已被手动删除\n\n"
+                    "[dim]建议: 使用普通扫描模式开始新的扫描[/dim]",
+                    border_style="yellow"
+                ))
+                return
+        
+        # 显示断点信息
+        progress = checkpoint.scan_progress
+        console.print(Panel(
+            f"[bold green]🔄 发现可恢复的断点[/bold green]\n\n"
+            f"📝 断点ID: {checkpoint.checkpoint_id[:8]}...\n"
+            f"📊 扫描进度: {progress.processed_files}/{progress.total_files} "
+            f"({(progress.processed_files/progress.total_files*100):.1f}%)\n"
+            f"🐛 已发现问题: {progress.issues_found}\n"
+            f"🕐 断点时间: {checkpoint.created_at.strftime('%Y-%m-%d %H:%M:%S')}\n\n"
+            f"[dim]准备从断点位置继续扫描...[/dim]",
+            border_style="green"
+        ))
+        
+        # 执行恢复扫描
+        import asyncio
+        from src.core.unified_interaction_engine import UnifiedInteractionEngine
+        
+        engine = UnifiedInteractionEngine(config)
+        
+        console.print("\n[bold cyan]⚡ 正在恢复扫描...[/bold cyan]")
+        
+        result = asyncio.run(engine.resume_from_checkpoint(
+            target=str(target_path),
+            checkpoint=checkpoint,
+            config=config
+        ))
+        
+        # 显示结果
+        if result.success:
+            console.print(f"\n[bold green]✅ 扫描完成！共发现 {result.total_findings} 个问题[/bold green]")
+        else:
+            console.print(f"\n[yellow]扫描完成，但可能存在部分问题: {result.message}[/yellow]")
+        
+    except ImportError:
+        console.print("[yellow]警告: 断点管理模块未安装[/yellow]")
+    except Exception as e:
+        console.print(f"[bold red]断点恢复失败: {e}[/bold red]")
+        if config.debug:
+            import traceback
+            traceback.print_exc()
+        sys.exit(1)
+
+
+def _display_index_rebuild_result(result: Dict[str, Any], console: Console) -> None:
+    """显示索引重建结果"""
+    from rich.table import Table
+    
+    success = result.get('success', False)
+    
+    if success:
+        table = Table(title="✅ 索引重建成功")
+        table.add_column("指标", style="cyan")
+        table.add_column("值", style="green")
+        
+        table.add_row("📄 总文件数", str(result.get('total_files', 0)))
+        table.add_row("⏱️ 用时", f"{result.get('duration_seconds', 0):.2f}秒")
+        table.add_row("📦 索引大小", f"{result.get('index_size_bytes', 0) / 1024:.1f} KB")
+        
+        console.print(table)
+        console.print("\n[bold green]💡 后续扫描将自动使用增量模式，显著提升速度！[/bold green]")
+    else:
+        console.print(f"[bold red]❌ 索引重建失败: {result.get('error', '未知错误')}[/bold red]")
 
 
 def main() -> None:

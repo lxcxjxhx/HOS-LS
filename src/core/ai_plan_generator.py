@@ -162,64 +162,192 @@ class AIPlanGenerator:
             if key != 'tasks':
                 entities_info += f"{key}: {value}\n"
         
-        # 使用format方法构建提示词
-        prompt = """你是一个专业的安全扫描计划生成专家。根据用户的需求，生成详细的执行计划。
+        # 使用format方法构建提示词（智能增强版）
+        prompt = """你是一个**资深安全扫描专家兼AI助手**，具有丰富的实战经验。你的任务是根据用户需求生成**最优、最简洁、最高效**的执行计划。
 
-用户输入: {user_input}
+## 📥 用户输入
+{user_input}
 
-解析后的意图: {intent_type}
-
-识别到的任务:
+## 🔍 意图分析
+- **意图类型**: {intent_type}
+- **识别到的任务**:
 {tasks_info}
-
-识别到的实体:
+- **关键实体**:
 {entities_info}
 
-可用的功能模块:
+## 🛠️ 可用功能模块
 {available_modules}
 
-请生成一个详细的执行计划，包括：
-1. 计划名称和描述
-2. 执行步骤（按顺序）
-3. 每个步骤使用的模块和参数
-4. 步骤之间的依赖关系
-5. 每个步骤的估计执行时间
-6. 是否使用纯AI模式
-7. 是否为测试模式及文件数量
+---
 
-重要提示：
-- 对于相关的任务，如"分析扫描结果并生成报告"，应该合并为一个步骤，而不是拆分成多个步骤
-- 避免创建不必要的步骤，确保计划简洁明了
-- 优先使用已有的功能模块，不要创建不存在的模块
+## 🎯 核心设计原则（必须严格遵守）
 
-请返回JSON格式:
+### 1️⃣ **步骤精简原则**
+✅ **推荐**: 将相关操作合并为单个步骤
+- "扫描并生成报告" → 1个步骤（module: scan, 参数包含 auto_report: true）
+- "创建测试文件然后扫描" → 2个步骤（code_tool → scan）
+  
+❌ **禁止**: 不必要的步骤拆分
+- 不要将"扫描结果分析"拆成"获取结果→解析结果→展示结果"3个步骤
+- 不要添加"初始化环境"、"准备配置"等无实质操作的步骤
+
+### 2️⃣ **意图推断规则**
+当用户使用以下表达时，自动推断隐含参数：
+
+| 用户表达 | 推断的参数 |
+|---------|-----------|
+| "快速"、"简单"、"试试"、"测试一下" | test_mode=true, file_count=1 |
+| "纯AI"、"AI模式"、"深度分析" | pure_ai=true |
+| "全面"、"完整"、"详细" | test_mode=false, 扫描全部文件 |
+| "帮我看看"、"查查有没有问题" | 默认scan + 简要报告 |
+
+### 3️⃣ **模块选择指南**
+
+#### scan模块（代码安全扫描）
+- **适用场景**: 所有涉及漏洞检测、安全检查、代码审计的任务
+- **参数说明**:
+  - target: 目标路径（默认"."）
+  - mode: "auto"(标准) / "pure-ai"(纯净AI)
+  - test_mode: 是否测试模式
+  - test_file_count: 测试模式下扫描的文件数
+
+#### report模块（报告生成）
+- **适用场景**: 用户明确要求生成报告时
+- **注意**: 如果用户说"扫描并报告"，优先在scan步骤中设置 auto_report=true，而非单独添加report步骤
+- **参数**: format (html/json/markdown), output (输出路径)
+
+#### code_tool模块（代码工具）
+- **适用场景**: 需要创建测试文件、准备测试数据
+- **参数**: action ("prepare_test_file"), file_count
+
+#### info模块（信息查询）
+- **适用场景**: 解释原理、提供帮助、教学性内容
+- **参数**: topic (主题)
+
+### 4️⃣ **典型场景示例**
+
+#### 示例1: "帮我快速测试一下这个项目"
+```json
 {
-  "name": "计划名称",
-  "description": "计划描述",
+  "name": "快速安全测试",
   "steps": [
     {
       "id": "step1",
-      "name": "步骤名称",
-      "description": "步骤描述",
-      "module": "使用的模块",
+      "name": "快速安全扫描",
+      "description": "使用纯净AI模式对项目进行快速安全测试",
+      "module": "scan",
       "parameters": {
-        "参数名": "参数值"
+        "target": ".",
+        "mode": "pure-ai",
+        "test_mode": true,
+        "test_file_count": 1,
+        "auto_report": true
       },
-      "dependencies": ["依赖的步骤ID"],
+      "dependencies": [],
+      "estimated_time": 30
+    }
+  ],
+  "pure_ai": true,
+  "test_mode": true,
+  "test_file_count": 1
+}
+```
+
+#### 示例2: "解释漏洞扫描原理然后扫描当前目录"
+```json
+{
+  "name": "原理讲解与安全扫描",
+  "steps": [
+    {
+      "id": "step1", 
+      "name": "讲解漏洞扫描原理",
+      "description": "详细解释HOS-LS的漏洞扫描实现机制",
+      "module": "info",
+      "parameters": {"topic": "漏洞扫描工作原理"},
+      "dependencies": [],
+      "estimated_time": 30
+    },
+    {
+      "id": "step2",
+      "name": "执行项目安全扫描",
+      "description": "对当前目录进行全面的安全扫描",
+      "module": "scan",
+      "parameters": {"target": ".", "mode": "auto"},
+      "dependencies": ["step1"],
+      "estimated_time": 120
+    }
+  ],
+  "pure_ai": false,
+  "test_mode": false
+}
+```
+
+#### 示例3: "分析扫描结果并生成简洁报告"
+```json
+{
+  "name": "扫描分析与报告生成",
+  "steps": [
+    {
+      "id": "step1",
+      "name": "扫描并生成报告",
+      "description": "执行安全扫描并自动生成简洁的报告",
+      "module": "scan",
+      "parameters": {
+        "target": ".",
+        "mode": "pure-ai",
+        "auto_report": true,
+        "report_format": "brief",
+        "output_path": "./security-report"
+      },
+      "dependencies": [],
       "estimated_time": 60
     }
   ],
-  "estimated_total_time": 300,
+  "pure_ai": true,
+  "test_mode": false
+}
+```
+
+---
+
+## 📤 输出格式要求
+
+请返回**严格的JSON格式**（不要包含任何其他文字、注释或markdown标记）:
+
+```json
+{
+  "name": "计划名称（简洁明了）",
+  "description": "一句话描述计划目标",
+  "steps": [
+    {
+      "id": "step1",
+      "name": "步骤名称（动词开头）",
+      "description": "详细描述该步骤要做什么",
+      "module": "从可用模块中选择",
+      "parameters": {
+        "参数名": "根据模块文档填写"
+      },
+      "dependencies": ["依赖的前置步骤ID，无依赖则为空数组"],
+      "estimated_time": 预估秒数（参考：info=30s, scan=60-180s, report=30s）
+    }
+  ],
+  "estimated_total_time": 总时间（所有步骤时间之和）,
   "pure_ai": true/false,
   "test_mode": true/false,
-  "test_file_count": 1
+  "test_file_count": 数字
 }
+```
 
-只返回JSON，不要其他内容。""".format(
+⚠️ **最后提醒**:
+1. 步骤数量控制在2-4个以内（除非确实需要更多）
+2. 每个步骤必须有明确的实际操作意义
+3. 不要创造不存在的模块或参数
+4. 合理估计执行时间
+5. 优先考虑用户体验和执行效率""".format(
             user_input=user_input,
             intent_type=intent.type.value,
-            tasks_info=tasks_info,
-            entities_info=entities_info,
+            tasks_info=tasks_info if tasks_info else "  （未识别到具体子任务，请根据用户输入推断）",
+            entities_info=entities_info if entities_info else "  （未识别到特殊实体）",
             available_modules=', '.join(available_modules)
         )
         

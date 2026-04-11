@@ -12,6 +12,7 @@
 from typing import Dict, Any, Optional, List
 import asyncio
 import os
+from datetime import datetime
 
 from src.core.config import Config
 from src.core.conversation_manager import ConversationManager
@@ -288,7 +289,7 @@ class UnifiedInteractionEngine:
             }
     
     async def _execute_plan(self, plan: Any) -> Dict[str, Any]:
-        """执行计划
+        """执行计划（支持断点续扫）
         
         Args:
             plan: 执行计划
@@ -298,8 +299,90 @@ class UnifiedInteractionEngine:
         """
         results = []
         
-        # 按顺序执行计划步骤
-        for i, step in enumerate(plan.steps, 1):
+        # 初始化断点续扫管理器
+        from src.core.checkpoint_manager import CheckpointManager, get_checkpoint_manager
+        checkpoint_manager = get_checkpoint_manager()
+        
+        # 初始化增量索引管理器
+        from src.utils.incremental_index import IncrementalIndexManager, get_incremental_index_manager
+        index_manager = get_incremental_index_manager()
+        incremental_plan = None  # 将在扫描步骤中使用
+        
+        # 检查是否有可恢复的Checkpoint
+        plan_id = getattr(plan, 'id', f"plan_{id(plan)}")
+        existing_checkpoint = await checkpoint_manager.load_latest_checkpoint(plan_id)
+        
+        start_step_index = 0
+        
+        if existing_checkpoint:
+            # 发现已有Checkpoint，询问用户是否恢复
+            print(f"\n{'='*80}")
+            print(f"\n[bold yellow]💾 发现已保存的CheckPoint[/bold yellow]")
+            print(f"   📅 保存时间: {existing_checkpoint.timestamp.strftime('%Y-%m-%d %H:%M:%S')}")
+            print(f"   📍 上次位置: 第{existing_checkpoint.current_step_index + 1}步/{existing_checkpoint.total_steps}步")
+            
+            if existing_checkpoint.scan_progress:
+                print(f"\n   {existing_checkpoint.scan_progress.to_summary()}")
+            
+            print(f"\n{'='*80}")
+            
+            user_choice = input("\n是否从上次中断的位置继续？(y/n/查看详情d): ").strip().lower()
+            
+            if user_choice == 'y' or user_choice == 'yes':
+                # 恢复Checkpoint
+                restore_result = await checkpoint_manager.restore_from_checkpoint(existing_checkpoint.checkpoint_id)
+                
+                if restore_result.success:
+                    print(f"\n[bold green]✅ {restore_result.message}[/bold green]")
+                    print(f"   ▶️ 从第{restore_result.resumed_step_index + 1}步继续执行")
+                    
+                    # 恢复已完成步骤的结果
+                    if existing_checkpoint.completed_results:
+                        results.extend(existing_checkpoint.completed_results.get('results', []))
+                    
+                    start_step_index = restore_result.resumed_index + 1
+                else:
+                    print(f"\n[bold red]❌ 恢复失败: {restore_result.message}[/bold red]")
+                    print("   将从头开始执行...")
+                    start_step_index = 0
+                    
+            elif user_choice == 'd' or user_choice == 'details':
+                # 显示Checkpoint详细信息
+                print(f"\n📋 CheckPoint详细信息:")
+                print(f"   ID: {existing_checkpoint.checkpoint_id}")
+                print(f"   任务类型: {existing_checkpoint.task_type}")
+                print(f"   元数据: {existing_checkpoint.metadata}")
+                
+                # 列出所有Checkpoint
+                all_ckpts = checkpoint_manager.list_all_checkpoints()
+                if len(all_ckpts) > 1:
+                    print(f"\n📚 其他可用Checkpoint:")
+                    for ckpt in all_ckpts[:5]:
+                        if ckpt['id'] != existing_checkpoint.checkpoint_id:
+                            print(f"   • [{ckpt['id'][:16]}...] {ckpt['task_type']} - 步骤{ckpt['step']}")
+                
+                user_choice2 = input("\n选择一个Checkpoint恢复（输入ID）或按回车从头开始: ").strip()
+                
+                if user_choice2 and user_choice2 != '':
+                    restore_result = await checkpoint_manager.restore_from_checkpoint(user_choice2)
+                    if restore_result.success:
+                        start_step_index = restore_result.resumed_step_index + 1
+                        if existing_checkpoint.completed_results:
+                            results.extend(existing_checkpoint.completed_results.get('results', []))
+                    else:
+                        print(f"⚠️ 无法恢复指定的Checkpoint，从头开始...")
+                        start_step_index = 0
+                else:
+                    start_step_index = 0
+            else:
+                # 用户选择不恢复
+                print("\nℹ️ 从头开始执行...")
+                start_step_index = 0
+        
+        # 按顺序执行计划步骤（从start_step_index开始）
+        for i, step in enumerate(plan.steps[start_step_index:], start=start_step_index + 1):
+            actual_index = i - 1  # 实际在列表中的索引（从0开始）
+            
             print(f"\n{'='*80}")
             print(f"\n[bold cyan]🔄 步骤 {i}/{len(plan.steps)}: {step.name}[/bold cyan]")
             print(f"📝 描述: {step.description}")
@@ -332,6 +415,36 @@ class UnifiedInteractionEngine:
                     # 优先使用计划的pure_ai设置
                     mode = 'pure-ai' if plan.pure_ai else step.parameters.get('mode', 'auto')
                     
+                    # ========== 增量索引优化 ==========
+                    use_incremental = False
+                    try:
+                        # 初始化项目索引（如果尚未初始化）
+                        await index_manager.initialize_for_project(target)
+                        
+                        # 获取增量扫描计划
+                        incremental_plan = await index_manager.get_incremental_scan_plan()
+                        
+                        # 判断是否应该使用增量模式
+                        if incremental_plan.has_changes and incremental_plan.should_use_incremental:
+                            use_incremental = True
+                            
+                            print(f"\n[bold yellow]⚡ 增量扫描模式已启用[/bold yellow]")
+                            print(f"   {incremental_plan.change_stats.to_summary()}")
+                            print(f"   📁 需要扫描: {len(incremental_plan.files_to_scan)} 个文件")
+                            print(f"   ⏭️ 可跳过: {len(incremental_plan.files_to_skip)} 个文件")
+                            print(f"   ⏱️ 预计节省: ~{incremental_plan.estimated_time_saving:.0f}秒")
+                            
+                            # 将增量信息传递给扫描请求
+                            if 'target_files' not in step.parameters:
+                                step.parameters['target_files'] = incremental_plan.files_to_scan
+                            if 'skip_files' not in step.parameters:
+                                step.parameters['skip_files'] = incremental_plan.files_to_skip
+                                
+                    except Exception as idx_err:
+                        print(f"[dim]⚠️ 增量索引初始化失败，将使用全量扫描: {str(idx_err)}[/dim]")
+                        use_incremental = False
+                    # ====================================
+                    
                     # 构建扫描请求
                     from src.core.base_agent import ExecutionRequest
                     request = ExecutionRequest(
@@ -339,12 +452,35 @@ class UnifiedInteractionEngine:
                         natural_language=plan.user_input,
                         mode=mode,
                         test_mode=plan.test_mode,
-                        test_file_count=plan.test_file_count
+                        test_file_count=plan.test_file_count,
+                        use_incremental=use_incremental,
+                        target_files=step.parameters.get('target_files') if use_incremental else None,
+                        skip_files=step.parameters.get('skip_files') if use_incremental else None
                     )
                     
                     # 执行扫描
                     import asyncio
+                    print(f"\n[bold cyan]⏳ 正在执行扫描...[/bold cyan]")
                     result = await self.unified_engine.execute(request, mode=mode)
+                    
+                    # 更新扫描进度到Checkpoint
+                    if hasattr(result, 'total_files') and hasattr(result, 'processed_files'):
+                        await checkpoint_manager.update_scan_progress(
+                            current_file=getattr(result, 'current_file', None),
+                            processed_count=getattr(result, 'processed_files', 0),
+                            total_files=getattr(result, 'total_files', 0),
+                            issues_found=getattr(result, 'total_findings', 0)
+                        )
+                        
+                        # 显示当前进度
+                        progress_summary = checkpoint_manager.get_progress_summary()
+                        if progress_summary:
+                            print(f"\n[dim]{progress_summary}[/dim]")
+                        
+                        # 自动保存Checkpoint（如果达到间隔）
+                        saved_ckpt_id = await checkpoint_manager.auto_save_if_needed()
+                        if saved_ckpt_id:
+                            print(f"[dim]💾 进度已自动保存 (Checkpoint: {saved_ckpt_id[:16]}...)[/dim]")
                     
                     scan_result = {
                         "type": "scan_result",
@@ -352,6 +488,7 @@ class UnifiedInteractionEngine:
                         "mode": mode,
                         "test_mode": plan.test_mode,
                         "test_file_count": plan.test_file_count,
+                        "incremental_mode": use_incremental,
                         "result": result.to_dict() if hasattr(result, 'to_dict') else {
                             'success': result.success,
                             'message': result.message,
@@ -359,8 +496,33 @@ class UnifiedInteractionEngine:
                             'pipeline': result.pipeline_used,
                             'execution_time': result.execution_time
                         },
-                        "message": f"✅ {result.message} (模式: {mode.upper()}, 测试模式: {'是' if plan.test_mode else '否'}, 文件数量: {plan.test_file_count})"
+                        "message": f"✅ {result.message} (模式: {mode.upper()}, {'增量' if use_incremental else '全量'}, 测试模式: {'是' if plan.test_mode else '否'}, 文件数量: {plan.test_file_count})"
                     }
+                    
+                    # 更新增量索引（如果使用了增量模式）
+                    if use_incremental and incremental_plan:
+                        try:
+                            # 提取扫描结果用于更新索引
+                            analyzed_files = getattr(result, 'analyzed_files', incremental_plan.files_to_scan)
+                            scan_results_data = {}
+                            
+                            if hasattr(result, 'findings') and result.findings:
+                                for finding in result.findings:
+                                    if hasattr(finding, 'file_path'):
+                                        scan_results_data[finding.file_path] = {
+                                            'issues': [finding],
+                                            'risk_score': getattr(finding, 'severity', 5.0)
+                                        }
+                            
+                            await index_manager.update_index_after_scan(
+                                analyzed_files=analyzed_files,
+                                results=scan_results_data
+                            )
+                            
+                            print(f"[dim]💾 增量索引已更新[/dim]")
+                            
+                        except Exception as idx_update_err:
+                            print(f"[dim]⚠️ 索引更新失败（不影响扫描结果）: {str(idx_update_err)}[/dim]")
                     
                     results.append(scan_result)
                 elif step.module == 'report':
@@ -481,6 +643,23 @@ def insecure_function():
                 print(f"\n[bold green]✅ 步骤 {i}/{len(plan.steps)}: {step.name} 执行完成[/bold green]")
                 print(f"{'='*80}")
                 
+                # 步骤完成后保存Checkpoint（关键步骤）
+                try:
+                    await checkpoint_manager.create_checkpoint(
+                        task_type=step.module,
+                        plan_id=plan_id,
+                        step_index=actual_index,
+                        total_steps=len(plan.steps),
+                        step_status="completed",
+                        results={'results': results},
+                        metadata={
+                            'mode': getattr(plan, 'pure_ai', False),
+                            'target': target if 'target' in dir() else None
+                        }
+                    )
+                except Exception as ckpt_err:
+                    print(f"[dim]⚠️ Checkpoint保存失败（不影响执行）: {str(ckpt_err)}[/dim]")
+                
                 # 添加步骤过渡延迟，使执行过程更加流畅
                 import time
                 if i < len(plan.steps):
@@ -491,6 +670,22 @@ def insecure_function():
                 error_message = f"❌ 步骤 {i}/{len(plan.steps)}: {step.name} 执行失败: {str(e)}"
                 print(f"\n[bold red]{error_message}[/bold red]")
                 print(f"{'='*80}")
+                
+                # 保存错误状态到Checkpoint（用于后续恢复）
+                try:
+                    await checkpoint_manager.create_checkpoint(
+                        task_type=step.module,
+                        plan_id=plan_id,
+                        step_index=actual_index,
+                        total_steps=len(plan.steps),
+                        step_status="failed",
+                        results={'results': results, 'last_error': str(e)},
+                        metadata={'error_step': step.name, 'error_time': datetime.now().isoformat()}
+                    )
+                    print(f"[dim]💾 已保存失败状态的Checkpoint（可稍后恢复）[/dim]")
+                except Exception as ckpt_err:
+                    pass  # Checkpoint保存失败不阻塞主流程
+                
                 results.append({
                     "type": "error",
                     "error": str(e),
