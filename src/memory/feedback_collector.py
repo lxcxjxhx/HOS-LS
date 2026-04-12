@@ -4,11 +4,10 @@
 计算隐式反馈指标（取消率、重复率等）。
 """
 
-import time
-from datetime import datetime
-from typing import Any, Dict, List, Optional
+from datetime import datetime, timedelta
+from typing import Dict, List, Optional, Tuple
 
-from .models import ExecutionLog, UserMemory, ProjectMemory
+from .models import ExecutionLog
 from .manager import get_memory_manager, MemoryManager
 from ..utils.logger import get_logger
 
@@ -73,9 +72,9 @@ class FeedbackCollector:
                     findings_count = len(findings_data)
                 elif isinstance(findings_data, int):
                     findings_count = findings_data
-        elif hasattr(result, 'findings'):
-            findings_count = len(result.findings) if hasattr(result.findings, '__len__') else 0
-        elif hasattr(result, 'to_dict'):
+        elif hasattr(result, "findings"):
+            findings_count = len(result.findings) if hasattr(result.findings, "__len__") else 0
+        elif hasattr(result, "to_dict"):
             result_dict = result.to_dict()
             findings_data = result_dict.get("findings", [])
             findings_count = len(findings_data) if isinstance(findings_data, list) else 0
@@ -98,7 +97,9 @@ class FeedbackCollector:
         # 记录到Memory系统
         try:
             self.memory_manager.record_execution(log)
-            logger.debug(f"执行日志已记录: {log.log_id}, findings={findings_count}, success={success}")
+            logger.debug(
+                f"执行日志已记录: {log.log_id}, findings={findings_count}, success={success}"
+            )
         except Exception as e:
             logger.error(f"记录执行日志失败: {e}")
 
@@ -226,6 +227,7 @@ class BatchFeedbackCollector:
 
         # 过滤时间范围
         from datetime import timedelta
+
         cutoff = datetime.now() - timedelta(days=days)
         recent_logs = [log for log in logs if log.timestamp >= cutoff]
 
@@ -247,13 +249,15 @@ class BatchFeedbackCollector:
         # 满意度分布
         satisfaction_dist = {}
         feedback_logs = [log for log in recent_logs if log.user_feedback]
-        for log in feedback_dist := range(1, 6):
-            satisfaction_dist[f"{score}_star"] = sum(1 for log in feedback_logs if log.user_feedback == score)
+        for score in range(1, 6):
+            satisfaction_dist[f"{score}_star"] = sum(
+                1 for log in feedback_logs if log.user_feedback == score
+            )
 
         # 意图分布
         intent_dist = {}
         for log in recent_logs:
-            intent_type = log.intent.split(":")[0] if ":" in log.log intent else log.intent
+            intent_type = log.intent.split(":")[0] if ":" in log.intent else log.intent
             intent_dist[intent_type] = intent_dist.get(intent_type, 0) + 1
 
         return {
@@ -265,9 +269,11 @@ class BatchFeedbackCollector:
             "satisfaction_distribution": satisfaction_dist,
             "intent_distribution": intent_dist,
             "cancellation_rate": sum(
-                1 for log in recent_logs
+                1
+                for log in recent_logs
                 if not log.success and "cancelled" in (log.error_message or "").lower()
-            ) / total,
+            )
+            / total,
         }
 
     def generate_improvement_suggestions(self) -> List[Dict[str, str]]:
@@ -280,33 +286,43 @@ class BatchFeedbackCollector:
         suggestions = []
 
         if stats["success_rate"] < 0.8:
-            suggestions.append({
-                "type": "warning",
-                "message": f"成功率较低 ({stats['success_rate']:.0%})，建议检查常见失败原因",
-            })
+            suggestions.append(
+                {
+                    "type": "warning",
+                    "message": f"成功率较低 ({stats['success_rate']:.0%})，建议检查常见失败原因",
+                }
+            )
 
         if stats["avg_duration"] > 300:
-            suggestions.append({
-                "type": "optimization",
-                "message": f"平均耗时较长 ({stats['avg_duration']:.0f}s)，可考虑启用快速模式",
-            })
+            suggestions.append(
+                {
+                    "type": "optimization",
+                    "message": f"平均耗时较长 ({stats['avg_duration']:.0f}s)，可考虑启用快速模式",
+                }
+            )
 
         if stats["avg_findings"] < 2 and stats["total_executions"] > 10:
-            suggestions.append({
-                "type": "info",
-                "message": "平均发现数较少，可能需要调整扫描深度或模块配置",
-            })
+            suggestions.append(
+                {
+                    "type": "info",
+                    "message": "平均发现数较少，可能需要调整扫描深度或模块配置",
+                }
+            )
 
         if stats.get("cancellation_rate", 0) > 0.2:
-            suggestions.append({
-                "type": "ux",
-                "message": "取消率较高，建议优化策略预览或增加自动确认选项",
-            })
+            suggestions.append(
+                {
+                    "type": "ux",
+                    "message": "取消率较高，建议优化策略预览或增加自动确认选项",
+                }
+            )
 
         if not suggestions:
-            suggestions.append({
-                "type": "good",
-                "message": "各项指标正常，继续保持！",
-            })
+            suggestions.append(
+                {
+                    "type": "good",
+                    "message": "各项指标正常，继续保持！",
+                }
+            )
 
         return suggestions

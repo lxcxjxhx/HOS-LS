@@ -53,7 +53,7 @@ class SemanticMatcher:
             config: 配置对象
         """
         self.config = config or get_config()
-        self._vector_store = VectorStore(Path("./vector_store"))
+        self._vector_store = VectorStore(Path("./rag_knowledge_base/vector_store"))
         from src.storage.rag_knowledge_base import get_rag_knowledge_base
         self._rag_knowledge_base = get_rag_knowledge_base()
         self._initialized = False

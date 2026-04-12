@@ -178,6 +178,9 @@ class PromptRule:
     group: Optional[str] = None
     tags: List[str] = field(default_factory=list)
     
+    # 关键词匹配字段
+    keywords: List[str] = field(default_factory=list)
+    
     # V3 新增字段
     triggers: List[str] = field(default_factory=list)      # 触发后激活的规则ID列表
     insert_position: InsertPosition = InsertPosition.AUTO   # V3 精细位置控制
@@ -1298,6 +1301,19 @@ class PromptRulebook:
             candidates=candidates  # V3: 传入预筛选的候选规则
         )
         
+        # 确保多步骤指令识别规则被应用
+        multi_step_rules = [rule for rule in self.rules if 'multi_step' in rule.id or 'multi' in rule.id.lower()]
+        for rule in multi_step_rules:
+            if rule not in conditional_rules and rule.enabled:
+                conditional_rules.append(rule)
+        
+        # 确保计划生成规则被应用（如果是计划生成场景）
+        if intent_type == 'plan':
+            plan_rules = [rule for rule in self.rules if 'plan' in rule.id.lower()]
+            for rule in plan_rules:
+                if rule not in conditional_rules and rule.enabled:
+                    conditional_rules.append(rule)
+        
         # ====== Step 3: 递归解析 (V3新增) ======
         if conditional_rules:
             resolution_result = self._recursive_resolver.resolve(
@@ -2000,6 +2016,24 @@ User Input → Intent Parser → Plan Generator → Executor
             id="fmt_markdown_long",
             name="Markdown详细格式",
             description="长回答的格式增强",
+            content="""## 详细回答格式要求
+
+### 结构
+- 使用标题层级（##、###）组织内容
+- 段落间留白，提高可读性
+- 重要概念加粗
+- 步骤类内容使用有序列表
+- 要点类内容使用无序列表
+
+### 代码
+- 代码块使用 ``` 包裹
+- 标明代码语言
+- 关键部分添加注释
+
+### 示例
+- 适当添加示例说明
+- 示例应简洁明了
+- 与实际场景相关""",
             condition=RuleCondition(
                 trigger_type=TriggerType.REGEX,
                 regex_pattern=r'(?:介绍|讲解|解释|详[细述]|分析|什么是|how to|explain|describe|tell me about).{8,}'
@@ -2013,6 +2047,24 @@ User Input → Intent Parser → Plan Generator → Executor
             id="fmt_code_example",
             name="代码示例格式",
             description="包含代码示例的回答格式规范",
+            content="""## 代码示例格式要求
+
+### 代码块
+```python
+# 代码示例
+print("Hello, world!")
+```
+
+### 说明
+- 代码应包含注释
+- 解释关键部分的逻辑
+- 提供完整可运行的示例
+- 说明代码的使用场景
+
+### 安全提示
+- 避免使用硬编码的敏感信息
+- 注意输入验证
+- 遵循安全最佳实践""",
             condition=RuleCondition(
                 trigger_type=TriggerType.REGEX,
                 regex_pattern=r'.*(?:代码|示例|example|demo|实例|sample).*(?:展示|给出|提供|写).*'
@@ -2026,6 +2078,19 @@ User Input → Intent Parser → Plan Generator → Executor
             id="fmt_table_chart",
             name="表格对比格式",
             description="需要对比类内容的格式",
+            content="""## 对比内容格式要求
+
+### 表格结构
+| 项目 | 特性1 | 特性2 | 特性3 |
+|------|-------|-------|-------|
+| A    | 是    | 否    | 高    |
+| B    | 否    | 是    | 中    |
+
+### 说明
+- 清晰列出对比项目
+- 使用表格展示关键差异
+- 提供简要的结论分析
+- 突出重点内容""",
             condition=RuleCondition(
                 trigger_type=TriggerType.REGEX,
                 regex_pattern=r'.*(?:对比|比较|区别|差异|vs|versus|优劣).{5,}'
@@ -2039,6 +2104,13 @@ User Input → Intent Parser → Plan Generator → Executor
             id="fmt_concise_answer",
             name="简洁回答格式",
             description="简短回答的格式要求",
+            content="""## 简洁回答格式要求
+
+### 回答风格
+- 直接回答问题
+- 简洁明了
+- 避免冗长解释
+- 必要时提供关键点""",
             condition=RuleCondition(
                 trigger_type=TriggerType.REGEX,
                 regex_pattern=r'.*(?:简短|简要|一句话|简单说|概括|总结).{3,}'
@@ -2053,6 +2125,13 @@ User Input → Intent Parser → Plan Generator → Executor
             id="ctx_multi_turn",
             name="多轮对话上下文关联",
             description="处理引用前文的问题",
+            content="""## 多轮对话上下文处理
+
+### 上下文关联
+- 识别用户对前文的引用
+- 保持对话的连贯性
+- 理解用户的意图
+- 提供相关的回答""",
             keywords=["刚才", "之前", "上面提到", "前面说的", "那个问题",
                       "上文", "正如你所说", "你说的对"],
             condition=RuleCondition(
@@ -2070,6 +2149,13 @@ User Input → Intent Parser → Plan Generator → Executor
             id="ctx_code_context",
             name="代码上下文理解",
             description="处理指代代码实体的问题",
+            content="""## 代码上下文理解
+
+### 代码实体识别
+- 理解用户对代码实体的指代
+- 分析代码上下文
+- 提供准确的代码相关回答
+- 解释代码逻辑和功能""",
             keywords=["这个函数", "那个文件", "这段代码", "它里面",
                       "该函数", "此文件", "上述代码"],
             condition=RuleCondition(
@@ -2086,6 +2172,13 @@ User Input → Intent Parser → Plan Generator → Executor
             id="ctx_follow_up",
             name="追问处理策略",
             description="处理追问和后续问题",
+            content="""## 追问处理策略
+
+### 后续问题处理
+- 识别用户的追问意图
+- 提供相关的后续信息
+- 保持对话的连贯性
+- 满足用户的深入需求""",
             keywords=["然后呢", "接下来", "还有呢", "除此之外",
                       "还有吗", "以及", "另外", "还有其他"],
             condition=RuleCondition(
@@ -3765,6 +3858,7 @@ DPO Appointment:
         rulebook.add_rule(PromptRule(
             id="ip_core",
             name="意图识别核心",
+            description="意图识别的核心规则，指导AI准确识别用户意图",
             content="""你是HOS-LS的意图识别引擎。
 
 核心能力：
@@ -3779,6 +3873,7 @@ DPO Appointment:
         rulebook.add_rule(PromptRule(
             id="ip_intent_list",
             name="意图类型参考",
+            description="意图类型的参考列表，提供各种意图类型的定义和判断原则",
             content="""
 ## 可选意图类型
 - **scan**: 代码安全扫描
@@ -3799,6 +3894,40 @@ DPO Appointment:
             constant=True
         ))
         
+        rulebook.add_rule(PromptRule(
+            id="ip_multi_step",
+            name="多步骤指令识别",
+            description="多步骤指令识别规则，指导AI识别和处理包含多个步骤的用户请求",
+            content="""
+## 多步骤指令识别
+
+### 识别要点
+- 使用AI语义理解识别包含多个任务的用户请求
+- 注意连接词：然后、接着、之后、再、并且、同时
+- 区分主要任务和次要任务
+- 为每个任务生成相应的子意图
+
+### 示例
+1. "解释一下漏扫实现方案，然后扫描当前目录" → 先ai_chat，后scan
+2. "先回答我的问题，再进行扫描" → 先ai_chat，后scan
+3. "扫描文件并生成报告" → 先scan，后report
+
+### 处理策略
+- 按照用户指定的顺序生成步骤
+- 确保所有任务都被包含在执行计划中
+- 为每个任务设置合理的参数
+- 准确提取用户提到的参数，如文件数量、目标路径等
+
+### 语义理解提示
+- 不要使用固定编码识别，而是使用AI语义理解
+- 理解用户的真实意图，而不是仅仅匹配关键词
+- 考虑上下文和语境，确保准确理解用户需求
+- 对于复杂指令，分解为多个子任务""",
+            condition=RuleCondition(trigger_type=TriggerType.ALWAYS),
+            priority=RulePriority.HIGH,
+            constant=True
+        ))
+        
         return rulebook
     
     @staticmethod
@@ -3808,6 +3937,7 @@ DPO Appointment:
         rulebook.add_rule(PromptRule(
             id="pg_core",
             name="计划生成核心",
+            description="计划生成的核心规则，根据用户需求生成最优执行计划",
             content="""你是HOS-LS的计划生成专家。
 根据用户需求和意图，生成最优执行计划。
 步骤数控制在2-4个，简洁高效。""",
@@ -3819,6 +3949,7 @@ DPO Appointment:
         rulebook.add_rule(PromptRule(
             id="pg_modules",
             name="模块指南",
+            description="模块选择指南，提供可用模块信息",
             content="""
 ## 模块选择
 - **scan**: 漏洞检测
@@ -3827,6 +3958,38 @@ DPO Appointment:
 - **ai_chat**: 知识问答
 
 ⚠️ 不要硬编码topic参数！""",
+            condition=RuleCondition(trigger_type=TriggerType.ALWAYS),
+            priority=RulePriority.HIGH,
+            constant=True
+        ))
+        
+        rulebook.add_rule(PromptRule(
+            id="pg_multi_step",
+            name="多步骤计划生成",
+            description="处理包含多个步骤的用户请求",
+            content="""
+## 多步骤计划生成
+
+### 处理原则
+- 识别用户请求中的多个任务
+- 按照用户指定的顺序生成执行步骤
+- 为每个步骤设置合理的参数
+- 确保所有任务都被包含在执行计划中
+
+### 常见多步骤场景
+1. **回答问题 + 扫描**: 先使用ai_chat回答问题，然后使用scan进行扫描
+2. **扫描 + 报告**: 先使用scan进行扫描，然后使用report生成报告
+3. **分析 + 修复**: 先使用analyze进行分析，然后使用fix提供修复建议
+
+### 参数设置
+- **ai_chat**: 设置合适的max_tokens，确保回答完整
+- **scan**: 设置target路径，test_mode=True，test_file_count=1（测试模式）
+- **report**: 设置合适的format和output路径
+
+### 执行顺序
+- 按照用户请求的顺序执行
+- 后一步骤依赖前一步骤的结果
+- 合理估计每个步骤的执行时间""",
             condition=RuleCondition(trigger_type=TriggerType.ALWAYS),
             priority=RulePriority.HIGH,
             constant=True

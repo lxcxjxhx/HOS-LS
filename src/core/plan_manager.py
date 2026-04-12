@@ -382,11 +382,34 @@ class PlanManager:
     
     def modify_plan(self, plan: Plan, modification: str) -> Plan:
         """通过自然语言修改Plan"""
-        # 使用AI修改Plan
-        modified_plan = self.ai_generator.modify_plan_sync(plan, modification)
+        # 直接修改Plan的目标和配置
+        # 这里我们简化处理，直接更新目标并根据修改内容调整步骤
+        
+        # 更新目标
+        plan.goal = modification
+        
+        # 检查是否需要修改扫描文件数量
+        import re
+        count_match = re.search(r'(?:扫|扫描)\s*(\d+)\s*个文件', modification)
+        if count_match:
+            test_file_count = int(count_match.group(1))
+            # 更新扫描步骤的配置
+            for step in plan.steps:
+                if step.type == PlanStepType.SCAN:
+                    step.config['test_file_count'] = test_file_count
+        
+        # 检查是否需要修改目标路径
+        path_match = re.search(r'目录\s*(.+?)\s*下', modification)
+        if path_match:
+            target_path = path_match.group(1).strip()
+            # 更新扫描步骤的配置
+            for step in plan.steps:
+                if step.type == PlanStepType.SCAN:
+                    step.config['path'] = target_path
+        
         # 更新版本
-        self.update_plan_version(modified_plan)
-        return modified_plan
+        self.update_plan_version(plan)
+        return plan
     
     def get_plan_directory(self) -> str:
         """获取Plan目录"""

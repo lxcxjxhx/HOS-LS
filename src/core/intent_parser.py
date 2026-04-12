@@ -37,12 +37,17 @@ class ParsedIntent:
     entities: Dict[str, Any] = field(default_factory=dict)
     raw_text: str = ""
     suggested_pipeline: Optional[List[str]] = None
+    sub_intents: Optional[List['ParsedIntent']] = field(default_factory=list)
     
     def __post_init__(self):
         if self.confidence > 1.0:
             self.confidence = 1.0
         elif self.confidence < 0.0:
             self.confidence = 0.0
+    
+    def has_multiple_intents(self) -> bool:
+        """检查是否包含多个意图"""
+        return len(self.sub_intents) > 0
 
 
 class SpecialCommandDetector:
@@ -160,17 +165,45 @@ class AIIntentParser:
             
             prompt = f"""用户输入: {text}
 
+你是一个智能意图识别助手，负责理解用户的自然语言输入并识别其中的意图。
+
+请仔细分析用户的输入，识别其中的所有意图和需求，包括：
+1. 主要意图
+2. 子意图（如果有多个步骤）
+3. 提取相关实体（如目标路径、文件数量等）
+
 请返回JSON格式（只返回JSON，不要其他内容）:
 {{
-  "intent": "意图类型",
+  "intent": "主要意图类型",
   "confidence": 0.0-1.0,
   "entities": {{
     "user_question": "用户的原始问题（如果是知识问答）",
     "target_path": "目标路径（如果能提取到）",
     "pure_ai": true/false,
-    "test_mode": true/false
-  }}
-}}"""
+    "test_mode": true/false,
+    "test_file_count": 数字（如果用户指定了文件数量）
+  }},
+  "sub_intents": [
+    {{
+      "intent": "子意图类型",
+      "confidence": 0.0-1.0,
+      "entities": {{}}
+    }}
+  ]
+}}
+
+意图类型参考：
+- scan: 代码安全扫描
+- ai_chat: 通用知识问答
+- info: 工具咨询
+- general: 通用对话
+
+注意：
+1. 请使用AI语义理解来识别用户需求，不要使用固定编码识别
+2. 如果用户请求包含多个步骤（例如：先回答问题，然后扫描文件），请在 sub_intents 中列出所有子任务
+3. 确保识别所有的用户需求，不要遗漏任何步骤
+4. 对于包含"然后"、"接着"、"之后"等连接词的请求，通常表示多个步骤
+5. 请准确提取用户提到的参数，如文件数量、目标路径等"""
 
             request = AIRequest(
                 prompt=prompt,
@@ -187,12 +220,32 @@ class AIIntentParser:
                 confidence = float(result.get("confidence", 0.7))
                 entities = result.get("entities", {})
                 
+                # 处理子意图
+                sub_intents = []
+                for sub_intent_data in result.get("sub_intents", []):
+                    try:
+                        sub_intent_type = IntentType(sub_intent_data.get("intent", "general"))
+                        sub_confidence = float(sub_intent_data.get("confidence", 0.7))
+                        sub_entities = sub_intent_data.get("entities", {})
+                        
+                        sub_intent = ParsedIntent(
+                            type=sub_intent_type,
+                            confidence=max(0.3, min(sub_confidence, 1.0)),
+                            entities=sub_entities,
+                            raw_text=text,
+                            suggested_pipeline=self._get_suggested_pipeline(sub_intent_type)
+                        )
+                        sub_intents.append(sub_intent)
+                    except (ValueError, TypeError):
+                        pass
+                
                 return ParsedIntent(
                     type=intent_type,
                     confidence=max(0.3, min(confidence, 1.0)),
                     entities=entities,
                     raw_text=text,
-                    suggested_pipeline=self._get_suggested_pipeline(intent_type)
+                    suggested_pipeline=self._get_suggested_pipeline(intent_type),
+                    sub_intents=sub_intents
                 )
                 
             except (ValueError, TypeError):
@@ -237,12 +290,38 @@ class AIIntentParser:
     
     def _fallback_intent(self, text: str) -> ParsedIntent:
         """回退意图（当AI不可用时）"""
+        # 简单的规则匹配，尝试识别多步骤指令
+        sub_intents = []
+        
+        # 检查是否包含扫描相关的指令
+        if any(keyword in text for keyword in ['扫描', 'scan', '检测', '漏洞']):
+            sub_intent = ParsedIntent(
+                type=IntentType.SCAN,
+                confidence=0.7,
+                entities={"target_path": ".", "pure_ai": True, "test_mode": True, "test_file_count": 1},
+                raw_text=text,
+                suggested_pipeline=["scan"]
+            )
+            sub_intents.append(sub_intent)
+        
+        # 检查是否包含AI回答相关的指令
+        if any(keyword in text for keyword in ['解释', '回答', '说明', '介绍']):
+            sub_intent = ParsedIntent(
+                type=IntentType.AI_CHAT,
+                confidence=0.7,
+                entities={"user_question": text},
+                raw_text=text,
+                suggested_pipeline=None
+            )
+            sub_intents.append(sub_intent)
+        
         return ParsedIntent(
             type=IntentType.GENERAL,
             confidence=0.5,
             entities={"raw_input": text},
             raw_text=text,
-            suggested_pipeline=None
+            suggested_pipeline=None,
+            sub_intents=sub_intents
         )
 
 
@@ -285,11 +364,23 @@ class IntentParser:
         if self.ai_parser:
             try:
                 ai_intent = asyncio.run(self.ai_parser.parse(text))
+                # 检查是否包含多个意图
+                if ai_intent.has_multiple_intents():
+                    return ai_intent
+                # 如果AI没有识别出多个意图，尝试使用规则匹配
+                multi_intent = self._detect_multi_intent(text)
+                if multi_intent.has_multiple_intents():
+                    return multi_intent
                 return ai_intent
             except Exception as e:
                 pass
         
-        # 第三步：最终回退（不应该到达这里，除非AI完全不可用）
+        # 第三步：尝试规则匹配检测多意图
+        multi_intent = self._detect_multi_intent(text)
+        if multi_intent.has_multiple_intents():
+            return multi_intent
+        
+        # 第四步：最终回退（不应该到达这里，除非AI完全不可用）
         return ParsedIntent(
             type=IntentType.GENERAL,
             confidence=0.3,
@@ -297,6 +388,79 @@ class IntentParser:
             raw_text=text,
             suggested_pipeline=None
         )
+    
+    def _detect_multi_intent(self, text: str) -> ParsedIntent:
+        """使用规则匹配检测多意图
+        
+        Args:
+            text: 用户输入文本
+            
+        Returns:
+            包含多意图的ParsedIntent对象
+        """
+        sub_intents = []
+        
+        # 检查是否包含AI回答相关的指令
+        if any(keyword in text for keyword in ['解释', '回答', '说明', '介绍', '什么是', '如何', '怎样']):
+            sub_intent = ParsedIntent(
+                type=IntentType.AI_CHAT,
+                confidence=0.8,
+                entities={"user_question": text},
+                raw_text=text,
+                suggested_pipeline=None
+            )
+            sub_intents.append(sub_intent)
+        
+        # 检查是否包含扫描相关的指令
+        if any(keyword in text for keyword in ['扫描', 'scan', '检测', '漏洞', '安全检查']):
+            # 提取目标路径
+            target_path = self.extract_target_path(text)
+            # 检测是否为纯AI模式
+            pure_ai = self.detect_pure_ai_mode(text)
+            # 检测是否为测试模式
+            test_mode, test_file_count = self.detect_test_mode(text)
+            
+            sub_intent = ParsedIntent(
+                type=IntentType.SCAN,
+                confidence=0.8,
+                entities={"target_path": target_path, "pure_ai": pure_ai, "test_mode": test_mode, "test_file_count": test_file_count},
+                raw_text=text,
+                suggested_pipeline=["scan"]
+            )
+            sub_intents.append(sub_intent)
+        
+        # 检查是否包含报告相关的指令
+        if any(keyword in text for keyword in ['报告', '生成报告', 'report']):
+            sub_intent = ParsedIntent(
+                type=IntentType.INFO,
+                confidence=0.7,
+                entities={"topic": "报告生成"},
+                raw_text=text,
+                suggested_pipeline=["report"]
+            )
+            sub_intents.append(sub_intent)
+        
+        # 创建主意图
+        if sub_intents:
+            # 如果有多个子意图，主意图设为GENERAL
+            main_intent = ParsedIntent(
+                type=IntentType.GENERAL,
+                confidence=0.9,
+                entities={"raw_input": text},
+                raw_text=text,
+                suggested_pipeline=None,
+                sub_intents=sub_intents
+            )
+            return main_intent
+        else:
+            # 如果没有子意图，返回普通意图
+            return ParsedIntent(
+                type=IntentType.GENERAL,
+                confidence=0.5,
+                entities={"raw_input": text},
+                raw_text=text,
+                suggested_pipeline=None
+            )
     
     async def parse_async(self, text: str) -> ParsedIntent:
         """异步解析用户意图"""
@@ -308,7 +472,20 @@ class IntentParser:
             return special_intent
         
         if self.ai_parser:
-            return await self.ai_parser.parse(text)
+            ai_intent = await self.ai_parser.parse(text)
+            # 检查是否包含多个意图
+            if ai_intent.has_multiple_intents():
+                return ai_intent
+            # 如果AI没有识别出多个意图，尝试使用规则匹配
+            multi_intent = self._detect_multi_intent(text)
+            if multi_intent.has_multiple_intents():
+                return multi_intent
+            return ai_intent
+        
+        # 尝试规则匹配检测多意图
+        multi_intent = self._detect_multi_intent(text)
+        if multi_intent.has_multiple_intents():
+            return multi_intent
         
         return ParsedIntent(
             type=IntentType.GENERAL,

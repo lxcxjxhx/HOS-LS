@@ -254,7 +254,7 @@ class UnifiedInteractionEngine:
             intent = self.intent_parser.parse(user_input)
             
             # 处理多任务命令
-            if 'tasks' in intent.entities:
+            if intent.has_multiple_intents() or 'tasks' in intent.entities:
                 return self._handle_multi_task_with_plan(intent, user_input)
             
             # 根据意图类型分发处理（带AI计划生成）
@@ -497,6 +497,9 @@ class UnifiedInteractionEngine:
             print(f"📝 描述: {step.description}")
             print(f"🔧 使用模块: {step.module}")
             print(f"⚙️ 参数: {step.parameters}")
+            print(f"⏱️ 估计执行时间: {step.estimated_time}秒")
+            if step.dependencies:
+                print(f"🔗 依赖步骤: {', '.join(step.dependencies)}")
             print(f"{'='*80}")
             
             try:
@@ -565,15 +568,20 @@ class UnifiedInteractionEngine:
                     
                     # 构建扫描请求
                     from src.core.base_agent import ExecutionRequest
+                    # 构建上下文字典，包含增量扫描相关参数
+                    context = {
+                        'use_incremental': use_incremental
+                    }
+                    if use_incremental:
+                        context['target_files'] = step.parameters.get('target_files')
+                        context['skip_files'] = step.parameters.get('skip_files')
                     request = ExecutionRequest(
                         target=target,
                         natural_language=plan.user_input,
                         mode=mode,
                         test_mode=plan.test_mode,
                         test_file_count=plan.test_file_count,
-                        use_incremental=use_incremental,
-                        target_files=step.parameters.get('target_files') if use_incremental else None,
-                        skip_files=step.parameters.get('skip_files') if use_incremental else None
+                        context=context
                     )
                     
                     # 执行扫描

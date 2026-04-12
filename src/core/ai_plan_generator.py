@@ -77,6 +77,15 @@ class AIPlanGenerator:
             生成的执行计划
         """
         try:
+            # 检查是否包含多个意图
+            if intent.has_multiple_intents() and len(intent.sub_intents) > 0:
+                return await self._generate_multi_intent_plan(intent, user_input)
+            
+            # 检查是否需要扫描（即使没有识别为多意图）
+            if any(keyword in user_input for keyword in ['扫描', 'scan', '检测', '漏洞', '安全检查']):
+                # 尝试生成包含扫描步骤的计划
+                return await self._generate_scan_plan(intent, user_input)
+            
             available_modules = list(self.module_capabilities.get_all_capabilities().keys())
             
             # 根据意图类型选择不同的提示策略
@@ -89,6 +98,195 @@ class AIPlanGenerator:
             
         except Exception as e:
             return self._generate_fallback_plan(intent, user_input)
+    
+    async def _generate_scan_plan(self, intent: ParsedIntent, user_input: str) -> ExecutionPlan:
+        """生成包含扫描步骤的计划
+        
+        Args:
+            intent: 解析后的意图
+            user_input: 用户原始输入
+            
+        Returns:
+            包含扫描步骤的执行计划
+        """
+        import uuid
+        plan_id = str(uuid.uuid4())
+        
+        steps = []
+        estimated_total_time = 0
+        
+        # 检查是否需要AI回答
+        if any(keyword in user_input for keyword in ['解释', '回答', '说明', '介绍', '什么是', '如何', '怎样']):
+            # 添加AI回答步骤
+            ai_step = PlanStep(
+                id="step1",
+                name="AI智能回答",
+                description=f"使用AI回答用户的问题: {user_input[:100]}",
+                module="ai_chat",
+                parameters={
+                    'question': user_input,
+                    'context': user_input,
+                    'max_tokens': 2000
+                },
+                dependencies=[],
+                estimated_time=10
+            )
+            steps.append(ai_step)
+            estimated_total_time += 10
+        
+        # 添加扫描步骤
+        target_path = "."
+        pure_ai = True
+        test_mode = True
+        test_file_count = 1
+        
+        # 提取目标路径
+        import re
+        path_match = re.search(r'目录\s*(.+?)\s*下', user_input)
+        if path_match:
+            target_path = path_match.group(1).strip()
+        
+        # 提取文件数量
+        count_match = re.search(r'(?:扫|扫描)\s*(\d+)\s*个文件', user_input)
+        if count_match:
+            test_file_count = int(count_match.group(1))
+        
+        scan_step = PlanStep(
+            id="step2" if steps else "step1",
+            name="纯净AI模式扫描",
+            description=f"使用纯净AI模式扫描 {target_path} 目录下的 {test_file_count} 个文件",
+            module="scan",
+            parameters={
+                'target': target_path,
+                'mode': 'pure-ai',
+                'test_mode': test_mode,
+                'test_file_count': test_file_count
+            },
+            dependencies=[steps[-1].id] if steps else [],
+            estimated_time=30
+        )
+        steps.append(scan_step)
+        estimated_total_time += 30
+        
+        return ExecutionPlan(
+            id=plan_id,
+            name="AI回答 + 扫描计划",
+            description=f"使用AI回答问题并进行纯净AI模式扫描",
+            steps=steps,
+            estimated_total_time=estimated_total_time,
+            pure_ai=True,
+            test_mode=True,
+            test_file_count=test_file_count,
+            user_input=user_input
+        )
+    
+    async def _generate_multi_intent_plan(self, intent: ParsedIntent, user_input: str) -> ExecutionPlan:
+        """生成多意图执行计划
+        
+        当用户请求包含多个步骤时，为每个子意图生成相应的步骤。
+        """
+        import uuid
+        plan_id = str(uuid.uuid4())
+        
+        steps = []
+        estimated_total_time = 0
+        
+        # 处理主要意图
+        if intent.type != IntentType.GENERAL:
+            main_step = await self._generate_step_for_intent(intent, user_input, 1)
+            if main_step:
+                steps.append(main_step)
+                estimated_total_time += main_step.estimated_time
+        
+        # 处理子意图
+        for i, sub_intent in enumerate(intent.sub_intents, start=len(steps) + 1):
+            sub_step = await self._generate_step_for_intent(sub_intent, user_input, i)
+            if sub_step:
+                # 设置依赖关系
+                if steps:
+                    sub_step.dependencies = [steps[-1].id]
+                steps.append(sub_step)
+                estimated_total_time += sub_step.estimated_time
+        
+        # 如果没有生成任何步骤，使用回退方案
+        if not steps:
+            return self._generate_fallback_plan(intent, user_input)
+        
+        return ExecutionPlan(
+            id=plan_id,
+            name="多步骤执行计划",
+            description=f"根据用户请求生成的多步骤执行计划: {user_input[:50]}",
+            steps=steps,
+            estimated_total_time=estimated_total_time,
+            pure_ai=True,
+            test_mode=True,
+            test_file_count=1,
+            user_input=user_input
+        )
+    
+    async def _generate_step_for_intent(self, intent: ParsedIntent, user_input: str, step_index: int) -> Optional[PlanStep]:
+        """为单个意图生成步骤
+        
+        Args:
+            intent: 解析后的意图
+            user_input: 用户原始输入
+            step_index: 步骤索引
+            
+        Returns:
+            生成的步骤，如果无法生成则返回None
+        """
+        step_id = f"step{step_index}"
+        
+        if intent.type == IntentType.AI_CHAT:
+            user_question = intent.entities.get('user_question', user_input)
+            return PlanStep(
+                id=step_id,
+                name="AI智能回答",
+                description=f"使用AI回答用户的问题: {user_question[:100]}",
+                module="ai_chat",
+                parameters={
+                    'question': user_question,
+                    'context': user_input,
+                    'max_tokens': 2000
+                },
+                dependencies=[],
+                estimated_time=10
+            )
+        elif intent.type == IntentType.SCAN:
+            target_path = intent.entities.get('target_path', '.')
+            pure_ai = intent.entities.get('pure_ai', True)
+            test_mode = intent.entities.get('test_mode', True)
+            test_file_count = intent.entities.get('test_file_count', 1)
+            
+            return PlanStep(
+                id=step_id,
+                name="纯净AI模式扫描",
+                description=f"使用纯净AI模式扫描 {target_path} 目录下的 {test_file_count} 个文件",
+                module="scan",
+                parameters={
+                    'target': target_path,
+                    'mode': 'pure-ai',
+                    'test_mode': test_mode,
+                    'test_file_count': test_file_count
+                },
+                dependencies=[],
+                estimated_time=30
+            )
+        elif intent.type == IntentType.INFO:
+            topic = intent.entities.get('topic', 'HOS-LS功能')
+            return PlanStep(
+                id=step_id,
+                name="工具信息查询",
+                description=f"查询关于 {topic} 的信息",
+                module="info",
+                parameters={
+                    'topic': topic
+                },
+                dependencies=[],
+                estimated_time=5
+            )
+        
+        return None
     
     async def _generate_ai_chat_plan(self, intent: ParsedIntent, user_input: str) -> ExecutionPlan:
         """生成AI对话类型的计划
@@ -141,7 +339,9 @@ class AIPlanGenerator:
         for key, value in intent.entities.items():
             entities_info += f"- {key}: {value}\n"
         
-        prompt = f"""## 📥 用户输入
+        prompt = f"""你是一个专业的安全扫描专家，负责根据用户的需求生成最优的执行计划。
+
+## 📥 用户输入
 {user_input}
 
 ## 🔍 AI意图分析结果
@@ -153,18 +353,44 @@ class AIPlanGenerator:
 ## 🛠️ 可用功能模块
 {', '.join(available_modules)}
 
+## 🎯 任务要求
+1. 使用AI语义理解来识别用户需求，不要使用固定编码识别
+2. 生成详细的执行方案，确保包含所有用户要求的步骤
+3. 清洗方案，确保输出符合用户的需求
+4. 按照读取的参数打印在屏幕上让用户可以看到
+
+## 📋 输出格式
 请返回JSON格式的执行计划（只返回JSON）:
 ```json
-{{
+{
   "name": "计划名称",
   "description": "计划描述",
-  "steps": [...],
-  "estimated_total_time": 秒数,
+  "steps": [
+    {
+      "id": "step1",
+      "name": "步骤名称",
+      "description": "详细描述",
+      "module": "scan|report|code_tool|info|ai_chat",
+      "parameters": {
+        "参数名": "值"
+      },
+      "dependencies": [],
+      "estimated_time": 秒数
+    }
+  ],
+  "estimated_total_time": 总秒数,
   "pure_ai": true/false,
   "test_mode": true/false,
   "test_file_count": 数字
-}}
-```"""
+}
+```
+
+## ⚠️ 重要提醒
+1. 确保识别所有的用户需求，不要遗漏任何步骤
+2. 准确提取用户提到的参数，如文件数量、目标路径等
+3. 按照用户指定的顺序生成步骤
+4. 为每个步骤设置合理的参数和执行时间
+5. 确保方案的可行性和准确性"""
 
         request = AIRequest(
             prompt=prompt,
@@ -180,7 +406,94 @@ class AIPlanGenerator:
         response = await ai_client.generate(request)
         plan_data = self._parse_ai_response(response.content)
         
-        return self._build_execution_plan(plan_data, user_input, intent)
+        # 清洗方案，确保符合用户需求
+        cleaned_plan_data = self._clean_plan_data(plan_data, user_input, intent)
+        
+        return self._build_execution_plan(cleaned_plan_data, user_input, intent)
+    
+    def _clean_plan_data(self, plan_data: Dict[str, Any], user_input: str, intent: ParsedIntent) -> Dict[str, Any]:
+        """清洗方案数据，确保符合用户需求
+        
+        Args:
+            plan_data: AI生成的方案数据
+            user_input: 用户原始输入
+            intent: 解析后的意图
+            
+        Returns:
+            清洗后的方案数据
+        """
+        import re
+        
+        # 确保计划名称和描述存在
+        if 'name' not in plan_data or not plan_data['name']:
+            plan_data['name'] = "执行计划"
+        
+        if 'description' not in plan_data or not plan_data['description']:
+            plan_data['description'] = f"基于用户输入生成的执行计划: {user_input[:50]}"
+        
+        # 确保步骤存在
+        if 'steps' not in plan_data or not plan_data['steps']:
+            plan_data['steps'] = []
+        
+        # 确保扫描步骤的参数正确
+        for step in plan_data['steps']:
+            if step.get('module') == 'scan':
+                # 确保target参数存在
+                if 'parameters' not in step:
+                    step['parameters'] = {}
+                if 'target' not in step['parameters']:
+                    step['parameters']['target'] = intent.entities.get('target_path', '.')
+                # 确保mode参数存在
+                if 'mode' not in step['parameters']:
+                    step['parameters']['mode'] = 'pure-ai'
+                # 确保test_mode参数存在
+                if 'test_mode' not in step['parameters']:
+                    step['parameters']['test_mode'] = intent.entities.get('test_mode', True)
+                # 确保test_file_count参数存在
+                if 'test_file_count' not in step['parameters']:
+                    # 从用户输入中提取文件数量
+                    count_match = re.search(r'(?:扫|扫描)\s*(\d+)\s*个文件', user_input)
+                    if count_match:
+                        step['parameters']['test_file_count'] = int(count_match.group(1))
+                    else:
+                        step['parameters']['test_file_count'] = intent.entities.get('test_file_count', 1)
+        
+        # 确保AI回答步骤的参数正确
+        for step in plan_data['steps']:
+            if step.get('module') == 'ai_chat':
+                # 确保question参数存在
+                if 'parameters' not in step:
+                    step['parameters'] = {}
+                if 'question' not in step['parameters']:
+                    step['parameters']['question'] = intent.entities.get('user_question', user_input)
+                # 确保max_tokens参数存在
+                if 'max_tokens' not in step['parameters']:
+                    step['parameters']['max_tokens'] = 2000
+        
+        # 确保estimated_total_time存在
+        if 'estimated_total_time' not in plan_data or not plan_data['estimated_total_time']:
+            # 计算总执行时间
+            total_time = sum(step.get('estimated_time', 60) for step in plan_data['steps'])
+            plan_data['estimated_total_time'] = total_time
+        
+        # 确保pure_ai存在
+        if 'pure_ai' not in plan_data:
+            plan_data['pure_ai'] = intent.entities.get('pure_ai', True)
+        
+        # 确保test_mode存在
+        if 'test_mode' not in plan_data:
+            plan_data['test_mode'] = intent.entities.get('test_mode', True)
+        
+        # 确保test_file_count存在
+        if 'test_file_count' not in plan_data:
+            # 从用户输入中提取文件数量
+            count_match = re.search(r'(?:扫|扫描)\s*(\d+)\s*个文件', user_input)
+            if count_match:
+                plan_data['test_file_count'] = int(count_match.group(1))
+            else:
+                plan_data['test_file_count'] = intent.entities.get('test_file_count', 1)
+        
+        return plan_data
     
     def _build_action_plan_prompt(self, intent: ParsedIntent, user_input: str, 
                                   available_modules: List[str]) -> str:

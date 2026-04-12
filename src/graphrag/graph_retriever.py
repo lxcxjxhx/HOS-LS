@@ -24,7 +24,7 @@ class GraphRetriever:
             self._vector_store = vector_store
         else:
             from pathlib import Path
-            storage_path = Path(".") / "vector_store"
+            storage_path = Path(".") / "rag_knowledge_base" / "vector_store"
             self._vector_store = FAISSVectorStore(storage_path)
         self._cache: Dict[str, Any] = {}
 

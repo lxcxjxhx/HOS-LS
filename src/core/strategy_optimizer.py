@@ -4,11 +4,10 @@
 实现fix_3.md中的自优化机制。
 """
 
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Any
 from datetime import datetime, timedelta
 
-from ..core.strategy import StrategyWeights, Strategy
-from ..memory.models import ExecutionLog, UserMemory
+from ..core.strategy import StrategyWeights
 from ..memory.manager import get_memory_manager, MemoryManager
 from ..utils.logger import get_logger
 
@@ -48,7 +47,10 @@ class StrategyOptimizer:
         user_memory = self.memory_manager.get_user_memory()
         total_executions = user_memory.behavior_stats.total_scans
 
-        return total_executions >= self.min_samples and total_executions % self.optimization_interval == 0
+        return (
+            total_executions >= self.min_samples
+            and total_executions % self.optimization_interval == 0
+        )
 
     async def optimize_weights(
         self,
@@ -142,7 +144,6 @@ class StrategyOptimizer:
         change_magnitude = abs(new_total - old_total) / old_total if old_total > 0 else 0
 
         if change_magnitude > 0.05:  # 变化超过5%
-            new_weights = new_weights
             report["optimization_applied"] = True
             report["new_weights"] = new_weights.to_dict()
             report["reasoning"] = adjustments
@@ -166,8 +167,11 @@ class StrategyOptimizer:
 
         total = len(logs)
         successful = sum(1 for log in logs if log.success)
-        cancelled = sum(1 for log in logs if not log.success and
-                       log.error_message and "cancelled" in log.error_message.lower())
+        cancelled = sum(
+            1
+            for log in logs
+            if not log.success and log.error_message and "cancelled" in log.error_message.lower()
+        )
 
         durations = [log.duration for log in logs if log.success]
         findings = [log.findings_count for log in logs if log.success]
@@ -179,9 +183,11 @@ class StrategyOptimizer:
             "success_rate": successful / total,
             "cancel_rate": cancelled / total,
             "avg_duration": sum(durations) / len(durations) if durations else 0,
-            "median_duration": sorted(durations)[len(durations)//2] if durations else 0,
+            "median_duration": sorted(durations)[len(durations) // 2] if durations else 0,
             "avg_findings": sum(findings) / len(findings) if findings else 0,
-            "findings_per_minute": (sum(findings) / (sum(durations) / 60)) if sum(durations) > 0 else 0,
+            "findings_per_minute": (
+                (sum(findings) / (sum(durations) / 60)) if sum(durations) > 0 else 0
+            ),
         }
 
         if feedback_scores:
@@ -210,8 +216,10 @@ class StrategyOptimizer:
                 self.memory_manager.get_recent_executions(limit=100)
             ),
             "recommendations": self._generate_recommendations(),
-            "next_optimization_in": max(0,
-                self.optimization_interval - (user_memory.behavior_stats.usage_count % self.optimization_interval)
+            "next_optimization_in": max(
+                0,
+                self.optimization_interval
+                - (user_memory.behavior_stats.usage_count % self.optimization_interval),
             ),
         }
 
@@ -224,37 +232,50 @@ class StrategyOptimizer:
 
         # 新用户引导
         if user_memory.behavior_stats.usage_count < 5:
-            recommendations.append({
-                "type": "info",
-                "message": "您是新用户，系统正在学习您的使用习惯。继续使用将获得更个性化的体验。",
-            })
+            recommendations.append(
+                {
+                    "type": "info",
+                    "message": "您是新用户，系统正在学习您的使用习惯。继续使用将获得更个性化的体验。",
+                }
+            )
 
         # 自动确认建议
         if not user_memory.preferences.auto_confirm and user_memory.is_advanced_user():
-            recommendations.append({
-                "type": "suggestion",
-                "message": "您是高级用户，可以启用'自动确认'模式以提升效率。命令：hos-ls memory set auto-confirm true",
-            })
+            recommendations.append(
+                {
+                    "type": "suggestion",
+                    "message": "您是高级用户，可以启用'自动确认'模式以提升效率。命令：hos-ls memory set auto-confirm true",
+                }
+            )
 
         # 成功率警告
-        if user_memory.behavior_stats.success_rate < 0.8 and user_memory.behavior_stats.usage_count > 10:
-            recommendations.append({
-                "type": "warning",
-                "message": f"成功率偏低 ({user_memory.behavior_stats.success_rate:.0%})，建议检查常见失败原因或调整策略。",
-            })
+        if (
+            user_memory.behavior_stats.success_rate < 0.8
+            and user_memory.behavior_stats.usage_count > 10
+        ):
+            recommendations.append(
+                {
+                    "type": "warning",
+                    "message": f"成功率偏低 ({user_memory.behavior_stats.success_rate:.0%})，建议检查常见失败原因或调整策略。",
+                }
+            )
 
         # 使用频率鼓励
         if user_memory.behavior_stats.usage_count >= 50:
-            recommendations.append({
-                "type": "achievement",
-                "message="恭喜！您已成为高级用户，系统将更多地参考您的个人偏好进行决策。",
-            })
+            recommendations.append(
+                {
+                    "type": "achievement",
+                    "message": "恭喜! 您已成为高级用户，系统将更多地参考您的个人偏好进行决策。",
+                }
+            )
 
         if not recommendations:
-            recommendations.append({
-                "type": "good",
-                "message": "一切正常！继续保持当前使用方式。",
-            })
+            recommendations.append(
+                {
+                    "type": "good",
+                    "message": "一切正常！继续保持当前使用方式。",
+                }
+            )
 
         return recommendations
 
@@ -268,7 +289,9 @@ class AdaptiveLearningScheduler:
     def __init__(self, memory_manager: Optional[MemoryManager] = None):
         self.memory_manager = memory_manager or get_memory_manager()
         self.optimizer = StrategyOptimizer(memory_manager)
-        self.updater = __import__('src.memory.updater', fromlist=['MemoryUpdater']).MemoryUpdater(memory_manager)
+        self.updater = __import__("src.memory.updater", fromlist=["MemoryUpdater"]).MemoryUpdater(
+            memory_manager
+        )
 
     async def run_maintenance_cycle(self) -> Dict[str, Any]:
         """运行一个完整的维护周期
@@ -288,6 +311,7 @@ class AdaptiveLearningScheduler:
         if self.optimizer.should_optimize():
             try:
                 from ..core.strategy import StrategyWeights
+
                 current_weights = StrategyWeights()
                 new_weights, opt_report = await self.optimizer.optimize_weights(current_weights)
 
