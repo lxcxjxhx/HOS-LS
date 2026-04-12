@@ -18,13 +18,210 @@
 
 ***
 
+## 💬 安全对话中心（chat + agent）
+
+### 什么是安全对话中心？
+
+`安全对话中心` 是 HOS-LS 的统一交互模式，它将**自然语言聊天**和 **Agent 编排语言**完美融合为一体。用户既可以通过自然语言与安全分析系统对话，也可以使用强大的 Agent Pipeline 构建器进行精细化控制。
+
+### 核心特性
+
+#### 🎯 自然语言交互能力
+- 🤖 **多代理架构** - 使用 7 个专门的代理进行安全分析
+- ⚡ **实时反馈** - 流式输出和代理思考过程
+- 📁 **代码库工具** - 内置代码搜索、文件读取、目录列出和 AST 分析
+- 🔧 **自动修复** - 生成具体的修复建议和代码补丁
+- 💣 **漏洞利用** - 生成 POC 并在沙箱中验证
+- 📡 **Git 集成** - 支持安全补丁的版本控制
+- 🎨 **用户友好界面** - 美观的终端输出和交互体验
+
+#### 🔧 Agent 编排语言
+- **Agent Pipeline 构建器** - 将 CLI flag 转换为 Agent 节点，构建执行管道
+- **自动补全 pipeline** - 根据依赖关系自动添加缺失的 Agent 节点
+- **宏命令支持** - 如 `--full-audit`、`--quick-scan` 等常用组合
+- **链式 Flag 表达** - 如 `--scan+reason+poc`
+- **CLI ↔ Chat 双向转换** - 自然语言与 CLI 命令的无缝切换
+- **轻量对话能力** - 支持 `--ask` 和 `--focus` 选项
+- **--explain 模式** - 展示执行流程
+- **进程隔离** - 确保并行执行的稳定性
+
+### 快速上手
+
+#### 启动聊天模式
+
+```bash
+# 启动交互式聊天
+hos-ls chat
+
+# 示例命令
+> 扫描当前目录的安全风险
+> 用纯 AI 模式分析项目
+> 生成漏洞的 POC 并验证
+> 提供修复建议和补丁
+> Git 提交修复
+```
+
+#### 使用 Agent 编排命令
+
+```bash
+# 基本扫描
+python -m src.cli.main scan --scan .
+
+# 带原因分析
+python -m src.cli.main scan --scan --reason .
+
+# 带 POC 生成
+python -m src.cli.main scan --scan --reason --poc .
+```
+
+#### 宏命令（常用组合）
+
+```bash
+# 快速扫描（scan + reason + report）
+python -m src.cli.main scan --quick-scan .
+
+# 完整审计（scan + reason + attack-chain + poc + verify + report）
+python -m src.cli.main scan --full-audit .
+```
+
+#### 链式 Flag 表达
+
+```bash
+# 链式表达
+python -m src.cli.main scan --scan+reason .
+
+# 复杂链式表达
+python -m src.cli.main scan --scan+reason+poc .
+```
+
+#### Explain 模式
+
+```bash
+# 显示执行流程
+python -m src.cli.main scan --scan --reason --explain .
+```
+
+#### 轻量对话（在扫描时聚焦特定方面）
+
+```bash
+# 重点关注认证逻辑
+python -m src.cli.main scan --scan --ask "重点看认证逻辑" .
+
+# 聚焦特定目录
+python -m src.cli.main scan --scan --focus "src" .
+```
+
+### 支持的命令类型
+
+**扫描命令**
+- 扫描当前目录的安全风险
+- 用纯 AI 模式扫描项目
+- 测试模式只扫描一个文件
+
+**分析命令**
+- 分析这个项目的漏洞
+- 评估代码安全性
+
+**利用命令**
+- 生成漏洞的 POC
+- 创建攻击脚本并验证
+
+**修复命令**
+- 提供修复建议
+- 生成修复补丁
+
+**Git 命令**
+- Git 提交修复
+- 创建安全补丁分支
+- 查看代码差异
+- 检查 Git 状态
+
+**代码库工具**
+- @file:path/to/file.py - 读取文件内容
+- @func:function_name - 搜索函数定义
+- 搜索代码关键词 - 搜索代码中的关键词
+- 列出目录 - 列出目录内容
+- 项目摘要 - 显示项目信息
+
+### 技术架构
+
+**核心组件：**
+- `ConversationalSecurityAgent` - 对话式安全代理，处理自然语言输入
+- `TerminalUI` - 终端用户界面，提供美观的交互体验
+- `MultiAgentPipeline` - 多智能体分析管道，实现深度安全分析
+- `LangGraphFlow` - 流程控制，实现多代理协作
+- `PipelineBuilder` - Agent 管道构建器，支持 flag 解析和宏展开
+- `AgentNode` - Agent 节点，代表执行流程中的一个步骤
+
+### 宏命令列表
+
+| 宏命令 | 展开为 | 说明 |
+|-------|-------|------|
+| `--full-audit` | `--scan --reason --attack-chain --poc --verify --report` | 完整安全审计 |
+| `--quick-scan` | `--scan --reason --report` | 快速扫描 |
+| `--poc-only` | `--scan --reason --poc` | 仅生成 POC |
+| `--attack-chain` | `--scan --reason --attack-chain` | 攻击链分析 |
+| `--verify-only` | `--scan --reason --verify` | 仅验证漏洞 |
+
+### 使用示例
+
+#### 基本扫描
+
+```bash
+[bold green]> [/bold green]扫描当前目录的安全风险
+[Planner] 正在分析您的请求...
+🔍 开始扫描目标: .
+⏱️ 开始时间: 2026-04-10 12:52:26
+🔄 正在初始化纯AI分析器...
+✓ API访问验证成功
+✓ 纯AI分析器初始化成功 (提供商: deepseek, 模型: deepseek-reasoner)
+✅ 发现 206 个文件                                                
+🔧 正在分析文件...
+```
+
+#### 代码库工具
+
+```bash
+[bold green]> [/bold green]@file:src/core/conversational_agent.py
+📄 文件内容: src/core/conversational_agent.py
+
+1. from typing import Dict, Any, Optional, List
+2. from pathlib import Path
+3. import json
+4. import os
+
+6. from src.core.config import Config
+7. from src.core.langgraph_flow import analyze_code
+8. from src.core.scanner import create_scanner
+9. from src.ai.pure_ai.multi_agent_pipeline import MultiAgentPipeline
+
+...
+```
+
+#### Git 操作
+
+```bash
+[bold green]> [/bold green]Git 提交修复
+Git 操作结果
+操作: commit
+状态: success
+消息: 提交成功
+
+[master a1b2c3d] 修复安全漏洞
+ 1 file changed, 10 insertions(+), 5 deletions(-)
+```
+
+***
+
 ## 📋 快速导航
 
+- [💬 安全对话中心（chat + agent）](#-安全对话中心-chat--agent) - 自然语言交互，Agent编排，智能安全分析
 - [🤖 纯净AI模式（--pure-ai）](#-纯净ai模式--pure-ai) - 低配置首选，开箱即用
-- [💬 智能交互模式（chat + agent）](#-智能交互模式-chat--agent) - 自然语言交互，Agent编排，智能安全分析
 - [🧠 重型模式（--ai）](#-重型模式--ai) - 全功能，高性能硬件推荐
 
 ***
+
+
 
 
 
@@ -435,198 +632,7 @@ attack_chain:
 
 ***
 
-## 💬 智能交互模式（chat + agent）
 
-### 什么是智能交互模式？
-
-`智能交互模式` 是 HOS-LS 的统一交互模式，它将**自然语言聊天**和 **Agent 编排语言**完美融合为一体。用户既可以通过自然语言与安全分析系统对话，也可以使用强大的 Agent Pipeline 构建器进行精细化控制。
-
-### 核心特性
-
-#### 🎯 自然语言交互能力
-- 🤖 **多代理架构** - 使用 7 个专门的代理进行安全分析
-- ⚡ **实时反馈** - 流式输出和代理思考过程
-- 📁 **代码库工具** - 内置代码搜索、文件读取、目录列出和 AST 分析
-- 🔧 **自动修复** - 生成具体的修复建议和代码补丁
-- 💣 **漏洞利用** - 生成 POC 并在沙箱中验证
-- 📡 **Git 集成** - 支持安全补丁的版本控制
-- 🎨 **用户友好界面** - 美观的终端输出和交互体验
-
-#### 🔧 Agent 编排语言
-- **Agent Pipeline 构建器** - 将 CLI flag 转换为 Agent 节点，构建执行管道
-- **自动补全 pipeline** - 根据依赖关系自动添加缺失的 Agent 节点
-- **宏命令支持** - 如 `--full-audit`、`--quick-scan` 等常用组合
-- **链式 Flag 表达** - 如 `--scan+reason+poc`
-- **CLI ↔ Chat 双向转换** - 自然语言与 CLI 命令的无缝切换
-- **轻量对话能力** - 支持 `--ask` 和 `--focus` 选项
-- **--explain 模式** - 展示执行流程
-- **进程隔离** - 确保并行执行的稳定性
-
-### 快速上手
-
-#### 启动聊天模式
-
-```bash
-# 启动交互式聊天
-hos-ls chat
-
-# 示例命令
-> 扫描当前目录的安全风险
-> 用纯 AI 模式分析项目
-> 生成漏洞的 POC 并验证
-> 提供修复建议和补丁
-> Git 提交修复
-```
-
-#### 使用 Agent 编排命令
-
-```bash
-# 基本扫描
-python -m src.cli.main scan --scan .
-
-# 带原因分析
-python -m src.cli.main scan --scan --reason .
-
-# 带 POC 生成
-python -m src.cli.main scan --scan --reason --poc .
-```
-
-#### 宏命令（常用组合）
-
-```bash
-# 快速扫描（scan + reason + report）
-python -m src.cli.main scan --quick-scan .
-
-# 完整审计（scan + reason + attack-chain + poc + verify + report）
-python -m src.cli.main scan --full-audit .
-```
-
-#### 链式 Flag 表达
-
-```bash
-# 链式表达
-python -m src.cli.main scan --scan+reason .
-
-# 复杂链式表达
-python -m src.cli.main scan --scan+reason+poc .
-```
-
-#### Explain 模式
-
-```bash
-# 显示执行流程
-python -m src.cli.main scan --scan --reason --explain .
-```
-
-#### 轻量对话（在扫描时聚焦特定方面）
-
-```bash
-# 重点关注认证逻辑
-python -m src.cli.main scan --scan --ask "重点看认证逻辑" .
-
-# 聚焦特定目录
-python -m src.cli.main scan --scan --focus "src" .
-```
-
-### 支持的命令类型
-
-**扫描命令**
-- 扫描当前目录的安全风险
-- 用纯 AI 模式扫描项目
-- 测试模式只扫描一个文件
-
-**分析命令**
-- 分析这个项目的漏洞
-- 评估代码安全性
-
-**利用命令**
-- 生成漏洞的 POC
-- 创建攻击脚本并验证
-
-**修复命令**
-- 提供修复建议
-- 生成修复补丁
-
-**Git 命令**
-- Git 提交修复
-- 创建安全补丁分支
-- 查看代码差异
-- 检查 Git 状态
-
-**代码库工具**
-- @file:path/to/file.py - 读取文件内容
-- @func:function_name - 搜索函数定义
-- 搜索代码关键词 - 搜索代码中的关键词
-- 列出目录 - 列出目录内容
-- 项目摘要 - 显示项目信息
-
-### 技术架构
-
-**核心组件：**
-- `ConversationalSecurityAgent` - 对话式安全代理，处理自然语言输入
-- `TerminalUI` - 终端用户界面，提供美观的交互体验
-- `MultiAgentPipeline` - 多智能体分析管道，实现深度安全分析
-- `LangGraphFlow` - 流程控制，实现多代理协作
-- `PipelineBuilder` - Agent 管道构建器，支持 flag 解析和宏展开
-- `AgentNode` - Agent 节点，代表执行流程中的一个步骤
-
-### 宏命令列表
-
-| 宏命令 | 展开为 | 说明 |
-|-------|-------|------|
-| `--full-audit` | `--scan --reason --attack-chain --poc --verify --report` | 完整安全审计 |
-| `--quick-scan` | `--scan --reason --report` | 快速扫描 |
-| `--poc-only` | `--scan --reason --poc` | 仅生成 POC |
-| `--attack-chain` | `--scan --reason --attack-chain` | 攻击链分析 |
-| `--verify-only` | `--scan --reason --verify` | 仅验证漏洞 |
-
-### 使用示例
-
-#### 基本扫描
-
-```bash
-[bold green]> [/bold green]扫描当前目录的安全风险
-[Planner] 正在分析您的请求...
-🔍 开始扫描目标: .
-⏱️ 开始时间: 2026-04-10 12:52:26
-🔄 正在初始化纯AI分析器...
-✓ API访问验证成功
-✓ 纯AI分析器初始化成功 (提供商: deepseek, 模型: deepseek-reasoner)
-✅ 发现 206 个文件                                                
-🔧 正在分析文件...
-```
-
-#### 代码库工具
-
-```bash
-[bold green]> [/bold green]@file:src/core/conversational_agent.py
-📄 文件内容: src/core/conversational_agent.py
-
-1. from typing import Dict, Any, Optional, List
-2. from pathlib import Path
-3. import json
-4. import os
-5. 
-6. from src.core.config import Config
-7. from src.core.langgraph_flow import analyze_code
-8. from src.core.scanner import create_scanner
-9. from src.ai.pure_ai.multi_agent_pipeline import MultiAgentPipeline
-10. 
-...
-```
-
-#### Git 操作
-
-```bash
-[bold green]> [/bold green]Git 提交修复
-Git 操作结果
-操作: commit
-状态: success
-消息: 提交成功
-
-[master a1b2c3d] 修复安全漏洞
- 1 file changed, 10 insertions(+), 5 deletions(-)
-```
 
 ## 📖 简介
 
@@ -909,7 +915,7 @@ hos-ls scan ./project --pure-ai --full-scan
 
 ### 上下文记忆系统（Context Memory）
 
-上下文记忆系统为智能交互模式提供多轮对话连贯性支持。
+上下文记忆系统为安全对话中心提供多轮对话连贯性支持。
 
 #### 核心特性
 - **实体提取**：自动识别对话中的代码实体（函数名、类名、文件名等）
@@ -2514,7 +2520,7 @@ HOS-LS 是一款专为 AI 生成代码设计的安全扫描工具，通过结合
 
 - **三大模式体系**：
   - 🤖 **纯净AI模式（--pure-ai）**：轻量级，低配置需求，开箱即用
-  - 💬 **智能交互模式（chat + agent）**：自然语言交互 + Agent编排，统一体验
+  - 💬 **安全对话中心（chat + agent）**：自然语言交互 + Agent编排，统一体验
   - 🔧 **重型模式（--ai）**：全功能，企业级安全审计
 - **强 Multi-Agent 架构**：多Agent协同工作，提供深度安全分析
 - **函数级代码切片**：AST精准切片，每个函数独立分析
@@ -2627,8 +2633,8 @@ v0.3.2.3 的重大改进：
 **v0.3.2.2 历史版本亮点：**
 
 1. **模式重命名与优化**：正式模式更名为**重型模式（--ai）**，更直观体现其定位；纯净AI模式保持不变
-2. **智能交互模式**：合并聊天模式和 Agent 编排语言为统一的**智能交互模式（chat + agent）**，提供自然语言 + Agent Pipeline 的完整交互体验
-3. **结构优化**：重新组织文档结构，建立清晰的**三大模式体系**（纯净AI → 智能交互 → 重型），提升可读性和易用性
+2. **安全对话中心**：合并聊天模式和 Agent 编排语言为统一的**安全对话中心（chat + agent）**，提供自然语言 + Agent Pipeline 的完整交互体验
+3. **结构优化**：重新组织文档结构，建立清晰的**三大模式体系**（纯净AI → 安全对话中心 → 重型），提升可读性和易用性
 4. **Agent 编排增强**：保留所有宏命令（--full-audit, --quick-scan等）、链式Flag表达（--scan+reason+poc）、CLI ↔ Chat双向转换等强大功能
 5. **体验升级**：整合CLI命令和Chat对话能力，用户可根据场景自由选择交互方式
 

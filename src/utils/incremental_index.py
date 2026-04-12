@@ -525,21 +525,34 @@ class IncrementalIndexManager:
         
         return stats
     
-    def get_index_status(self) -> str:
-        """获取索引状态的可读描述"""
+    def get_index_status(self, project_path: str = None) -> Dict[str, Any]:
+        """获取索引状态"""
+        if project_path:
+            # 初始化指定路径的索引管理器
+            self.__init__(project_path)
+        
         if not self.project_index:
-            return "❌ 索引未初始化"
+            return {
+                'exists': False,
+                'message': '索引未初始化',
+                'total_files': 0,
+                'version': 0,
+                'last_updated': None,
+                'path': str(self.index_file) if hasattr(self, 'index_file') else None
+            }
         
         age = (datetime.now() - self.project_index.last_updated).total_seconds()
         age_str = f"{age/3600:.1f}小时前" if age > 3600 else f"{age/60:.1f}分钟前"
         
-        return (
-            f"📚 项目索引状态:\n"
-            f"   文件数: {self.project_index.total_files_indexed}\n"
-            f"   版本: v{self.project_index.index_version}\n"
-            f"   最后更新: {age_str}\n"
-            f"   存储位置: {self.index_file}"
-        )
+        return {
+            'exists': True,
+            'message': '索引已初始化',
+            'total_files': self.project_index.total_files_indexed,
+            'version': self.project_index.index_version,
+            'last_updated': self.project_index.last_updated.isoformat(),
+            'age': age_str,
+            'path': str(self.index_file)
+        }
     
     # ========== 私有方法 ==========
     

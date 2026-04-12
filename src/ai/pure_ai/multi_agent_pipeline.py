@@ -759,11 +759,23 @@ class MultiAgentPipeline:
 4. 使用双引号，不要用单引号
 5. 使用 true/false/null，不要用 True/False/None
 6. 不要输出推理过程或说明文字
+7. 必须包含所有必要字段，不能缺失
+8. 必须确保JSON结构完整，没有截断
+9. 必须可被 json.loads 直接解析
+
+【重要提示】
+- 请仔细检查JSON格式，确保没有语法错误
+- 确保所有字符串值都使用双引号
+- 确保所有属性名都使用双引号
+- 确保没有尾部逗号
+- 确保JSON结构完整，没有缺失的括号
 
 【示例】
-✅ 正确输出: {"key": "value"}
-❌ 错误输出1: 以下是结果：{"key": "value"}
-❌ 错误输出2: ```json\n{"key": "value"}\n```
+✅ 正确输出: {"vulnerabilities": [{"type": "SQL注入", "location": "file.py:45", "description": "存在SQL注入漏洞"}]}
+❌ 错误输出1: 以下是结果：{"vulnerabilities": [...]}
+❌ 错误输出2: ```json\n{"vulnerabilities": [...]}\n```
+❌ 错误输出3: {"vulnerabilities": [{"type": 'SQL注入', "location": "file.py:45"}]
+❌ 错误输出4: {"vulnerabilities": [{"type": "SQL注入", "location": "file.py:45"},
 
 """ + prompt
                 
@@ -789,10 +801,20 @@ class MultiAgentPipeline:
                     token_usage['total_tokens'] = response.usage.get('total_tokens', 0)
                 
                 # 返回响应内容和token使用信息
+                response_content = ""
                 if hasattr(response, 'content'):
-                    return response.content, token_usage
+                    response_content = response.content
                 else:
-                    return str(response), token_usage
+                    response_content = str(response)
+                
+                # 增强日志记录
+                print(f"[DEBUG] 收到AI响应: 长度={len(response_content)}字符")
+                if response_content:
+                    print(f"[DEBUG] 响应前100字符: {response_content[:100]}...")
+                else:
+                    print(f"[DEBUG] 响应为空")
+                
+                return response_content, token_usage
                     
             except Exception as e:
                 console.print(f"[bold cyan][PURE-AI][/bold cyan] [yellow]生成失败 (Agent: {agent_name}, 尝试 {i+1}/{self.max_retries}): {e}[/yellow]")
@@ -812,8 +834,16 @@ class MultiAgentPipeline:
             解析后的JSON对象
         """
         try:
+            # 增强日志记录
+            print(f"[DEBUG] 开始解析JSON响应: 长度={len(response)}字符")
+            if response:
+                print(f"[DEBUG] 原始响应前100字符: {response[:100]}...")
+            else:
+                print(f"[DEBUG] 原始响应为空")
+            
             # 清理响应字符串
             cleaned_response = response.strip()
+            print(f"[DEBUG] 清理后响应长度: {len(cleaned_response)}字符")
 
             # 【新增】首先尝试使用 SmartJSONParser（更强的解析能力）
             smart_result = self.json_parser.parse(cleaned_response)
@@ -976,7 +1006,7 @@ class MultiAgentPipeline:
             prefix_match = re.search(r'\{', cleaned_for_extraction)
             if prefix_match:
                 cleaned_for_extraction = cleaned_for_extraction[prefix_match.start():]
-            suffix_match = re.rfind(cleaned_for_extraction, '}')
+            suffix_match = cleaned_for_extraction.rfind('}')
             if suffix_match != -1:
                 cleaned_for_extraction = cleaned_for_extraction[:suffix_match+1]
 
@@ -1003,22 +1033,39 @@ class MultiAgentPipeline:
                         result.append(char)
                     i += 1
                 return ''.join(result)
+            
+            # 策略C: 增强的JSON修复规则
+            def enhance_json_fix(json_str):
+                """增强的JSON修复规则"""
+                # 1. 修复未转义的单引号
+                json_str = re.sub(r"(?<!\\)'(?!\"", '"', json_str)
+                
+                # 2. 修复属性名缺少引号
+                json_str = re.sub(r'(\w+)\s*:', r'"\1":', json_str)
+                
+                # 3. 修复尾部逗号
+                json_str = re.sub(r',\s*}', '}', json_str)
+                json_str = re.sub(r',\s*\]', ']', json_str)
+                
+                # 4. 修复多行字符串
+                json_str = re.sub(r'"""([\s\S]*?)"""', lambda m: '"' + m.group(1).replace('"', '\\"').replace('\n', '\\n') + '"', json_str)
+                
+                # 5. 修复注释
+                json_str = re.sub(r'//.*$', '', json_str, flags=re.MULTILINE)
+                json_str = re.sub(r'/\*[\s\S]*?\*/', '', json_str)
+                
+                # 6. 移除多余的空白字符
+                json_str = json_str.strip()
+                
+                return json_str
 
-            # 应用修复策略A和B
+            # 应用修复策略A、B和C
             first_brace_new = cleaned_for_extraction.find('{')
             last_brace_new = cleaned_for_extraction.rfind('}')
             if first_brace_new != -1 and last_brace_new != -1 and last_brace_new > first_brace_new:
                 json_str = cleaned_for_extraction[first_brace_new:last_brace_new+1]
                 json_str = fix_python_dict_style(json_str)
-
-                # 额外修复：处理常见的格式问题
-                # 1. 修复未转义的引号（在字符串值内部）
-                # 2. 修复属性名缺少引号
-                # 3. 修复尾部逗号
-                json_str = re.sub(r'(?<!\\)\'', '"', json_str)
-                json_str = re.sub(r'(\w+)\s*:', r'"\1":', json_str)
-                json_str = re.sub(r',\s*}', '}', json_str)
-                json_str = re.sub(r',\s*\]', ']', json_str)
+                json_str = enhance_json_fix(json_str)
 
                 try:
                     parsed_json = json.loads(json_str)
@@ -1183,7 +1230,7 @@ class MultiAgentPipeline:
 
             # 【新增】将失败的响应保存到日志文件以便后续分析
             import os
-            debug_dir = "debug_logs"
+            debug_dir = ".hos-ls/logs"
             try:
                 os.makedirs(debug_dir, exist_ok=True)
                 timestamp = time.strftime("%Y%m%d_%H%M%S")
@@ -1228,7 +1275,7 @@ class MultiAgentPipeline:
 
             # 【新增】保存异常情况的响应到日志文件
             import os
-            debug_dir = "debug_logs"
+            debug_dir = ".hos-ls/logs"
             try:
                 os.makedirs(debug_dir, exist_ok=True)
                 timestamp = time.strftime("%Y%m%d_%H%M%S")
