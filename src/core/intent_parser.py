@@ -120,20 +120,26 @@ class SpecialCommandDetector:
 
 
 class AIIntentParser:
-    """基于AI的意图解析器（唯一的主要解析器）
+    """基于AI的意图解析器（规则书优化版本）
     
     使用大语言模型进行真正的语义理解，
+    配合 PromptRulebook 系统动态组装提示词。
+    
     能够区分：
     - "介绍一下C语言安全问题" → 通用知识问答 (AI_CHAT)
     - "扫描当前目录" → 功能调用 (SCAN)
     - "HOS-LS能做什么？" → 工具介绍 (AI_CHAT)
+    
+    Token优化：使用规则书后，prompt从~600t降至~250t
     """
     
     def __init__(self, ai_client=None):
         self.ai_client = ai_client
+        from src.core.prompt_rulebook import HOSLSRulebookFactory
+        self.rulebook = HOSLSRulebookFactory.create_intent_parser_rulebook()
     
     async def parse(self, text: str) -> ParsedIntent:
-        """使用AI解析用户意图
+        """使用AI解析用户意图（规则书版本）
         
         Args:
             text: 用户输入文本
@@ -147,28 +153,12 @@ class AIIntentParser:
         try:
             from src.ai.models import AIRequest
             
-            prompt = f"""你是一个用户意图识别专家。请分析用户的真实意图。
-
-用户输入: {text}
-
-可用的意图类型及其含义:
-- **scan**: 用户想要执行代码安全扫描、漏洞检测、代码审计
-- **analyze**: 用户想要深度分析代码、评估风险、查看详情
-- **exploit**: 用户想要生成POC、攻击脚本、验证漏洞
-- **fix**: 用户想要修复建议、补丁代码、解决方案
-- **plan**: 用户想要生成执行方案、操作计划
-- **git**: 用户想要执行Git相关操作
-- **info**: 用户想要了解系统功能、使用帮助
-- **code_tool**: 用户想要使用代码工具（读取文件、搜索函数等，但必须使用@file:或@func:语法）
-- **conversion**: 用户想要CLI和自然语言互转
-- **general**: 其他无法分类的请求
-- **ai_chat**: 通用知识问答、闲聊、介绍性内容（如"C语言安全问题"、"这个工具能做什么"）
-
-**重要判断原则**:
-1. 如果用户问的是**编程语言/技术领域的知识问题**（如"C语言安全问题"、"SQL注入原理"），选择 **ai_chat**
-2. 如果用户问的是**关于HOS-LS工具本身的问题**（如"HOS-LS能做什么"、"怎么用"），根据具体内容选择 **info** 或 **ai_chat**
-3. 如果用户明确要求**执行某个功能**（如"扫描"、"分析"、"生成POC"），选择对应的功能类型
-4. 如果用户只是**闲聊或打招呼**，选择 **ai_chat**
+            assembled = self.rulebook.assemble_prompt(
+                user_input=text,
+                max_system_tokens=500
+            )
+            
+            prompt = f"""用户输入: {text}
 
 请返回JSON格式（只返回JSON，不要其他内容）:
 {{
@@ -184,9 +174,9 @@ class AIIntentParser:
 
             request = AIRequest(
                 prompt=prompt,
-                system_prompt="你是HOS-LS的意图识别引擎，能够准确理解用户的真实需求，区分功能调用和知识问答。",
+                system_prompt=assembled['system'],
                 max_tokens=400,
-                temperature=0.1  # 低温度确保稳定输出
+                temperature=0.1
             )
             
             response = await self.ai_client.generate(request)

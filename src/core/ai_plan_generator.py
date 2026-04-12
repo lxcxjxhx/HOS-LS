@@ -14,6 +14,7 @@ from src.core.module_capabilities import get_module_capabilities
 from src.core.config import get_config
 from src.ai.client import get_model_manager
 from src.ai.models import AIRequest
+from src.core.prompt_rulebook import HOSLSRulebookFactory, PromptRulebook
 
 
 @dataclass
@@ -43,10 +44,12 @@ class ExecutionPlan:
 
 
 class AIPlanGenerator:
-    """AI计划生成器（动态版本）
+    """AI计划生成器（规则书优化版本）
     
     不再使用硬编码的默认值，
     所有计划内容都由AI根据用户实际输入动态生成。
+    
+    Token优化：使用规则书后，prompt从~900t降至~400t
     """
     
     def __init__(self, config=None):
@@ -54,6 +57,7 @@ class AIPlanGenerator:
         self.config = config if config else get_config()
         self.ai_client = None
         self.module_capabilities = get_module_capabilities()
+        self.rulebook: PromptRulebook = HOSLSRulebookFactory.create_plan_generator_rulebook()
     
     async def _get_ai_client(self):
         """获取AI客户端"""
@@ -125,13 +129,46 @@ class AIPlanGenerator:
     
     async def _generate_action_plan(self, intent: ParsedIntent, user_input: str, 
                                     available_modules: List[str]) -> ExecutionPlan:
-        """生成功能操作类型的计划"""
+        """生成功能操作类型的计划（规则书版本）"""
         
-        prompt = self._build_action_plan_prompt(intent, user_input, available_modules)
+        assembled = self.rulebook.assemble_prompt(
+            user_input=user_input,
+            intent_type=intent.type.value,
+            max_system_tokens=800
+        )
         
+        entities_info = ""
+        for key, value in intent.entities.items():
+            entities_info += f"- {key}: {value}\n"
+        
+        prompt = f"""## 📥 用户输入
+{user_input}
+
+## 🔍 AI意图分析结果
+- **意图类型**: {intent.type.value}
+- **置信度**: {intent.confidence:.0%}
+- **提取的实体**:
+{entities_info if entities_info else '  （无特殊实体）'}
+
+## 🛠️ 可用功能模块
+{', '.join(available_modules)}
+
+请返回JSON格式的执行计划（只返回JSON）:
+```json
+{{
+  "name": "计划名称",
+  "description": "计划描述",
+  "steps": [...],
+  "estimated_total_time": 秒数,
+  "pure_ai": true/false,
+  "test_mode": true/false,
+  "test_file_count": 数字
+}}
+```"""
+
         request = AIRequest(
             prompt=prompt,
-            system_prompt="你是HOS-LS的安全扫描计划生成专家。根据用户需求和AI识别出的意图，生成最优的执行计划。",
+            system_prompt=assembled['system'],
             max_tokens=1200,
             temperature=0.1
         )
