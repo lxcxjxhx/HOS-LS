@@ -7,6 +7,8 @@ import sys
 import os
 import io
 import contextlib
+import threading
+from queue import Queue, Empty
 
 # [TEST MODE] 临时禁用stdout/stderr重定向以捕获完整输出
 # _devnull = open(os.devnull, 'w')
@@ -29,7 +31,6 @@ import asyncio
 from pathlib import Path
 from typing import Optional, List, Dict, Any
 from concurrent.futures import ThreadPoolExecutor
-from queue import Queue
 
 import click
 from rich.console import Console
@@ -68,43 +69,66 @@ class AsyncWorker:
         self.executor = ThreadPoolExecutor(max_workers=max_workers)
         self.queue = Queue()
         self.running = False
+        self._lock = threading.RLock()  # 添加线程锁确保线程安全
     
     def start(self):
         """启动Worker"""
-        self.running = True
-        # 在单独的线程中运行事件循环
-        def run_event_loop():
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            loop.create_task(self._process_queue())
-            loop.run_forever()
-        
-        import threading
-        thread = threading.Thread(target=run_event_loop)
-        thread.daemon = True
-        thread.start()
+        with self._lock:
+            if not self.running:
+                self.running = True
+                # 在单独的线程中运行事件循环
+                def run_event_loop():
+                    loop = asyncio.new_event_loop()
+                    asyncio.set_event_loop(loop)
+                    loop.create_task(self._process_queue())
+                    loop.run_forever()
+                
+                import threading
+                thread = threading.Thread(target=run_event_loop)
+                thread.daemon = True
+                thread.start()
     
     def stop(self):
         """停止Worker"""
-        self.running = False
-        self.executor.shutdown()
+        with self._lock:
+            if self.running:
+                self.running = False
+                self.executor.shutdown(wait=False)  # 非阻塞关闭
     
     def add_task(self, task, *args, **kwargs):
         """添加任务到队列"""
-        self.queue.put((task, args, kwargs))
+        if not callable(task):
+            console.print(f"[bold red]错误: 任务必须是可调用对象[/bold red]")
+            return
+        
+        with self._lock:
+            if self.running:
+                self.queue.put((task, args, kwargs))
+            else:
+                console.print(f"[bold yellow]警告: Worker 未运行，任务未添加[/bold yellow]")
     
     async def _process_queue(self):
         """处理队列中的任务"""
-        while self.running:
-            if not self.queue.empty():
-                task, args, kwargs = self.queue.get()
+        while True:
+            with self._lock:
+                if not self.running and self.queue.empty():
+                    break
+            
+            try:
+                # 使用非阻塞方式获取任务，避免长时间阻塞
                 try:
-                    await asyncio.to_thread(task, *args, **kwargs)
-                except Exception as e:
-                    console.print(f"[bold red]任务执行失败: {e}[/bold red]")
-                finally:
-                    self.queue.task_done()
-            await asyncio.sleep(0.1)
+                    task, args, kwargs = self.queue.get(block=False)
+                    try:
+                        await asyncio.to_thread(task, *args, **kwargs)
+                    except Exception as e:
+                        console.print(f"[bold red]任务执行失败: {e}[/bold red]")
+                    finally:
+                        self.queue.task_done()
+                except Empty:
+                    await asyncio.sleep(0.1)
+            except Exception as e:
+                console.print(f"[bold red]队列处理错误: {e}[/bold red]")
+                await asyncio.sleep(0.1)
 
 
 def print_banner() -> None:
@@ -219,6 +243,13 @@ def cli(ctx: click.Context, config: Optional[str], verbose: bool, quiet: bool, d
 @click.option("--plan", help="使用指定的Plan执行")
 @click.option("--lang", type=click.Choice(["cn", "en"]), help="输出语言")
 @click.option("--test", type=int, default=0, help="启用测试模式，指定扫描文件数量")
+# 宏命令选项
+@click.option("--full-audit", is_flag=True, help="完整审计 - 全流程深度安全审计")
+@click.option("--quick-scan", is_flag=True, help="快速扫描 - 扫描并生成报告")
+@click.option("--deep-audit", is_flag=True, help="深度审计 - 包含漏洞验证的完整审计")
+@click.option("--red-team", is_flag=True, help="红队模式 - 模拟攻击者视角的全面测试")
+@click.option("--bug-bounty", is_flag=True, help="漏洞赏金模式 - 针对漏洞赏金的高效扫描")
+@click.option("--compliance", is_flag=True, help="合规模式 - 符合安全合规要求的检查")
 @click.pass_context
 def scan(
     ctx: click.Context,
@@ -230,6 +261,12 @@ def scan(
     plan: Optional[str],
     lang: Optional[str],
     test: int,
+    full_audit: bool,
+    quick_scan: bool,
+    deep_audit: bool,
+    red_team: bool,
+    bug_bounty: bool,
+    compliance: bool,
 ) -> None:
     """扫描代码安全漏洞（支持自然语言输入）
     
@@ -340,30 +377,47 @@ def scan(
     # 执行计划
     try:
         import asyncio
-        from src.core.plan_manager import PlanManager
+        from src.cli.agent_integration import execute_with_unified_engine
         
-        plan_manager = PlanManager(config)
-        result = asyncio.run(plan_manager.execute_plan(plan))
+        # 构建行为flags
+        behavior_flags = []
+        
+        # 处理宏命令
+        if full_audit:
+            behavior_flags.extend(['scan', 'reason', 'attack-chain', 'poc', 'report'])
+        elif quick_scan:
+            behavior_flags.extend(['scan', 'report'])
+        elif deep_audit:
+            behavior_flags.extend(['scan', 'reason', 'attack-chain', 'poc', 'verify', 'report'])
+        elif red_team:
+            behavior_flags.extend(['scan', 'reason', 'attack-chain', 'poc', 'verify'])
+        elif bug_bounty:
+            behavior_flags.extend(['scan', 'reason', 'poc', 'report'])
+        elif compliance:
+            behavior_flags.extend(['scan', 'reason', 'report'])
+        else:
+            # 默认行为
+            behavior_flags.extend(['scan', 'report'])
+        
+        # 执行扫描
+        result = asyncio.run(execute_with_unified_engine(
+            config=config,
+            target=target,
+            behavior_flags=behavior_flags,
+            mode=mode,
+            ask=user_query,
+            focus=None
+        ))
         
         # 显示结果
-        # 转换结果为对象格式
-        class ResultObject:
-            def __init__(self, data):
-                self.__dict__.update(data)
-        result_obj = ResultObject(result)
-        display_unified_result(result_obj, console, quiet=config.quiet)
+        display_unified_result(result, console, quiet=config.quiet)
         
         # 生成报告
         if output:
-            # 转换结果为对象格式
-            class ResultObject:
-                def __init__(self, data):
-                    self.__dict__.update(data)
-            result_obj = ResultObject(result)
-            _generate_unified_report(result_obj, output, output_format, config)
+            _generate_unified_report(result, output, output_format, config)
         
         # 设置退出码
-        if not result.get("success", True) and result.get("total_findings", 0) > 0:
+        if not result.success and result.total_findings > 0:
             sys.exit(1)
     except Exception as e:
         console.print(f"[bold red]执行失败: {e}[/bold red]")
@@ -1009,6 +1063,10 @@ def _convert_execution_result_to_scan_results(execution_result) -> List:
     target_path = getattr(execution_result, 'target', 'unknown')
 
     for agent_name, agent_result in execution_result.results.items():
+        # 跳过 ReportGeneratorAgent，因为它的 findings 是重复的（收集了其他 Agent 的 findings）
+        if agent_name in ['report', 'ReportGeneratorAgent']:
+            continue
+            
         findings_list = []
 
         if hasattr(agent_result, 'findings') and agent_result.findings:

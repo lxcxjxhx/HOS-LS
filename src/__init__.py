@@ -24,7 +24,17 @@ class _StdoutSuppressor:
     
     def write(self, text):
         if not any(p in text for p in self._PATTERNS):
-            return self._original.write(text)
+            try:
+                return self._original.write(text)
+            except UnicodeEncodeError:
+                # 处理 Unicode 编码错误，尝试使用替代编码
+                try:
+                    if isinstance(text, str):
+                        return self._original.write(text.encode('gbk', errors='replace').decode('gbk'))
+                    return self._original.write(text)
+                except:
+                    # 如果仍然失败，跳过写入
+                    return len(text)
         return len(text)
     
     def flush(self):
@@ -60,7 +70,7 @@ def _suppress_startup_messages():
 
 _suppress_startup_messages()
 
-__version__ = "0.3.2.4"
+__version__ = "0.3.2.7"
 __author__ = "HOS Team"
 __license__ = "MIT"
 

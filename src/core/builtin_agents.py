@@ -83,7 +83,8 @@ class ScannerAgent(BaseAgent, PureAIAgentMixin):
                 findings=findings,
                 metadata={
                     'target': context.target,
-                    'has_findings': len(findings) > 0
+                    'has_findings': len(findings) > 0,
+                    'mode': 'standard'
                 }
             )
 
@@ -93,6 +94,147 @@ class ScannerAgent(BaseAgent, PureAIAgentMixin):
                 status=AgentStatus.FAILED,
                 error=f"扫描失败: {str(e)}",
                 confidence=0.0
+            )
+
+    async def execute_ai_mode(self, context: ExecutionContext) -> AgentResult:
+        """纯AI模式执行代码扫描
+        
+        使用 PureAIAnalyzer 进行深度语义分析
+        """
+        try:
+            from src.ai.pure_ai_analyzer import PureAIAnalyzer
+            from pathlib import Path
+
+            # 定义FileInfo类，使其在整个方法中可见
+            class FileInfo:
+                def __init__(self, path):
+                    self.path = str(path)
+
+            config = context.config or Config()
+            analyzer = PureAIAnalyzer(config)
+
+            # 初始化分析器
+            await analyzer._initialize()
+            if not analyzer.initialized:
+                return AgentResult(
+                    agent_name="scan",
+                    status=AgentStatus.FAILED,
+                    error="纯AI分析器初始化失败",
+                    confidence=0.0,
+                    metadata={
+                        'target': context.target,
+                        'mode': 'pure-ai'
+                    }
+                )
+
+            # 收集文件信息
+            target_path = Path(context.target).resolve()  # 使用resolve()统一路径
+            file_infos = []
+            
+            # 确定文件数量限制
+            file_limit = 10  # 默认值
+            if hasattr(config, 'test_mode') and config.test_mode:
+                if hasattr(config, 'test_file_count'):
+                    file_limit = config.test_file_count
+                else:
+                    file_limit = 1  # 测试模式默认限制为1个文件
+            
+            if target_path.is_file():
+                # 单个文件
+                file_infos.append(FileInfo(target_path))
+            elif target_path.is_dir():
+                # 目录，收集Python文件
+                for file_path in target_path.rglob('*.py'):
+                    resolved_path = file_path.resolve()  # 使用resolve()统一路径
+                    file_infos.append(FileInfo(resolved_path))
+                    if len(file_infos) >= file_limit:  # 使用配置的文件数量限制
+                        break
+            else:
+                return AgentResult(
+                    agent_name="scan",
+                    status=AgentStatus.FAILED,
+                    error="目标路径不存在或不是文件/目录",
+                    confidence=0.0,
+                    metadata={
+                        'target': context.target,
+                        'mode': 'pure-ai'
+                    }
+                )
+
+            if not file_infos:
+                return AgentResult(
+                    agent_name="scan",
+                    status=AgentStatus.COMPLETED,
+                    message="未找到Python文件",
+                    confidence=1.0,
+                    findings=[],
+                    metadata={
+                        'target': context.target,
+                        'mode': 'pure-ai',
+                        'file_count': 0
+                    }
+                )
+
+            # 执行批量分析
+            findings_list = await analyzer.analyze_batch(file_infos)
+
+            # 收集所有发现
+            all_findings = []
+            for findings in findings_list:
+                for finding in findings:
+                    # 转换为字典格式
+                    finding_dict = {
+                        'rule_id': getattr(finding, 'rule_id', ''),
+                        'rule_name': getattr(finding, 'rule_name', ''),
+                        'severity': getattr(finding, 'severity', 'unknown'),
+                        'message': getattr(finding, 'description', ''),
+                        'file': getattr(finding, 'location', {}).get('file', '') if hasattr(getattr(finding, 'location', None), 'get') else '',
+                        'confidence': getattr(finding, 'confidence', 0.5)
+                    }
+                    all_findings.append(finding_dict)
+
+            # 关闭分析器
+            await analyzer.close()
+
+            result = AgentResult(
+                agent_name="scan",
+                status=AgentStatus.COMPLETED,
+                data={
+                    'findings_count': len(all_findings),
+                    'file_count': len(file_infos)
+                },
+                message=f"纯AI扫描完成，分析了 {len(file_infos)} 个文件，发现 {len(all_findings)} 个问题",
+                confidence=0.9 if all_findings else 1.0,
+                findings=all_findings,
+                metadata={
+                    'target': context.target,
+                    'mode': 'pure-ai',
+                    'file_count': len(file_infos),
+                    'has_findings': len(all_findings) > 0
+                }
+            )
+
+            return result
+
+        except Exception as e:
+            error_message = f"纯AI扫描失败: {str(e)}"
+            error_details = {
+                'error_type': type(e).__name__,
+                'error_message': str(e),
+                'target': context.target,
+                'mode': 'pure-ai',
+                'suggestion': '请检查目标路径是否存在，以及AI分析器是否正确初始化'
+            }
+            return AgentResult(
+                agent_name="scan",
+                status=AgentStatus.FAILED,
+                error=error_message,
+                confidence=0.0,
+                metadata={
+                    'target': context.target,
+                    'mode': 'pure-ai',
+                    'error_details': error_details
+                }
             )
 
 

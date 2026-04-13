@@ -70,41 +70,65 @@ class StandardExecutor(BaseExecutor):
         pipeline: List[str],
         context: ExecutionContext
     ) -> ExecutionResult:
-        start_time = time.time()
+        from src.core.utils.time_utils import Timer
+        from src.core.utils.agent_utils import get_agent_instance, check_agent_dependencies
+        from src.core.utils.error_handling import create_error_result
+
+        timer = Timer()
+        timer.start()
         results = {}
 
         for agent_name in pipeline:
-            agent_instance = self.registry.get_agent_instance(agent_name, self.config)
+            agent_instance = get_agent_instance(agent_name, self.config, self.registry)
 
             if not agent_instance:
-                results[agent_name] = AgentResult(
+                results[agent_name] = create_error_result(
                     agent_name=agent_name,
-                    status=AgentStatus.FAILED,
-                    error=f"Agent '{agent_name}' 未注册或无法实例化",
-                    confidence=0.0
+                    error_message=f"Agent '{agent_name}' 未注册或无法实例化",
+                    error_type="AgentNotFoundError"
                 )
                 continue
 
             try:
+                # 检查Agent的依赖关系
+                if not check_agent_dependencies(agent_instance, context):
+                    # 依赖检查失败，创建失败结果
+                    results[agent_name] = create_error_result(
+                        agent_name=agent_name,
+                        error_message=f"Agent '{agent_name}' 依赖检查失败，请确保其依赖的Agent已成功执行",
+                        error_type="DependencyError",
+                        metadata={
+                            'agent_name': agent_name,
+                            'completed_agents': list(context.results.keys())
+                        }
+                    )
+                    context.add_result(agent_name, results[agent_name])
+                    continue
+                
+                # 执行Agent
                 result = await agent_instance.execute_with_hooks(context)
-                results[agent_name] = result
+                # 先将结果添加到context中，再存储到results中
+                # 这样后续的Agent可以看到当前Agent的结果
                 context.add_result(agent_name, result)
+                results[agent_name] = result
 
                 if not result.is_success and agent_name != "report":
                     # 非 report Agent 失败时记录但继续
                     pass
 
             except Exception as e:
-                results[agent_name] = AgentResult(
+                results[agent_name] = create_error_result(
                     agent_name=agent_name,
-                    status=AgentStatus.FAILED,
-                    error=str(e),
-                    confidence=0.0
+                    error_message=str(e),
+                    error_type=type(e).__name__
                 )
 
-        execution_time = time.time() - start_time
+        execution_time = timer.stop()
         all_findings = []
-        for r in results.values():
+        for agent_name, r in results.items():
+            # 跳过 ReportGeneratorAgent，因为它的 findings 是重复的（收集了其他 Agent 的 findings）
+            if agent_name in ['report', 'ReportGeneratorAgent']:
+                continue
             if r.findings:
                 all_findings.extend(r.findings)
 
@@ -132,7 +156,12 @@ class PureAIExecutor(BaseExecutor):
         pipeline: List[str],
         context: ExecutionContext
     ) -> ExecutionResult:
-        start_time = time.time()
+        from src.core.utils.time_utils import Timer
+        from src.core.utils.agent_utils import get_agent_instance, check_agent_dependencies
+        from src.core.utils.error_handling import create_error_result
+
+        timer = Timer()
+        timer.start()
         results = {}
 
         if self.config:
@@ -141,38 +170,56 @@ class PureAIExecutor(BaseExecutor):
                 context.config = self.config
 
         for agent_name in pipeline:
-            agent_instance = self.registry.get_agent_instance(agent_name, self.config)
+            agent_instance = get_agent_instance(agent_name, self.config, self.registry)
 
             if not agent_instance:
-                results[agent_name] = AgentResult(
+                results[agent_name] = create_error_result(
                     agent_name=agent_name,
-                    status=AgentStatus.FAILED,
-                    error=f"Agent '{agent_name}' 未注册",
-                    confidence=0.0
+                    error_message=f"Agent '{agent_name}' 未注册",
+                    error_type="AgentNotFoundError"
                 )
                 continue
 
             try:
+                # 检查Agent的依赖关系
+                if not check_agent_dependencies(agent_instance, context):
+                    # 依赖检查失败，创建失败结果
+                    results[agent_name] = create_error_result(
+                        agent_name=agent_name,
+                        error_message=f"Agent '{agent_name}' 依赖检查失败，请确保其依赖的Agent已成功执行",
+                        error_type="DependencyError",
+                        metadata={
+                            'agent_name': agent_name,
+                            'completed_agents': list(context.results.keys())
+                        }
+                    )
+                    context.add_result(agent_name, results[agent_name])
+                    continue
+                
                 # 尝试使用纯AI模式
                 if hasattr(agent_instance, 'execute_ai_mode'):
                     result = await agent_instance.execute_ai_mode(context)
                 else:
                     result = await agent_instance.execute_with_hooks(context)
 
-                results[agent_name] = result
+                # 先将结果添加到context中，再存储到results中
+                # 这样后续的Agent可以看到当前Agent的结果
                 context.add_result(agent_name, result)
+                results[agent_name] = result
 
             except Exception as e:
-                results[agent_name] = AgentResult(
+                results[agent_name] = create_error_result(
                     agent_name=agent_name,
-                    status=AgentStatus.FAILED,
-                    error=f"纯AI执行失败: {str(e)}",
-                    confidence=0.0
+                    error_message=f"纯AI执行失败: {str(e)}",
+                    error_type=type(e).__name__
                 )
 
-        execution_time = time.time() - start_time
+        execution_time = timer.stop()
         all_findings = []
-        for r in results.values():
+        for agent_name, r in results.items():
+            # 跳过 ReportGeneratorAgent，因为它的 findings 是重复的（收集了其他 Agent 的 findings）
+            if agent_name in ['report', 'ReportGeneratorAgent']:
+                continue
             if r.findings:
                 all_findings.extend(r.findings)
 
@@ -417,103 +464,169 @@ class UnifiedExecutionEngine:
         # 确定执行模式
         exec_mode = mode or request.mode or 'auto'
 
-        # 1. 构建 Pipeline
-        pipeline = await self._build_pipeline(request)
+        try:
+            # 1. 构建 Pipeline
+            pipeline = await self._build_pipeline(request)
 
-        if not pipeline:
+            if not pipeline:
+                return ExecutionResult(
+                    success=False,
+                    mode=exec_mode,
+                    error="无法构建有效的 Pipeline",
+                    message="请提供有效的命令或自然语言描述"
+                )
+
+            # 2. 创建执行上下文
+            context = self._create_context(request)
+
+            # 3. 选择执行器
+            executor = self.executors.get(exec_mode, self.executors['auto'])
+
+            # 4. 执行
+            result = await executor.execute(pipeline, context)
+
+            # 5. 后处理
+            result.execution_time = time.time() - start_time
+            result.pipeline_used = pipeline
+
+            # 6. 收集反馈（如果启用）
+            if self.config and getattr(self.config, 'feedback', None):
+                if getattr(self.config.feedback, 'collect_auto', False):
+                    try:
+                        self._collect_feedback(request, pipeline, result)
+                    except Exception as feedback_error:
+                        # 反馈收集失败不应影响主流程
+                        if self.config and getattr(self.config, 'debug', False):
+                            print(f"[DEBUG] 反馈收集失败: {feedback_error}")
+
+            return result
+        except Exception as e:
+            # 捕获所有异常，确保框架不会崩溃
+            execution_time = time.time() - start_time
+            error_message = f"执行失败: {str(e)}"
+            
+            # 在调试模式下打印详细错误信息
+            if self.config and getattr(self.config, 'debug', False):
+                import traceback
+                traceback.print_exc()
+            
             return ExecutionResult(
                 success=False,
                 mode=exec_mode,
-                error="无法构建有效的 Pipeline",
-                message="请提供有效的命令或自然语言描述"
+                error=error_message,
+                message=error_message,
+                execution_time=execution_time,
+                pipeline_used=[],
+                total_findings=0,
+                metadata={'error_details': str(e)}
             )
-
-        # 2. 创建执行上下文
-        context = self._create_context(request)
-
-        # 3. 选择执行器
-        executor = self.executors.get(exec_mode, self.executors['auto'])
-
-        # 4. 执行
-        result = await executor.execute(pipeline, context)
-
-        # 5. 后处理
-        result.execution_time = time.time() - start_time
-        result.pipeline_used = pipeline
-
-        # 6. 收集反馈（如果启用）
-        if self.config and getattr(self.config, 'feedback', None):
-            if getattr(self.config.feedback, 'collect_auto', False):
-                self._collect_feedback(request, pipeline, result)
-
-        return result
 
     async def _build_pipeline(self, request: ExecutionRequest) -> List[str]:
         """根据请求类型构建 Pipeline"""
-        if request.flags:
-            return self.registry.build_pipeline_from_flags(
-                request.flags,
-                auto_complete=True,
-                expand_macros=True
-            )
+        try:
+            if request.flags:
+                return self.registry.build_pipeline_from_flags(
+                    request.flags,
+                    auto_complete=True,
+                    expand_macros=True
+                )
 
-        elif request.natural_language:
-            return await self._nl_to_pipeline(request.natural_language)
+            elif request.natural_language:
+                return await self._nl_to_pipeline(request.natural_language)
 
-        elif hasattr(request, 'plan') and request.plan:
-            return self._plan_to_pipeline(request.plan)
+            elif hasattr(request, 'plan') and request.plan:
+                return self._plan_to_pipeline(request.plan)
 
-        else:
-            # 默认 Pipeline
+            else:
+                # 默认 Pipeline
+                return ['scan', 'report']
+        except Exception as e:
+            # 构建 Pipeline 失败时返回默认 Pipeline
+            if self.config and getattr(self.config, 'debug', False):
+                print(f"[DEBUG] Pipeline 构建失败: {e}")
             return ['scan', 'report']
 
     async def _nl_to_pipeline(self, text: str) -> List[str]:
         """将自然语言转换为 Pipeline"""
-        from src.core.intelligent_pipeline_builder import IntelligentPipelineBuilder
+        try:
+            from src.core.intelligent_pipeline_builder import IntelligentPipelineBuilder
 
-        ai_client = None
-        if self.config:
-            try:
-                from src.ai.client import get_model_manager
-                import asyncio
-                model_manager = asyncio.run(get_model_manager(self.config))
-                ai_client = model_manager.get_default_client()
-            except Exception:
-                pass
+            ai_client = None
+            if self.config:
+                try:
+                    from src.ai.client import get_model_manager
+                    model_manager = await get_model_manager(self.config)
+                    ai_client = model_manager.get_default_client()
+                except Exception as client_error:
+                    if self.config and getattr(self.config, 'debug', False):
+                        print(f"[DEBUG] AI 客户端初始化失败: {client_error}")
 
-        nodes = IntelligentPipelineBuilder.from_natural_language(text, ai_client, self.config)
-        return [node.type.value for node in nodes]
+            nodes = IntelligentPipelineBuilder.from_natural_language(text, ai_client, self.config)
+            return [node.type.value for node in nodes]
+        except Exception as e:
+            # 自然语言转换失败时返回默认 Pipeline
+            if self.config and getattr(self.config, 'debug', False):
+                print(f"[DEBUG] 自然语言转换失败: {e}")
+            return ['scan', 'report']
 
     def _plan_to_pipeline(self, plan) -> List[str]:
         """将 Plan 对象转换为 Pipeline"""
-        nodes = IntelligentPipelineBuilder.from_plan(plan)
-        return [node.type.value for node in nodes]
+        try:
+            nodes = IntelligentPipelineBuilder.from_plan(plan)
+            return [node.type.value for node in nodes]
+        except Exception as e:
+            # Plan 转换失败时返回默认 Pipeline
+            if self.config and getattr(self.config, 'debug', False):
+                print(f"[DEBUG] Plan 转换失败: {e}")
+            return ['scan', 'report']
 
     def _create_context(self, request: ExecutionRequest) -> ExecutionContext:
         """创建执行上下文"""
-        # 复制配置对象，避免修改原始配置
-        import copy
-        config = copy.deepcopy(self.config)
-        
-        # 应用测试模式参数
-        if hasattr(request, 'test_mode') and request.test_mode:
-            config.test_mode = True
-            if hasattr(request, 'test_file_count'):
-                config.test_file_count = request.test_file_count
-        
-        context = ExecutionContext(
-            target=request.target,
-            config=config,
-            user_intent=request.natural_language or str(request.flags),
-            user_query=request.context.get('ask'),
-            focus=request.context.get('focus')
-        )
+        try:
+            # 直接使用原始配置引用，避免深拷贝带来的内存开销
+            # 注意：这里假设执行过程中不会修改配置对象
+            config = self.config
+            
+            # 应用测试模式参数（仅在测试模式下）
+            if hasattr(request, 'test_mode') and request.test_mode:
+                # 如果需要修改配置，创建一个浅拷贝
+                import copy
+                config = copy.copy(self.config)
+                config.test_mode = True
+                if hasattr(request, 'test_file_count'):
+                    config.test_file_count = request.test_file_count
+            
+            context = ExecutionContext(
+                target=request.target,
+                config=config,
+                user_intent=request.natural_language or str(request.flags),
+                user_query=request.context.get('ask'),
+                focus=request.context.get('focus')
+            )
 
-        # 如果提供了代码内容
-        if request.context.get('code'):
-            context.code = request.context['code']
+            # 如果提供了代码内容
+            if request.context.get('code'):
+                context.code = request.context['code']
 
-        return context
+            return context
+        except Exception as e:
+            # 上下文创建失败时使用默认配置
+            if self.config and getattr(self.config, 'debug', False):
+                print(f"[DEBUG] 上下文创建失败: {e}")
+            
+            # 使用原始配置
+            context = ExecutionContext(
+                target=request.target,
+                config=self.config,
+                user_intent=request.natural_language or str(request.flags),
+                user_query=request.context.get('ask'),
+                focus=request.context.get('focus')
+            )
+            
+            if request.context.get('code'):
+                context.code = request.context['code']
+            
+            return context
 
     def _collect_feedback(
         self,

@@ -293,19 +293,24 @@ class BaseAgent(ABC):
         Returns:
             AgentResult: 最终执行结果
         """
-        import time
+        from src.core.utils.time_utils import Timer
+        from src.core.utils.error_handling import create_error_result
 
         self._status = AgentStatus.RUNNING
-        self._start_time = datetime.now()
+        timer = Timer()
+        timer.start()
 
         try:
             # 1. 验证输入
             if not self.validate_input(context):
-                return AgentResult(
+                return create_error_result(
                     agent_name=self.__class__.__name__,
-                    status=AgentStatus.FAILED,
-                    error="输入验证失败",
-                    confidence=0.0
+                    error_message="输入验证失败",
+                    error_type="ValidationError",
+                    metadata={
+                        'agent_name': self.__class__.__name__,
+                        'context': context.to_dict() if hasattr(context, 'to_dict') else {}
+                    }
                 )
 
             # 2. 预处理
@@ -321,19 +326,24 @@ class BaseAgent(ABC):
             self._status = AgentStatus.COMPLETED
 
             # 记录执行时间
-            if self._start_time:
-                final_result.execution_time = (datetime.now() - self._start_time).total_seconds()
+            final_result.execution_time = timer.stop()
 
             return final_result
 
         except Exception as e:
             self._status = AgentStatus.FAILED
-            return AgentResult(
+            execution_time = timer.stop()
+            error_result = create_error_result(
                 agent_name=self.__class__.__name__,
-                status=AgentStatus.FAILED,
-                error=str(e),
-                confidence=0.0
+                error_message=str(e),
+                error_type=type(e).__name__,
+                metadata={
+                    'agent_name': self.__class__.__name__,
+                    'execution_time': execution_time
+                }
             )
+            error_result.execution_time = execution_time
+            return error_result
 
     def _define_capabilities(self) -> AgentCapabilities:
         """定义 Agent 能力（子类应重写此方法）"""

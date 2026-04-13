@@ -204,6 +204,42 @@ class TokenTracker:
         except Exception as e:
             logger.error(f"Failed to load token usage history: {e}")
 
+    def estimate_tokens(self, file_size: int, agent_count: int) -> int:
+        """动态 Token 预估
+
+        Args:
+            file_size: 文件大小（字节）
+            agent_count: Agent 数量
+
+        Returns:
+            int: 预估的 Token 数量
+        """
+        base = file_size * 1.5
+        multiplier = agent_count
+        
+        return int(base * multiplier)
+
+    def estimate_tokens_with_range(self, file_size: int, agent_count: int) -> dict:
+        """带范围的 Token 预估
+
+        Args:
+            file_size: 文件大小（字节）
+            agent_count: Agent 数量
+
+        Returns:
+            dict: 包含单Agent预估、Agent数量、总预估范围的字典
+        """
+        single_agent_estimate = int(file_size * 1.5)
+        min_estimate = single_agent_estimate * agent_count
+        max_estimate = single_agent_estimate * agent_count * 2.4  # 考虑动态浮动
+        
+        return {
+            'single_agent_estimate': single_agent_estimate,
+            'agent_count': agent_count,
+            'min_estimate': min_estimate,
+            'max_estimate': max_estimate
+        }
+
     def generate_report(self) -> str:
         """生成使用报告
 

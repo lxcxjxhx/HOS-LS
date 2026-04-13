@@ -7,16 +7,87 @@ from typing import Optional, Dict, Any, List
 import re
 import os
 from pathlib import Path
+from dataclasses import dataclass
+
+
+@dataclass
+class ConversationMessage:
+    """对话消息"""
+    role: str
+    content: str
+
+
+@dataclass
+class ConversationHistory:
+    """对话历史"""
+    messages: List[ConversationMessage]
+
+
+class SimpleConversationManager:
+    """简化对话管理器"""
+    
+    def __init__(self):
+        """初始化"""
+        self.project_context = {}
+        self.messages = []
+    
+    def add_user_message(self, content: str):
+        """添加用户消息"""
+        self.messages.append(ConversationMessage(role="user", content=content))
+    
+    def add_assistant_message(self, content: str):
+        """添加助手消息"""
+        self.messages.append(ConversationMessage(role="assistant", content=content))
+    
+    def get_messages(self):
+        """获取所有消息"""
+        return self.messages
 
 
 class UnifiedInteractionEngine:
     """统一交互引擎"""
     
-    def __init__(self, ai_client=None):
-        """初始化交互引擎"""
+    def __init__(self, config=None, session_name: Optional[str] = None, ai_client=None):
+        """初始化交互引擎
+        
+        Args:
+            config: 配置对象（兼容旧接口）
+            session_name: 会话名称（兼容旧接口）
+            ai_client: AI 客户端
+        """
+        self.config = config
+        self.session_name = session_name
         self.ai_client = ai_client
         self.history = []
         self.context = {}
+        
+        # 兼容旧接口的属性
+        self.conversation_manager = SimpleConversationManager()
+    
+    def process(self, user_input: str) -> Dict[str, Any]:
+        """处理用户输入（兼容旧接口）
+        
+        Args:
+            user_input: 用户输入文本
+            
+        Returns:
+            处理结果，包含意图、参数等信息
+        """
+        result = self.process_input(user_input)
+        
+        # 兼容旧接口的响应格式
+        compatible_result = {
+            "content": result["response"]["message"],
+            "action": result["response"]["action"],
+            "params": result["params"],
+            "intent": result["intent"]
+        }
+        
+        # 添加到对话历史
+        self.conversation_manager.add_user_message(user_input)
+        self.conversation_manager.add_assistant_message(compatible_result["content"])
+        
+        return compatible_result
     
     def process_input(self, user_input: str) -> Dict[str, Any]:
         """处理用户输入
@@ -289,6 +360,19 @@ class UnifiedInteractionEngine:
             历史记录列表
         """
         return self.history
+    
+    def save_session(self):
+        """保存会话（兼容旧接口）"""
+        # 简单实现，保存到内存即可
+        pass
+    
+    def get_conversation_history(self) -> ConversationHistory:
+        """获取对话历史（兼容旧接口）
+        
+        Returns:
+            对话历史
+        """
+        return ConversationHistory(messages=self.conversation_manager.messages)
 
 
 class InteractionManager:
@@ -296,7 +380,7 @@ class InteractionManager:
     
     def __init__(self, ai_client=None):
         """初始化交互管理器"""
-        self.engine = UnifiedInteractionEngine(ai_client)
+        self.engine = UnifiedInteractionEngine(ai_client=ai_client)
         self.session_id = self._generate_session_id()
     
     def _generate_session_id(self) -> str:
@@ -363,16 +447,18 @@ class InteractionManager:
         self.session_id = self._generate_session_id()
 
 
-def create_unified_interaction_engine(ai_client=None) -> UnifiedInteractionEngine:
+def create_unified_interaction_engine(config=None, session_name: Optional[str] = None, ai_client=None) -> UnifiedInteractionEngine:
     """创建统一交互引擎实例
     
     Args:
+        config: 配置对象
+        session_name: 会话名称
         ai_client: AI客户端实例
         
     Returns:
         统一交互引擎实例
     """
-    return UnifiedInteractionEngine(ai_client)
+    return UnifiedInteractionEngine(config=config, session_name=session_name, ai_client=ai_client)
 
 def create_interaction_manager(ai_client=None) -> InteractionManager:
     """创建交互管理器实例
@@ -383,4 +469,4 @@ def create_interaction_manager(ai_client=None) -> InteractionManager:
     Returns:
         交互管理器实例
     """
-    return InteractionManager(ai_client)
+    return InteractionManager(ai_client=ai_client)

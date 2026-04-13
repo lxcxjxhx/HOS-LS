@@ -24,7 +24,7 @@
 ## 📋 快速导航
 
 - [💬 安全对话中心（chat + agent）](#-安全对话中心-chat--agent) - 自然语言交互，Agent编排，智能安全分析
-- [🤖 纯净AI模式（--pure-ai）](#-纯净ai模式--pure-ai) - 低配置首选，开箱即用
+- [🤖 纯净AI模式（--mode pure-ai）](#-纯净ai模式--mode-pure-ai) - 低配置首选，开箱即用
 - [🧠 重型模式（--ai）](#-重型模式--ai) - 全功能，高性能硬件推荐
 
 ***
@@ -225,15 +225,15 @@ Git 操作结果
 
 
 ***
-## 🤖 纯净AI模式（--pure-ai）
+## 🤖 纯净AI模式（--mode pure-ai）
 
-### 什么是 --pure-ai 模式？
+### 什么是 --mode pure-ai 模式？
 
-`--pure-ai` 是 HOS-LS 推出的轻量级纯 AI 深度语义解析模式。它采用多 Agent 流水线架构，默认使用 deepseek-reasoner 模型，无需依赖 Neo4j、FAISS、GraphRAG 等重型组件，即可提供高质量的代码安全扫描服务。
+`--mode pure-ai` 是 HOS-LS 推出的轻量级纯 AI 深度语义解析模式。它采用多 Agent 流水线架构，默认使用 deepseek-reasoner 模型，无需依赖 Neo4j、FAISS、GraphRAG 等重型组件，即可提供高质量的代码安全扫描服务。
 
-### 为什么推出 --pure-ai 模式？
+### 为什么推出 --mode pure-ai 模式？
 
-根据客户反馈，重型模式对于电脑性能依赖过高，需要较高配置的硬件才能流畅运行。为了让更多开发者能够轻松使用 HOS-LS，我们特别推出了 `--pure-ai` 模式，它具有以下特点：
+根据客户反馈，重型模式对于电脑性能依赖过高，需要较高配置的硬件才能流畅运行。为了让更多开发者能够轻松使用 HOS-LS，我们特别推出了 `--mode pure-ai` 模式，它具有以下特点：
 
 - **低性能依赖**：不依赖图数据库、向量存储等重型组件
 - **开箱即用**：只需配置 API 密钥即可开始使用
@@ -243,14 +243,14 @@ Git 操作结果
 ### 核心特性
 
 - 🧠 **深度语义解析**：使用 deepseek-reasoner 模型进行代码理解
-- 🤖 **多智能体协作**：Planner → Analyzer → Reviewer 三级分析管道
+- 🤖 **多智能体协作**：Scanner → Reasoning → Exploit → Fix → Report 多级分析管道
 - ⚡ **智能文件优先级**：基于文件重要性自动排序分析
 - 🔄 **实时结果输出**：扫描过程中即时显示发现的问题
 - 💾 **智能缓存机制**：避免重复分析，提升效率
 
 ### 核心优势对比
 
-| 特性 | 纯净AI模式（--pure-ai） | 重型模式（--ai） |
+| 特性 | 纯净AI模式（--mode pure-ai） | 重型模式（--ai） |
 |------|---------------------|-----------------|
 | **硬件要求** | 普通配置即可 | 推荐高性能配置 |
 | **依赖组件** | 仅需 AI API | Neo4j、FAISS、PostgreSQL 等 |
@@ -264,7 +264,7 @@ Git 操作结果
 
 ### 7个专业 Agent 详解
 
-`--pure-ai` 模式采用 7 个专业 Agent 协同工作，形成完整的安全分析流水线：
+`--mode pure-ai` 模式采用 7 个专业 Agent 协同工作，形成完整的安全分析流水线：
 
 ```mermaid
 graph LR
@@ -296,7 +296,7 @@ graph LR
 
 ### 技术架构
 
-`--pure-ai` 模式采用先进的技术架构，确保高效、准确的代码安全分析：
+`--mode pure-ai` 模式采用先进的技术架构，确保高效、准确的代码安全分析：
 
 **核心组件：**
 - `PureAIAnalyzer` - 纯AI分析器主模块，协调整个分析流程
@@ -329,7 +329,7 @@ export DEEPSEEK_API_KEY=sk-your-api-key-here
 
 ```bash
 # 真实测试命令（用户提供）
-python -m src.cli.main scan c:\1AAA_PROJECT\HOS\HOS-LS\real-project\crewAI-main --pure-ai --test 1 -o crewai_test
+python -m src.cli.main scan c:\1AAA_PROJECT\HOS\HOS-LS\real-project\crewAI-main --mode pure-ai --test 1 -o crewai_test
 ```
 <details>
 <summary><b>预期输出</b></summary>
@@ -344,19 +344,19 @@ python -m src.cli.main scan c:\1AAA_PROJECT\HOS\HOS-LS\real-project\crewAI-main 
 
 ```bash
 # 扫描当前目录（纯净AI模式）
-python -m src.cli.main scan . --pure-ai
+python -m src.cli.main scan . --mode pure-ai
 
 # 扫描指定项目
-python -m src.cli.main scan /path/to/project --pure-ai
+python -m src.cli.main scan /path/to/project --mode pure-ai
 
 # 生成 HTML 报告
-python -m src.cli.main scan --pure-ai --format html --output report.html
+python -m src.cli.main scan --mode pure-ai --format html --output report.html
 
 # 测试模式（只扫描前10个文件）
-python -m src.cli.main scan --pure-ai --test 10
+python -m src.cli.main scan --mode pure-ai --test 10
 
 # 调试模式
-python -m src.cli.main --debug scan /path/to/project --pure-ai
+python -m src.cli.main --debug scan /path/to/project --mode pure-ai
 ```
 
 
@@ -366,50 +366,64 @@ python -m src.cli.main --debug scan /path/to/project --pure-ai
 #### 命令行参数
 
 ```bash
-hos-ls scan --pure-ai [OPTIONS] [PATH]
+python -m src.cli.main scan [OPTIONS] [TARGET] [QUERY]...
 
 Arguments:
-  PATH                 要扫描的目录或文件 [默认: 当前目录]
+  TARGET                 要扫描的目录或文件 [默认: 当前目录]
+  QUERY                  自然语言查询（可选）
 
 Options:
-  --format, -f         输出格式: html, json, markdown, sarif [默认: html]
-  --output, -o         输出文件路径
-  --ruleset, -r        规则集: owasp-top10, cwe-top25, all, v3 [默认: v3]
-  --severity, -s       最低严重级别: critical, high, medium, low
-  --workers, -w        并行工作进程数 [默认: 4]
-  --incremental        增量扫描（使用缓存）
-  --test, -t           测试模式，指定扫描文件数量
-  --config, -c         配置文件路径
-  --verbose, -v        详细输出
-  --help, -h           显示帮助信息
+  -m, --mode [auto|pure-ai|fast|deep|stealth]
+                          运行模式 [默认: auto]
+  -f, --format TEXT     输出格式: html, markdown, json, sarif [默认: html]
+  -o, --output TEXT      输出文件路径
+  --plan TEXT            使用指定的Plan执行
+  --lang [cn|en]         输出语言
+  --test INTEGER          启用测试模式，指定扫描文件数量
+  --full-audit           完整审计 - 全流程深度安全审计
+  --quick-scan           快速扫描 - 扫描并生成报告
+  --deep-audit           深度审计 - 包含漏洞验证的完整审计
+  --red-team             红队模式 - 模拟攻击者视角的全面测试
+  --bug-bounty           漏洞赏金模式 - 针对漏洞赏金的高效扫描
+  --compliance           合规模式 - 符合安全合规要求的检查
+  --help                  显示帮助信息
 ```
 
 #### 使用示例
 
 ```bash
 # 基本扫描
-hos-ls scan --pure-ai
+python -m src.cli.main scan .
+
+# 纯净AI模式扫描
+python -m src.cli.main scan . --mode pure-ai
 
 # 扫描指定目录
-hos-ls scan /path/to/project --pure-ai
+python -m src.cli.main scan /path/to/project --mode pure-ai
 
 # 生成 JSON 报告
-hos-ls scan --pure-ai --format json --output report.json
-
-# 只扫描高严重级别问题
-hos-ls scan --pure-ai --severity high
-
-# 使用 8 个工作进程
-hos-ls scan --pure-ai --workers 8
-
-# 增量扫描（使用缓存）
-hos-ls scan --pure-ai --incremental
+python -m src.cli.main scan /path/to/project --mode pure-ai --format json --output report.json
 
 # 测试模式（只扫描前 20 个文件）
-hos-ls scan --pure-ai --test 20
+python -m src.cli.main scan /path/to/project --mode pure-ai --test 20
 
-# 详细输出
-hos-ls scan --pure-ai --verbose
+# 完整审计
+python -m src.cli.main scan /path/to/project --full-audit
+
+# 快速扫描
+python -m src.cli.main scan /path/to/project --quick-scan
+
+# 深度审计
+python -m src.cli.main scan /path/to/project --deep-audit
+
+# 红队模式
+python -m src.cli.main scan /path/to/project --red-team
+
+# 漏洞赏金模式
+python -m src.cli.main scan /path/to/project --bug-bounty
+
+# 合规模式
+python -m src.cli.main scan /path/to/project --compliance
 ```
 
 #### 配置文件
@@ -469,34 +483,6 @@ verbose: false
 quiet: false
 ```
 
-#### 使用示例
-
-```bash
-# 基本扫描
-hos-ls scan --pure-ai
-
-# 扫描指定目录
-hos-ls scan /path/to/project --pure-ai
-
-# 生成 JSON 报告
-hos-ls scan --pure-ai --format json --output report.json
-
-# 只扫描高严重级别问题
-hos-ls scan --pure-ai --severity high
-
-# 使用 8 个工作进程
-hos-ls scan --pure-ai --workers 8
-
-# 增量扫描（使用缓存）
-hos-ls scan --pure-ai --incremental
-
-# 测试模式（只扫描前 20 个文件）
-hos-ls scan --pure-ai --test 20
-
-# 详细输出
-hos-ls scan --pure-ai --verbose
-```
-
 #### 环境变量
 
 ```bash
@@ -514,7 +500,7 @@ export HOS_LS_LOG_LEVEL="DEBUG"
 
 ### 支持的 AI 模型
 
-`--pure-ai` 模式支持多种 AI 模型：
+`--mode pure-ai` 模式支持多种 AI 模型：
 
 | 提供商 | 模型 | 说明 |
 |-------|------|------|
@@ -554,7 +540,7 @@ export HOS_LS_LOG_LEVEL="DEBUG"
 
 ### 硬件要求
 
-> **注意**：重型模式提供完整功能，但对硬件配置要求较高。推荐 16GB+ 内存、支持 CUDA 的 GPU。如果您的配置有限，建议使用 [纯净AI模式（--pure-ai）](#-纯净ai模式--pure-ai)。
+> **注意**：重型模式提供完整功能，但对硬件配置要求较高。推荐 16GB+ 内存、支持 CUDA 的 GPU。如果您的配置有限，建议使用 [纯净AI模式（--mode pure-ai）](#-纯净ai模式--mode-pure-ai)。
 
 ### 快速上手
 
@@ -877,10 +863,10 @@ hos-ls index rebuild ./project
 hos-ls index rebuild ./project --force
 
 # 正常扫描（自动使用增量模式）
-hos-ls scan ./project --pure-ai
+hos-ls scan ./project --mode pure-ai
 
 # 强制全量扫描（忽略增量索引）
-hos-ls scan ./project --pure-ai --full-scan
+hos-ls scan ./project --mode pure-ai --full-scan
 ```
 
 #### 索引状态示例输出
@@ -1162,7 +1148,7 @@ hos-ls --version
 hos-ls nvd status
 
 # 测试Pure AI模式
-hos-ls scan --pure-ai --test 1 ./test-code
+python -m src.cli.main scan --mode pure-ai --test 1 ./test-code
 ```
 
 ## 🐛 已知问题
@@ -1835,7 +1821,7 @@ hos-ls scan ./project --index-status                         查看索引状态
 hos-ls index status ./project                                查看项目索引状态
 hos-ls index rebuild ./project                               重建/更新索引
 hos-ls index rebuild ./project --force                       强制重建索引
-hos-ls scan ./project --pure-ai --full-scan                  强制全量扫描
+hos-ls scan ./project --mode pure-ai --full-scan                  强制全量扫描
 
 # 攻击链分析
 hos-ls analyze --attack-chain
@@ -2519,7 +2505,7 @@ HOS-LS 是一款专为 AI 生成代码设计的安全扫描工具，通过结合
 ### 核心优势
 
 - **三大模式体系**：
-  - 🤖 **纯净AI模式（--pure-ai）**：轻量级，低配置需求，开箱即用
+  - 🤖 **纯净AI模式（--mode pure-ai）**：轻量级，低配置需求，开箱即用
   - 💬 **安全对话中心（chat + agent）**：自然语言交互 + Agent编排，统一体验
   - 🔧 **重型模式（--ai）**：全功能，企业级安全审计
 - **强 Multi-Agent 架构**：多Agent协同工作，提供深度安全分析
@@ -2538,9 +2524,9 @@ HOS-LS 是一款专为 AI 生成代码设计的安全扫描工具，通过结合
 
 ### 版本更新说明
 
-**v0.3.2.6 (2026-04-12) - 最新版本**
+**v0.3.2.7 (2026-04-13) - 最新版本**
 
-v0.3.2.6 引入了三大核心机制和提示词规则库 V3 升级，大幅提升扫描效率和用户体验：
+v0.3.2.7 更新了 CLI 命令接口，修复了文档与代码不一致的问题：
 
 **🚀 Phase 2 核心机制：**
 - 🔄 **断点续扫系统**：支持任务中断恢复，三级Checkpoint机制（步骤级/文件级/Agent级）
@@ -2692,7 +2678,9 @@ pytest
 
 ## 🗺️ 路线图
 
-### v0.3.2.6 (2026-04-12) ✅ 已完成
+### v0.3.2.7 (2026-04-13) ✅ 已完成
+- [x] CLI 命令格式统一（--mode 替代 --pure-ai）
+- [x] 文档与代码一致性修复
 - [x] 断点续扫系统（Checkpoint Resume）
 - [x] 增量索引系统（Incremental Index）
 - [x] 上下文记忆系统（Context Memory）
@@ -2701,8 +2689,8 @@ pytest
 ### v0.3.3 (计划中)
 - [ ] 自动数据库初始化
 - [ ] 更多AI提供商支持（OpenAI、Anthropic）
-- [x] ~~增量扫描优化~~ (v0.3.2.6已完成)
 - [ ] IDE插件（VS Code、IntelliJ）
+- [ ] 统一 Agent 系统完善
 
 ### v0.4.0 (规划中)
 - [ ] 实时协作扫描

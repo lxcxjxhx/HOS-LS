@@ -49,7 +49,7 @@ class TerminalUI:
         
         # 确保启用颜色支持，即使在不支持的终端中也能优雅降级
         self.console = Console(
-            force_terminal=True, 
+            force_terminal=None, 
             color_system="auto",
             theme=custom_theme,
             highlight=True,
@@ -702,7 +702,7 @@ class TerminalUI:
         Args:
             result: 通用结果
         """
-        self.console.print(Panel(str(result), border_style="gray"))
+        self.console.print(Panel(str(result), border_style="dim"))
 
     def _show_git_result(self, result: Dict[str, Any]):
         """显示 Git 操作结果
