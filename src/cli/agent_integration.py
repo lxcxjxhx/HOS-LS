@@ -148,13 +148,23 @@ def display_unified_result(result: ExecutionResult, console, quiet=False):
     if not quiet and result.results:
         console.print("\n[bold]详细结果:[/bold]")
         for agent_name, agent_result in result.results.items():
-            status_icon = "✅" if agent_result.is_success else "❌"
-            confidence_color = "green" if agent_result.confidence >= 0.8 else "yellow" if agent_result.confidence >= 0.5 else "red"
+            # 处理字典类型的 agent_result
+            if isinstance(agent_result, dict):
+                is_success = agent_result.get("is_success", True)
+                confidence = agent_result.get("confidence", 1.0)
+                message = agent_result.get("message", "")
+            else:
+                is_success = agent_result.is_success
+                confidence = agent_result.confidence
+                message = agent_result.message
+            
+            status_icon = "✅" if is_success else "❌"
+            confidence_color = "green" if confidence >= 0.8 else "yellow" if confidence >= 0.5 else "red"
 
             console.print(
                 f"  {status_icon} [{agent_name}] "
-                f"{agent_result.message[:80]} "
-                f"[{confidence_color}]{agent_result.confidence:.0%}[/{confidence_color}]"
+                f"{message[:80]} "
+                f"[{confidence_color}]{confidence:.0%}[/{confidence_color}]"
             )
 
 

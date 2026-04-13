@@ -211,628 +211,86 @@ def cli(ctx: click.Context, config: Optional[str], verbose: bool, quiet: bool, d
 
 @cli.command()
 @click.argument("target", required=False, default=".", type=click.Path(exists=True))
-# 行为类Flag（Agent）
-@click.option("--scan", is_flag=True, help="代码扫描（Scanner Agent）")
-@click.option("--reason", is_flag=True, help="漏洞推理（Reasoning Agent）")
-@click.option("--attack-chain", is_flag=True, help="攻击链分析（AttackGraph Agent）")
-@click.option("--poc", is_flag=True, help="生成利用（Exploit Agent）")
-@click.option("--verify", is_flag=True, help="验证漏洞（Verifier Agent）")
-@click.option("--fix", is_flag=True, help="修复建议（Fix Agent）")
-@click.option("--report", is_flag=True, help="报告生成（Report Agent）")
-# 模式类Flag（Mode）
-@click.option("--pure-ai", is_flag=True, help="纯AI模式")
-@click.option("--fast", is_flag=True, help="快速模式")
-@click.option("--deep", is_flag=True, help="深度模式")
-@click.option("--stealth", is_flag=True, help="stealth模式")
-# 控制类Flag（Control）
+@click.argument("query", nargs=-1)
+# 简化的核心选项
+@click.option("--mode", "-m", type=click.Choice(["auto", "pure-ai", "fast", "deep", "stealth"]), default="auto", help="运行模式")
 @click.option("--format", "-f", "output_format", default="html", help="输出格式 (html, markdown, json, sarif)")
 @click.option("--output", "-o", help="输出文件路径")
-@click.option("--ruleset", "-r", help="规则集")
-@click.option("--diff", is_flag=True, help="扫描 Git 差异")
-@click.option("--workers", "-w", type=int, default=4, help="工作线程数")
-@click.option("--threads", type=int, default=4, help="线程数")
-@click.option("--timeout", type=int, help="超时时间")
-@click.option("--scope", help="扫描范围")
-@click.option("--exclude", help="排除目录")
-# 宏命令
-@click.option("--full-audit", is_flag=True, help="完整审计（scan + reason + attack-chain + poc + verify + report）")
-@click.option("--quick-scan", is_flag=True, help="快速扫描（scan + reason + report）")
-@click.option("--deep-audit", is_flag=True, help="深度审计（scan + reason=deep + attack-chain + poc + verify）")
-@click.option("--red-team", is_flag=True, help="红队模式（scan + reason + attack-chain + poc + verify）")
-@click.option("--bug-bounty", is_flag=True, help="漏洞赏金模式（scan + reason + poc + report）")
-@click.option("--compliance", is_flag=True, help="合规模式（scan + reason + report）")
-# 特殊功能
-@click.option("--explain", is_flag=True, help="解释执行流程")
-@click.option("--ask", help="自然语言查询")
-@click.option("--focus", help="关注特定文件或目录")
 @click.option("--plan", help="使用指定的Plan执行")
-# 向后兼容
-@click.option("--ai", is_flag=True, help="启用 AI 分析")
-@click.option("--pure-ai-fast", is_flag=True, help="使用纯AI快速模式")
-@click.option("--pure-ai-batch-size", type=int, default=8, help="纯AI批量大小")
-@click.option("--pure-ai-cache-ttl", default="7d", help="纯AI缓存TTL")
-@click.option("--pure-ai-provider", help="纯AI提供商 (anthropic, openai, deepseek, local, ollama)")
-@click.option("--poc-dir", default="./generated_pocs", help="POC输出目录")
-@click.option("--poc-severity", default="high", help="POC生成的严重级别过滤")
-@click.option("--poc-max", type=int, default=10, help="最大POC生成数量")
-@click.option("--ai-provider", help="AI 提供商 (anthropic, openai, deepseek, local)")
-@click.option("--incremental", is_flag=True, help="启用增量扫描")
-@click.option("--langgraph", is_flag=True, help="使用 LangGraph 流程")
-@click.option("--test", type=int, default=0, help="启用测试模式，指定扫描文件数量，默认10")
-@click.option("--cn", is_flag=True, help="使用中文输出所有漏洞信息")
-@click.option("--en", is_flag=True, help="使用英文输出所有漏洞信息")
-# 远程扫描选项 (NEW)
-@click.option("--target-type", "-t", 
-              type=click.Choice(["local", "remote-server", "website", "direct-connect"]),
-              default="local",
-              help="目标类型: local(本地), remote-server(SSH远程服务器), website(网站), direct-connect(设备直连)")
-@click.option("--host", help="远程主机地址 (用于 remote-server 或 website)")
-@click.option("--port", type=int, default=None, help="端口号 (SSH默认22, HTTP默认80/443)")
-@click.option("--username", "-u", help="用户名 (SSH认证)")
-@click.option("--password", "-p", help="密码 (或使用环境变量 REMOTE_PASSWORD)")
-@click.option("--key-file", "-k", type=click.Path(), help="SSH私钥文件路径")
-@click.option("--protocol", 
-              type=click.Choice(["ssh", "sftp", "http", "https", "serial"]),
-              help="连接协议 (自动检测如果未指定)")
-@click.option("--connection-config", "-c", type=click.Path(),
-              help="连接配置文件路径 (.yaml/.json)")
-@click.option("--scan-depth", 
-              type=click.Choice(["shallow", "medium", "deep"]),
-              default="medium",
-              help="扫描深度: shallow(浅), medium(中), deep(深)")
-@click.option("--concurrent-connections", "-n", type=int, default=5,
-              help="并发连接数 (远程扫描)")
-@click.option("--connection-timeout", type=int, default=30,
-              help="连接超时时间（秒）")
-@click.option("--proxy", help="代理服务器地址 (如 socks5://127.0.0.1:1080)")
-@click.option("--serial-port", help="串口端口 (如 /dev/ttyUSB0 或 COM3)")
-@click.option("--baudrate", type=int, default=9600, help="串口波特率")
-# 企业内网/VPN 选项 (NEW - Enterprise)
-@click.option("--vpn-config", type=click.Path(), help="VPN配置文件路径 (.ovpn/.conf)")
-@click.option("--vpn-type",
-              type=click.Choice(["openvpn", "wireguard", "ipsec"]),
-              default=None,
-              help="VPN类型: openvpn, wireguard, ipsec")
-@click.option("--jump-host", multiple=True,
-              help="跳板机地址 (可多次使用，格式: user@host:port 或 host:port)")
-@click.option("--jump-host-key", "-jk", type=click.Path(), multiple=True,
-              help="跳板机SSH密钥 (与--jump-host一一对应)")
-@click.option("--proxy-chain", type=click.Path(),
-              help="代理链配置文件路径 (.yaml)")
-@click.option("--internal-scan", is_flag=True,
-              help="启用内网子网扫描模式 (需要先连接VPN或跳板机)")
-@click.option("--subnet", help="指定要扫描的内网子网 (如 192.168.1.0/24)")
-@click.option("--discover-hosts", is_flag=True,
-              help="自动发现并扫描内网所有主机")
-@click.option("--deep-service-id", is_flag=True,
-              help="深度服务识别 (Banner抓取+版本检测)")
-@click.option("--network-topology", type=click.Path(),
-              help="网络拓扑配置文件 (定义复杂网络环境)")
-# Phase 2 核心机制参数（新增）
-@click.option("--resume", is_flag=True, help="从上次中断的断点恢复扫描")
-@click.option("--checkpoint-id", type=str, help="指定要恢复的断点ID")
-@click.option("--full-scan", is_flag=True, help="强制全量扫描（忽略增量索引）")
-@click.option("--index-status", is_flag=True, help="显示当前项目索引状态后退出")
+@click.option("--lang", type=click.Choice(["cn", "en"]), help="输出语言")
+@click.option("--test", type=int, default=0, help="启用测试模式，指定扫描文件数量")
 @click.pass_context
 def scan(
     ctx: click.Context,
     target: str,
-    # 行为类Flag
-    scan: bool,
-    reason: bool,
-    attack_chain: bool,
-    poc: bool,
-    verify: bool,
-    fix: bool,
-    report: bool,
-    # 模式类Flag
-    pure_ai: bool,
-    fast: bool,
-    deep: bool,
-    stealth: bool,
-    # 控制类Flag
+    query: tuple,
+    mode: str,
     output_format: str,
     output: Optional[str],
-    ruleset: Optional[str],
-    diff: bool,
-    workers: int,
-    threads: int,
-    timeout: Optional[int],
-    scope: Optional[str],
-    exclude: Optional[str],
-    # 宏命令
-    full_audit: bool,
-    quick_scan: bool,
-    deep_audit: bool,
-    red_team: bool,
-    bug_bounty: bool,
-    compliance: bool,
-    # 特殊功能
-    explain: bool,
-    ask: Optional[str],
-    focus: Optional[str],
     plan: Optional[str],
-    # 向后兼容
-    ai: bool,
-    pure_ai_fast: bool,
-    pure_ai_batch_size: int,
-    pure_ai_cache_ttl: str,
-    pure_ai_provider: Optional[str],
-    poc_dir: str,
-    poc_severity: str,
-    poc_max: int,
-    ai_provider: Optional[str],
-    incremental: bool,
-    langgraph: bool,
+    lang: Optional[str],
     test: int,
-    cn: bool,
-    en: bool,
-    # 远程扫描选项 (NEW)
-    target_type: str,
-    host: Optional[str],
-    port: Optional[int],
-    username: Optional[str],
-    password: Optional[str],
-    key_file: Optional[str],
-    protocol: Optional[str],
-    connection_config: Optional[str],
-    scan_depth: str,
-    concurrent_connections: int,
-    connection_timeout: int,
-    proxy: Optional[str],
-    serial_port: Optional[str],
-    baudrate: int,
-    # 企业内网/VPN 选项 (NEW - Enterprise)
-    vpn_config: Optional[str],
-    vpn_type: Optional[str],
-    jump_host: tuple,
-    jump_host_key: tuple,
-    proxy_chain: Optional[str],
-    internal_scan: bool,
-    subnet: Optional[str],
-    discover_hosts: bool,
-    deep_service_id: bool,
-    network_topology: Optional[str],
-    # Phase 2 核心机制参数（新增）
-    resume: bool,
-    checkpoint_id: Optional[str],
-    full_scan: bool,
-    index_status: bool,
 ) -> None:
-    """扫描代码安全漏洞（支持本地、远程和企业内网）
-    
-    支持的目标类型：
-    - 本地文件系统（默认）：./my-project
-    - SSH远程服务器：ssh://user@host --target-type remote-server
-    - 网站Web应用：https://example.com --target-type website
-    - 物理设备直连：serial:///dev/ttyUSB0 --target-type direct-connect
-    
-    企业内网/VPN支持：
-    - VPN连接：--vpn-config /path/to/vpn.ovpn --vpn-type openvpn
-    - 跳板机：--jump-host user@bastion.com --jump-host-key ~/.ssh/id_rsa
-    - 内网扫描：--internal-scan --subnet 192.168.1.0/24
-    - 自动发现：--discover-hosts (自动发现内网所有主机)
+    """扫描代码安全漏洞（支持自然语言输入）
     
     示例：
     \b
-    本地扫描: hos-ls scan ./my-project --pure-ai
-    远程SSH:  hos-ls scan /var/www/html --target-type remote-server --host 192.168.1.100 -u admin
-    网站扫描: hos-ls scan https://example.com --target-type website --full-audit
-    设备扫描: hos-ls scan --target-type direct-connect --serial-port COM3
+    基本扫描: hos-ls scan ./my-project
+    自然语言查询: hos-ls scan ./my-project "扫描SQL注入漏洞并生成修复方案"
+    纯AI模式: hos-ls scan ./my-project --mode pure-ai
+    快速模式: hos-ls scan ./my-project --mode fast
     """
     config: Config = ctx.obj["config"]
     
-    # 🔥🔥🔥 Phase 2: 索引状态显示（新增）
-    if index_status:
-        _show_index_status(target, console)
-        return
-    
-    # 🔥🔥🔥 Phase 2: 断点续扫处理（新增）
-    if resume:
-        _handle_resume_scan(target, checkpoint_id, config, console)
-        return
+    # 设置语言
+    if lang:
+        config.language = lang
     
     # 处理Plan选项
     if plan:
         from src.core.plan_manager import PlanManager
-        from src.cli.plan_commands import _plan_to_cli_args
-        
-        plan_manager = PlanManager(config)
         try:
+            plan_manager = PlanManager(config)
             # 加载Plan
             loaded_plan = plan_manager.load_plan(plan)
             
-            # 转换为CLI参数
-            plan_args = _plan_to_cli_args(loaded_plan)
-            
             # 显示执行的Plan
             console.print(Panel("执行Plan", border_style="green"))
-            from src.core.plan_dsl import PlanDSLParser
-            console.print(PlanDSLParser.format_plan_for_display(loaded_plan))
+            console.print(f"目标: {loaded_plan.goal}")
+            console.print(f"步骤数: {len(loaded_plan.steps)}")
             
-            # 执行扫描
-            ctx.invoke(scan, **plan_args)
+            # 执行Plan
+            result = asyncio.run(plan_manager.execute_plan(loaded_plan))
+            
+            # 显示结果
+            # 转换结果为对象格式
+            class ResultObject:
+                def __init__(self, data):
+                    self.__dict__.update(data)
+            result_obj = ResultObject(result)
+            display_unified_result(result_obj, console, quiet=config.quiet)
+            
+            # 生成报告
+            if output:
+                # 转换结果为对象格式
+                class ResultObject:
+                    def __init__(self, data):
+                        self.__dict__.update(data)
+                result_obj = ResultObject(result)
+                _generate_unified_report(result_obj, output, output_format, config)
+            
+            # 设置退出码
+            if not result.get("success", True) and result.get("total_findings", 0) > 0:
+                sys.exit(1)
             return
         except Exception as e:
             console.print(f"[bold red]错误: {e}[/bold red]")
             sys.exit(1)
     
-    # 设置语言
-    if cn and en:
-        console.print("[bold red]错误: 不能同时使用 --cn 和 --en 参数[/bold red]")
-        sys.exit(1)
-    if cn:
-        config.language = "cn"
-    elif en:
-        config.language = "en"
+    # 处理自然语言查询
+    user_query = " ".join(query)
     
-    # 🔥🔥🔥 远程扫描处理 (NEW)
-    if target_type != 'local':
-        try:
-            import asyncio
-            from src.remote.scanners import create_unified_scanner
-            
-            console.print(Panel(
-                f"[bold cyan]远程扫描模式[/bold cyan]\n"
-                f"目标类型: {target_type}\n"
-                f"目标地址: {host or target}\n"
-                f"AI模式: {'PureAI' if pure_ai else ('Heavy' if ai else 'Standard')}",
-                border_style="cyan"
-            ))
-            
-            remote_scanner = create_unified_scanner(
-                config=config,
-                target_type=target_type,
-                target=target,
-                host=host,
-                port=port or (22 if target_type == 'remote-server' else None),
-                username=username,
-                password=password or os.environ.get('REMOTE_PASSWORD'),
-                key_file=key_file,
-                connection_type='serial' if serial_port else None,
-                serial_port=serial_port,
-                baudrate=baudrate
-            )
-            
-            result = asyncio.run(remote_scanner.scan(target))
-            
-            _display_remote_result(result, console)
-            
-            if output:
-                _generate_unified_report(result, output, output_format, config)
-                
-            sys.exit(1 if result.findings else 0)
-            
-        except ImportError as e:
-            console.print(f"[red]错误: 缺少依赖库 - {e}[/red]")
-            console.print("[yellow]提示: pip install asyncssh httpx pyserial[/yellow]")
-            sys.exit(2)
-        except Exception as e:
-            console.print(f"[bold red]远程扫描失败: {e}[/bold red]")
-            if config.debug:
-                import traceback
-                traceback.print_exc()
-            sys.exit(2)
-    
-    # 🔥🔥🔥 企业内网/VPN扫描处理 (NEW - Enterprise)
-    if vpn_config or jump_host or internal_scan or subnet:
-        try:
-            import asyncio
-            from src.remote.enterprise import (
-                create_vpn_connector,
-                VPNConfig,
-                JumpHostManager,
-                ProxyChain,
-                InternalNetworkScanner
-            )
-            
-            console.print("\n" + "=" * 70)
-            console.print("[bold blue]🏢 企业内网/VPN 安全扫描模式[/bold blue]")
-            console.print("=" * 70)
-            
-            async def _run_enterprise_scan():
-                """执行企业内网/VPN扫描的异步主逻辑"""
-                
-                chain = ProxyChain()
-                
-                # 1. 建立VPN连接（如果配置了）
-                vpn_connector = None
-                if vpn_config:
-                    console.print(f"\n[cyan]📡 正在连接企业VPN...[/cyan]")
-                    
-                    vpn_cfg = VPNConfig(
-                        config_file=vpn_config,
-                        server_address=host,  # 可选：从--host参数获取
-                        username=username,
-                        password=password or os.environ.get('VPN_PASSWORD')
-                    )
-                    
-                    vpn_connector = create_vpn_connector(
-                        vpn_type or 'openvpn',
-                        vpn_cfg
-                    )
-                    
-                    result = await vpn_connector.connect()
-                    
-                    if not result.success:
-                        console.print(f"[red]❌ VPN连接失败: {result.message}[/red]")
-                        sys.exit(3)
-                    
-                    console.print(f"[green]✅ VPN已成功连接[/green]")
-                    
-                    # 显示VPN信息
-                    if vpn_connector.connection_info:
-                        info = vpn_connector.connection_info
-                        console.print(f"   本地IP: {info.local_ip}")
-                        console.print(f"   隧道接口: {info.tunnel_interface}")
-                
-                # 2. 建立跳板机链（如果配置了）
-                if jump_host:
-                    console.print(f"\n[cyan]🔗 正在建立跳板机连接链 ({len(jump_host)} 个跳板)...[/cyan]")
-                    
-                    jump_chain = []
-                    for i, host_str in enumerate(jump_host):
-                        host_info = _parse_jump_host(host_str)
-                        
-                        hop_config = {
-                            'ssh_host': host_info['host'],
-                            'ssh_port': host_info['port'],
-                            'username': host_info['username']
-                        }
-                        
-                        if i < len(jump_host_key):
-                            hop_config['key_file'] = jump_host_key[i]
-                        
-                        jump_chain.append(hop_config)
-                    
-                    success = await chain.add_jump_hosts(jump_chain)
-                    
-                    if not success:
-                        console.print("[red]❌ 跳板机连接失败[/red]")
-                        sys.exit(3)
-                    
-                    console.print(f"[green]✅ 跳板机链已建立 ({len(jump_chain)} hops)[/green]")
-                
-                # 3. 执行内网扫描
-                if internal_scan or subnet or discover_hosts:
-                    targets_to_scan = []
-                    
-                    if subnet:
-                        targets_to_scan.append(subnet)
-                        console.print(f"\n[cyan]🎯 目标子网: [bold]{subnet}[/bold][/cyan]")
-                    
-                    if discover_hosts and not subnet:
-                        console.print("\n[yellow]⚠️ --discover-hosts 需要 --subnet 参数指定基础网络[/yellow]")
-                        console.print("   示例: --discover-hosts --subnet 192.168.0.0/16")
-                    
-                    if targets_to_scan:
-                        console.print("\n[bold cyan]🔍 开始内网安全扫描...[/bold cyan]\n")
-                        
-                        scanner = InternalNetworkScanner(proxy_chain=chain if (jump_host or vpn_config) else None)
-                        
-                        scan_result = await scanner.full_scan(
-                            targets=targets_to_scan,
-                            deep_scan=deep_service_id
-                        )
-                        
-                        # 显示详细结果
-                        _display_internal_scan_result(scan_result, console)
-                        
-                        # 保存报告
-                        if output:
-                            _save_internal_scan_report(scan_result, output, output_format)
-                        
-                        console.print("\n[bold green]✅ 内网扫描完成！[/bold green]")
-                
-                # 拆除代理链和VPN
-                if vpn_connector or jump_host:
-                    console.print("\n[dim]正在清理连接...[/dim]")
-                    await chain.teardown()
-                    
-                    if vpn_connector:
-                        await vpn_connector.disconnect()
-                        console.print("[dim]VPN已断开[/dim]")
-            
-            # 调用异步函数
-            asyncio.run(_run_enterprise_scan())
-            
-            sys.exit(0)
-            
-        except ImportError as e:
-            console.print(f"[red]错误: 缺少依赖库 - {e}[/red]")
-            console.print("[yellow]提示: pip install asyncssh httpx pyyaml[/yellow]")
-            sys.exit(3)
-        except Exception as e:
-            console.print(f"[bold red]内网/VPN扫描失败: {e}[/bold red]")
-            if config.debug:
-                import traceback
-                traceback.print_exc()
-            sys.exit(3)
-    
-    # 收集行为类Flag
-    behavior_flags = []
-    if scan:
-        behavior_flags.append("scan")
-    if reason:
-        behavior_flags.append("reason")
-    if attack_chain:
-        behavior_flags.append("attack-chain")
-    if poc:
-        behavior_flags.append("poc")
-    if verify:
-        behavior_flags.append("verify")
-    if fix:
-        behavior_flags.append("fix")
-    if report:
-        behavior_flags.append("report")
-    
-    # 收集宏命令
-    macro_flags = []
-    if full_audit:
-        macro_flags.append("full-audit")
-    if quick_scan:
-        macro_flags.append("quick-scan")
-    if deep_audit:
-        macro_flags.append("deep-audit")
-    if red_team:
-        macro_flags.append("red-team")
-    if bug_bounty:
-        macro_flags.append("bug-bounty")
-    if compliance:
-        macro_flags.append("compliance")
-    
-    # 合并所有flags
-    all_flags = behavior_flags + macro_flags
-
-    # 🔥 使用统一 Agent 系统的新架构（优先）
-    if all_flags:  # 如果有行为类 flags，使用新架构
-        try:
-            import asyncio
-
-            # 收集 flags（使用新的辅助函数）
-            unified_flags = [f"--{flag}" for flag in all_flags]
-
-            # 确定执行模式
-            exec_mode = "pure-ai" if pure_ai else "auto"
-
-            # 🔥🔥🔥 调用统一执行引擎（核心改动！）
-            result = asyncio.run(execute_with_unified_engine(
-                config=config,
-                target=target,
-                behavior_flags=unified_flags,
-                mode=exec_mode,
-                ask=ask,
-                focus=focus
-            ))
-
-            # 显示结果
-            display_unified_result(result, console, quiet=config.quiet)
-
-            # 生成报告（如果需要）
-            if output:
-                _generate_unified_report(result, output, output_format, config)
-
-            # 设置退出码
-            if not result.success and result.total_findings > 0:
-                sys.exit(1)
-            return  # ✅ 新架构执行完成，直接返回
-
-        except Exception as e:
-            # 新架构失败时回退到旧逻辑（向后兼容）
-            if config.debug:
-                console.print(f"[yellow][DEBUG] 新架构执行失败，回退到旧逻辑: {e}[/yellow]")
-            pass  # 继续执行下面的旧代码
-    
-    # === 以下是旧的硬编码逻辑（作为 fallback）===
-    
-    # 导入Pipeline构建器
-    from src.core.agent_pipeline import PipelineBuilder
-    
-    # 构建Pipeline
-    try:
-        pipeline = PipelineBuilder.build_pipeline(all_flags)
-    except ValueError as e:
-        console.print(f"[bold red]错误: {e}[/bold red]")
-        sys.exit(1)
-    
-    # 生成执行计划
-    execution_plan = PipelineBuilder.create_execution_plan(pipeline, config)
-    
-    # 显示执行计划（如果需要）
-    if explain:
-        explanation = PipelineBuilder.generate_explanation(pipeline)
-        console.print(Panel(explanation))
-        return
-    
-    # 显示 Claude 风格的输入提示
-    if not config.quiet:
-        console.print("[bold cyan]> hosls " + " ".join(f"--{flag}" for flag in all_flags) + " " + target + "[/bold cyan]")
-
-    # 提前检查纯AI模式
-    if pure_ai:
-        # 设置环境变量
-        os.environ["HOS_LS_MODE"] = "PURE_AI"
-        
-        if not config.quiet:
-            print_banner()
-            console.print("[bold green]🔒 纯AI模式已激活，隔离运行时环境...[/bold green]")
-        
-        # 纯AI模式配置
-        config.scan.max_workers = workers
-        config.scan.incremental = incremental
-        if ruleset:
-            config.rules.ruleset = ruleset
-        config.report.format = output_format
-        if output:
-            config.report.output = output
-        config.ai.enabled = True
-        config.pure_ai = True
-        
-        # 纯AI模式配置（从Config动态加载，零硬编码）
-        config.pure_ai_provider = config.ai.provider or "deepseek"  # 从配置读取，有默认值
-        config.pure_ai_model = config.ai.model or "deepseek-chat"  # 从配置读取，有默认值
-        
-        # 测试模式
-        if test > 0:
-            config.test_mode = True
-            config.__dict__['test_file_count'] = test
-            if not config.quiet:
-                console.print(f"[bold yellow]⚠ 测试模式已启用，只扫描前{test}个优先级最高的文件[/bold yellow]")
-        elif test == 0:
-            config.test_mode = False
-        else:
-            config.test_mode = True
-            config.__dict__['test_file_count'] = 10
-            if not config.quiet:
-                console.print("[bold yellow]⚠ 测试模式已启用，只扫描前10个优先级最高的文件[/bold yellow]")
-        
-        # 导入纯AI扫描器
-        from src.core.scanner import create_scanner
-        
-        # 执行纯AI扫描
-        try:
-            # 显示扫描进度
-            if not config.quiet:
-                show_scan_progress()
-            
-            scanner = create_scanner(config)
-            result = scanner.scan_sync(target)
-
-            # 显示结果
-            if not config.quiet:
-                show_agent_status()
-                _display_result(result)
-
-            # 生成报告
-            if output:
-                _generate_report(result, output, output_format, config)
-
-            # 根据结果设置退出码
-            if result.findings:
-                sys.exit(1)
-        except Exception as e:
-            console.print(f"[bold red]扫描失败: {e}[/bold red]")
-            sys.exit(2)
-        return
-    
-    # 非纯AI模式
-    if not config.quiet:
-        print_banner()
-
-    # 更新配置
-    config.scan.max_workers = workers
-    config.scan.incremental = incremental
-    if ruleset:
-        config.rules.ruleset = ruleset
-    config.report.format = output_format
-    if output:
-        config.report.output = output
-    config.ai.enabled = ai or any(flag in all_flags for flag in ["reason", "attack-chain", "poc"])
-    config.pure_ai = False
-    
-    if ai_provider:
-        config.ai.provider = ai_provider
-    # 测试模式
+    # 测试模式配置
     if test > 0:
         config.test_mode = True
         config.__dict__['test_file_count'] = test
@@ -845,72 +303,73 @@ def scan(
         config.__dict__['test_file_count'] = 10
         if not config.quiet:
             console.print("[bold yellow]⚠ 测试模式已启用，只扫描前10个优先级最高的文件[/bold yellow]")
-
-    # 执行扫描
+    
+    # 生成执行计划
+    from src.core.plan import AIPlanner
+    from src.core.ai_client import get_ai_client
+    
+    ai_client = get_ai_client(config)
+    planner = AIPlanner(ai_client)
+    
+    # 构建上下文
+    context = {
+        "file_system": {
+            "target": target,
+            "exists": os.path.exists(target),
+            "is_dir": os.path.isdir(target)
+        },
+        "tools": ["scan", "analyze", "exploit", "fix", "report"]
+    }
+    
+    # 生成计划
+    if user_query:
+        console.print(f"[bold cyan]分析查询: {user_query}[/bold cyan]")
+        plan = planner.generate_plan(user_query, context)
+    else:
+        # 默认计划
+        plan = planner.generate_plan(f"扫描 {target} 的安全漏洞", context)
+    
+    # 显示生成的计划
+    if not config.quiet:
+        console.print(Panel("[bold green]生成的执行计划[/bold green]"))
+        for i, step in enumerate(plan.steps, 1):
+            console.print(f"{i}. [{step.risk_level.upper()}] {step.type.value}: {step.description}")
+            if step.estimated_tokens > 0:
+                console.print(f"   预估Token: {step.estimated_tokens}")
+    
+    # 执行计划
     try:
-        if langgraph or any(flag in all_flags for flag in ["reason", "attack-chain", "poc"]):
-            # 使用 LangGraph 多Agent流程
-            from src.core.langgraph_flow import run_pipeline
-            # 读取目标文件内容
-            target_path = Path(target)
-            if target_path.is_file():
-                with open(target_path, 'r', encoding='utf-8') as f:
-                    code = f.read()
-            else:
-                code = f"目录扫描: {target}"
-            # 运行多Agent分析
-            result = asyncio.run(run_pipeline(pipeline, code, ask=ask, focus=focus))
-            # 显示结果
-            if not config.quiet:
-                console.print(Panel("[bold]LangGraph 多Agent分析结果[/bold]"))
-                if 'final_report' in result:
-                    report = result['final_report']
-                    console.print(f"[green]分析状态: {report.get('quality', 'unknown')}[/green]")
-                    console.print(f"[green]迭代次数: {report.get('iteration', 0)}[/green]")
-                    console.print(f"[green]CVE候选数量: {len(report.get('cve_candidates', []))}[/green]")
-                    console.print(f"[green]攻击链长度: {len(report.get('attack_chain', {}))}[/green]")
-                    console.print("[bold]分析结果:[/bold]")
-                    console.print(report.get('analysis', ''))
-                    if 'fix_suggestions' in report:
-                        console.print("[bold]修复建议:[/bold]")
-                        console.print(report.get('fix_suggestions', ''))
-                else:
-                    console.print(f"[red]分析失败: {result.get('error', '未知错误')}[/red]")
-            # 生成报告
-            if output:
-                import json
-                with open(output, 'w', encoding='utf-8') as f:
-                    json.dump(result, f, ensure_ascii=False, indent=2)
-                console.print(f"[bold green]报告已生成: {output}[/bold green]")
-            # 根据结果设置退出码
-            if result.get('final_report', {}).get('quality') != 'pass':
-                sys.exit(1)
-        else:
-            # 使用传统扫描器
-            from src.core.scanner import create_scanner
-            
-            # 显示扫描进度
-            if not config.quiet:
-                show_scan_progress()
-            
-            scanner = create_scanner(config)
-            result = scanner.scan_sync(target)
-
-            # 显示结果
-            if not config.quiet:
-                show_agent_status()
-                _display_result(result)
-
-            # 生成报告
-            if output:
-                _generate_report(result, output, output_format, config)
-
-            # 根据结果设置退出码
-            if result.findings:
-                sys.exit(1)
-
+        import asyncio
+        from src.core.plan_manager import PlanManager
+        
+        plan_manager = PlanManager(config)
+        result = asyncio.run(plan_manager.execute_plan(plan))
+        
+        # 显示结果
+        # 转换结果为对象格式
+        class ResultObject:
+            def __init__(self, data):
+                self.__dict__.update(data)
+        result_obj = ResultObject(result)
+        display_unified_result(result_obj, console, quiet=config.quiet)
+        
+        # 生成报告
+        if output:
+            # 转换结果为对象格式
+            class ResultObject:
+                def __init__(self, data):
+                    self.__dict__.update(data)
+            result_obj = ResultObject(result)
+            _generate_unified_report(result_obj, output, output_format, config)
+        
+        # 设置退出码
+        if not result.get("success", True) and result.get("total_findings", 0) > 0:
+            sys.exit(1)
     except Exception as e:
-        console.print(f"[bold red]扫描失败: {e}[/bold red]")
+        console.print(f"[bold red]执行失败: {e}[/bold red]")
+        if config.debug:
+            import traceback
+            traceback.print_exc()
         sys.exit(2)
 
 

@@ -16,6 +16,19 @@ class TerminalUI:
     处理交互式终端界面，包括用户输入、思考状态显示和结果展示
     """
     
+    # 标准颜色映射
+    COLOR_MAP = {
+        "primary": "cyan",
+        "success": "green",
+        "warning": "yellow",
+        "error": "red",
+        "info": "blue",
+        "debug": "dim",
+        "bold": "bold",
+        "italic": "italic",
+        "underline": "underline"
+    }
+    
     def __init__(self):
         """初始化终端 UI"""
         # 优化Rich控制台配置，确保颜色支持
@@ -44,24 +57,67 @@ class TerminalUI:
         )
         self.history = []
         self.history_index = -1
+        self.color_supported = self.is_color_supported()
+        self.color_level = self.get_color_level()
         
     def is_color_supported(self) -> bool:
         """检测终端是否支持颜色"""
         return self.console.color_system is not None
     
+    def get_color_level(self) -> int:
+        """获取终端支持的颜色级别"""
+        if not self.is_color_supported():
+            return 0
+        try:
+            return self.console.color_system.level
+        except:
+            return 0
+    
     def get_supported_colors(self) -> int:
         """获取终端支持的颜色数量"""
-        return self.console.size.height
+        color_level = self.get_color_level()
+        if color_level == 0:
+            return 2  # 黑白
+        elif color_level == 1:
+            return 16  # ANSI 16色
+        elif color_level == 2:
+            return 256  # ANSI 256色
+        else:
+            return 16777216  # True Color
+    
+    def get_color(self, color_name: str) -> str:
+        """获取颜色代码，支持自动 fallback
+        
+        Args:
+            color_name: 颜色名称
+            
+        Returns:
+            颜色代码或空字符串（如果不支持颜色）
+        """
+        if not self.color_supported:
+            return ""
+        return self.COLOR_MAP.get(color_name, "")
     
     def print_with_color(self, text: str, style: str = ""):
         """带颜色打印文本
         
         Args:
             text: 要打印的文本
-            style: Rich样式字符串
+            style: Rich样式字符串或颜色名称
         """
-        if style:
-            self.console.print(f"[{style}]{text}[/{style}]")
+        # 检查是否是颜色名称
+        if style in self.COLOR_MAP:
+            color_code = self.get_color(style)
+            if color_code:
+                self.console.print(f"[{color_code}]{text}[/{color_code}]")
+            else:
+                self.console.print(text)
+        elif style:
+            # 使用自定义样式
+            if self.color_supported:
+                self.console.print(f"[{style}]{text}[/{style}]")
+            else:
+                self.console.print(text)
         else:
             self.console.print(text)
     

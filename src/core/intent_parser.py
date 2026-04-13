@@ -5,12 +5,34 @@
 - 采用纯AI语义理解作为主要解析方式
 - 仅保留少量明确的特殊命令语法（@file:, @func:, /help等）
 - 对于无法识别的输入，默认交给AI处理
+- 支持alias system和fuzzy match，提供智能输入纠正
 """
 
 from typing import Dict, Any, Optional, List
 from dataclasses import dataclass, field
 from enum import Enum
 import re
+
+# 计算编辑距离的函数
+def levenshtein_distance(s1: str, s2: str) -> int:
+    """计算两个字符串之间的编辑距离"""
+    if len(s1) < len(s2):
+        return levenshtein_distance(s2, s1)
+    
+    if len(s2) == 0:
+        return len(s1)
+    
+    previous_row = range(len(s2) + 1)
+    for i, c1 in enumerate(s1):
+        current_row = [i + 1]
+        for j, c2 in enumerate(s2):
+            insertions = previous_row[j + 1] + 1
+            deletions = current_row[j] + 1
+            substitutions = previous_row[j] + (c1 != c2)
+            current_row.append(min(insertions, deletions, substitutions))
+        previous_row = current_row
+    
+    return previous_row[-1]
 
 
 class IntentType(Enum):
@@ -27,6 +49,124 @@ class IntentType(Enum):
     CONVERSION = "conversion"
     GENERAL = "general"  # 通用对话/AI直接回答
     AI_CHAT = "ai_chat"  # 纯AI对话模式（新增）
+
+
+class AliasManager:
+    """别名管理器"""
+    
+    # 核心别名映射
+    CORE_ALIASES = {
+        # yes/no/modify 相关别名
+        "y": "yes",
+        "n": "no",
+        "m": "modify",
+        "modif": "modify",
+        "ok": "yes",
+        "cancel": "no",
+        "confirm": "yes",
+        "deny": "no",
+        "change": "modify",
+        # 扫描相关别名
+        "扫描": "scan",
+        "检测": "scan",
+        "漏洞": "scan",
+        "安全检查": "scan",
+        # AI相关别名
+        "ai": "ai_chat",
+        "聊天": "ai_chat",
+        "对话": "ai_chat",
+        # 其他命令别名
+        "帮助": "help",
+        "退出": "exit",
+        "清屏": "clear",
+    }
+    
+    @classmethod
+    def resolve_alias(cls, text: str) -> str:
+        """解析别名
+        
+        Args:
+            text: 用户输入文本
+            
+        Returns:
+            解析后的文本
+        """
+        text = text.strip().lower()
+        return cls.CORE_ALIASES.get(text, text)
+    
+    @classmethod
+    def has_alias(cls, text: str) -> bool:
+        """检查是否存在别名
+        
+        Args:
+            text: 用户输入文本
+            
+        Returns:
+            是否存在别名
+        """
+        text = text.strip().lower()
+        return text in cls.CORE_ALIASES
+
+
+class FuzzyMatcher:
+    """模糊匹配器"""
+    
+    # 标准命令列表
+    STANDARD_COMMANDS = [
+        "yes", "no", "modify", "scan", "ai_chat", "help", "exit", "clear",
+        "analyze", "exploit", "fix", "plan", "report"
+    ]
+    
+    @classmethod
+    def fuzzy_match(cls, text: str, max_distance: int = 2) -> Optional[str]:
+        """模糊匹配命令
+        
+        Args:
+            text: 用户输入文本
+            max_distance: 最大编辑距离
+            
+        Returns:
+            匹配的标准命令，如果没有匹配则返回None
+        """
+        text = text.strip().lower()
+        
+        # 首先检查精确匹配
+        if text in cls.STANDARD_COMMANDS:
+            return text
+        
+        # 计算与每个标准命令的编辑距离
+        best_match = None
+        best_distance = float('inf')
+        
+        for command in cls.STANDARD_COMMANDS:
+            distance = levenshtein_distance(text, command)
+            if distance <= max_distance and distance < best_distance:
+                best_match = command
+                best_distance = distance
+        
+        return best_match
+    
+    @classmethod
+    def auto_correct(cls, text: str) -> str:
+        """自动纠正输入
+        
+        Args:
+            text: 用户输入文本
+            
+        Returns:
+            纠正后的文本
+        """
+        # 先尝试别名解析
+        resolved = AliasManager.resolve_alias(text)
+        if resolved != text:
+            return resolved
+        
+        # 再尝试模糊匹配
+        matched = cls.fuzzy_match(text)
+        if matched:
+            return matched
+        
+        return text
 
 
 @dataclass
@@ -355,39 +495,60 @@ class IntentParser:
                 raw_text=text
             )
         
-        # 第一步：检测特殊命令语法
-        special_intent = SpecialCommandDetector.detect(text)
+        # 第一步：自动纠正输入
+        corrected_text = FuzzyMatcher.auto_correct(text)
+        if corrected_text != text:
+            # 添加纠正信息到实体中
+            entities = {"original_input": text, "corrected_input": corrected_text}
+        else:
+            entities = {}
+        
+        # 第二步：检测特殊命令语法
+        special_intent = SpecialCommandDetector.detect(corrected_text)
         if special_intent:
+            # 如果有纠正，将纠正信息添加到实体中
+            if entities:
+                special_intent.entities.update(entities)
             return special_intent
         
-        # 第二步：使用AI解析（核心！）
+        # 第三步：使用AI解析（核心！）
         if self.ai_parser:
             try:
-                ai_intent = asyncio.run(self.ai_parser.parse(text))
+                ai_intent = asyncio.run(self.ai_parser.parse(corrected_text))
+                # 添加纠正信息到实体中
+                if entities:
+                    ai_intent.entities.update(entities)
                 # 检查是否包含多个意图
                 if ai_intent.has_multiple_intents():
                     return ai_intent
                 # 如果AI没有识别出多个意图，尝试使用规则匹配
-                multi_intent = self._detect_multi_intent(text)
+                multi_intent = self._detect_multi_intent(corrected_text)
                 if multi_intent.has_multiple_intents():
+                    # 添加纠正信息到实体中
+                    if entities:
+                        multi_intent.entities.update(entities)
                     return multi_intent
                 return ai_intent
             except Exception as e:
                 pass
         
-        # 第三步：尝试规则匹配检测多意图
-        multi_intent = self._detect_multi_intent(text)
+        # 第四步：尝试规则匹配检测多意图
+        multi_intent = self._detect_multi_intent(corrected_text)
         if multi_intent.has_multiple_intents():
+            # 添加纠正信息到实体中
+            if entities:
+                multi_intent.entities.update(entities)
             return multi_intent
         
-        # 第四步：最终回退（不应该到达这里，除非AI完全不可用）
-        return ParsedIntent(
+        # 第五步：最终回退（不应该到达这里，除非AI完全不可用）
+        final_intent = ParsedIntent(
             type=IntentType.GENERAL,
             confidence=0.3,
-            entities={"raw_input": text},
+            entities={"raw_input": text, **entities},
             raw_text=text,
             suggested_pipeline=None
         )
+        return final_intent
     
     def _detect_multi_intent(self, text: str) -> ParsedIntent:
         """使用规则匹配检测多意图
@@ -467,30 +628,53 @@ class IntentParser:
         if not text or not text.strip():
             return ParsedIntent(type=IntentType.GENERAL, confidence=0.0, raw_text=text)
         
-        special_intent = SpecialCommandDetector.detect(text)
+        # 第一步：自动纠正输入
+        corrected_text = FuzzyMatcher.auto_correct(text)
+        if corrected_text != text:
+            # 添加纠正信息到实体中
+            entities = {"original_input": text, "corrected_input": corrected_text}
+        else:
+            entities = {}
+        
+        # 第二步：检测特殊命令语法
+        special_intent = SpecialCommandDetector.detect(corrected_text)
         if special_intent:
+            # 如果有纠正，将纠正信息添加到实体中
+            if entities:
+                special_intent.entities.update(entities)
             return special_intent
         
+        # 第三步：使用AI解析
         if self.ai_parser:
-            ai_intent = await self.ai_parser.parse(text)
+            ai_intent = await self.ai_parser.parse(corrected_text)
+            # 添加纠正信息到实体中
+            if entities:
+                ai_intent.entities.update(entities)
             # 检查是否包含多个意图
             if ai_intent.has_multiple_intents():
                 return ai_intent
             # 如果AI没有识别出多个意图，尝试使用规则匹配
-            multi_intent = self._detect_multi_intent(text)
+            multi_intent = self._detect_multi_intent(corrected_text)
             if multi_intent.has_multiple_intents():
+                # 添加纠正信息到实体中
+                if entities:
+                    multi_intent.entities.update(entities)
                 return multi_intent
             return ai_intent
         
-        # 尝试规则匹配检测多意图
-        multi_intent = self._detect_multi_intent(text)
+        # 第四步：尝试规则匹配检测多意图
+        multi_intent = self._detect_multi_intent(corrected_text)
         if multi_intent.has_multiple_intents():
+            # 添加纠正信息到实体中
+            if entities:
+                multi_intent.entities.update(entities)
             return multi_intent
         
+        # 第五步：最终回退
         return ParsedIntent(
             type=IntentType.GENERAL,
             confidence=0.3,
-            entities={"raw_input": text},
+            entities={"raw_input": text, **entities},
             raw_text=text
         )
     

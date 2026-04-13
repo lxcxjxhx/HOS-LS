@@ -934,6 +934,102 @@ class AllocationResult:
     allocation_details: List[Dict[str, Any]] = field(default_factory=list)
 
 
+class ContextSummarizer:
+    """Context Summarizer Agent
+    
+    功能:
+    - 自动压缩历史对话
+    - 每5步进行一次summarization
+    - 保留语义记忆，不保留原文
+    """
+    
+    def __init__(self, ai_client=None):
+        self.ai_client = ai_client
+        self._summary_frequency = 5  # 每5步总结一次
+    
+    def summarize(self, history: List[str], max_tokens: int = 200) -> str:
+        """总结历史对话
+        
+        Args:
+            history: 历史对话列表
+            max_tokens: 最大token数
+            
+        Returns:
+            总结后的文本
+        """
+        if not history:
+            return ""
+        
+        # 如果历史记录较长，只取最近的部分
+        recent_history = history[-10:]  # 只取最近10条
+        
+        # 简单的规则总结
+        if len(recent_history) <= 3:
+            return " ".join(recent_history)
+        
+        # 使用AI进行总结
+        if self.ai_client:
+            try:
+                from src.ai.models import AIRequest
+                
+                prompt = f"""请总结以下对话历史，保留核心信息，忽略不重要的细节：
+                
+                {"\n".join(recent_history)}
+                
+                总结要求：
+                1. 保持简洁，控制在{max_tokens}token以内
+                2. 保留用户的主要意图和系统的核心响应
+                3. 不要包含无关的细节
+                4. 使用中文总结
+                """
+                
+                request = AIRequest(
+                    prompt=prompt,
+                    system_prompt="你是一个专业的对话总结助手，擅长提取核心信息并保持简洁。",
+                    max_tokens=max_tokens,
+                    temperature=0.1
+                )
+                
+                response = self.ai_client.generate(request)
+                return response.content.strip()
+            except Exception as e:
+                logger.warning(f"AI总结失败: {e}")
+        
+        # 回退到规则总结
+        return self._rule_based_summary(recent_history, max_tokens)
+    
+    def _rule_based_summary(self, history: List[str], max_tokens: int) -> str:
+        """基于规则的总结"""
+        summary_parts = []
+        
+        # 提取用户意图
+        user_intents = []
+        for msg in history:
+            if msg.startswith('用户:'):
+                user_intents.append(msg[3:].strip())
+        
+        if user_intents:
+            summary_parts.append(f"用户意图: {'; '.join(user_intents[:3])}")
+        
+        # 提取系统响应
+        system_responses = []
+        for msg in history:
+            if msg.startswith('系统:'):
+                system_responses.append(msg[3:].strip())
+        
+        if system_responses:
+            summary_parts.append(f"系统响应: {'; '.join(system_responses[:2])}")
+        
+        summary = " ".join(summary_parts)
+        
+        # 截断到max_tokens
+        estimated_tokens = len(summary) // 2  # 粗略估计
+        if estimated_tokens > max_tokens:
+            summary = summary[:max_tokens * 2] + "..."
+        
+        return summary
+
+
 class TokenBudgetManager:
     """V3: Token预算管理器
     
@@ -941,6 +1037,7 @@ class TokenBudgetManager:
     - 动态分配token给不同优先级的规则
     - 支持规则间的token竞争和妥协
     - 提供智能压缩建议
+    - 实现分层加载和动态预算管理
     """
     
     def __init__(self, config: BudgetConfig = None):
@@ -952,10 +1049,11 @@ class TokenBudgetManager:
         分配token预算
         
         算法:
-        1. 计算核心规则预留
+        1. 分层加载：Core → Task → Tool → History
         2. 按优先级权重排序候选规则
         3. 贪心算法填充直到预算耗尽
         4. 低优先级规则可能被拒绝
+        5. 智能压缩和预算调整
         
         Args:
             rules: 候选规则列表
@@ -964,25 +1062,40 @@ class TokenBudgetManager:
         Returns:
             AllocationResult: 分配结果
         """
-        core_budget = int(self.config.total_budget * self.config.core_reserve)
-        conditional_budget = int(self.config.total_budget * self.config.conditional_limit)
-        safety_budget = int(self.config.total_budget * self.config.safety_margin)
+        # 分层预算分配
+        total_budget = self.config.total_budget
         
-        available_budget = self.config.total_budget - core_budget - safety_budget
+        # 核心预算 (200 tokens 固定)
+        core_budget = 200
+        # 任务上下文预算 (动态)
+        task_budget = int(total_budget * 0.4)
+        # 工具上下文预算 (按需)
+        tool_budget = int(total_budget * 0.2)
+        # 历史预算 (压缩后)
+        history_budget = int(total_budget * 0.15)
+        # 安全边际
+        safety_budget = int(total_budget * 0.05)
         
-        # 分离常量规则和条件规则
-        constant_rules = [r for r in rules if r.constant]
-        conditional_rules = [r for r in rules if not r.constant]
+        # 分离规则到不同层次
+        core_rules = [r for r in rules if r.constant or r.priority == RulePriority.CRITICAL]
+        task_rules = [r for r in rules if not r.constant and r.priority in [RulePriority.HIGH, RulePriority.MEDIUM]]
+        tool_rules = [r for r in rules if 'tool' in r.id.lower() or 'tool' in r.group]
+        history_rules = [r for r in rules if 'history' in r.id.lower() or 'history' in r.group]
         
-        # 计算常量规则成本
-        constant_cost = sum(r.estimate_tokens() for r in constant_rules)
+        # 计算核心规则成本
+        core_cost = sum(r.estimate_tokens() for r in core_rules)
         
-        if constant_cost > core_budget:
-            logger.warning(f"Constant rules exceed core budget: {constant_cost} > {core_budget}")
+        # 如果核心规则超过预算，进行压缩
+        if core_cost > core_budget:
+            logger.warning(f"Core rules exceed budget: {core_cost} > {core_budget}, applying compression")
+            # 对核心规则进行压缩
+            compressed_core = self._compress_rules(core_rules, core_budget)
+            core_rules = compressed_core['allocated']
+            core_cost = compressed_core['used_tokens']
         
-        # 为条件规则计算优先级得分
-        scored_rules = []
-        for rule in conditional_rules:
+        # 为任务规则计算优先级得分
+        scored_task_rules = []
+        for rule in task_rules:
             base_weight = self.config.priority_weights.get(rule.priority, 0.5)
             
             # 如果有语义分析，调整权重
@@ -992,45 +1105,78 @@ class TokenBudgetManager:
             tokens = rule.estimate_tokens()
             score = base_weight * (1000 / (tokens + 100))  # token效率加权
             
-            scored_rules.append((rule, score, tokens))
+            scored_task_rules.append((rule, score, tokens))
         
         # 按得分排序
-        scored_rules.sort(key=lambda x: x[1], reverse=True)
+        scored_task_rules.sort(key=lambda x: x[1], reverse=True)
         
-        # 贪心分配
+        # 贪心分配任务规则
+        allocated_task = []
+        task_cost = 0
+        for rule, score, tokens in scored_task_rules:
+            if task_cost + tokens <= task_budget:
+                allocated_task.append(rule)
+                task_cost += tokens
+        
+        # 分配工具规则
+        allocated_tool = []
+        tool_cost = 0
+        for rule in tool_rules:
+            tokens = rule.estimate_tokens()
+            if tool_cost + tokens <= tool_budget:
+                allocated_tool.append(rule)
+                tool_cost += tokens
+        
+        # 分配历史规则
+        allocated_history = []
+        history_cost = 0
+        for rule in history_rules:
+            tokens = rule.estimate_tokens()
+            if history_cost + tokens <= history_budget:
+                allocated_history.append(rule)
+                history_cost += tokens
+        
+        # 计算总使用量
+        total_used = core_cost + task_cost + tool_cost + history_cost
+        
+        return AllocationResult(
+            allocated_rules=core_rules + allocated_task + allocated_tool + allocated_history,
+            rejected_rules=[r for r in rules if r not in (core_rules + allocated_task + allocated_tool + allocated_history)],
+            budget_used=total_used,
+            budget_remaining=max(0, total_budget - total_used),
+            compression_applied={},
+            allocation_details=[
+                {'layer': 'core', 'tokens': core_cost, 'rules': len(core_rules)},
+                {'layer': 'task', 'tokens': task_cost, 'rules': len(allocated_task)},
+                {'layer': 'tool', 'tokens': tool_cost, 'rules': len(allocated_tool)},
+                {'layer': 'history', 'tokens': history_cost, 'rules': len(allocated_history)}
+            ]
+        )
+    
+    def _compress_rules(self, rules: List[PromptRule], budget: int) -> Dict[str, Any]:
+        """压缩规则以适应预算"""
+        # 按优先级排序
+        rules.sort(key=lambda r: r.priority.value)
+        
         allocated = []
-        rejected = []
-        used_tokens = constant_cost
-        allocation_details = []
-        compression_applied = {}
+        used_tokens = 0
         
-        for rule, score, tokens in scored_rules:
-            if used_tokens + tokens <= available_budget:
+        for rule in rules:
+            tokens = rule.estimate_tokens()
+            if used_tokens + tokens <= budget:
                 allocated.append(rule)
                 used_tokens += tokens
-                allocation_details.append({
-                    'rule_id': rule.id,
-                    'tokens_allocated': tokens,
-                    'priority_score': round(score, 3),
-                    'priority': rule.priority.name
-                })
             else:
-                rejected.append(rule)
                 # 尝试压缩
-                compressed_tokens = self._try_compress(rule, available_budget - used_tokens)
-                if compressed_tokens > 0 and used_tokens + compressed_tokens <= available_budget:
-                    compression_applied[rule.id] = tokens - compressed_tokens
+                compressed_tokens = int(tokens * 0.5)  # 压缩到50%
+                if used_tokens + compressed_tokens <= budget:
                     allocated.append(rule)
                     used_tokens += compressed_tokens
         
-        return AllocationResult(
-            allocated_rules=constant_rules + allocated,
-            rejected_rules=rejected,
-            budget_used=used_tokens,
-            budget_remaining=max(0, self.config.total_budget - used_tokens),
-            compression_applied=compression_applied,
-            allocation_details=allocation_details
-        )
+        return {
+            'allocated': allocated,
+            'used_tokens': used_tokens
+        }
     
     def _try_compress(self, rule: PromptRule, remaining_budget: int) -> int:
         """尝试压缩规则内容以适应预算"""
@@ -1136,7 +1282,7 @@ Inline_SYSTEM = "inline_system"
 class PromptRulebook:
     """提示词规则书管理器 V3"""
     
-    def __init__(self):
+    def __init__(self, ai_client=None):
         self.rules: List[PromptRule] = []
         self._core_rules: List[PromptRule] = []
         self._conditional_rules: List[PromptRule] = []
@@ -1147,6 +1293,7 @@ class PromptRulebook:
         self._max_history: int = 10
         self._total_assemblies: int = 0
         self._total_tokens_saved: int = 0
+        self._ai_client = ai_client
         
         # V3 新增组件
         self._semantic_analyzer = SemanticAnalyzer()
@@ -1155,6 +1302,7 @@ class PromptRulebook:
         self._data_source_manager = DataSourceManager()
         self._budget_manager = TokenBudgetManager()
         self._template_engine = TemplateEngine()
+        self._context_summarizer = ContextSummarizer(ai_client)
         self._all_rules_dict: Dict[str, PromptRule] = {}
     
     @property
@@ -1266,11 +1414,12 @@ class PromptRulebook:
         V3 增强版提示词组装流程:
         
         Step 1: AI语义分析 → 获取意图分类和规则建议
-        Step 2: 规则预筛选（基于意图）+ 关键词/BM25精确匹配
-        Step 3: 递归解析 → 处理depends_on和triggers链
-        Step 4: Token预算分配 → 智能分配和压缩
-        Step 5: 位置组织 → 按插入位置分组排序
-        Step 6: 组装最终prompt → 返回结构化结果
+        Step 2: 历史压缩 → 使用Context Summarizer压缩历史
+        Step 3: 规则预筛选（基于意图）+ 关键词/BM25精确匹配
+        Step 4: 递归解析 → 处理depends_on和triggers链
+        Step 5: 分层Token预算分配 → 智能分配和压缩
+        Step 6: 位置组织 → 按插入位置分组排序
+        Step 7: 组装最终prompt → 返回结构化结果
         """
         import time
         start_time = time.time()
@@ -1282,11 +1431,16 @@ class PromptRulebook:
         if not intent_type:
             intent_type = analysis.primary_intent
         
-        # ====== Step 2: 规则匹配 (增强版) ======
-        core_content = "\n\n".join([r.content for r in self._core_rules])
+        # ====== Step 2: 历史压缩 (新增) ======
+        # 每5步进行一次总结
+        if self._turn_count % 5 == 0 and len(self._history) > 3:
+            summarized_history = self._context_summarizer.summarize(self._history)
+            if summarized_history:
+                # 替换历史为总结
+                self._history = [summarized_history]
+                logger.debug(f"History summarized, new length: {len(self._history)}")
         
-        available_budget = max_system_tokens - self._estimate_core_tokens()
-        
+        # ====== Step 3: 规则匹配 (增强版) ======
         # V3增强：基于语义分析预筛选候选规则
         candidates = None
         if analysis.suggested_rules:
@@ -1294,6 +1448,9 @@ class PromptRulebook:
             candidates = [r for r in self._conditional_rules 
                          if r.id in candidate_ids or r.constant]
             logger.debug(f"Pre-filtered {len(candidates)} candidates from semantic analysis")
+        
+        # 计算可用预算
+        available_budget = max_system_tokens
         
         conditional_rules = self.match_rules(
             user_input, intent_type, 
@@ -1314,7 +1471,7 @@ class PromptRulebook:
                 if rule not in conditional_rules and rule.enabled:
                     conditional_rules.append(rule)
         
-        # ====== Step 3: 递归解析 (V3新增) ======
+        # ====== Step 4: 递归解析 (V3新增) ======
         if conditional_rules:
             resolution_result = self._recursive_resolver.resolve(
                 matched_rules=list(conditional_rules),
@@ -1326,7 +1483,7 @@ class PromptRulebook:
                 conditional_rules = resolution_result.resolved_rules
                 logger.debug(f"Recursive resolution added {len(conditional_rules) - len(resolution_result.resolution_chain[:len(conditional_rules)])} rules")
         
-        # ====== Step 4: Token预算分配 (V3新增) ======
+        # ====== Step 5: 分层Token预算分配 (新增) ======
         all_rules_for_budget = list(self._core_rules) + list(conditional_rules)
         allocation = self._budget_manager.allocate(
             rules=all_rules_for_budget,
@@ -1336,10 +1493,10 @@ class PromptRulebook:
         # 使用预算分配后的规则
         final_rules = allocation.allocated_rules
         
-        # ====== Step 5: 位置组织 (V3新增) ======
+        # ====== Step 6: 位置组织 (V3新增) ======
         organized = self._position_controller.organize(final_rules)
         
-        # ====== Step 6: 组装最终prompt ======
+        # ====== Step 7: 组装最终prompt ======
         system_parts = []
         prompt_structure_sections = []
         token_distribution = {}
@@ -1462,8 +1619,8 @@ class HOSLSRulebookFactory:
     """HOS-LS 规则书工厂 V2 - 21条规则"""
     
     @staticmethod
-    def create_default_rulebook() -> PromptRulebook:
-        rulebook = PromptRulebook()
+    def create_default_rulebook(ai_client=None) -> PromptRulebook:
+        rulebook = PromptRulebook(ai_client)
         
         # ====== Core Rules (3条) ======
         rulebook.add_rule(PromptRule(
@@ -3852,8 +4009,8 @@ DPO Appointment:
         return rulebook
     
     @staticmethod
-    def create_intent_parser_rulebook() -> PromptRulebook:
-        rulebook = PromptRulebook()
+    def create_intent_parser_rulebook(ai_client=None) -> PromptRulebook:
+        rulebook = PromptRulebook(ai_client)
         
         rulebook.add_rule(PromptRule(
             id="ip_core",
@@ -3931,8 +4088,8 @@ DPO Appointment:
         return rulebook
     
     @staticmethod
-    def create_plan_generator_rulebook() -> PromptRulebook:
-        rulebook = PromptRulebook()
+    def create_plan_generator_rulebook(ai_client=None) -> PromptRulebook:
+        rulebook = PromptRulebook(ai_client)
         
         rulebook.add_rule(PromptRule(
             id="pg_core",
