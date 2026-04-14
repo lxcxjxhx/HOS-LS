@@ -1,0 +1,893 @@
+<!-- Jinja2 Template File - IDE should ignore JavaScript errors in this file -->
+<!-- eslint-disable -->
+<!-- tslint-disable -->
+<!-- prettier-ignore -->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HOS-LS 安全扫描报告</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg-primary: #0f1117;
+            --bg-secondary: #161a22;
+            --primary: #6f42c1;
+            --critical: #ff4d4f;
+            --high: #ff8c42;
+            --medium: #ffd166;
+            --low: #3ddc97;
+            --text-primary: #e6edf3;
+            --text-secondary: #8b949e;
+            --border: rgba(255,255,255,0.06);
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            position: relative;
+            min-height: 100vh;
+        }
+        
+        body::before {
+            content: "";
+            position: fixed;
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, rgba(111,66,193,0.15), transparent);
+            top: -200px;
+            left: -200px;
+            z-index: 0;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            position: relative;
+            z-index: 1;
+        }
+        
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            background: linear-gradient(135deg, #6f42c1, #4287f5);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-size: 2.5rem;
+            font-weight: 700;
+        }
+        
+        .hero {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 30px;
+            text-align: center;
+            backdrop-filter: blur(6px);
+        }
+        
+        .status {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 10px;
+            padding: 10px 20px;
+            border-radius: 25px;
+            display: inline-block;
+        }
+        
+        .status.safe {
+            background: rgba(61, 220, 151, 0.1);
+            color: var(--low);
+            border: 1px solid var(--low);
+        }
+        
+        .status.low {
+            background: rgba(61, 220, 151, 0.1);
+            color: var(--low);
+            border: 1px solid var(--low);
+        }
+        
+        .status.medium {
+            background: rgba(255, 209, 102, 0.1);
+            color: var(--medium);
+            border: 1px solid var(--medium);
+        }
+        
+        .status.high {
+            background: rgba(255, 140, 66, 0.1);
+            color: var(--high);
+            border: 1px solid var(--high);
+        }
+        
+        .status.critical {
+            background: rgba(255, 77, 79, 0.1);
+            color: var(--critical);
+            border: 1px solid var(--critical);
+        }
+        
+        .meta {
+            color: var(--text-secondary);
+            font-size: 1rem;
+        }
+        
+        .conclusion {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 30px;
+            text-align: center;
+            font-size: 1.1rem;
+        }
+        
+        .filter-bar {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 30px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            align-items: center;
+        }
+        
+        .filter-bar label {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+        
+        .filter-bar select,
+        .filter-bar input {
+            background: var(--bg-primary);
+            border: 1px solid #2a2f3a;
+            color: var(--text-primary);
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 0.9rem;
+        }
+        
+        .filter-bar input {
+            flex: 1;
+            min-width: 200px;
+        }
+        
+        .summary-section {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 25px;
+            margin-bottom: 30px;
+        }
+        
+        .summary-section h2 {
+            margin-bottom: 20px;
+            color: var(--text-primary);
+            font-size: 1.5rem;
+        }
+        
+        .summary-content {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 30px;
+        }
+        
+        .summary-stats {
+            flex: 1;
+            min-width: 250px;
+        }
+        
+        .summary-stats ul {
+            list-style: none;
+        }
+        
+        .summary-stats li {
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .summary-stats span {
+            font-weight: 600;
+        }
+        
+        .chart-container {
+            flex: 2;
+            min-width: 300px;
+            height: 300px;
+        }
+        
+        .empty-state {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 40px;
+            margin-bottom: 30px;
+            text-align: center;
+            font-size: 1.2rem;
+            color: var(--text-secondary);
+        }
+        
+        .clusters {
+            margin-bottom: 30px;
+        }
+        
+        .cluster {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            margin-bottom: 20px;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .cluster::after {
+            content: "";
+            height: 1px;
+            background: linear-gradient(to right, transparent, #6f42c1, transparent);
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+        }
+        
+        .cluster-header {
+            padding: 15px 20px;
+            font-weight: 600;
+            font-size: 1.1rem;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .cluster-critical .cluster-header {
+            color: var(--critical);
+            border-left: 4px solid var(--critical);
+        }
+        
+        .cluster-high .cluster-header {
+            color: var(--high);
+            border-left: 4px solid var(--high);
+        }
+        
+        .cluster-medium .cluster-header {
+            color: var(--medium);
+            border-left: 4px solid var(--medium);
+        }
+        
+        .cluster-low .cluster-header {
+            color: var(--low);
+            border-left: 4px solid var(--low);
+        }
+        
+        .cluster-info .cluster-header {
+            color: var(--text-secondary);
+            border-left: 4px solid var(--text-secondary);
+        }
+        
+        .petals {
+            padding: 20px;
+        }
+        
+        .petal {
+            background: rgba(255,255,255,0.02);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 10px;
+            transition: all 0.3s ease;
+        }
+        
+        .petal:hover {
+            background: rgba(255,255,255,0.04);
+            transform: translateY(-2px);
+        }
+        
+        .petal-title {
+            font-weight: 600;
+            margin-bottom: 5px;
+            color: var(--text-primary);
+        }
+        
+        .petal-meta {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin-bottom: 10px;
+        }
+        
+        .petal-description {
+            color: var(--text-primary);
+            margin-bottom: 10px;
+        }
+        
+        .code {
+            background: rgba(0,0,0,0.3);
+            padding: 12px;
+            border-radius: 6px;
+            font-family: "Consolas", "Monaco", "Courier New", monospace;
+            white-space: pre-wrap;
+            margin: 10px 0;
+            overflow-x: auto;
+            font-size: 0.9rem;
+            border-left: 3px solid var(--primary);
+        }
+        
+        .poc-section {
+            margin: 10px 0;
+            padding: 12px;
+            background: rgba(111,66,193,0.1);
+            border-radius: 6px;
+            border-left: 3px solid var(--primary);
+        }
+        
+        .poc-section h4 {
+            margin: 0 0 5px 0;
+            color: var(--primary);
+            font-size: 0.9rem;
+        }
+        
+        .fix-suggestion {
+            margin: 10px 0;
+            padding: 12px;
+            background: rgba(61, 220, 151, 0.1);
+            border-radius: 6px;
+            border-left: 3px solid var(--low);
+        }
+        
+        .fix-suggestion h4 {
+            margin: 0 0 5px 0;
+            color: var(--low);
+            font-size: 0.9rem;
+        }
+        
+        .attack-chain {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 25px;
+            margin-top: 30px;
+        }
+        
+        .attack-chain h2 {
+            margin-bottom: 20px;
+            color: var(--text-primary);
+        }
+        
+        .attack-chain h3 {
+            margin: 20px 0 10px 0;
+            color: var(--text-primary);
+            font-size: 1.2rem;
+        }
+        
+        .attack-chain ul {
+            margin-left: 20px;
+            margin-bottom: 15px;
+        }
+        
+        .attack-chain li {
+            margin-bottom: 5px;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+            
+            h1 {
+                font-size: 2rem;
+            }
+            
+            .hero {
+                padding: 20px;
+            }
+            
+            .summary-content {
+                flex-direction: column;
+            }
+            
+            .chart-container {
+                height: 250px;
+            }
+            
+            .filter-bar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .filter-bar input {
+                min-width: unset;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>HOS-LS 安全扫描报告</h1>
+        
+        <div class="hero">
+            <div class="status critical">✓ 严重安全风险</div>
+            <div class="meta">扫描 1 文件 - 10 风险 - 用时 0.04s</div>
+        </div>
+        
+        <div class="conclusion">
+            本次扫描发现安全问题，建议及时修复。
+        </div>
+        
+        <div class="filter-bar">
+            <label for="severity-filter">按严重级别过滤:</label>
+            <select id="severity-filter" onchange="filterFindings()">
+                <option value="all">全部</option>
+                <option value="critical">严重</option>
+                <option value="high">高</option>
+                <option value="medium">中</option>
+                <option value="low">低</option>
+                <option value="info">信息</option>
+            </select>
+            <label for="search-input">搜索:</label>
+            <input type="text" id="search-input" placeholder="搜索漏洞...">
+        </div>
+        
+        <div class="summary-section">
+            <h2>扫描摘要</h2>
+            <div class="summary-content">
+                <div class="summary-stats">
+                    <ul>
+                        <li>扫描文件数: <span>1</span></li>
+                        <li>发现问题数: <span>10</span></li>
+                        <li>严重: <span style="color: var(--critical)">3</span></li>
+                        <li>高: <span style="color: var(--high)">4</span></li>
+                        <li>中: <span style="color: var(--medium)">3</span></li>
+                        <li>低: <span style="color: var(--low)">0</span></li>
+                        <li>信息: <span style="color: var(--text-secondary)">0</span></li>
+                    </ul>
+                </div>
+                
+                <div class="chart-container">
+                    <canvas id="severityChart"></canvas>
+                </div>
+                
+            </div>
+        </div>
+        
+        
+        
+        
+        <div class="clusters">
+            
+                
+                
+                    
+                        
+                    
+                        
+                    
+                        
+                    
+                        
+                    
+                        
+                            
+                        
+                    
+                        
+                    
+                        
+                    
+                        
+                            
+                        
+                    
+                        
+                            
+                        
+                    
+                        
+                    
+                
+                
+                <div class="cluster cluster-critical">
+                    <div class="cluster-header">critical (3)</div>
+                    <div class="petals">
+                        
+                        <div class="petal">
+                            <div class="petal-title">Server-Side Request Forgery (SSRF) (位于 ImageProcessor.java:112) (Server-Side Request Forgery (SSRF))</div>
+                            <div class="petal-meta">ImageProcessor.java:112:0</div>
+                            <div class="petal-description">Server-Side Request Forgery (SSRF)。[{'type': 'code_line', 'location': 'ImageProcessor.java:112', 'reason': '通过用户提供的URL字符串构造HTTP请求', 'confidence': 0.9, 'source_agent': 'RISK_AGENT'}, {'type': 'method_call', 'location': 'ImageProcessor.java:112', 'reason': '调用 `HttpClient.execute` 请求用户可控的URL', 'confidence': 0.9, 'source_agent': 'ADVERSARIAL_AGENT'}, {'type': 'attack_vector', 'location': 'ImageProcessor.java:112', 'reason': '验证攻击向量有效，可通过构造 `file:///etc/passwd` 或 `http://169.254.169.254/` 等URL探测内部系统', 'confidence': 0.95, 'source_agent': 'ADVERSARIAL_AGENT'}] 建议：验证并限制用户输入的URL协议、主机和端口。禁止访问内部网络地址段（如127.0.0.1, 10.0.0.0/8）。使用白名单机制允许访问的域名。</div>
+                            
+                            
+                            
+                            <div class="fix-suggestion">
+                                <h4>修复建议</h4>
+                                <p>验证并限制用户输入的URL协议、主机和端口。禁止访问内部网络地址段（如127.0.0.1, 10.0.0.0/8）。使用白名单机制允许访问的域名。</p>
+                            </div>
+                            
+                        </div>
+                        
+                        <div class="petal">
+                            <div class="petal-title">SQL Injection (位于 /api/user?id=) (SQL Injection)</div>
+                            <div class="petal-meta">/api/user?id=:0</div>
+                            <div class="petal-description">SQL Injection。[{'type': 'risk_signal', 'location': '/api/user', 'reason': '检测到SQL查询字符串拼接模式。', 'confidence': 0.9, 'source_agent': 'SAST-Engine'}, {'type': 'code_line', 'location': 'db_access.py:127', 'reason': '代码行: `query = "SELECT * FROM users WHERE id = " + user_id`， 变量 `user_id` 直接拼接。', 'confidence': 0.6, 'source_agent': 'Code-Analyzer'}, {'type': 'chained_evidence', 'location': 'Database Logs', 'reason': '未观测到异常的、包含SQL语法元素的查询日志。', 'confidence': 0.3, 'source_agent': 'Data-Sensor'}, {'type': 'adversarial_validation', 'location': '/api/user?id=', 'reason': '注入测试未返回预期异常数据或错误，参数 `id` 可能在前端或中间件被强制转换为整数，但后端代码模式仍存在高风险。需要人工审查上下文以确认利用条件。', 'confidence': 0.4, 'source_agent': 'Adversarial-Validator'}] 建议：立即将查询改造为参数化查询或使用预编译语句，避免字符串拼接。</div>
+                            
+                            
+                            
+                            <div class="fix-suggestion">
+                                <h4>修复建议</h4>
+                                <p>立即将查询改造为参数化查询或使用预编译语句，避免字符串拼接。</p>
+                            </div>
+                            
+                        </div>
+                        
+                        <div class="petal">
+                            <div class="petal-title">SQL Injection (位于 auth.go:authenticateUser) (SQL Injection)</div>
+                            <div class="petal-meta">auth.go:authenticateUser:0</div>
+                            <div class="petal-description">SQL Injection。[{'type': 'code_line', 'location': 'auth.go:authenticateUser:47-49', 'reason': 'SQL语句直接拼接用户输入`username`和`password`，未使用参数化查询。', 'confidence': 1.0, 'source_agent': 'SAST-AGENT'}, {'type': 'adversarial_validation', 'location': 'ADVERSARIAL-001', 'reason': '验证确认构造的恶意SQL Payload可以被成功执行，导致认证绕过。', 'confidence': 1.0, 'source_agent': 'ADVERSARIAL-VALIDATOR'}] 建议：使用参数化查询或ORM库来构造SQL语句，避免直接拼接用户输入。</div>
+                            
+                            
+                            
+                            <div class="fix-suggestion">
+                                <h4>修复建议</h4>
+                                <p>使用参数化查询或ORM库来构造SQL语句，避免直接拼接用户输入。</p>
+                            </div>
+                            
+                        </div>
+                        
+                    </div>
+                </div>
+                
+            
+                
+                
+                    
+                        
+                            
+                        
+                    
+                        
+                    
+                        
+                            
+                        
+                    
+                        
+                    
+                        
+                    
+                        
+                    
+                        
+                            
+                        
+                    
+                        
+                    
+                        
+                    
+                        
+                            
+                        
+                    
+                
+                
+                <div class="cluster cluster-high">
+                    <div class="cluster-header">high (4)</div>
+                    <div class="petals">
+                        
+                        <div class="petal">
+                            <div class="petal-title">Reflected XSS (位于 /api/user/profile - nickname parameter) (Reflected XSS)</div>
+                            <div class="petal-meta">/api/user/profile - nickname parameter:0</div>
+                            <div class="petal-description">Reflected XSS。[{'type': 'code_line', 'location': 'server.js:45', 'reason': '代码将用户输入的nickname参数直接拼接到HTML响应中，未进行任何编码。', 'confidence': 1.0, 'source_agent': 'StaticAnalyzer-1'}, {'type': 'code_line', 'location': 'server.js:45', 'reason': '动态测试确认payload <script>alert(1)</script> 被成功注入并触发了弹窗，验证了漏洞的可利用性。', 'confidence': 1.0, 'source_agent': 'AdversarialValidator-2'}] 建议：对用户可控的nickname参数进行严格的输出编码（HTML实体编码）或内容安全策略（CSP），以防止恶意脚本在受害者浏览器中执行。</div>
+                            
+                            
+                            
+                            <div class="fix-suggestion">
+                                <h4>修复建议</h4>
+                                <p>对用户可控的nickname参数进行严格的输出编码（HTML实体编码）或内容安全策略（CSP），以防止恶意脚本在受害者浏览器中执行。</p>
+                            </div>
+                            
+                        </div>
+                        
+                        <div class="petal">
+                            <div class="petal-title">SQL Injection (位于 UserController.java:45) (SQL Injection)</div>
+                            <div class="petal-meta">UserController.java:45:0</div>
+                            <div class="petal-description">SQL Injection。[{'type': 'code_line', 'location': 'UserController.java:45', 'reason': '使用字符串拼接方式构造SQL查询语句', 'confidence': 0.95, 'source_agent': 'RISK_AGENT'}, {'type': 'code_line', 'location': 'DBConnection.java:22', 'reason': '使用不具备SQL注入防护能力的Statement接口', 'confidence': 0.85, 'source_agent': 'RISK_AGENT'}, {'type': 'method_call', 'location': 'UserController.java:45', 'reason': '直接调用 `executeQuery` 执行拼接后的SQL字符串', 'confidence': 0.9, 'source_agent': 'ADVERSARIAL_AGENT'}] 建议：使用参数化查询或预编译语句替代字符串拼接，对用户输入的'userId'参数进行严格的类型与格式校验。</div>
+                            
+                            
+                            
+                            <div class="fix-suggestion">
+                                <h4>修复建议</h4>
+                                <p>使用参数化查询或预编译语句替代字符串拼接，对用户输入的'userId'参数进行严格的类型与格式校验。</p>
+                            </div>
+                            
+                        </div>
+                        
+                        <div class="petal">
+                            <div class="petal-title">Reflected XSS (位于 /api/search?q=) (Reflected XSS)</div>
+                            <div class="petal-meta">/api/search?q=:0</div>
+                            <div class="petal-description">Reflected XSS。[{'type': 'risk_signal', 'location': '/api/search', 'reason': '检测到用户输入直接嵌入到HTTP响应中，未发现明显的过滤或编码函数。', 'confidence': 0.8, 'source_agent': 'SAST-Engine'}, {'type': 'code_line', 'location': 'server.py:45', 'reason': "代码行: `response = f'<p>Search results for: {query}</p>'`， 变量 `query` 直接拼接。", 'confidence': 1.0, 'source_agent': 'Code-Analyzer'}, {'type': 'chained_evidence', 'location': 'HTTP Request/Response', 'reason': '请求 `GET /api/search?q=<script>alert(1)</script>` 在响应体中返回未编码的payload。', 'confidence': 1.0, 'source_agent': 'DAST-Scanner'}, {'type': 'adversarial_validation', 'location': '/api/search?q=', 'reason': '对抗验证成功注入有效载荷 `"\'><img src=x onerror=alert(document.domain)>` 并触发执行。', 'confidence': 1.0, 'source_agent': 'Adversarial-Validator'}] 建议：对所有用户可控输入（如查询参数q）进行严格的输出编码（HTML实体编码）后再嵌入到HTTP响应中。</div>
+                            
+                            
+                            
+                            <div class="fix-suggestion">
+                                <h4>修复建议</h4>
+                                <p>对所有用户可控输入（如查询参数q）进行严格的输出编码（HTML实体编码）后再嵌入到HTTP响应中。</p>
+                            </div>
+                            
+                        </div>
+                        
+                        <div class="petal">
+                            <div class="petal-title">Reflected XSS (位于 profile.go:renderProfilePage) (Reflected XSS)</div>
+                            <div class="petal-meta">profile.go:renderProfilePage:0</div>
+                            <div class="petal-description">Reflected XSS。[{'type': 'code_line', 'location': 'profile.go:renderProfilePage:22', 'reason': '将URL参数`name`的值直接输出到HTML响应中。', 'confidence': 0.8, 'source_agent': 'SAST-AGENT'}, {'type': 'adversarial_validation', 'location': 'ADVERSARIAL-002', 'reason': '验证确认`name`参数值可控并可被反射到响应中，但需要人工检查输出上下文（是否在标签属性内）及是否有全局编码措施。', 'confidence': 0.6, 'source_agent': 'ADVERSARIAL-VALIDATOR'}] 建议：对所有输出到HTML页面中的用户可控数据（如URL参数`name`）进行适当的编码（如HTML实体编码）。</div>
+                            
+                            
+                            
+                            <div class="fix-suggestion">
+                                <h4>修复建议</h4>
+                                <p>对所有输出到HTML页面中的用户可控数据（如URL参数`name`）进行适当的编码（如HTML实体编码）。</p>
+                            </div>
+                            
+                        </div>
+                        
+                    </div>
+                </div>
+                
+            
+                
+                
+                    
+                        
+                    
+                        
+                            
+                        
+                    
+                        
+                    
+                        
+                            
+                        
+                    
+                        
+                    
+                        
+                            
+                        
+                    
+                        
+                    
+                        
+                    
+                        
+                    
+                        
+                    
+                
+                
+                <div class="cluster cluster-medium">
+                    <div class="cluster-header">medium (3)</div>
+                    <div class="petals">
+                        
+                        <div class="petal">
+                            <div class="petal-title">Open Redirect (位于 /login?redirect parameter) (Open Redirect)</div>
+                            <div class="petal-meta">/login?redirect parameter:0</div>
+                            <div class="petal-description">Open Redirect。[{'type': 'code_line', 'location': 'auth.js:78', 'reason': '存在对重定向URL的检查逻辑，但仅检查了是否以‘/’开头，这可以被相对路径或某些绕过方式利用。', 'confidence': 0.7, 'source_agent': 'StaticAnalyzer-1'}, {'type': 'code_line', 'location': 'auth.js:78', 'reason': '通过构造形如‘/../../evil.com’的payload，可能绕过内部路径检查，实现跨域重定向。该利用场景需结合特定上下文，存在不确定性。', 'confidence': 0.6, 'source_agent': 'AdversarialValidator-2'}] 建议：实施严格的白名单机制，仅允许重定向到受信任的内部域名或路径。避免使用用户提供的完整URL进行重定向。</div>
+                            
+                            
+                            
+                            <div class="fix-suggestion">
+                                <h4>修复建议</h4>
+                                <p>实施严格的白名单机制，仅允许重定向到受信任的内部域名或路径。避免使用用户提供的完整URL进行重定向。</p>
+                            </div>
+                            
+                        </div>
+                        
+                        <div class="petal">
+                            <div class="petal-title">Cross-Site Scripting (XSS) (位于 comment.jsp:78) (Cross-Site Scripting (XSS))</div>
+                            <div class="petal-meta">comment.jsp:78:0</div>
+                            <div class="petal-description">Cross-Site Scripting (XSS)。[{'type': 'code_line', 'location': 'comment.jsp:78', 'reason': '使用<%= %>指令直接输出用户评论内容', 'confidence': 0.8, 'source_agent': 'CHAIN_AGENT'}, {'type': 'data_flow', 'location': 'CommentDAO.save() -> comment.jsp', 'reason': '用户评论数据从数据库被读取后，未经处理直接传递至视图层渲染', 'confidence': 0.75, 'source_agent': 'CHAIN_AGENT'}] 建议：对所有用户控制的输入（如评论内容）在输出到HTML前进行编码或转义。建议使用安全的编码库处理HTML上下文输出。</div>
+                            
+                            
+                            
+                            <div class="fix-suggestion">
+                                <h4>修复建议</h4>
+                                <p>对所有用户控制的输入（如评论内容）在输出到HTML前进行编码或转义。建议使用安全的编码库处理HTML上下文输出。</p>
+                            </div>
+                            
+                        </div>
+                        
+                        <div class="petal">
+                            <div class="petal-title">Insecure Direct Object Reference (IDOR) (位于 ProfileServlet.java:67) (Insecure Direct Object Reference (IDOR))</div>
+                            <div class="petal-meta">ProfileServlet.java:67:0</div>
+                            <div class="petal-description">Insecure Direct Object Reference (IDOR)。[{'type': 'code_line', 'location': 'ProfileServlet.java:67', 'reason': '根据URL参数`userId`直接查询并返回用户资料，未进行所有权验证', 'confidence': 0.7, 'source_agent': 'RISK_AGENT'}, {'type': 'session_analysis', 'location': 'ProfileServlet.java:45', 'reason': '会话中存储了当前登录的用户ID，但在第67行的查询逻辑中未使用此信息进行比对', 'confidence': 0.65, 'source_agent': 'ADVERSARIAL_AGENT'}] 建议：实施基于会话或Token的访问控制。在获取用户资料前，验证当前登录用户ID与请求的用户ID是否匹配，或使用间接引用映射。</div>
+                            
+                            
+                            
+                            <div class="fix-suggestion">
+                                <h4>修复建议</h4>
+                                <p>实施基于会话或Token的访问控制。在获取用户资料前，验证当前登录用户ID与请求的用户ID是否匹配，或使用间接引用映射。</p>
+                            </div>
+                            
+                        </div>
+                        
+                    </div>
+                </div>
+                
+            
+                
+                
+                    
+                        
+                    
+                        
+                    
+                        
+                    
+                        
+                    
+                        
+                    
+                        
+                    
+                        
+                    
+                        
+                    
+                        
+                    
+                        
+                    
+                
+                
+            
+                
+                
+                    
+                        
+                    
+                        
+                    
+                        
+                    
+                        
+                    
+                        
+                    
+                        
+                    
+                        
+                    
+                        
+                    
+                        
+                    
+                        
+                    
+                
+                
+            
+        </div>
+        
+        
+        
+            
+        
+        
+        <script>
+            /* eslint-disable */
+            /* jshint ignore:start */
+            // 严重级别分布图表
+            
+            const ctx = document.getElementById('severityChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['严重', '高', '中', '低', '信息'],
+                    datasets: [{
+                        label: '漏洞数量',
+                        // Jinja2 template variables below - IDE should ignore
+                        data: [3, 4, 3, 0, 0],
+                        backgroundColor: [
+                            'rgba(255, 77, 79, 0.6)',
+                            'rgba(255, 140, 66, 0.6)',
+                            'rgba(255, 209, 102, 0.6)',
+                            'rgba(61, 220, 151, 0.6)',
+                            'rgba(139, 148, 158, 0.6)'
+                        ],
+                        borderColor: [
+                            'rgba(255, 77, 79, 1)',
+                            'rgba(255, 140, 66, 1)',
+                            'rgba(255, 209, 102, 1)',
+                            'rgba(61, 220, 151, 1)',
+                            'rgba(139, 148, 158, 1)'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        title: {
+                            display: true,
+                            text: '漏洞严重级别分布',
+                            color: '#e6edf3'
+                        }
+                    },
+                    scales: {
+                        x: {
+                            beginAtZero: true,
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            },
+                            ticks: {
+                                color: '#8b949e'
+                            }
+                        },
+                        y: {
+                            grid: {
+                                display: false
+                            },
+                            ticks: {
+                                color: '#e6edf3'
+                            }
+                        }
+                    }
+                }
+            });
+            
+            
+            // 防抖函数
+            function debounce(func, wait) {
+                let timeout;
+                return function() {
+                    clearTimeout(timeout);
+                    timeout = setTimeout(() => func.apply(this, arguments), wait);
+                };
+            }
+            
+            // 过滤功能
+            const filterFindings = debounce(function() {
+                const severityFilter = document.getElementById("severity-filter").value;
+                const searchInput = document.getElementById("search-input").value.toLowerCase();
+                const petals = document.querySelectorAll(".petal");
+                
+                petals.forEach(petal => {
+                    const cluster = petal.closest(".cluster");
+                    const severity = cluster.classList.contains("cluster-critical") ? "critical" : 
+                                   cluster.classList.contains("cluster-high") ? "high" :
+                                   cluster.classList.contains("cluster-medium") ? "medium" :
+                                   cluster.classList.contains("cluster-low") ? "low" : "info";
+                    const text = petal.textContent.toLowerCase();
+                    
+                    const severityMatch = severityFilter === "all" || severity === severityFilter;
+                    const searchMatch = text.includes(searchInput);
+                    
+                    petal.style.display = (severityMatch && searchMatch) ? "block" : "none";
+                    
+                    // 检查cluster是否有可见的petal
+                    const visiblePetals = cluster.querySelectorAll(".petal[style=\"display: block;\"]");
+                    cluster.style.display = visiblePetals.length > 0 ? "block" : "none";
+                });
+            }, 300);
+            
+            // 绑定事件
+            document.getElementById("search-input").addEventListener("keyup", filterFindings);
+            document.getElementById("severity-filter").addEventListener("change", filterFindings);
+            /* jshint ignore:end */
+        </script>
+    </div>
+</body>
+</html>
