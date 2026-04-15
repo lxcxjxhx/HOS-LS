@@ -1,0 +1,2271 @@
+<!-- Jinja2 Template File - IDE should ignore JavaScript errors in this file -->
+<!-- eslint-disable -->
+<!-- tslint-disable -->
+<!-- prettier-ignore -->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HOS-LS 安全扫描报告</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg-primary: #0f1117;
+            --bg-secondary: #161a22;
+            --primary: #6f42c1;
+            --critical: #ff4d4f;
+            --high: #ff8c42;
+            --medium: #ffd166;
+            --low: #3ddc97;
+            --text-primary: #e6edf3;
+            --text-secondary: #8b949e;
+            --border: rgba(255,255,255,0.06);
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            position: relative;
+            min-height: 100vh;
+        }
+        
+        body::before {
+            content: "";
+            position: fixed;
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, rgba(111,66,193,0.15), transparent);
+            top: -200px;
+            left: -200px;
+            z-index: 0;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            position: relative;
+            z-index: 1;
+        }
+        
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            background: linear-gradient(135deg, #6f42c1, #4287f5);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-size: 2.5rem;
+            font-weight: 700;
+        }
+        
+        .hero {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 30px;
+            text-align: center;
+            backdrop-filter: blur(6px);
+        }
+        
+        .status {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 10px;
+            padding: 10px 20px;
+            border-radius: 25px;
+            display: inline-block;
+        }
+        
+        .status.safe {
+            background: rgba(61, 220, 151, 0.1);
+            color: var(--low);
+            border: 1px solid var(--low);
+        }
+        
+        .status.low {
+            background: rgba(61, 220, 151, 0.1);
+            color: var(--low);
+            border: 1px solid var(--low);
+        }
+        
+        .status.medium {
+            background: rgba(255, 209, 102, 0.1);
+            color: var(--medium);
+            border: 1px solid var(--medium);
+        }
+        
+        .status.high {
+            background: rgba(255, 140, 66, 0.1);
+            color: var(--high);
+            border: 1px solid var(--high);
+        }
+        
+        .status.critical {
+            background: rgba(255, 77, 79, 0.1);
+            color: var(--critical);
+            border: 1px solid var(--critical);
+        }
+        
+        .meta {
+            color: var(--text-secondary);
+            font-size: 1rem;
+        }
+        
+        .conclusion {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 30px;
+            text-align: center;
+            font-size: 1.1rem;
+        }
+        
+        .filter-bar {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 30px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            align-items: center;
+        }
+        
+        .filter-bar label {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+        
+        .filter-bar select,
+        .filter-bar input {
+            background: var(--bg-primary);
+            border: 1px solid #2a2f3a;
+            color: var(--text-primary);
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 0.9rem;
+        }
+        
+        .filter-bar input {
+            flex: 1;
+            min-width: 200px;
+        }
+        
+        .summary-section {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 25px;
+            margin-bottom: 30px;
+        }
+        
+        .summary-section h2 {
+            margin-bottom: 20px;
+            color: var(--text-primary);
+            font-size: 1.5rem;
+        }
+        
+        .summary-content {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 30px;
+        }
+        
+        .summary-stats {
+            flex: 1;
+            min-width: 250px;
+        }
+        
+        .summary-stats ul {
+            list-style: none;
+        }
+        
+        .summary-stats li {
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .summary-stats span {
+            font-weight: 600;
+        }
+        
+        .chart-container {
+            flex: 2;
+            min-width: 300px;
+            height: 300px;
+        }
+        
+        .empty-state {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 40px;
+            margin-bottom: 30px;
+            text-align: center;
+            font-size: 1.2rem;
+            color: var(--text-secondary);
+        }
+        
+        .clusters {
+            margin-bottom: 30px;
+        }
+        
+        .cluster {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            margin-bottom: 20px;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .cluster::after {
+            content: "";
+            height: 1px;
+            background: linear-gradient(to right, transparent, #6f42c1, transparent);
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+        }
+        
+        .cluster-header {
+            padding: 15px 20px;
+            font-weight: 600;
+            font-size: 1.1rem;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .cluster-critical .cluster-header {
+            color: var(--critical);
+            border-left: 4px solid var(--critical);
+        }
+        
+        .cluster-high .cluster-header {
+            color: var(--high);
+            border-left: 4px solid var(--high);
+        }
+        
+        .cluster-medium .cluster-header {
+            color: var(--medium);
+            border-left: 4px solid var(--medium);
+        }
+        
+        .cluster-low .cluster-header {
+            color: var(--low);
+            border-left: 4px solid var(--low);
+        }
+        
+        .cluster-info .cluster-header {
+            color: var(--text-secondary);
+            border-left: 4px solid var(--text-secondary);
+        }
+        
+        .petals {
+            padding: 20px;
+        }
+        
+        .petal {
+            background: rgba(255,255,255,0.02);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 10px;
+            transition: all 0.3s ease;
+        }
+        
+        .petal:hover {
+            background: rgba(255,255,255,0.04);
+            transform: translateY(-2px);
+        }
+        
+        .petal-title {
+            font-weight: 600;
+            margin-bottom: 5px;
+            color: var(--text-primary);
+        }
+        
+        .petal-meta {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin-bottom: 10px;
+        }
+        
+        .petal-description {
+            color: var(--text-primary);
+            margin-bottom: 10px;
+        }
+        
+        .code {
+            background: rgba(0,0,0,0.3);
+            padding: 12px;
+            border-radius: 6px;
+            font-family: "Consolas", "Monaco", "Courier New", monospace;
+            white-space: pre-wrap;
+            margin: 10px 0;
+            overflow-x: auto;
+            font-size: 0.9rem;
+            border-left: 3px solid var(--primary);
+        }
+        
+        .poc-section {
+            margin: 10px 0;
+            padding: 12px;
+            background: rgba(111,66,193,0.1);
+            border-radius: 6px;
+            border-left: 3px solid var(--primary);
+        }
+        
+        .poc-section h4 {
+            margin: 0 0 5px 0;
+            color: var(--primary);
+            font-size: 0.9rem;
+        }
+        
+        .fix-suggestion {
+            margin: 10px 0;
+            padding: 12px;
+            background: rgba(61, 220, 151, 0.1);
+            border-radius: 6px;
+            border-left: 3px solid var(--low);
+        }
+        
+        .fix-suggestion h4 {
+            margin: 0 0 5px 0;
+            color: var(--low);
+            font-size: 0.9rem;
+        }
+        
+        .attack-chain {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 25px;
+            margin-top: 30px;
+        }
+        
+        .attack-chain h2 {
+            margin-bottom: 20px;
+            color: var(--text-primary);
+        }
+        
+        .attack-chain h3 {
+            margin: 20px 0 10px 0;
+            color: var(--text-primary);
+            font-size: 1.2rem;
+        }
+        
+        .attack-chain ul {
+            margin-left: 20px;
+            margin-bottom: 15px;
+        }
+        
+        .attack-chain li {
+            margin-bottom: 5px;
+        }
+
+        .debug-log-section {
+            background: rgba(255,255,255,0.02);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+
+        .debug-log-section summary {
+            padding: 12px 15px;
+            cursor: pointer;
+            font-weight: 600;
+            color: var(--primary);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            user-select: none;
+            background: rgba(111,66,193,0.1);
+        }
+
+        .debug-log-section summary:hover {
+            background: rgba(111,66,193,0.15);
+        }
+
+        .debug-log-section summary::after {
+            content: "▶";
+            font-size: 0.8rem;
+            transition: transform 0.2s ease;
+        }
+
+        .debug-log-section[open] summary::after {
+            transform: rotate(90deg);
+        }
+
+        .debug-log-content {
+            padding: 15px;
+            max-height: 400px;
+            overflow-y: auto;
+            font-family: "Consolas", "Monaco", monospace;
+            font-size: 0.85rem;
+            line-height: 1.8;
+            background: rgba(0,0,0,0.3);
+        }
+
+        .debug-log-line {
+            padding: 2px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.03);
+        }
+
+        .debug-log-line:last-child {
+            border-bottom: none;
+        }
+
+        .debug-log-line .prefix {
+            color: var(--text-secondary);
+        }
+
+        .debug-log-line .debug-level {
+            color: var(--primary);
+        }
+
+        .debug-log-line .content {
+            color: var(--text-primary);
+        }
+
+        .token-details {
+            background: rgba(255,255,255,0.02);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+
+        .token-details summary {
+            padding: 12px 15px;
+            cursor: pointer;
+            font-weight: 600;
+            color: var(--accent);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            user-select: none;
+            background: rgba(255, 193, 7, 0.1);
+        }
+
+        .token-details summary:hover {
+            background: rgba(255, 193, 7, 0.15);
+        }
+
+        .token-details summary::after {
+            content: "▶";
+            font-size: 0.8rem;
+            transition: transform 0.2s ease;
+        }
+
+        .token-details[open] summary::after {
+            transform: rotate(90deg);
+        }
+
+        .token-content {
+            padding: 15px;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        .token-record {
+            background: rgba(0,0,0,0.3);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            margin-bottom: 15px;
+            padding: 12px;
+        }
+
+        .token-record:last-child {
+            margin-bottom: 0;
+        }
+
+        .token-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .token-model {
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        .token-count {
+            color: var(--accent);
+            font-weight: 600;
+        }
+
+        .token-prompt, .token-response {
+            margin-top: 8px;
+        }
+
+        .token-prompt summary, .token-response summary {
+            cursor: pointer;
+            padding: 6px 10px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 4px;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .token-prompt summary:hover, .token-response summary:hover {
+            background: rgba(255,255,255,0.1);
+        }
+
+        .token-prompt pre, .token-response pre {
+            margin-top: 8px;
+            padding: 10px;
+            background: rgba(0,0,0,0.4);
+            border-radius: 4px;
+            font-family: "Consolas", "Monaco", monospace;
+            font-size: 0.75rem;
+            line-height: 1.5;
+            color: var(--text-primary);
+            white-space: pre-wrap;
+            word-break: break-all;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .scanned-files-section {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 25px;
+            margin-top: 30px;
+        }
+
+        .scanned-files-section h2 {
+            margin-bottom: 20px;
+            color: var(--text-primary);
+            font-size: 1.5rem;
+        }
+
+        .file-details {
+            background: rgba(255,255,255,0.02);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            margin-bottom: 10px;
+            overflow: hidden;
+        }
+
+        .file-details summary {
+            padding: 12px 15px;
+            cursor: pointer;
+            font-weight: 600;
+            color: var(--text-primary);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            user-select: none;
+        }
+
+        .file-details summary:hover {
+            background: rgba(255,255,255,0.04);
+        }
+
+        .file-details summary::after {
+            content: "▶";
+            font-size: 0.8rem;
+            transition: transform 0.2s ease;
+        }
+
+        .file-details[open] summary::after {
+            transform: rotate(90deg);
+        }
+
+        .file-details summary .file-path {
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .file-details summary .finding-count {
+            margin-left: 15px;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.85rem;
+            background: rgba(111,66,193,0.3);
+        }
+
+        .file-findings {
+            padding: 15px;
+            border-top: 1px solid var(--border);
+        }
+
+        .file-findings .petal {
+            margin-bottom: 8px;
+        }
+
+        .file-findings .petal:last-child {
+            margin-bottom: 0;
+        }
+
+        .file-details.has-findings summary {
+            color: var(--high);
+        }
+
+        .file-details.no-findings summary {
+            color: var(--low);
+        }
+
+        .file-details.no-findings .finding-count {
+            background: rgba(61, 220, 151, 0.3);
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+            
+            h1 {
+                font-size: 2rem;
+            }
+            
+            .hero {
+                padding: 20px;
+            }
+            
+            .summary-content {
+                flex-direction: column;
+            }
+            
+            .chart-container {
+                height: 250px;
+            }
+            
+            .filter-bar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .filter-bar input {
+                min-width: unset;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>HOS-LS 安全扫描报告</h1>
+        
+        <div class="hero">
+            <div class="status high">✓ 高安全风险</div>
+            <div class="meta">扫描 1 文件 - 5 风险 - 用时 0.06s</div>
+        </div>
+        
+        <div class="conclusion">
+            本次扫描发现安全问题，建议及时修复。
+        </div>
+        
+        <div class="filter-bar">
+            <label for="severity-filter">按严重级别过滤:</label>
+            <select id="severity-filter" onchange="filterFindings()">
+                <option value="all">全部</option>
+                <option value="critical">严重</option>
+                <option value="high">高</option>
+                <option value="medium">中</option>
+                <option value="low">低</option>
+                <option value="info">信息</option>
+            </select>
+            <label for="search-input">搜索:</label>
+            <input type="text" id="search-input" placeholder="搜索漏洞...">
+        </div>
+        
+        <div class="summary-section">
+            <h2>扫描摘要</h2>
+            <div class="summary-content">
+                <div class="summary-stats">
+                    <ul>
+                        <li>扫描文件数: <span>1</span></li>
+                        <li>发现问题数: <span>5</span></li>
+                        <li>严重: <span style="color: var(--critical)">0</span></li>
+                        <li>高: <span style="color: var(--high)">1</span></li>
+                        <li>中: <span style="color: var(--medium)">4</span></li>
+                        <li>低: <span style="color: var(--low)">0</span></li>
+                        <li>信息: <span style="color: var(--text-secondary)">0</span></li>
+                    </ul>
+                </div>
+                
+                <div class="chart-container">
+                    <canvas id="severityChart"></canvas>
+                </div>
+                
+            </div>
+        </div>
+        
+        
+        
+        
+        <div class="clusters">
+            
+                
+                
+                    
+                        
+                    
+                        
+                    
+                        
+                    
+                        
+                    
+                        
+                    
+                
+                
+            
+                
+                
+                    
+                        
+                    
+                        
+                    
+                        
+                    
+                        
+                    
+                        
+                    
+                
+                
+            
+                
+                
+                    
+                        
+                    
+                        
+                    
+                        
+                    
+                        
+                    
+                        
+                    
+                
+                
+            
+                
+                
+                    
+                        
+                    
+                        
+                    
+                        
+                    
+                        
+                    
+                        
+                    
+                
+                
+            
+                
+                
+                    
+                        
+                    
+                        
+                    
+                        
+                    
+                        
+                    
+                        
+                    
+                
+                
+            
+        </div>
+        
+        
+        
+            
+        
+        
+        <script>
+            /* eslint-disable */
+            /* jshint ignore:start */
+            // 严重级别分布图表
+            
+            const ctx = document.getElementById('severityChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['严重', '高', '中', '低', '信息'],
+                    datasets: [{
+                        label: '漏洞数量',
+                        // Jinja2 template variables below - IDE should ignore
+                        data: [0, 1, 4, 0, 0],
+                        backgroundColor: [
+                            'rgba(255, 77, 79, 0.6)',
+                            'rgba(255, 140, 66, 0.6)',
+                            'rgba(255, 209, 102, 0.6)',
+                            'rgba(61, 220, 151, 0.6)',
+                            'rgba(139, 148, 158, 0.6)'
+                        ],
+                        borderColor: [
+                            'rgba(255, 77, 79, 1)',
+                            'rgba(255, 140, 66, 1)',
+                            'rgba(255, 209, 102, 1)',
+                            'rgba(61, 220, 151, 1)',
+                            'rgba(139, 148, 158, 1)'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        title: {
+                            display: true,
+                            text: '漏洞严重级别分布',
+                            color: '#e6edf3'
+                        }
+                    },
+                    scales: {
+                        x: {
+                            beginAtZero: true,
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            },
+                            ticks: {
+                                color: '#8b949e'
+                            }
+                        },
+                        y: {
+                            grid: {
+                                display: false
+                            },
+                            ticks: {
+                                color: '#e6edf3'
+                            }
+                        }
+                    }
+                }
+            });
+            
+            
+            // 防抖函数
+            function debounce(func, wait) {
+                let timeout;
+                return function() {
+                    clearTimeout(timeout);
+                    timeout = setTimeout(() => func.apply(this, arguments), wait);
+                };
+            }
+            
+            // 过滤功能
+            const filterFindings = debounce(function() {
+                const severityFilter = document.getElementById("severity-filter").value;
+                const searchInput = document.getElementById("search-input").value.toLowerCase();
+                const petals = document.querySelectorAll(".petal");
+                
+                petals.forEach(petal => {
+                    const cluster = petal.closest(".cluster");
+                    const severity = cluster.classList.contains("cluster-critical") ? "critical" : 
+                                   cluster.classList.contains("cluster-high") ? "high" :
+                                   cluster.classList.contains("cluster-medium") ? "medium" :
+                                   cluster.classList.contains("cluster-low") ? "low" : "info";
+                    const text = petal.textContent.toLowerCase();
+                    
+                    const severityMatch = severityFilter === "all" || severity === severityFilter;
+                    const searchMatch = text.includes(searchInput);
+                    
+                    petal.style.display = (severityMatch && searchMatch) ? "block" : "none";
+                    
+                    // 检查cluster是否有可见的petal
+                    const visiblePetals = cluster.querySelectorAll(".petal[style=\"display: block;\"]");
+                    cluster.style.display = visiblePetals.length > 0 ? "block" : "none";
+                });
+            }, 300);
+            
+            // 绑定事件
+            document.getElementById("search-input").addEventListener("keyup", filterFindings);
+            document.getElementById("severity-filter").addEventListener("change", filterFindings);
+
+            // 扫描文件详情区域搜索功能
+            document.getElementById("file-search-input").addEventListener("keyup", function() {
+                const searchText = this.value.toLowerCase();
+                const fileDetails = document.querySelectorAll(".file-details");
+
+                fileDetails.forEach(detail => {
+                    const filePath = detail.querySelector(".file-path").textContent.toLowerCase();
+                    const matches = filePath.includes(searchText);
+                    detail.style.display = matches ? "block" : "none";
+                });
+            });
+            /* jshint ignore:end */
+        </script>
+
+        
+        <div class="scanned-files-section">
+            <h2>扫描文件详情</h2>
+
+            
+            <details class="debug-log-section">
+                <summary>🐛 调试日志 (AI API 输出)</summary>
+                <div class="debug-log-content">
+                    
+                    <div class="debug-log-line">
+                        <span class="prefix">[</span><span class="debug-level">DEBUG</span><span class="prefix">]</span>
+                        <span class="content">[DEBUG] 运行Agent 0 (上下文构建) on: C:\1AAA_PROJECT\HOS\HOS-LS\real-project\bizspring-open-main\bizspring-base\bizspring-base-security\src\main\java\cn\bizspring\cloud\common\security\component\BaseResourceServerConfigurerAdapter.java</span>
+                    </div>
+                    
+                    <div class="debug-log-line">
+                        <span class="prefix">[</span><span class="debug-level">DEBUG</span><span class="prefix">]</span>
+                        <span class="content">[DEBUG] Agent 0 完成，token使用: 5822</span>
+                    </div>
+                    
+                    <div class="debug-log-line">
+                        <span class="prefix">[</span><span class="debug-level">DEBUG</span><span class="prefix">]</span>
+                        <span class="content">[DEBUG] 运行Agent 1 (代码理解) on: C:\1AAA_PROJECT\HOS\HOS-LS\real-project\bizspring-open-main\bizspring-base\bizspring-base-security\src\main\java\cn\bizspring\cloud\common\security\component\BaseResourceServerConfigurerAdapter.java</span>
+                    </div>
+                    
+                    <div class="debug-log-line">
+                        <span class="prefix">[</span><span class="debug-level">DEBUG</span><span class="prefix">]</span>
+                        <span class="content">[DEBUG] Agent 1 完成，token使用: 5217</span>
+                    </div>
+                    
+                    <div class="debug-log-line">
+                        <span class="prefix">[</span><span class="debug-level">DEBUG</span><span class="prefix">]</span>
+                        <span class="content">[DEBUG] 运行Agent 2 (风险枚举) on: C:\1AAA_PROJECT\HOS\HOS-LS\real-project\bizspring-open-main\bizspring-base\bizspring-base-security\src\main\java\cn\bizspring\cloud\common\security\component\BaseResourceServerConfigurerAdapter.java</span>
+                    </div>
+                    
+                    <div class="debug-log-line">
+                        <span class="prefix">[</span><span class="debug-level">DEBUG</span><span class="prefix">]</span>
+                        <span class="content">[DEBUG] Agent 2 完成，token使用: 5596</span>
+                    </div>
+                    
+                    <div class="debug-log-line">
+                        <span class="prefix">[</span><span class="debug-level">DEBUG</span><span class="prefix">]</span>
+                        <span class="content">[DEBUG] 运行Agent 3 (漏洞验证) on: C:\1AAA_PROJECT\HOS\HOS-LS\real-project\bizspring-open-main\bizspring-base\bizspring-base-security\src\main\java\cn\bizspring\cloud\common\security\component\BaseResourceServerConfigurerAdapter.java</span>
+                    </div>
+                    
+                    <div class="debug-log-line">
+                        <span class="prefix">[</span><span class="debug-level">DEBUG</span><span class="prefix">]</span>
+                        <span class="content">[DEBUG] Agent 3 完成，token使用: 7217</span>
+                    </div>
+                    
+                    <div class="debug-log-line">
+                        <span class="prefix">[</span><span class="debug-level">DEBUG</span><span class="prefix">]</span>
+                        <span class="content">[DEBUG] 运行Agent 4 (攻击链分析) on: C:\1AAA_PROJECT\HOS\HOS-LS\real-project\bizspring-open-main\bizspring-base\bizspring-base-security\src\main\java\cn\bizspring\cloud\common\security\component\BaseResourceServerConfigurerAdapter.java</span>
+                    </div>
+                    
+                    <div class="debug-log-line">
+                        <span class="prefix">[</span><span class="debug-level">DEBUG</span><span class="prefix">]</span>
+                        <span class="content">[DEBUG] Agent 4 完成，token使用: 5976</span>
+                    </div>
+                    
+                    <div class="debug-log-line">
+                        <span class="prefix">[</span><span class="debug-level">DEBUG</span><span class="prefix">]</span>
+                        <span class="content">[DEBUG] 运行Agent 5 (对抗验证) on: C:\1AAA_PROJECT\HOS\HOS-LS\real-project\bizspring-open-main\bizspring-base\bizspring-base-security\src\main\java\cn\bizspring\cloud\common\security\component\BaseResourceServerConfigurerAdapter.java</span>
+                    </div>
+                    
+                    <div class="debug-log-line">
+                        <span class="prefix">[</span><span class="debug-level">DEBUG</span><span class="prefix">]</span>
+                        <span class="content">[DEBUG] Agent 5 完成，token使用: 3852</span>
+                    </div>
+                    
+                    <div class="debug-log-line">
+                        <span class="prefix">[</span><span class="debug-level">DEBUG</span><span class="prefix">]</span>
+                        <span class="content">[DEBUG] 运行Agent 6 (最终裁决) on: C:\1AAA_PROJECT\HOS\HOS-LS\real-project\bizspring-open-main\bizspring-base\bizspring-base-security\src\main\java\cn\bizspring\cloud\common\security\component\BaseResourceServerConfigurerAdapter.java</span>
+                    </div>
+                    
+                    <div class="debug-log-line">
+                        <span class="prefix">[</span><span class="debug-level">DEBUG</span><span class="prefix">]</span>
+                        <span class="content">[DEBUG] Agent 6 完成，token使用: 2422</span>
+                    </div>
+                    
+                    <div class="debug-log-line">
+                        <span class="prefix">[</span><span class="debug-level">DEBUG</span><span class="prefix">]</span>
+                        <span class="content">[DEBUG] 开始转换结果，结果包含: ['file_path', 'context_analysis', 'code_understanding', 'risk_enumeration', 'vulnerability_verification', 'attack_chain_analysis', 'adversarial_validation', 'final_decision', 'evidence_chain', 'debug_logs']</span>
+                    </div>
+                    
+                    <div class="debug-log-line">
+                        <span class="prefix">[</span><span class="debug-level">DEBUG</span><span class="prefix">]</span>
+                        <span class="content">[DEBUG] final_decision 类型: <class 'dict'></span>
+                    </div>
+                    
+                    <div class="debug-log-line">
+                        <span class="prefix">[</span><span class="debug-level">DEBUG</span><span class="prefix">]</span>
+                        <span class="content">[DEBUG] 找到 0 个最终发现</span>
+                    </div>
+                    
+                    <div class="debug-log-line">
+                        <span class="prefix">[</span><span class="debug-level">DEBUG</span><span class="prefix">]</span>
+                        <span class="content">[DEBUG] 处理发现: SECURITY_MISCONFIGURATION, 状态: UNCERTAIN</span>
+                    </div>
+                    
+                    <div class="debug-log-line">
+                        <span class="prefix">[</span><span class="debug-level">DEBUG</span><span class="prefix">]</span>
+                        <span class="content">[DEBUG] 添加漏洞发现: SECURITY_MISCONFIGURATION (位于 BaseResourceServerConfigurerAdapter.java:C:\1AAA_PROJECT\HOS\HOS-LS\real-project\bizspring-open-main\bizspring-base\bizspring-base-security\src\main\java\cn\bizspring\cloud\common\security\component\BaseResourceServerConfigurerAdapter.java:29)</span>
+                    </div>
+                    
+                    <div class="debug-log-line">
+                        <span class="prefix">[</span><span class="debug-level">DEBUG</span><span class="prefix">]</span>
+                        <span class="content">[DEBUG] 处理发现: SECURITY_MISCONFIGURATION, 状态: UNCERTAIN</span>
+                    </div>
+                    
+                    <div class="debug-log-line">
+                        <span class="prefix">[</span><span class="debug-level">DEBUG</span><span class="prefix">]</span>
+                        <span class="content">[DEBUG] 添加漏洞发现: SECURITY_MISCONFIGURATION (位于 BaseResourceServerConfigurerAdapter.java:C:\1AAA_PROJECT\HOS\HOS-LS\real-project\bizspring-open-main\bizspring-base\bizspring-base-security\src\main\java\cn\bizspring\cloud\common\security\component\BaseResourceServerConfigurerAdapter.java:35)</span>
+                    </div>
+                    
+                    <div class="debug-log-line">
+                        <span class="prefix">[</span><span class="debug-level">DEBUG</span><span class="prefix">]</span>
+                        <span class="content">[DEBUG] 处理发现: INSECURE_CONFIGURATION, 状态: UNCERTAIN</span>
+                    </div>
+                    
+                    <div class="debug-log-line">
+                        <span class="prefix">[</span><span class="debug-level">DEBUG</span><span class="prefix">]</span>
+                        <span class="content">[DEBUG] 添加漏洞发现: INSECURE_CONFIGURATION (位于 BaseResourceServerConfigurerAdapter.java:C:\1AAA_PROJECT\HOS\HOS-LS\real-project\bizspring-open-main\bizspring-base\bizspring-base-security\src\main\java\cn\bizspring\cloud\common\security\component\BaseResourceServerConfigurerAdapter.java:30)</span>
+                    </div>
+                    
+                    <div class="debug-log-line">
+                        <span class="prefix">[</span><span class="debug-level">DEBUG</span><span class="prefix">]</span>
+                        <span class="content">[DEBUG] 处理发现: WEAK_SECURITY_SIGNAL, 状态: UNCERTAIN</span>
+                    </div>
+                    
+                    <div class="debug-log-line">
+                        <span class="prefix">[</span><span class="debug-level">DEBUG</span><span class="prefix">]</span>
+                        <span class="content">[DEBUG] 添加漏洞发现: WEAK_SECURITY_SIGNAL (位于 BaseResourceServerConfigurerAdapter.java:C:\1AAA_PROJECT\HOS\HOS-LS\real-project\bizspring-open-main\bizspring-base\bizspring-base-security\src\main\java\cn\bizspring\cloud\common\security\component\BaseResourceServerConfigurerAdapter.java:41)</span>
+                    </div>
+                    
+                    <div class="debug-log-line">
+                        <span class="prefix">[</span><span class="debug-level">DEBUG</span><span class="prefix">]</span>
+                        <span class="content">[DEBUG] 处理发现: WEAK_SECURITY_SIGNAL, 状态: UNCERTAIN</span>
+                    </div>
+                    
+                    <div class="debug-log-line">
+                        <span class="prefix">[</span><span class="debug-level">DEBUG</span><span class="prefix">]</span>
+                        <span class="content">[DEBUG] 添加漏洞发现: WEAK_SECURITY_SIGNAL (位于 BaseResourceServerConfigurerAdapter.java:C:\1AAA_PROJECT\HOS\HOS-LS\real-project\bizspring-open-main\bizspring-base\bizspring-base-security\src\main\java\cn\bizspring\cloud\common\security\component\BaseResourceServerConfigurerAdapter.java:17)</span>
+                    </div>
+                    
+                    <div class="debug-log-line">
+                        <span class="prefix">[</span><span class="debug-level">DEBUG</span><span class="prefix">]</span>
+                        <span class="content">[DEBUG] 转换完成，生成 5 个漏洞发现</span>
+                    </div>
+                    
+                </div>
+            </details>
+            
+
+            
+            <details class="token-details">
+                <summary>📊 Token 使用详情 (7 条记录)</summary>
+                <div class="token-content">
+                    
+                    <div class="token-record">
+                        <div class="token-header">
+                            <span class="token-model">Agent 0 @ C:\1AAA_PROJECT\HOS\HOS-LS\...</span>
+                            <span class="token-count">5822 tokens</span>
+                        </div>
+                        
+                        <details class="token-prompt">
+                            <summary>📝 Prompt (1726 tokens)</summary>
+                            <pre>只输出JSON，否则视为失败
+
+
+[CHARACTER]
+你不是聊天AI，而是一个"受约束的安全分析执行模块"。
+
+你必须严格按照协议运行。
+
+[CORE TRAITS]
+- Precision First（精确优先）
+- No Assumption（禁止假设）
+- Evidence Driven（基于代码事实）
+- Deterministic Output（稳定输出）
+
+[语言要求 / LANGUAGE REQUIREMENTS]
+- 所有输出必须使用简体中文
+- 专业术语保留英文
+- 结论、描述必须用中文表达
+
+[DECISION RULES]
+- 只基于提供内容
+- 不允许推测用途
+- 不允许跨文件猜测逻辑
+
+[HARD RULES]
+- 禁止输出解释性文本
+- 禁止输出推理过程
+- 禁止偏离任务
+- 禁止补充未提供的信息
+- 禁止使用"可能/大概/推测"等词
+- 禁止空洞的"Unknown"输出
+
+[STRICT OUTPUT CONTRACT]
+所有输出必须包含evidence数组。
+
+如果无法提供有效evidence：
+- 使用"SUSPICIOUS_PATTERN"标签
+- 使用"WEAK_SECURITY_SIGNAL"标签
+- 禁止使用"Unknown"单独输出
+
+[INPUT]
+文件路径: C:\1AAA_PROJECT\HOS\HOS-LS\real-project\bizspring-open-main\bizspring-base\bizspring-base-security\src\main\java\cn\bizspring\cloud\common\security\component\BaseResourceServerConfigurerAdapter.java
+
+文件内容:
+package cn.bizspring.cloud.common.security.component;
+
+import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configurers.ExpressionUrlAuthorizationConfigurer;
+import org.springframework.security.oauth2.config.annotation.web.configuration.ResourceServerConfigurerAdapter;
+import org.springframework.security.oauth2.config.annotation.web.configurers.ResourceServerSecurityConfigurer;
+import org.springframework.security.oauth2.provider.token.DefaultAccessTokenConverter;
+import org.springframework.security.oauth2.provider.token.RemoteTokenServices;
+import org.springframework.security.oauth2.provider.token.UserAuthenticationConverter;
+import org.springframework.web.client.RestTemplate;
+
+/**
+ * @author
+ * <p>
+ * 1. 支持remoteTokenServices 负载均衡
+ * 2. 支持 获取用户全部信息
+ */
+@Slf4j
+public class BaseResourceServerConfigurerAdapter extends ResourceServerConfigurerAdapter {
+	@Autowired
+	protected ResourceAuthExceptionEntryPoint resourceAuthExceptionEntryPoint;
+	@Autowired
+	protected RemoteTokenServices remoteTokenServices;
+	@Autowired
+	private PermitAllUrlProperties permitAllUrlProperties;
+	@Autowired
+	private RestTemplate lbRestTemplate;
+
+	/**
+	 * 默认的配置，对外暴露
+	 *
+	 * @param httpSecurity
+	 */
+	@Override
+	@SneakyThrows
+	public void configure(HttpSecurity httpSecurity) {
+		//允许使用iframe 嵌套，避免swagger-ui 不被加载的问题
+		httpSecurity.headers().frameOptions().disable();
+		ExpressionUrlAuthorizationConfigurer<HttpSecurity>
+			.ExpressionInterceptUrlRegistry registry = httpSecurity
+			.authorizeRequests();
+		permitAllUrlProperties.getReleaseUrls()
+			.forEach(url -> registry.antMatchers(url).permitAll());
+		registry.anyRequest().authenticated()
+			.and().csrf().disable();
+	}
+
+	@Override
+	public void configure(ResourceServerSecurityConfigurer resources) {
+		DefaultAccessTokenConverter accessTokenConverter = new DefaultAccessTokenConverter();
+		UserAuthenticationConverter userTokenConverter = new BaseUserAuthenticationConverter();
+		accessTokenConverter.setUserTokenConverter(userTokenConverter);
+
+		remoteTokenServices.setRestTemplate(lbRestTemplate);
+		remoteTokenServices.setAccessTokenConverter(accessTokenConverter);
+		resources.authenticationEntryPoint(resourceAuthExceptionEntryPoint)
+				.tokenServices(remoteTokenServices);
+	}
+}
+
+
+相关文件:
+文件 1: C:\1AAA_PROJECT\HOS\HOS-LS\real-project\bizspring-open-main\bizspring-base\bizspring-base-security\src\main\java\cn\bizspring\cloud\common\security\component\AuthorityService.java
+package cn.bizspring.cloud.common.security.component;
+
+import cn.hutool.core.util.ArrayUtil;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.stereotype.Component;
+import org.springframework.util.PatternMatchUtils;
+import org.springframework.util.StringUtils;
+
+import java.util.Collection;
+
+/**
+ * @a
+
+文件 2: C:\1AAA_PROJECT\HOS\HOS-LS\real-project\bizspring-open-main\bizspring-base\bizspring-base-security\src\main\java\cn\bizspring\cloud\common\security\component\BaseAuth2ExceptionSerializer.java
+package cn.bizspring.cloud.common.security.component;
+
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.databind.SerializerProvider;
+import com.fasterxml.jackson.databind.ser.std.StdSerializer;
+import cn.bizspring.cloud.common.security.exception.BaseAuth2Exception;
+import cn.bizspring.cloud.common.core.enums.CommonEnum;
+import lombok.SneakyThrows;
+
+/**
+ * @author
+ * <p>
+ * OAuth2 异常格式化
+ */
+public class BaseAuth2ExceptionSerializer extends StdSerializer<BaseAuth2Excep
+
+文件 3: C:\1AAA_PROJECT\HOS\HOS-LS\real-project\bizspring-open-main\bizspring-base\bizspring-base-security\src\main\java\cn\bizspring\cloud\common\security\component\BasePreAuthenticationChecks.java
+package cn.bizspring.cloud.common.security.component;
+
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.support.MessageSourceAccessor;
+import org.springframework.security.authen</pre>
+                        </details>
+                        
+                        
+                        <details class="token-response">
+                            <summary>📨 Response (4096 tokens)</summary>
+                            <pre>{
+  "file_function": "BaseResourceServerConfigurerAdapter 是一个 Spring Security OAuth2 资源服务器配置类，支持 remoteTokenServices 负载均衡和获取用户全部信息。",
+  "dependencies": [
+    {
+      "import": "import lombok.SneakyThrows;",
+      "purpose": "用于异常处理，允许在方法中抛出受检异常而不声明",
+      "evidence": ["@SneakyThrows 注解在 configure(HttpSecurity) 方法上"]
+    },
+    {
+      "import": "import lombok.extern.slf4j.Slf4j;",
+      "purpose": "用于日志记录，提供 SLF4J 日志功能",
+      "evidence": ["@Slf4j 注解在类声明上"]
+    },
+    {
+      "import": "import org.springframework.beans.factory.annotation.Autowired;",
+      "purpose": "用于依赖注入，自动装配 Bean",
+      "evidence": ["@Autowired 注解在字段 resourceAuthExceptionEntryPoint、remoteTokenServices、permitAllUrlProperties、lbRestTemplate 上"]
+    },
+    {
+      "import": "import org.springframework.security.config.annotation.web.builders.HttpSecurity;",
+      "purpose": "用于配置 HTTP 安全策略",
+      "evidence": ["configure(HttpSecurity httpSecurity) 方法参数类型为 HttpSecurity"]
+    },
+    {
+      "import": "import org.springframework.security.config.annotation.web.configurers.ExpressionUrlAuthorizationConfigurer;",
+      "purpose": "用于配置 URL 授权规则",
+      "evidence": ["ExpressionUrlAuthorizationConfigurer.ExpressionInterceptUrlRegistry registry = httpSecurity.authorizeRequests()"]
+    },
+    {
+      "import": "import org.springframework.security.oauth2.config.annotation.web.configuration.ResourceServerConfigurerAdapter;",
+      "purpose": "作为基类，用于资源服务器配置",
+      "evidence": ["类声明 extends ResourceServerConfigurerAdapter"]
+    },
+    {
+      "import": "import org.springframework.security.oauth2.config.annotation.web.configurers.ResourceServerSecurityConfigurer;",
+      "purpose": "用于配置资源服务器安全",
+      "evidence": ["configure(ResourceServerSecurityConfigurer resources) 方法参数类型为 ResourceServerSecurityConfigurer"]
+    },
+    {
+      "import": "import org.springframework.security.oauth2.provider.token.DefaultAccessTokenConverter;",
+      "purpose": "用于访问令牌转换，解析和验证令牌",
+      "evidence": ["DefaultAccessTokenConverter accessTokenConverter = new DefaultAccessTokenConverter()"]
+    },
+    {
+      "import": "import org.springframework.security.oauth2.provider.token.RemoteTokenServices;",
+      "purpose": "用于远程令牌服务，验证 OAuth2 令牌",
+      "evidence": ["@Autowired 字段 remoteTokenServices，并在 configure(ResourceServerSecurityConfigurer) 中设置"]
+    },
+    {
+      "import": "import org.springframework.security.oauth2.provider.token.UserAuthenticationConverter;",
+      "purpose": "用于用户认证转换，提取用户信息从令牌",
+      "evidence": ["UserAuthenticationConverter userTokenConverter = new BaseUserAuthenticationConverter()"]
+    },
+    {
+      "import": "import org.springframework.web.client.RestTemplate;",
+      "purpose": "用于 HTTP 调用，支持负载均衡的 REST 模板",
+      "evidence": ["@Autowired 字段 lbRestTemplate，并在 configure(ResourceServerSecurityConfigurer) 中设置 remoteTokenServices.setRestTemplate(lbRestTemplate)"]
+    }
+  ],
+  "key</pre>
+                        </details>
+                        
+                    </div>
+                    
+                    <div class="token-record">
+                        <div class="token-header">
+                            <span class="token-model">Agent 1 @ C:\1AAA_PROJECT\HOS\HOS-LS\...</span>
+                            <span class="token-count">5217 tokens</span>
+                        </div>
+                        
+                        <details class="token-prompt">
+                            <summary>📝 Prompt (2182 tokens)</summary>
+                            <pre>只输出JSON，否则视为失败
+
+
+[CHARACTER]
+你不是聊天AI，而是一个"受约束的安全分析执行模块"。
+
+你必须严格按照协议运行。
+
+[CORE TRAITS]
+- Precision First（精确优先）
+- No Assumption（禁止假设）
+- Evidence Driven（基于代码事实）
+- Deterministic Output（稳定输出）
+
+[语言要求]
+- 所有输出必须使用简体中文
+- 专业术语保留英文
+- 描述、结论必须用中文
+
+[DECISION RULES]
+- 禁止漏洞判断
+- location 必须带行号
+- 数据流必须可追踪（变量级）
+- 禁止跳步描述
+
+[HARD RULES]
+- 禁止输出解释性文本
+- 禁止输出推理过程
+- 禁止偏离任务
+- 禁止补充未提供的信息
+- 禁止使用"可能/大概/推测"等词
+- 禁止空洞的"Unknown"输出
+
+[STRICT OUTPUT CONTRACT]
+所有输出必须包含evidence数组。
+
+如果无法提供有效evidence：
+- 使用"SUSPICIOUS_PATTERN"标签
+- 使用"WEAK_SECURITY_SIGNAL"标签
+- 禁止使用"Unknown"单独输出
+
+[INPUT]
+文件路径: C:\1AAA_PROJECT\HOS\HOS-LS\real-project\bizspring-open-main\bizspring-base\bizspring-base-security\src\main\java\cn\bizspring\cloud\common\security\component\BaseResourceServerConfigurerAdapter.java
+
+文件内容:
+package cn.bizspring.cloud.common.security.component;
+
+import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configurers.ExpressionUrlAuthorizationConfigurer;
+import org.springframework.security.oauth2.config.annotation.web.configuration.ResourceServerConfigurerAdapter;
+import org.springframework.security.oauth2.config.annotation.web.configurers.ResourceServerSecurityConfigurer;
+import org.springframework.security.oauth2.provider.token.DefaultAccessTokenConverter;
+import org.springframework.security.oauth2.provider.token.RemoteTokenServices;
+import org.springframework.security.oauth2.provider.token.UserAuthenticationConverter;
+import org.springframework.web.client.RestTemplate;
+
+/**
+ * @author
+ * <p>
+ * 1. 支持remoteTokenServices 负载均衡
+ * 2. 支持 获取用户全部信息
+ */
+@Slf4j
+public class BaseResourceServerConfigurerAdapter extends ResourceServerConfigurerAdapter {
+	@Autowired
+	protected ResourceAuthExceptionEntryPoint resourceAuthExceptionEntryPoint;
+	@Autowired
+	protected RemoteTokenServices remoteTokenServices;
+	@Autowired
+	private PermitAllUrlProperties permitAllUrlProperties;
+	@Autowired
+	private RestTemplate lbRestTemplate;
+
+	/**
+	 * 默认的配置，对外暴露
+	 *
+	 * @param httpSecurity
+	 */
+	@Override
+	@SneakyThrows
+	public void configure(HttpSecurity httpSecurity) {
+		//允许使用iframe 嵌套，避免swagger-ui 不被加载的问题
+		httpSecurity.headers().frameOptions().disable();
+		ExpressionUrlAuthorizationConfigurer<HttpSecurity>
+			.ExpressionInterceptUrlRegistry registry = httpSecurity
+			.authorizeRequests();
+		permitAllUrlProperties.getReleaseUrls()
+			.forEach(url -> registry.antMatchers(url).permitAll());
+		registry.anyRequest().authenticated()
+			.and().csrf().disable();
+	}
+
+	@Override
+	public void configure(ResourceServerSecurityConfigurer resources) {
+		DefaultAccessTokenConverter accessTokenConverter = new DefaultAccessTokenConverter();
+		UserAuthenticationConverter userTokenConverter = new BaseUserAuthenticationConverter();
+		accessTokenConverter.setUserTokenConverter(userTokenConverter);
+
+		remoteTokenServices.setRestTemplate(lbRestTemplate);
+		remoteTokenServices.setAccessTokenConverter(accessTokenConverter);
+		resources.authenticationEntryPoint(resourceAuthExceptionEntryPoint)
+				.tokenServices(remoteTokenServices);
+	}
+}
+
+
+上下文:
+{"raw": "{\n  \"file_function\": \"BaseResourceServerConfigurerAdapter 是一个 Spring Security OAuth2 资源服务器配置类，支持 remoteTokenServices 负载均衡和获取用户全部信息。\",\n  \"dependencies\": [\n    {\n      \"import\": \"import lombok.SneakyThrows;\",\n      \"purpose\": \"用于异常处理，允许在方法中抛出受检异常而不声明\",\n      \"evidence\": [\"@SneakyThrows 注解在 configure(HttpSecurity) 方法上\"]\n    },\n    {\n      \"import\": \"import lombok.extern.slf4j.Slf4j;\",\n      \"purpose\": \"用于日志记录，提供 SLF4J 日志功能\",\n      \"evidence\": [\"@Slf4j 注解在类声明上\"]\n    },\n    {\n      \"import\": \"import org.springframework.beans.factory.annotation.Autowired;\",\n      \"purpose\": \"用于依赖注入，自动装配 Bean\",\n      \"evidence\": [\"@Autowired 注解在字段 resourceAuthExceptionEntryPoint、remoteTokenServices、permitAllUrlProperties、lbRestTemplate 上\"]\n    },\n    {\n      \"import\": \"import org.springframework.security.config.annotation.web.builders.HttpSecurity;\",\n      \"purpose\": \"用于配置 HTTP 安全策略\",\n      \"evidence\": [\"configure(HttpSecurity httpSecurity) 方法参数类型为 HttpSecurity\"]\n    },\n    {\n      \"import\": \"import org.springframework.security.config.annotation.web.configurers.ExpressionUrlAuthorizationConfigurer;\",\n      \"purpose\": \"用于配置 URL 授权规则\",\n      \"evidence\": [\"ExpressionUrlAuthorizationConfigurer.ExpressionInterceptUrlRegistry registry = httpSecurity.authorizeRequests()\"]\n    },\n    {\n      \"import\": \"import org.springframework.security.oauth2.config.annotation.web.configuration.ResourceServerConfigurerAdapter;\",\n      \"purpose\": \"作为基类，用于资源服务器配置\",\n      \"evidence\": [\"类声明 extends ResourceServerConfigurerAdapter\"]\n    },\n    {\n      \"import\": \"import org.springframework.security.oauth2.config.annotation.web.configurers.ResourceServerSecurityConfigurer;\",\n      \"purpose</pre>
+                        </details>
+                        
+                        
+                        <details class="token-response">
+                            <summary>📨 Response (3035 tokens)</summary>
+                            <pre>```json
+{
+    "input_sources": [],
+    "dangerous_operations": [
+        {
+            "type": "SECURITY_FEATURE_DISABLE",
+            "location": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-security\\src\\main\\java\\cn\\bizspring\\cloud\\common\\security\\component\\BaseResourceServerConfigurerAdapter.java:29",
+            "description": "禁用HTTP安全头部中的Frame-Options，允许iframe嵌套。可能增加点击劫持风险。",
+            "function_name": "configure(HttpSecurity)",
+            "evidence": [
+                "httpSecurity.headers().frameOptions().disable()"
+            ]
+        },
+        {
+            "type": "SECURITY_FEATURE_DISABLE",
+            "location": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-security\\src\\main\\java\\cn\\bizspring\\cloud\\common\\security\\component\\BaseResourceServerConfigurerAdapter.java:35",
+            "description": "禁用CSRF保护。对于无状态的资源服务器API可能是预期的，但会移除针对CSRF攻击的防护。",
+            "function_name": "configure(HttpSecurity)",
+            "evidence": [
+                ".and().csrf().disable()"
+            ]
+        }
+    ],
+    "data_flows": [
+        {
+            "source": "permitAllUrlProperties.getReleaseUrls()",
+            "sink": "registry.antMatchers(url).permitAll()",
+            "path": "配置类属性 -> HTTP安全配置表达式",
+            "steps": [
+                "字段 `permitAllUrlProperties` (第20行)",
+                "调用 `getReleaseUrls()` 方法 (第30行)",
+                "遍历URL字符串列表 (第30行)",
+                "为每个URL调用 `registry.antMatchers(url).permitAll()` (第31行)"
+            ],
+            "evidence": [
+                "@Autowired private PermitAllUrlProperties permitAllUrlProperties;",
+                "permitAllUrlProperties.getReleaseUrls().forEach(url -> registry.antMatchers(url).permitAll());"
+            ]
+        },
+        {
+            "source": "lbRestTemplate (字段)",
+            "sink": "remoteTokenServices.setRestTemplate(...)",
+            "path": "负载均衡RestTemplate -> 远程令牌服务",
+            "steps": [
+                "字段 `lbRestTemplate` (第21行)",
+                "在 `configure(ResourceServerSecurityConfigurer)` 方法中作为参数传递 (第41行)",
+                "调用 `remoteTokenServices.setRestTemplate(lbRestTemplate)` (第41行)"
+            ],
+            "evidence": [
+                "@Autowired private RestTemplate lbRestTemplate;",
+                "remoteTokenServices.setRestTemplate(lbRestTemplate);"
+            ]
+        },
+        {
+            "source": "new BaseUserAuthenticationConverter()",
+            "sink": "accessTokenConverter.setUserTokenConverter(...)",
+            "path": "用户认证转换器实例 -> 默认访问令牌转换器",
+            "steps": [
+                "创建 `BaseUserAuthenticationConverter` 实例 (第39行)",
+                "赋值给 `UserAuthenticationConverter userTokenConverter` 变量 (第39行)",
+                "调用 `accessTokenConverter.setUserTokenConverter(userTokenConverter)` (第40行)"
+            ],
+            "evidence": [
+                "UserAuthenticationConverter userTokenConverter = new BaseUserAuthenticationConverter();",
+                "accessTokenConverter.setUserTokenConverter(userTokenConverter);"
+            ]
+        },
+        {
+            "source": "accessTokenConverter (局部变量)",
+            "sink": "remoteTokenServices.setAccessTokenConverter(...)",
+            "path": "配置的令牌转换器 -> 远程令牌服务",
+            "steps": [
+                "创建 `DefaultAccessTokenConverter` 实例并赋值给 `accessTokenConverter` (第38行)",
+                "设置用户令牌转换器 (第40行)",
+                "调用 `remoteTokenServices.setAccessTokenConverter(accessTokenConverter)` (第42行)"
+            ],
+            "evidence": [
+                "DefaultAccessTokenConverter accessTokenConverter = new DefaultAccessTokenConverter();",
+                "accessTokenConverter.setUserTokenConverter(userTokenConverter);",
+                "remoteTokenServices.setAccessTokenConverter(accessTokenConverter);"
+            ]
+        },
+        {
+            "source": "remoteTokenServices (字段)",
+            "sink": "resources.tokenServices(...)",
+            "path": "自动装配的远程令牌服务 -> 资源服务器安全配置",
+            "steps": [
+                "字段 `remoteTokenServices` (第17行)",
+                "在 `configure(ResourceServerSecurityConfigurer)` 方法中设置其属性 (第41-42行)",
+                "调用 `resources.tokenServices(remoteTokenServices)` (第44行)"
+            ],
+            "evidence": [
+                "@Autowired protected RemoteTokenServices remoteTokenServices;",
+                "remoteTokenServices.setRestTemplate(lbRestTemplate);",
+                "remoteTokenServices.setAccessTokenConverter(accessTokenConverter);",
+                "resources.authenticationEntryPoint(resourceAuthExceptionEntryPoint).tokenServices(remoteTokenServices);"
+            ]
+        },
+        {
+            "source": "resourceAuthExceptionEntryPoint (字段)",
+            "sink": "resources.authenticationEntryPoint(...)",
+            "path": "认证异常处理端点 -> 资源服务器安全配置",
+            "steps": [
+                "字段 `resourceAuthExcep</pre>
+                        </details>
+                        
+                    </div>
+                    
+                    <div class="token-record">
+                        <div class="token-header">
+                            <span class="token-model">Agent 2 @ C:\1AAA_PROJECT\HOS\HOS-LS\...</span>
+                            <span class="token-count">5596 tokens</span>
+                        </div>
+                        
+                        <details class="token-prompt">
+                            <summary>📝 Prompt (2879 tokens)</summary>
+                            <pre>只输出JSON，否则视为失败
+
+
+[CHARACTER]
+你不是聊天AI，而是一个"受约束的安全分析执行模块"。
+
+你必须严格按照协议运行。
+
+[CORE TRAITS]
+- Precision First（精确优先）
+- No Assumption（禁止假设）
+- Evidence Driven（基于代码事实）
+- Deterministic Output（稳定输出）
+
+[语言要求]
+- 所有输出必须使用简体中文
+- 专业术语保留英文
+- 描述、结论必须用中文
+
+[DECISION RULES]
+- 必须覆盖多类漏洞
+- 基于数据流进行合理推断
+- 不验证真实性（这是后续Agent的工作）
+
+[HARD RULES]
+- 禁止输出解释性文本
+- 禁止输出推理过程
+- 禁止偏离任务
+- 禁止补充未提供的信息
+- 禁止使用"可能/大概/推测"等词
+- 禁止空洞的"Unknown"输出
+
+[STRICT OUTPUT CONTRACT]
+所有risks必须包含：
+- signal_id: 唯一标识符（格式：RISK-{序号}）
+- signal_state: 固定为"NEW"（表示这是新发现的信号）
+- evidence数组: 包含代码行号、配置项等具体证据
+
+如果无法提供有效evidence：
+- 使用"SUSPICIOUS_PATTERN"标签
+- 使用"WEAK_SECURITY_SIGNAL"标签
+- 禁止使用"Unknown"单独输出
+
+[INPUT]
+文件路径: C:\1AAA_PROJECT\HOS\HOS-LS\real-project\bizspring-open-main\bizspring-base\bizspring-base-security\src\main\java\cn\bizspring\cloud\common\security\component\BaseResourceServerConfigurerAdapter.java
+
+结构化数据:
+{"input_sources": [], "dangerous_operations": [{"type": "SECURITY_FEATURE_DISABLE", "location": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-security\\src\\main\\java\\cn\\bizspring\\cloud\\common\\security\\component\\BaseResourceServerConfigurerAdapter.java:29", "description": "禁用HTTP安全头部中的Frame-Options，允许iframe嵌套。可能增加点击劫持风险。", "function_name": "configure(HttpSecurity)", "evidence": ["httpSecurity.headers().frameOptions().disable()"]}, {"type": "SECURITY_FEATURE_DISABLE", "location": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-security\\src\\main\\java\\cn\\bizspring\\cloud\\common\\security\\component\\BaseResourceServerConfigurerAdapter.java:35", "description": "禁用CSRF保护。对于无状态的资源服务器API可能是预期的，但会移除针对CSRF攻击的防护。", "function_name": "configure(HttpSecurity)", "evidence": [".and().csrf().disable()"]}], "data_flows": [{"source": "permitAllUrlProperties.getReleaseUrls()", "sink": "registry.antMatchers(url).permitAll()", "path": "配置类属性 -> HTTP安全配置表达式", "steps": ["字段 `permitAllUrlProperties` (第20行)", "调用 `getReleaseUrls()` 方法 (第30行)", "遍历URL字符串列表 (第30行)", "为每个URL调用 `registry.antMatchers(url).permitAll()` (第31行)"], "evidence": ["@Autowired private PermitAllUrlProperties permitAllUrlProperties;", "permitAllUrlProperties.getReleaseUrls().forEach(url -> registry.antMatchers(url).permitAll());"]}, {"source": "lbRestTemplate (字段)", "sink": "remoteTokenServices.setRestTemplate(...)", "path": "负载均衡RestTemplate -> 远程令牌服务", "steps": ["字段 `lbRestTemplate` (第21行)", "在 `configure(ResourceServerSecurityConfigurer)` 方法中作为参数传递 (第41行)", "调用 `remoteTokenServices.setRestTemplate(lbRestTemplate)` (第41行)"], "evidence": ["@Autowired private RestTemplate lbRestTemplate;", "remoteTokenServices.setRestTemplate(lbRestTemplate);"]}, {"source": "new BaseUserAuthenticationConverter()", "sink": "accessTokenConverter.setUserTokenConverter(...)", "path": "用户认证转换器实例 -> 默认访问令牌转换器", "steps": ["创建 `BaseUserAuthenticationConverter` 实例 (第39行)", "赋值给 `UserAuthenticationConverter userTokenConverter` 变量 (第39行)", "调用 `accessTokenConverter.setUserTokenConverter(userTokenConverter)` (第40行)"], "evidence": ["UserAuthenticationConverter userTokenConverter = new BaseUserAuthenticationConverter();", "accessTokenConverter.setUserTokenConverter(userTokenConverter);"]}, {"source": "accessTokenConverter (局部变量)", "sink": "remoteTokenServices.setAccessTokenConverter(...)", "path": "配置的令牌转换器 -> 远程令牌服务", "steps": ["创建 `DefaultAccessTokenConverter` 实例并赋值给 `accessTokenConverter` (第38行)", "设置用户令牌转换器 (第40行)", "调用 `remoteTokenServices.setAccessTokenConverter(accessTokenConverter)` (第42行)"], "evidence": ["DefaultAccessTokenConverter accessTokenConverter = new DefaultAccessTokenConverter();", "accessTokenConverter.setUserTokenConverter(userTokenConverter);", "remoteTokenServices.setAccessTokenConverter(accessTokenConverter);"]}, {"source": "remoteTokenServices (字段)", "sink": "resources.tokenServices(...)", "path": "自动装配的远程令牌服务 -> 资源服务器安全配置", "steps": ["字段 `remoteTokenServices` (第17行)", "在 `configure(ResourceServerSecurityConfigurer)` 方法中设置其属性 (第41-42行)", "调用 `resources.tokenServices(remoteTokenServices)` (第44行)"], "evidence": ["@Autowired protected RemoteTokenServices remoteTokenServices;", "remoteTokenServices.setRestTemplate(lbRestTemplate);", "remoteTokenServices.setAccessTokenConverter(accessTokenConverter);", "resources.authenticationEntryPoint(resourceAuthExceptionEntryPoint).tokenServices(remoteTokenServices);"]}, {"source": "resourceAuthExceptionEntryPoint (字段)", "sink": "resources.authenticationEntryPoint(...)", "path": "认证异常处理端点 -> 资源服务器安全配置", "steps": ["字段 `resourceAuthExceptionEntryPoint` (第15行)", "作为参数传递给 `resources.authenticationEntryPoint(...)` (第43行)"], "evidence": ["@Autowired protected ResourceAuthExceptionEntryPoint resourceAuthExceptionEntryPoint;", "resources.authenticationEntryPoint(resourceAuthExceptionEntryPoint).tokenServices(remoteTokenServices);"]}], "suspicious_points": [{"location": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-security\\src\\main\\java\\c</pre>
+                        </details>
+                        
+                        
+                        <details class="token-response">
+                            <summary>📨 Response (2717 tokens)</summary>
+                            <pre>```json
+{
+    "risks": [
+        {
+            "risk_type": "SECURITY_MISCONFIGURATION",
+            "location": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-security\\src\\main\\java\\cn\\bizspring\\cloud\\common\\security\\component\\BaseResourceServerConfigurerAdapter.java:29",
+            "description": "HTTP安全头部中的Frame-Options被显式禁用，移除了针对点击劫持攻击的内置防护。",
+            "potential_impact": "点击劫持攻击。攻击者可能利用iframe嵌套诱导用户执行非预期操作。",
+            "cvss_score": "5.4",
+            "signal_id": "RISK-1",
+            "signal_state": "NEW",
+            "evidence": [
+                {
+                    "type": "code_line",
+                    "location": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-security\\src\\main\\java\\cn\\bizspring\\cloud\\common\\security\\component\\BaseResourceServerConfigurerAdapter.java:29",
+                    "reason": "SECURITY_FEATURE_DISABLE",
+                    "confidence": 1.0,
+                    "code_snippet": "httpSecurity.headers().frameOptions().disable()"
+                }
+            ]
+        },
+        {
+            "risk_type": "SECURITY_MISCONFIGURATION",
+            "location": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-security\\src\\main\\java\\cn\\bizspring\\cloud\\common\\security\\component\\BaseResourceServerConfigurerAdapter.java:35",
+            "description": "CSRF（跨站请求伪造）保护被全局禁用，移除了一项关键的Web安全防护机制。",
+            "potential_impact": "CSRF攻击。攻击者可诱导已认证的用户向应用提交非预期的请求。",
+            "cvss_score": "7.1",
+            "signal_id": "RISK-2",
+            "signal_state": "NEW",
+            "evidence": [
+                {
+                    "type": "code_line",
+                    "location": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-security\\src\\main\\java\\cn\\bizspring\\cloud\\common\\security\\component\\BaseResourceServerConfigurerAdapter.java:35",
+                    "reason": "SECURITY_FEATURE_DISABLE",
+                    "confidence": 1.0,
+                    "code_snippet": ".and().csrf().disable()"
+                },
+                {
+                    "type": "code_line",
+                    "location": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-security\\src\\main\\java\\cn\\bizspring\\cloud\\common\\security\\component\\BaseResourceServerConfigurerAdapter.java:35",
+                    "reason": "SUSPICIOUS_PATTERN",
+                    "confidence": 0.8,
+                    "code_snippet": "registry.anyRequest().authenticated().and().csrf().disable();"
+                }
+            ]
+        },
+        {
+            "risk_type": "INSECURE_CONFIGURATION",
+            "location": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-security\\src\\main\\java\\cn\\bizspring\\cloud\\common\\security\\component\\BaseResourceServerConfigurerAdapter.java:30",
+            "description": "从外部属性源动态配置完全公开的URL（permitAll），若属性源被篡改或配置错误，可能导致敏感端点暴露。",
+            "potential_impact": "授权绕过或信息泄露。攻击者可能访问本应受保护的API端点。",
+            "cvss_score": "7.5",
+            "signal_id": "RISK-3",
+            "signal_state": "NEW",
+            "evidence": [
+                {
+                    "type": "code_line",
+                    "location": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-security\\src\\main\\java\\cn\\bizspring\\cloud\\common\\security\\component\\BaseResourceServerConfigurerAdapter.java:20",
+                    "reason": "SUSPICIOUS_PATTERN",
+                    "confidence": 0.7,
+                    "code_snippet": "@Autowired private PermitAllUrlProperties permitAllUrlProperties;"
+                },
+                {
+                    "type": "code_line",
+                    "location": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-security\\src\\main\\java\\cn\\bizspring\\cloud\\common\\security\\component\\BaseResourceServerConfigurerAdapter.java:30-31",
+                    "reason": "数据流路径：配置类属性 -> HTTP安全配置表达式",
+                    "confidence": 0.9,
+                    "code_snippet": "permitAllUrlProperties.getReleaseUrls().forEach(url -> registry.antMatchers(url).permitAll());"
+                }
+            ]
+        },
+        {
+            "risk_type": "WEAK_SECURITY_SIGNAL",
+            "location": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-security\\src\\main\\java\\cn\\bizspring\\cloud\\common\\security\\component\\BaseResourceServerConfigurerAdapter.java:41",
+            "description": "远程令牌验证服务配置了负载均衡RestTemplate。若RestTemplate未正确配置安全属性（如SSL证书验证），可能使令牌验证请求易受中间人攻击。",
+            "potential_impact": "认证绕过。攻击者可能通过篡改与认证服务器的通信来伪造令牌验证结果。",
+            "cvss_score": "8.2",
+            "sign</pre>
+                        </details>
+                        
+                    </div>
+                    
+                    <div class="token-record">
+                        <div class="token-header">
+                            <span class="token-model">Agent 3 @ C:\1AAA_PROJECT\HOS\HOS-LS\...</span>
+                            <span class="token-count">7217 tokens</span>
+                        </div>
+                        
+                        <details class="token-prompt">
+                            <summary>📝 Prompt (3121 tokens)</summary>
+                            <pre>只输出JSON，否则视为失败
+
+
+[CHARACTER]
+你不是聊天AI，而是一个"受约束的安全分析执行模块"。
+
+你必须严格按照协议运行。
+
+[CORE TRAITS]
+- Precision First（精确优先）
+- No Assumption（禁止假设）
+- Evidence Driven（基于代码事实）
+- Deterministic Output（稳定输出）
+- 只接受真实利用链
+- 不接受理论漏洞
+
+[语言要求]
+- 所有输出必须使用简体中文
+- 专业术语保留英文（如 SQL Injection, XSS, CSRF）
+- 描述、结论必须用中文
+
+[DECISION RULES]
+- 无法构造完整攻击路径 → REJECTED
+- payload不可执行 → REJECTED
+- 输入不可控 → REJECTED
+- 存在防御 → 必须判断是否阻断
+- 只能confirm/reject/refine上游信号，不能新增信号
+
+[HARD RULES]
+- 禁止输出解释性文本
+- 禁止输出推理过程
+- 禁止偏离任务
+- 禁止补充未提供的信息
+- 禁止使用"可能/大概/推测"等词
+- 禁止假设
+- 禁止编造
+- 必须基于输入
+- 禁止空洞的"Unknown"输出
+
+[STRICT OUTPUT CONTRACT]
+verification_decision只能是：
+- CONFIRMED: 信号被验证确实存在
+- REJECTED: 信号被验证不存在或无法利用
+- REFINED: 信号被细化为更精确的描述
+
+必须包含上游signal_id进行追踪。
+
+[INPUT]
+文件路径: C:\1AAA_PROJECT\HOS\HOS-LS\real-project\bizspring-open-main\bizspring-base\bizspring-base-security\src\main\java\cn\bizspring\cloud\common\security\component\BaseResourceServerConfigurerAdapter.java
+
+来自Agent-2的风险信号:
+[{"risk_type": "SECURITY_MISCONFIGURATION", "location": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-security\\src\\main\\java\\cn\\bizspring\\cloud\\common\\security\\component\\BaseResourceServerConfigurerAdapter.java:29", "description": "HTTP安全头部中的Frame-Options被显式禁用，移除了针对点击劫持攻击的内置防护。", "potential_impact": "点击劫持攻击。攻击者可能利用iframe嵌套诱导用户执行非预期操作。", "cvss_score": "5.4", "signal_id": "RISK-1", "signal_state": "NEW", "evidence": [{"type": "code_line", "location": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-security\\src\\main\\java\\cn\\bizspring\\cloud\\common\\security\\component\\BaseResourceServerConfigurerAdapter.java:29", "reason": "SECURITY_FEATURE_DISABLE", "confidence": 1.0, "code_snippet": "httpSecurity.headers().frameOptions().disable()"}], "severity": "MEDIUM"}, {"risk_type": "SECURITY_MISCONFIGURATION", "location": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-security\\src\\main\\java\\cn\\bizspring\\cloud\\common\\security\\component\\BaseResourceServerConfigurerAdapter.java:35", "description": "CSRF（跨站请求伪造）保护被全局禁用，移除了一项关键的Web安全防护机制。", "potential_impact": "CSRF攻击。攻击者可诱导已认证的用户向应用提交非预期的请求。", "cvss_score": "7.1", "signal_id": "RISK-2", "signal_state": "NEW", "evidence": [{"type": "code_line", "location": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-security\\src\\main\\java\\cn\\bizspring\\cloud\\common\\security\\component\\BaseResourceServerConfigurerAdapter.java:35", "reason": "SECURITY_FEATURE_DISABLE", "confidence": 1.0, "code_snippet": ".and().csrf().disable()"}, {"type": "code_line", "location": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-security\\src\\main\\java\\cn\\bizspring\\cloud\\common\\security\\component\\BaseResourceServerConfigurerAdapter.java:35", "reason": "SUSPICIOUS_PATTERN", "confidence": 0.8, "code_snippet": "registry.anyRequest().authenticated().and().csrf().disable();"}], "severity": "HIGH"}, {"risk_type": "INSECURE_CONFIGURATION", "location": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-security\\src\\main\\java\\cn\\bizspring\\cloud\\common\\security\\component\\BaseResourceServerConfigurerAdapter.java:30", "description": "从外部属性源动态配置完全公开的URL（permitAll），若属性源被篡改或配置错误，可能导致敏感端点暴露。", "potential_impact": "授权绕过或信息泄露。攻击者可能访问本应受保护的API端点。", "cvss_score": "7.5", "signal_id": "RISK-3", "signal_state": "NEW", "evidence": [{"type": "code_line", "location": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-security\\src\\main\\java\\cn\\bizspring\\cloud\\common\\security\\component\\BaseResourceServerConfigurerAdapter.java:20", "reason": "SUSPICIOUS_PATTERN", "confidence": 0.7, "code_snippet": "@Autowired private PermitAllUrlProperties permitAllUrlProperties;"}, {"type": "code_line", "location": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-security\\src\\main\\java\\cn\\bizspring\\cloud\\common\\security\\component\\BaseResourceServerConfigurerAdapter.java:30-31", "reason": "数据流路径：配置类属性 -> HTTP安全配置表达式", "confidence": 0.9, "code_snippet": "permitAllUrlProperties.getReleaseUrls().forEach(url -> registry.antMatchers(url).permitAll());"}], "severity": "MEDIUM"}, {"risk_type": "WEAK_SECURITY_SIGNAL", "location": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-security\\src\\main\\java\\cn\\bizspring\\cloud\\common\\security\\component\\BaseResourceServerConfigurerAdapter.java:41", "description": "远程令牌验证服务配置了负载均衡RestTemplate。若RestTemplate未正确配置安全属性（如SSL证书验证），可能使令牌验证请求易受中间人攻击。", "potential_impact": "认证绕过。攻击者可能通过篡改与认证服务器的通信来伪造令牌验证结果。", "cvss_score": "8.2", "signal_id": "RISK-4", "signal_state": "NEW", "evidence": [{"type": "code_line", "location": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bi</pre>
+                        </details>
+                        
+                        
+                        <details class="token-response">
+                            <summary>📨 Response (4096 tokens)</summary>
+                            <pre>{
+  "vulnerabilities": [
+    {
+      "title": "Frame-Options安全头部被禁用",
+      "severity": "MEDIUM",
+      "location": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-security\\src\\main\\java\\cn\\bizspring\\cloud\\common\\security\\component\\BaseResourceServerConfigurerAdapter.java:29",
+      "evidence": [
+        {
+          "type": "code_line",
+          "location": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-security\\src\\main\\java\\cn\\bizspring\\cloud\\common\\security\\component\\BaseResourceServerConfigurerAdapter.java:29",
+          "reason": "SECURITY_FEATURE_DISABLE",
+          "confidence": 1.0,
+          "code_snippet": "httpSecurity.headers().frameOptions().disable()"
+        }
+      ],
+      "cwe_id": "CWE-693",
+      "cvss_score": "5.4",
+      "signal_id": "RISK-1",
+      "signal_state": "NEW",
+      "verification_decision": "CONFIRMED",
+      "verification_reason": "代码中显式禁用Frame-Options安全头部，存在点击劫持攻击风险。"
+    },
+    {
+      "title": "CSRF保护被全局禁用",
+      "severity": "HIGH",
+      "location": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-security\\src\\main\\java\\cn\\bizspring\\cloud\\common\\security\\component\\BaseResourceServerConfigurerAdapter.java:35",
+      "evidence": [
+        {
+          "type": "code_line",
+          "location": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-security\\src\\main\\java\\cn\\bizspring\\cloud\\common\\security\\component\\BaseResource</pre>
+                        </details>
+                        
+                    </div>
+                    
+                    <div class="token-record">
+                        <div class="token-header">
+                            <span class="token-model">Agent 4 @ C:\1AAA_PROJECT\HOS\HOS-LS\...</span>
+                            <span class="token-count">5976 tokens</span>
+                        </div>
+                        
+                        <details class="token-prompt">
+                            <summary>📝 Prompt (1880 tokens)</summary>
+                            <pre>只输出JSON，否则视为失败
+
+
+[CHARACTER]
+你不是聊天AI，而是一个"受约束的安全分析执行模块"。
+
+你必须严格按照协议运行。
+
+[CORE TRAITS]
+- Precision First（精确优先）
+- No Assumption（禁止假设）
+- Evidence Driven（基于代码事实）
+- Deterministic Output（稳定输出）
+
+[语言要求]
+- 所有输出必须使用简体中文
+- 专业术语保留英文
+- 描述、结论必须用中文
+
+[DECISION RULES]
+- 仅使用已验证漏洞（CONFIRMED信号）
+- 步骤必须连续可执行
+- 每个攻击链必须有唯一signal_id
+
+[HARD RULES]
+- 禁止输出解释性文本
+- 禁止输出推理过程
+- 禁止偏离任务
+- 禁止补充未提供的信息
+- 禁止使用"可能/大概/推测"等词
+- 禁止空洞的"Unknown"输出
+
+[STRICT OUTPUT CONTRACT]
+attack_chain必须包含：
+- signal_id: 唯一标识符（格式：CHAIN-{序号}）
+- 链接到上游CONFIRMED信号的signal_id
+
+[INPUT]
+文件路径: C:\1AAA_PROJECT\HOS\HOS-LS\real-project\bizspring-open-main\bizspring-base\bizspring-base-security\src\main\java\cn\bizspring\cloud\common\security\component\BaseResourceServerConfigurerAdapter.java
+
+来自Agent-3的验证结果:
+{"vulnerabilities": [{"title": "WEAK_SECURITY_SIGNAL", "severity": "MEDIUM", "location": "Unknown (refined from upstream)", "evidence": [{"type": "code_line", "location": "N/A", "reason": "Signal RISK-3 was not processed by downstream agent", "confidence": 0.3}], "cwe_id": "", "cvss_score": "", "signal_id": "RISK-3", "signal_state": "REFINED", "verification_decision": "REFINED", "verification_reason": "Signal inherited from upstream due to semantic gap"}, {"title": "WEAK_SECURITY_SIGNAL", "severity": "MEDIUM", "location": "Unknown (refined from upstream)", "evidence": [{"type": "code_line", "location": "N/A", "reason": "Signal RISK-2 was not processed by downstream agent", "confidence": 0.3}], "cwe_id": "", "cvss_score": "", "signal_id": "RISK-2", "signal_state": "REFINED", "verification_decision": "REFINED", "verification_reason": "Signal inherited from upstream due to semantic gap"}, {"title": "WEAK_SECURITY_SIGNAL", "severity": "MEDIUM", "location": "Unknown (refined from upstream)", "evidence": [{"type": "code_line", "location": "N/A", "reason": "Signal RISK-1 was not processed by downstream agent", "confidence": 0.3}], "cwe_id": "", "cvss_score": "", "signal_id": "RISK-1", "signal_state": "REFINED", "verification_decision": "REFINED", "verification_reason": "Signal inherited from upstream due to semantic gap"}, {"title": "WEAK_SECURITY_SIGNAL", "severity": "MEDIUM", "location": "Unknown (refined from upstream)", "evidence": [{"type": "code_line", "location": "N/A", "reason": "Signal RISK-5 was not processed by downstream agent", "confidence": 0.3}], "cwe_id": "", "cvss_score": "", "signal_id": "RISK-5", "signal_state": "REFINED", "verification_decision": "REFINED", "verification_reason": "Signal inherited from upstream due to semantic gap"}, {"title": "WEAK_SECURITY_SIGNAL", "severity": "MEDIUM", "location": "Unknown (refined from upstream)", "evidence": [{"type": "code_line", "location": "N/A", "reason": "Signal RISK-4 was not processed by downstream agent", "confidence": 0.3}], "cwe_id": "", "cvss_score": "", "signal_id": "RISK-4", "signal_state": "REFINED", "verification_decision": "REFINED", "verification_reason": "Signal inherited from upstream due to semantic gap"}], "signal_tracking": {"total_signals": 0, "signals_new": 0, "signals_confirmed": 0, "signals_rejected": 0, "signals_refined": 0}, "raw": "{\n  \"vulnerabilities\": [\n    {\n      \"title\": \"Frame-Options安全头部被禁用\",\n      \"severity\": \"MEDIUM\",\n      \"location\": \"C:\\\\1AAA_PROJECT\\\\HOS\\\\HOS-LS\\\\real-project\\\\bizspring-open-main\\\\bizspring-base\\\\bizspring-base-security\\\\src\\\\main\\\\java\\\\cn\\\\bizspring\\\\cloud\\\\common\\\\security\\\\component\\\\BaseResourceServerConfigurerAdapter.java:29\",\n      \"evidence\": [\n        {\n          \"type\": \"code_line\",\n          \"location\": \"C:\\\\1AAA_PROJECT\\\\HOS\\\\HOS-LS\\\\real-project\\\\bizspring-open-main\\\\bizspring-base\\\\bizspring-base-security\\\\src\\\\main\\\\java\\\\cn\\\\bizspring\\\\cloud\\\\common\\\\security\\\\component\\\\BaseResourceServerConfigurerAdapter.java:29\",\n          \"reason\": \"SECURITY_FEATURE_DISABLE\",\n          \"confidence\": 1.0,\n          \"code_snippet\": \"httpSecurity.headers().frameOptions().disable()\"\n        }\n      ],\n      \"cwe_id\": \"CWE-693\",\n      \"cvss_score\": \"5.4\",\n      \"signal_id\": \"RISK-1\",\n      \"signal_state\": \"NEW\",\n      \"verification_decision\": \"CONFIRMED\",\n      \"verification_reason\": \"代码中显式禁用Frame-Options安全头部，存在点击劫持攻击风险。\"\n    },\n    {\n      \"title\": \"CSRF保护被全局禁用\",\n      \"severity\": \"HIGH\",\n      \"location\": \"C:\\\\1AAA_PROJECT\\\\HOS\\\\HOS-LS\\\\real-project\\\\bizspring-open-main\\\\bizspring-base\\\\bizspring-base-security\\\\src\\\\main\\\\java\\\\cn\\\\bizspring\\\\cloud\\\\common\\\\security\\\\component\\\\BaseResourceServerConfigurerAdapter.java:35\",\n      \"evidence\": [\n        {\n          \"type\": \"code_line\",\n          \"location\": \"C:\\\\1AAA_PROJECT\\\\HOS\\\\HOS-LS\\\\real-project\\\\bizspring-open-main\\\\bizspring-base\\\\bizspring-base-security\\\\src\\\\main\\\\java\\\\cn\\\\bizspring\\\\cloud\\\\common\\\\security\\\\component\\\\BaseResource"}
+
+[TASK]
+基于已验证漏洞构建完整攻击链。
+
+[OUTPUT PRO</pre>
+                        </details>
+                        
+                        
+                    </div>
+                    
+                    <div class="token-record">
+                        <div class="token-header">
+                            <span class="token-model">Agent 5 @ C:\1AAA_PROJECT\HOS\HOS-LS\...</span>
+                            <span class="token-count">3852 tokens</span>
+                        </div>
+                        
+                        <details class="token-prompt">
+                            <summary>📝 Prompt (1387 tokens)</summary>
+                            <pre>只输出JSON，否则视为失败
+
+
+[CHARACTER]
+你不是聊天AI，而是一个"受约束的安全分析执行模块"。
+
+你必须严格按照协议运行。
+
+[CORE TRAITS]
+- Precision First（精确优先）
+- No Assumption（禁止假设）
+- Evidence Driven（基于代码事实）
+- Deterministic Output（稳定输出）
+- 优先反驳
+- 攻击链默认不成立
+
+[语言要求]
+- 所有输出必须使用简体中文
+- 专业术语保留英文（如 SQL Injection, XSS, CSRF, SSRF）
+- 描述、结论必须用中文
+
+[DECISION RULES]
+- 攻击路径完整可执行 → ACCEPT
+- 攻击路径不完整但有可疑迹象 → ESCALATE（标记待人工复核）
+- 仅理论可能无法实际验证 → UNCERTAIN
+- 明确不可行或被防御完全阻断 → REFUTE
+- 只能挑战CONFIRMED信号
+
+[HARD RULES]
+- 禁止输出解释性文本
+- 禁止输出推理过程
+- 禁止偏离任务
+- 禁止补充未提供的信息
+- 禁止使用"可能/大概/推测"等词
+- 禁止推测
+- 禁止补全逻辑
+- 禁止编造攻击路径
+- 所有结论必须来自输入
+- 禁止空洞的"Unknown"输出
+
+[STRICT OUTPUT CONTRACT]
+verdict只能是：
+- ACCEPT: 攻击链可行
+- REFUTE: 攻击链不可行
+- ESCALATE: 需要人工复核
+- UNCERTAIN: 无法确定
+
+必须包含challenged_signal_id指向上游攻击链。
+
+[INPUT]
+文件路径: C:\1AAA_PROJECT\HOS\HOS-LS\real-project\bizspring-open-main\bizspring-base\bizspring-base-security\src\main\java\cn\bizspring\cloud\common\security\component\BaseResourceServerConfigurerAdapter.java
+
+来自Agent-4的攻击链:
+{"raw": ""}
+
+代码:
+package cn.bizspring.cloud.common.security.component;
+
+import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configurers.ExpressionUrlAuthorizationConfigurer;
+import org.springframework.security.oauth2.config.annotation.web.configuration.ResourceServerConfigurerAdapter;
+import org.springframework.security.oauth2.config.annotation.web.configurers.ResourceServerSecurityConfigurer;
+import org.springframework.security.oauth2.provider.token.DefaultAccessTokenConverter;
+import org.springframework.security.oauth2.provider.token.RemoteTokenServices;
+import org.springframework.security.oauth2.provider.token.UserAuthenticationConverter;
+import org.springframework.web.client.RestTemplate;
+
+/**
+ * @author
+ * <p>
+ * 1. 支持remoteTokenServices 负载均衡
+ * 2. 支持 获取用户全部信息
+ */
+@Slf4j
+public class BaseResourceServerConfigurerAdapter extends ResourceServerConfigurerAdapter {
+	@Autowired
+	protected ResourceAuthExceptionEntryPoint resourceAuthExceptionEntryPoint;
+	@Autowired
+	protected RemoteTokenServices remoteTokenServices;
+	@Autowired
+	private PermitAllUrlProperties permitAllUrlProperties;
+	@Autowired
+	private RestTemplate lbRestTemplate;
+
+	/**
+	 * 默认的配置，对外暴露
+	 *
+	 * @param httpSecurity
+	 */
+	@Override
+	@SneakyThrows
+	public void configure(HttpSecurity httpSecurity) {
+		//允许使用iframe 嵌套，避免swagger-ui 不被加载的问题
+		httpSecurity.headers().frameOptions().disable();
+		ExpressionUrlAuthorizationConfigurer<HttpSecurity>
+			.ExpressionInterceptUrlRegistry registry = httpSecurity
+			.authorizeRequests();
+		permitAllUrlProperties.getReleaseUrls()
+			.forEach(url -> registry.antMatchers(url).permitAll());
+		registry.anyRequest().authenticated()
+			.and().csrf().disable();
+	}
+
+	@Override
+	public void configure(ResourceServerSecurityConfigurer resources) {
+		DefaultAccessTokenConverter accessTokenConverter = new DefaultAccessTokenConverter();
+		UserAuthenticationConverter userTokenConverter = new BaseUserAuthenticationConverter();
+		accessTokenConverter.setUserTokenConverter(userTokenConverter);
+
+		remoteTokenServices.setRestTemplate(lbRestTemplate);
+		remoteTokenServices.setAccessTokenConverter(accessTokenConverter);
+		resources.authenticationEntryPoint(resourceAuthExceptionEntryPoint)
+				.tokenServices(remoteTokenServices);
+	}
+}
+
+
+[TASK]
+验证攻击链是否真实可行。
+
+[OUTPUT PROTOCOL]
+- 只允许输出 JSON
+- 必须严格符合 schema
+- 不允许缺失字段
+- 不允许多余字段
+- 必须可被 json.loads 解析
+
+[OUTPUT FORMAT]
+{
+  "adversarial_analysis": [
+    {
+      "attack_chain_name": "",
+      "verdict": "ACCEPT/REFUTE/ESCALATE/UNCERTAIN",
+      "confidence": 0.0-1.0,
+      "reason": "",
+      "counter_arguments": [],
+      "evidence": [
+        {"type": "code_line", "location": "C:\1AAA_PROJECT\HOS\HOS-LS\real-project\bizspring-open-main\bizspring-base\bizspring-base-security\src\main\java\cn\bizspring\cloud\common\security\component\BaseResourceServerConfigurerAdapter.java:line", "reason": "", "confidence": 0.0-1.0, "code_snippet": ""}
+      ],
+      "requires_human_review": true/false,
+      "challenged_signal_id": "CHAIN-{序号}"
+    }
+  ],
+  "cross_agent_agreement": [
+    {
+      "signal_id": "CHAIN-{序号}",
+      "signal_type": "attack_chain",
+      "original_agent": "Agent-4",
+      "current_state": "ACCEPT/REFUTE/ESCALATE/UNCERTAIN",
+      "evidence_chain": [
+        {"type": "code_line", "location": "", "reason": "", "confidence": 0.0-1.0}
+      ],
+      "confirmed_by": [],
+      "rejected_by": [],
+      "refined_by": []
+    }
+  ]
+}
+
+[FAILSAFE]
+如果信息不足：
+- verdict设为UNCERTAIN
+- 使用结构化标签（SUSPICIOUS_PATTERN等）
+- 不允许编造
+</pre>
+                        </details>
+                        
+                        
+                        <details class="token-response">
+                            <summary>📨 Response (2465 tokens)</summary>
+                            <pre>{
+  "adversarial_analysis": [
+    {
+      "attack_chain_name": "",
+      "verdict": "UNCERTAIN",
+      "confidence": 0.0,
+      "reason": "攻击链内容为空，无法验证可行性",
+      "counter_arguments": [],
+      "evidence": [],
+      "requires_human_review": true,
+      "challenged_signal_id": "CHAIN-4"
+    }
+  ],
+  "cross_agent_agreement": [
+    {
+      "signal_id": "CHAIN-4",
+      "signal_type": "attack_chain",
+      "original_agent": "Agent-4",
+      "current_state": "UNCERTAIN",
+      "evidence_chain": [],
+      "confirmed_by": [],
+      "rejected_by": [],
+      "refined_by": []
+    }
+  ]
+}</pre>
+                        </details>
+                        
+                    </div>
+                    
+                    <div class="token-record">
+                        <div class="token-header">
+                            <span class="token-model">Agent 6 @ C:\1AAA_PROJECT\HOS\HOS-LS\...</span>
+                            <span class="token-count">2422 tokens</span>
+                        </div>
+                        
+                        <details class="token-prompt">
+                            <summary>📝 Prompt (851 tokens)</summary>
+                            <pre>只输出JSON，否则视为失败
+
+
+[CHARACTER]
+你不是聊天AI，而是一个"受约束的安全分析执行模块"。
+
+你必须严格按照协议运行。
+
+[CORE TRAITS]
+- Precision First（精确优先）
+- No Assumption（禁止假设）
+- Evidence Driven（基于代码事实）
+- Deterministic Output（稳定输出）
+
+[语言要求]
+- 所有输出必须使用简体中文
+- 专业术语保留英文（如 SQL Injection, XSS, CSRF, SSRF）
+- 描述、结论必须用中文
+
+[HARD RULES]
+1. 禁止输出任何解释性文字，只允许输出JSON
+2. 禁止返回空的final_findings，除非所有信号都被REJECTED
+3. 禁止省略任何required字段
+4. 禁止编造任何漏洞信息
+5. 必须基于上游Agent的输出进行判断
+6. 禁止使用fallback机制补漏洞
+7. 禁止空洞的"Unknown"输出
+
+[CRITICAL - 你不再"发现漏洞"，而是"裁决证据"]
+1. 你只裁决上游CONFIRMED/ACCEPT/ESCALATE的信号
+2. 你不能发现新漏洞
+3. 你不能使用fallback生成漏洞
+4. 所有输出必须基于evidence_chain
+
+[DECISION RULES]
+- 对抗验证 ACCEPT → 必须包含在 final_findings
+- 对抗验证 ESCALATE → 必须包含在 final_findings，标记 requires_human_review=true
+- 对抗验证 UNCERTAIN → 如果severity为HIGH/CRITICAL，必须包含
+- 对抗验证 REFUTE → 仅当有强证据支持时保留
+
+[TASK]
+基于对抗验证结果给出最终漏洞裁决：
+1. 遍历adversarial_validation中的所有ACCEPT/ESCALATE结果
+2. 只裁决已有信号，不发现新漏洞
+3. 为每个漏洞提供完整的evidence_chain_summary
+
+[MANDATORY OUTPUT]
+你必须输出以下JSON结构，不允许省略任何字段：
+
+{
+  "final_findings": [
+    {
+      "vulnerability": "<漏洞名称，必须来自上游信号>",
+      "location": "<位置，必须来自上游信号>",
+      "severity": "<HIGH/MEDIUM/LOW/CRITICAL/INFO>",
+      "status": "<CONFIRMED/WEAK/REJECTED>",
+      "confidence": "<HIGH/MEDIUM/LOW>",
+      "cvss_score": "<分数>",
+      "recommendation": "<修复建议>",
+      "evidence": [
+        {"type": "code_line", "location": "", "reason": "", "confidence": 0.0-1.0, "source_agent": ""}
+      ],
+      "evidence_chain_summary": "<总结整个证据链>",
+      "requires_human_review": <true/false>,
+      "signal_state": "<CONFIRMED/WEAK/REJECTED>",
+      "linked_signals": ["RISK-xxx", "CHAIN-xxx", "ADVERSARIAL-xxx"]
+    }
+  ],
+  "summary": {
+    "total_vulnerabilities": <总数>,
+    "valid_vulnerabilities": <ACCEPT数>,
+    "uncertain_vulnerabilities": <ESCALATE/UNCERTAIN数>,
+    "invalid_vulnerabilities": <REFUTE数>,
+    "high_severity_count": <高危数>,
+    "medium_severity_count": <中危数>,
+    "low_severity_count": <低危数>,
+    "signals_confirmed": <确认数>,
+    "signals_rejected": <拒绝数>,
+    "signals_refined": <精化数>
+  }
+}
+
+[FAILSAFE]
+如果所有信号都被REJECTED：
+- 返回 {"final_findings": [], "summary": {"total_vulnerabilities": 0, ...}}
+- 必须确保上游信号确实都被REJECTED
+- 禁止使用fallback生成假漏洞
+</pre>
+                        </details>
+                        
+                        
+                        <details class="token-response">
+                            <summary>📨 Response (1571 tokens)</summary>
+                            <pre>{
+  "final_findings": [],
+  "summary": {
+    "total_vulnerabilities": 0,
+    "valid_vulnerabilities": 0,
+    "uncertain_vulnerabilities": 0,
+    "invalid_vulnerabilities": 0,
+    "high_severity_count": 0,
+    "medium_severity_count": 0,
+    "low_severity_count": 0,
+    "signals_confirmed": 0,
+    "signals_rejected": 0,
+    "signals_refined": 0
+  }
+}</pre>
+                        </details>
+                        
+                    </div>
+                    
+                </div>
+            </details>
+            
+
+            <div class="filter-bar" style="margin-bottom: 20px;">
+                <label for="file-search-input">搜索文件:</label>
+                <input type="text" id="file-search-input" placeholder="输入文件名搜索...">
+            </div>
+            
+            <details class="file-details has-findings">
+                <summary>
+                    <span class="file-path"></span>
+                    <span class="finding-count">5 个问题</span>
+                </summary>
+                <div class="file-findings">
+                    
+                    
+                    <div class="petal">
+                        <div class="petal-title">SECURITY_MISCONFIGURATION (位于 BaseResourceServerConfigurerAdapter.java:C:\1AAA_PROJECT\HOS\HOS-LS\real-project\bizspring-open-main\bizspring-base\bizspring-base-security\src\main\java\cn\bizspring\cloud\common\security\component\BaseResourceServerConfigurerAdapter.java:29) (SECURITY_MISCONFIGURATION)</div>
+                        <div class="petal-meta">BaseResourceServerConfigurerAdapter.java:C:\1AAA_PROJECT\HOS\HOS-LS\real-project\bizspring-open-main\bizspring-base\bizspring-base-security\src\main\java\cn\bizspring\cloud\common\security\component\BaseResourceServerConfigurerAdapter.java:29:0</div>
+                        <div class="petal-description">SECURITY_MISCONFIGURATION。HTTP安全头部中的Frame-Options被显式禁用，移除了针对点击劫持攻击的内置防护。 建议：需要人工复核此风险</div>
+                        
+                        
+                        
+                        <div class="fix-suggestion">
+                            <h4>修复建议</h4>
+                            <p>需要人工复核此风险</p>
+                        </div>
+                        
+                    </div>
+                    
+                    <div class="petal">
+                        <div class="petal-title">SECURITY_MISCONFIGURATION (位于 BaseResourceServerConfigurerAdapter.java:C:\1AAA_PROJECT\HOS\HOS-LS\real-project\bizspring-open-main\bizspring-base\bizspring-base-security\src\main\java\cn\bizspring\cloud\common\security\component\BaseResourceServerConfigurerAdapter.java:35) (SECURITY_MISCONFIGURATION)</div>
+                        <div class="petal-meta">BaseResourceServerConfigurerAdapter.java:C:\1AAA_PROJECT\HOS\HOS-LS\real-project\bizspring-open-main\bizspring-base\bizspring-base-security\src\main\java\cn\bizspring\cloud\common\security\component\BaseResourceServerConfigurerAdapter.java:35:0</div>
+                        <div class="petal-description">SECURITY_MISCONFIGURATION。CSRF（跨站请求伪造）保护被全局禁用，移除了一项关键的Web安全防护机制。 建议：需要人工复核此风险</div>
+                        
+                        
+                        
+                        <div class="fix-suggestion">
+                            <h4>修复建议</h4>
+                            <p>需要人工复核此风险</p>
+                        </div>
+                        
+                    </div>
+                    
+                    <div class="petal">
+                        <div class="petal-title">INSECURE_CONFIGURATION (位于 BaseResourceServerConfigurerAdapter.java:C:\1AAA_PROJECT\HOS\HOS-LS\real-project\bizspring-open-main\bizspring-base\bizspring-base-security\src\main\java\cn\bizspring\cloud\common\security\component\BaseResourceServerConfigurerAdapter.java:30) (INSECURE_CONFIGURATION)</div>
+                        <div class="petal-meta">BaseResourceServerConfigurerAdapter.java:C:\1AAA_PROJECT\HOS\HOS-LS\real-project\bizspring-open-main\bizspring-base\bizspring-base-security\src\main\java\cn\bizspring\cloud\common\security\component\BaseResourceServerConfigurerAdapter.java:30:0</div>
+                        <div class="petal-description">INSECURE_CONFIGURATION。从外部属性源动态配置完全公开的URL（permitAll），若属性源被篡改或配置错误，可能导致敏感端点暴露。 建议：需要人工复核此风险</div>
+                        
+                        
+                        
+                        <div class="fix-suggestion">
+                            <h4>修复建议</h4>
+                            <p>需要人工复核此风险</p>
+                        </div>
+                        
+                    </div>
+                    
+                    <div class="petal">
+                        <div class="petal-title">WEAK_SECURITY_SIGNAL (位于 BaseResourceServerConfigurerAdapter.java:C:\1AAA_PROJECT\HOS\HOS-LS\real-project\bizspring-open-main\bizspring-base\bizspring-base-security\src\main\java\cn\bizspring\cloud\common\security\component\BaseResourceServerConfigurerAdapter.java:41) (WEAK_SECURITY_SIGNAL)</div>
+                        <div class="petal-meta">BaseResourceServerConfigurerAdapter.java:C:\1AAA_PROJECT\HOS\HOS-LS\real-project\bizspring-open-main\bizspring-base\bizspring-base-security\src\main\java\cn\bizspring\cloud\common\security\component\BaseResourceServerConfigurerAdapter.java:41:0</div>
+                        <div class="petal-description">WEAK_SECURITY_SIGNAL。远程令牌验证服务配置了负载均衡RestTemplate。若RestTemplate未正确配置安全属性（如SSL证书验证），可能使令牌验证请求易受中间人攻击。 建议：需要人工复核此风险</div>
+                        
+                        
+                        
+                        <div class="fix-suggestion">
+                            <h4>修复建议</h4>
+                            <p>需要人工复核此风险</p>
+                        </div>
+                        
+                    </div>
+                    
+                    <div class="petal">
+                        <div class="petal-title">WEAK_SECURITY_SIGNAL (位于 BaseResourceServerConfigurerAdapter.java:C:\1AAA_PROJECT\HOS\HOS-LS\real-project\bizspring-open-main\bizspring-base\bizspring-base-security\src\main\java\cn\bizspring\cloud\common\security\component\BaseResourceServerConfigurerAdapter.java:17) (WEAK_SECURITY_SIGNAL)</div>
+                        <div class="petal-meta">BaseResourceServerConfigurerAdapter.java:C:\1AAA_PROJECT\HOS\HOS-LS\real-project\bizspring-open-main\bizspring-base\bizspring-base-security\src\main\java\cn\bizspring\cloud\common\security\component\BaseResourceServerConfigurerAdapter.java:17:0</div>
+                        <div class="petal-description">WEAK_SECURITY_SIGNAL。使用Lombok @SneakyThrows注解，可能抑制关键安全检查异常，导致安全问题被隐藏，而非妥善处理。 建议：需要人工复核此风险</div>
+                        
+                        
+                        
+                        <div class="fix-suggestion">
+                            <h4>修复建议</h4>
+                            <p>需要人工复核此风险</p>
+                        </div>
+                        
+                    </div>
+                    
+                    
+                </div>
+            </details>
+            
+        </div>
+        
+    </div>
+</body>
+</html>

@@ -1,0 +1,994 @@
+<!-- Jinja2 Template File - IDE should ignore JavaScript errors in this file -->
+<!-- eslint-disable -->
+<!-- tslint-disable -->
+<!-- prettier-ignore -->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HOS-LS 安全扫描报告</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg-primary: #0f1117;
+            --bg-secondary: #161a22;
+            --primary: #6f42c1;
+            --critical: #ff4d4f;
+            --high: #ff8c42;
+            --medium: #ffd166;
+            --low: #3ddc97;
+            --text-primary: #e6edf3;
+            --text-secondary: #8b949e;
+            --border: rgba(255,255,255,0.06);
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            position: relative;
+            min-height: 100vh;
+        }
+        
+        body::before {
+            content: "";
+            position: fixed;
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, rgba(111,66,193,0.15), transparent);
+            top: -200px;
+            left: -200px;
+            z-index: 0;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            position: relative;
+            z-index: 1;
+        }
+        
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            background: linear-gradient(135deg, #6f42c1, #4287f5);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-size: 2.5rem;
+            font-weight: 700;
+        }
+        
+        .hero {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 30px;
+            text-align: center;
+            backdrop-filter: blur(6px);
+        }
+        
+        .status {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 10px;
+            padding: 10px 20px;
+            border-radius: 25px;
+            display: inline-block;
+        }
+        
+        .status.safe {
+            background: rgba(61, 220, 151, 0.1);
+            color: var(--low);
+            border: 1px solid var(--low);
+        }
+        
+        .status.low {
+            background: rgba(61, 220, 151, 0.1);
+            color: var(--low);
+            border: 1px solid var(--low);
+        }
+        
+        .status.medium {
+            background: rgba(255, 209, 102, 0.1);
+            color: var(--medium);
+            border: 1px solid var(--medium);
+        }
+        
+        .status.high {
+            background: rgba(255, 140, 66, 0.1);
+            color: var(--high);
+            border: 1px solid var(--high);
+        }
+        
+        .status.critical {
+            background: rgba(255, 77, 79, 0.1);
+            color: var(--critical);
+            border: 1px solid var(--critical);
+        }
+        
+        .meta {
+            color: var(--text-secondary);
+            font-size: 1rem;
+        }
+        
+        .conclusion {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 30px;
+            text-align: center;
+            font-size: 1.1rem;
+        }
+        
+        .filter-bar {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 30px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            align-items: center;
+        }
+        
+        .filter-bar label {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+        
+        .filter-bar select,
+        .filter-bar input {
+            background: var(--bg-primary);
+            border: 1px solid #2a2f3a;
+            color: var(--text-primary);
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 0.9rem;
+        }
+        
+        .filter-bar input {
+            flex: 1;
+            min-width: 200px;
+        }
+        
+        .summary-section {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 25px;
+            margin-bottom: 30px;
+        }
+        
+        .summary-section h2 {
+            margin-bottom: 20px;
+            color: var(--text-primary);
+            font-size: 1.5rem;
+        }
+        
+        .summary-content {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 30px;
+        }
+        
+        .summary-stats {
+            flex: 1;
+            min-width: 250px;
+        }
+        
+        .summary-stats ul {
+            list-style: none;
+        }
+        
+        .summary-stats li {
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .summary-stats span {
+            font-weight: 600;
+        }
+        
+        .chart-container {
+            flex: 2;
+            min-width: 300px;
+            height: 300px;
+        }
+        
+        .empty-state {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 40px;
+            margin-bottom: 30px;
+            text-align: center;
+            font-size: 1.2rem;
+            color: var(--text-secondary);
+        }
+        
+        .clusters {
+            margin-bottom: 30px;
+        }
+        
+        .cluster {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            margin-bottom: 20px;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .cluster::after {
+            content: "";
+            height: 1px;
+            background: linear-gradient(to right, transparent, #6f42c1, transparent);
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+        }
+        
+        .cluster-header {
+            padding: 15px 20px;
+            font-weight: 600;
+            font-size: 1.1rem;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .cluster-critical .cluster-header {
+            color: var(--critical);
+            border-left: 4px solid var(--critical);
+        }
+        
+        .cluster-high .cluster-header {
+            color: var(--high);
+            border-left: 4px solid var(--high);
+        }
+        
+        .cluster-medium .cluster-header {
+            color: var(--medium);
+            border-left: 4px solid var(--medium);
+        }
+        
+        .cluster-low .cluster-header {
+            color: var(--low);
+            border-left: 4px solid var(--low);
+        }
+        
+        .cluster-info .cluster-header {
+            color: var(--text-secondary);
+            border-left: 4px solid var(--text-secondary);
+        }
+        
+        .petals {
+            padding: 20px;
+        }
+        
+        .petal {
+            background: rgba(255,255,255,0.02);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 10px;
+            transition: all 0.3s ease;
+        }
+        
+        .petal:hover {
+            background: rgba(255,255,255,0.04);
+            transform: translateY(-2px);
+        }
+        
+        .petal-title {
+            font-weight: 600;
+            margin-bottom: 5px;
+            color: var(--text-primary);
+        }
+        
+        .petal-meta {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin-bottom: 10px;
+        }
+        
+        .petal-description {
+            color: var(--text-primary);
+            margin-bottom: 10px;
+        }
+        
+        .code {
+            background: rgba(0,0,0,0.3);
+            padding: 12px;
+            border-radius: 6px;
+            font-family: "Consolas", "Monaco", "Courier New", monospace;
+            white-space: pre-wrap;
+            margin: 10px 0;
+            overflow-x: auto;
+            font-size: 0.9rem;
+            border-left: 3px solid var(--primary);
+        }
+        
+        .poc-section {
+            margin: 10px 0;
+            padding: 12px;
+            background: rgba(111,66,193,0.1);
+            border-radius: 6px;
+            border-left: 3px solid var(--primary);
+        }
+        
+        .poc-section h4 {
+            margin: 0 0 5px 0;
+            color: var(--primary);
+            font-size: 0.9rem;
+        }
+        
+        .fix-suggestion {
+            margin: 10px 0;
+            padding: 12px;
+            background: rgba(61, 220, 151, 0.1);
+            border-radius: 6px;
+            border-left: 3px solid var(--low);
+        }
+        
+        .fix-suggestion h4 {
+            margin: 0 0 5px 0;
+            color: var(--low);
+            font-size: 0.9rem;
+        }
+        
+        .attack-chain {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 25px;
+            margin-top: 30px;
+        }
+        
+        .attack-chain h2 {
+            margin-bottom: 20px;
+            color: var(--text-primary);
+        }
+        
+        .attack-chain h3 {
+            margin: 20px 0 10px 0;
+            color: var(--text-primary);
+            font-size: 1.2rem;
+        }
+        
+        .attack-chain ul {
+            margin-left: 20px;
+            margin-bottom: 15px;
+        }
+        
+        .attack-chain li {
+            margin-bottom: 5px;
+        }
+
+        .debug-log-section {
+            background: rgba(255,255,255,0.02);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+
+        .debug-log-section summary {
+            padding: 12px 15px;
+            cursor: pointer;
+            font-weight: 600;
+            color: var(--primary);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            user-select: none;
+            background: rgba(111,66,193,0.1);
+        }
+
+        .debug-log-section summary:hover {
+            background: rgba(111,66,193,0.15);
+        }
+
+        .debug-log-section summary::after {
+            content: "▶";
+            font-size: 0.8rem;
+            transition: transform 0.2s ease;
+        }
+
+        .debug-log-section[open] summary::after {
+            transform: rotate(90deg);
+        }
+
+        .debug-log-content {
+            padding: 15px;
+            max-height: 400px;
+            overflow-y: auto;
+            font-family: "Consolas", "Monaco", monospace;
+            font-size: 0.85rem;
+            line-height: 1.8;
+            background: rgba(0,0,0,0.3);
+        }
+
+        .debug-log-line {
+            padding: 2px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.03);
+        }
+
+        .debug-log-line:last-child {
+            border-bottom: none;
+        }
+
+        .debug-log-line .prefix {
+            color: var(--text-secondary);
+        }
+
+        .debug-log-line .debug-level {
+            color: var(--primary);
+        }
+
+        .debug-log-line .content {
+            color: var(--text-primary);
+        }
+
+        .token-details {
+            background: rgba(255,255,255,0.02);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+
+        .token-details summary {
+            padding: 12px 15px;
+            cursor: pointer;
+            font-weight: 600;
+            color: var(--accent);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            user-select: none;
+            background: rgba(255, 193, 7, 0.1);
+        }
+
+        .token-details summary:hover {
+            background: rgba(255, 193, 7, 0.15);
+        }
+
+        .token-details summary::after {
+            content: "▶";
+            font-size: 0.8rem;
+            transition: transform 0.2s ease;
+        }
+
+        .token-details[open] summary::after {
+            transform: rotate(90deg);
+        }
+
+        .token-content {
+            padding: 15px;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        .token-record {
+            background: rgba(0,0,0,0.3);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            margin-bottom: 15px;
+            padding: 12px;
+        }
+
+        .token-record:last-child {
+            margin-bottom: 0;
+        }
+
+        .token-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .token-model {
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        .token-count {
+            color: var(--accent);
+            font-weight: 600;
+        }
+
+        .token-prompt, .token-response {
+            margin-top: 8px;
+        }
+
+        .token-prompt summary, .token-response summary {
+            cursor: pointer;
+            padding: 6px 10px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 4px;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .token-prompt summary:hover, .token-response summary:hover {
+            background: rgba(255,255,255,0.1);
+        }
+
+        .token-prompt pre, .token-response pre {
+            margin-top: 8px;
+            padding: 10px;
+            background: rgba(0,0,0,0.4);
+            border-radius: 4px;
+            font-family: "Consolas", "Monaco", monospace;
+            font-size: 0.75rem;
+            line-height: 1.5;
+            color: var(--text-primary);
+            white-space: pre-wrap;
+            word-break: break-all;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .scanned-files-section {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 25px;
+            margin-top: 30px;
+        }
+
+        .scanned-files-section h2 {
+            margin-bottom: 20px;
+            color: var(--text-primary);
+            font-size: 1.5rem;
+        }
+
+        .file-details {
+            background: rgba(255,255,255,0.02);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            margin-bottom: 10px;
+            overflow: hidden;
+        }
+
+        .file-details summary {
+            padding: 12px 15px;
+            cursor: pointer;
+            font-weight: 600;
+            color: var(--text-primary);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            user-select: none;
+        }
+
+        .file-details summary:hover {
+            background: rgba(255,255,255,0.04);
+        }
+
+        .file-details summary::after {
+            content: "▶";
+            font-size: 0.8rem;
+            transition: transform 0.2s ease;
+        }
+
+        .file-details[open] summary::after {
+            transform: rotate(90deg);
+        }
+
+        .file-details summary .file-path {
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .file-details summary .finding-count {
+            margin-left: 15px;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.85rem;
+            background: rgba(111,66,193,0.3);
+        }
+
+        .file-findings {
+            padding: 15px;
+            border-top: 1px solid var(--border);
+        }
+
+        .file-findings .petal {
+            margin-bottom: 8px;
+        }
+
+        .file-findings .petal:last-child {
+            margin-bottom: 0;
+        }
+
+        .file-details.has-findings summary {
+            color: var(--high);
+        }
+
+        .file-details.no-findings summary {
+            color: var(--low);
+        }
+
+        .file-details.no-findings .finding-count {
+            background: rgba(61, 220, 151, 0.3);
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+            
+            h1 {
+                font-size: 2rem;
+            }
+            
+            .hero {
+                padding: 20px;
+            }
+            
+            .summary-content {
+                flex-direction: column;
+            }
+            
+            .chart-container {
+                height: 250px;
+            }
+            
+            .filter-bar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .filter-bar input {
+                min-width: unset;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>HOS-LS 安全扫描报告</h1>
+        
+        <div class="hero">
+            <div class="status {{ status }}">✓ {{ status_text }}</div>
+            <div class="meta">扫描 {{ summary.total_scans }} 文件 - {{ summary.total_findings }} 风险 - 用时 {{ total_duration }}s</div>
+        </div>
+        
+        <div class="conclusion">
+            {{ "本次扫描未发现可利用漏洞，代码结构安全性良好。" if summary.total_findings == 0 else "本次扫描发现安全问题，建议及时修复。" }}
+        </div>
+        
+        <div class="filter-bar">
+            <label for="severity-filter">按严重级别过滤:</label>
+            <select id="severity-filter" onchange="filterFindings()">
+                <option value="all">全部</option>
+                <option value="critical">严重</option>
+                <option value="high">高</option>
+                <option value="medium">中</option>
+                <option value="low">低</option>
+                <option value="info">信息</option>
+            </select>
+            <label for="search-input">搜索:</label>
+            <input type="text" id="search-input" placeholder="搜索漏洞...">
+        </div>
+        
+        <div class="summary-section">
+            <h2>扫描摘要</h2>
+            <div class="summary-content">
+                <div class="summary-stats">
+                    <ul>
+                        <li>扫描文件数: <span>{{ summary.total_scans }}</span></li>
+                        <li>发现问题数: <span>{{ summary.total_findings }}</span></li>
+                        <li>严重: <span style="color: var(--critical)">{{ summary.severity_counts.critical }}</span></li>
+                        <li>高: <span style="color: var(--high)">{{ summary.severity_counts.high }}</span></li>
+                        <li>中: <span style="color: var(--medium)">{{ summary.severity_counts.medium }}</span></li>
+                        <li>低: <span style="color: var(--low)">{{ summary.severity_counts.low }}</span></li>
+                        <li>信息: <span style="color: var(--text-secondary)">{{ summary.severity_counts.info }}</span></li>
+                    </ul>
+                </div>
+                {% if summary.total_findings > 0 %}
+                <div class="chart-container">
+                    <canvas id="severityChart"></canvas>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        {% if summary.total_findings == 0 %}
+        <div class="empty-state">
+            🌸 未发现安全问题
+        </div>
+        {% endif %}
+        
+        {% if summary.total_findings > 0 %}
+        <div class="clusters">
+            {% for severity in ['critical', 'high', 'medium', 'low', 'info'] %}
+                {% set findings = [] %}
+                {% for result in results %}
+                    {% for finding in result.findings %}
+                        {% if finding.severity == severity %}
+                            {% set _ = findings.append(finding) %}
+                        {% endif %}
+                    {% endfor %}
+                {% endfor %}
+                {% if findings %}
+                <div class="cluster cluster-{{ severity }}">
+                    <div class="cluster-header">{{ severity }} ({{ findings|length }})</div>
+                    <div class="petals">
+                        {% for finding in findings %}
+                        <div class="petal">
+                            <div class="petal-title">{{ finding.rule_name }} ({{ finding.rule_id }})</div>
+                            <div class="petal-meta">{{ getattr(finding.location, 'file', 'unknown') }}:{{ getattr(finding.location, 'line', 0) }}</div>
+                            <div class="petal-description">{{ finding.message or finding.description }}</div>
+                            {% if finding.code_snippet %}
+                            <div class="code">{{ finding.code_snippet }}</div>
+                            {% endif %}
+                            {% if finding.poc %}
+                            <div class="poc-section">
+                                <h4>漏洞利用 (POC)</h4>
+                                <div class="code">{{ finding.poc }}</div>
+                            </div>
+                            {% endif %}
+                            {% if finding.fix_suggestion %}
+                            <div class="fix-suggestion">
+                                <h4>修复建议</h4>
+                                <p>{{ finding.fix_suggestion }}</p>
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+            {% endfor %}
+        </div>
+        {% endif %}
+        
+        {% for result in results %}
+            {% if result.metadata and 'attack_chain' in result.metadata %}
+            <div class="attack-chain">
+                <h2>攻击链路分析</h2>
+                <h3>分析摘要</h3>
+                <p>{{ result.metadata.attack_chain.summary }}</p>
+                <p><strong>总体风险评分:</strong> {{ result.metadata.attack_chain.risk_score|round(2) }}</p>
+                <h3>高风险攻击路径</h3>
+                <ul>
+                    {% for path in result.metadata.attack_chain.paths[:5] %}
+                    <li>{{ loop.index }}. {{ path.description }} (风险: {{ path.risk_score|round(2) }})</li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+        {% endfor %}
+        
+        <script>
+            /* eslint-disable */
+            /* jshint ignore:start */
+            // 严重级别分布图表
+            {% if summary.total_findings > 0 %}
+            const ctx = document.getElementById('severityChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['严重', '高', '中', '低', '信息'],
+                    datasets: [{
+                        label: '漏洞数量',
+                        // Jinja2 template variables below - IDE should ignore
+                        data: [{{ summary.severity_counts.critical|default(0) }}, {{ summary.severity_counts.high|default(0) }}, {{ summary.severity_counts.medium|default(0) }}, {{ summary.severity_counts.low|default(0) }}, {{ summary.severity_counts.info|default(0) }}],
+                        backgroundColor: [
+                            'rgba(255, 77, 79, 0.6)',
+                            'rgba(255, 140, 66, 0.6)',
+                            'rgba(255, 209, 102, 0.6)',
+                            'rgba(61, 220, 151, 0.6)',
+                            'rgba(139, 148, 158, 0.6)'
+                        ],
+                        borderColor: [
+                            'rgba(255, 77, 79, 1)',
+                            'rgba(255, 140, 66, 1)',
+                            'rgba(255, 209, 102, 1)',
+                            'rgba(61, 220, 151, 1)',
+                            'rgba(139, 148, 158, 1)'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        title: {
+                            display: true,
+                            text: '漏洞严重级别分布',
+                            color: '#e6edf3'
+                        }
+                    },
+                    scales: {
+                        x: {
+                            beginAtZero: true,
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            },
+                            ticks: {
+                                color: '#8b949e'
+                            }
+                        },
+                        y: {
+                            grid: {
+                                display: false
+                            },
+                            ticks: {
+                                color: '#e6edf3'
+                            }
+                        }
+                    }
+                }
+            });
+            {% endif %}
+            
+            // 防抖函数
+            function debounce(func, wait) {
+                let timeout;
+                return function() {
+                    clearTimeout(timeout);
+                    timeout = setTimeout(() => func.apply(this, arguments), wait);
+                };
+            }
+            
+            // 过滤功能
+            const filterFindings = debounce(function() {
+                const severityFilter = document.getElementById("severity-filter").value;
+                const searchInput = document.getElementById("search-input").value.toLowerCase();
+                const petals = document.querySelectorAll(".petal");
+                
+                petals.forEach(petal => {
+                    const cluster = petal.closest(".cluster");
+                    const severity = cluster.classList.contains("cluster-critical") ? "critical" : 
+                                   cluster.classList.contains("cluster-high") ? "high" :
+                                   cluster.classList.contains("cluster-medium") ? "medium" :
+                                   cluster.classList.contains("cluster-low") ? "low" : "info";
+                    const text = petal.textContent.toLowerCase();
+                    
+                    const severityMatch = severityFilter === "all" || severity === severityFilter;
+                    const searchMatch = text.includes(searchInput);
+                    
+                    petal.style.display = (severityMatch && searchMatch) ? "block" : "none";
+                    
+                    // 检查cluster是否有可见的petal
+                    const visiblePetals = cluster.querySelectorAll(".petal[style=\"display: block;\"]");
+                    cluster.style.display = visiblePetals.length > 0 ? "block" : "none";
+                });
+            }, 300);
+            
+            // 绑定事件
+            document.getElementById("search-input").addEventListener("keyup", filterFindings);
+            document.getElementById("severity-filter").addEventListener("change", filterFindings);
+
+            // 扫描文件详情区域搜索功能
+            document.getElementById("file-search-input").addEventListener("keyup", function() {
+                const searchText = this.value.toLowerCase();
+                const fileDetails = document.querySelectorAll(".file-details");
+
+                fileDetails.forEach(detail => {
+                    const filePath = detail.querySelector(".file-path").textContent.toLowerCase();
+                    const matches = filePath.includes(searchText);
+                    detail.style.display = matches ? "block" : "none";
+                });
+            });
+            /* jshint ignore:end */
+        </script>
+
+        {% if results %}
+        <div class="scanned-files-section">
+            <h2>扫描文件详情</h2>
+
+            {% if debug_logs %}
+            <details class="debug-log-section">
+                <summary>🐛 调试日志 (AI API 输出)</summary>
+                <div class="debug-log-content">
+                    {% for log in debug_logs %}
+                    <div class="debug-log-line">
+                        <span class="prefix">[</span><span class="debug-level">DEBUG</span><span class="prefix">]</span>
+                        <span class="content">{{ log }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </details>
+            {% endif %}
+
+            {% if token_records %}
+            <details class="token-details">
+                <summary>📊 Token 使用详情 ({{ token_records|length }} 条记录)</summary>
+                <div class="token-content">
+                    {% for record in token_records %}
+                    <div class="token-record">
+                        <div class="token-header">
+                            <span class="token-model">{{ record.agent_name|default('unknown') }} @ {{ record.file_path|truncate(30, killwords=True) }}</span>
+                            <span class="token-count">{{ record.total_tokens }} tokens</span>
+                        </div>
+                        {% if record.prompt %}
+                        <details class="token-prompt">
+                            <summary>📝 Prompt ({{ record.prompt_tokens }} tokens)</summary>
+                            <pre>{{ record.prompt }}</pre>
+                        </details>
+                        {% endif %}
+                        {% if record.response %}
+                        <details class="token-response">
+                            <summary>📨 Response ({{ record.completion_tokens }} tokens)</summary>
+                            <pre>{{ record.response }}</pre>
+                        </details>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </details>
+            {% endif %}
+
+            <div class="filter-bar" style="margin-bottom: 20px;">
+                <label for="file-search-input">搜索文件:</label>
+                <input type="text" id="file-search-input" placeholder="输入文件名搜索...">
+            </div>
+            {% for result in results %}
+            <details class="file-details {% if result.findings %}has-findings{% else %}no-findings{% endif %}">
+                <summary>
+                    <span class="file-path">{{ result.file_path }}</span>
+                    <span class="finding-count">{{ result.findings|length }} 个问题</span>
+                </summary>
+                <div class="file-findings">
+                    {% if result.findings %}
+                    {% for finding in result.findings %}
+                    <div class="petal">
+                        <div class="petal-title">{{ finding.rule_name }} ({{ finding.rule_id }})</div>
+                        <div class="petal-meta">{{ getattr(finding.location, 'file', 'unknown') }}:{{ getattr(finding.location, 'line', 0) }}</div>
+                        <div class="petal-description">{{ finding.message or finding.description }}</div>
+                        {% if finding.code_snippet %}
+                        <div class="code">{{ finding.code_snippet }}</div>
+                        {% endif %}
+                        {% if finding.poc %}
+                        <div class="poc-section">
+                            <h4>漏洞利用 (POC)</h4>
+                            <div class="code">{{ finding.poc }}</div>
+                        </div>
+                        {% endif %}
+                        {% if finding.fix_suggestion %}
+                        <div class="fix-suggestion">
+                            <h4>修复建议</h4>
+                            <p>{{ finding.fix_suggestion }}</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                    {% else %}
+                    <div class="petal" style="border-left-color: var(--low);">
+                        <div class="petal-description" style="color: var(--low);">未发现安全问题</div>
+                    </div>
+                    {% endif %}
+                </div>
+            </details>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+</body>
+</html>

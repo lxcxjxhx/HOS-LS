@@ -1,0 +1,12 @@
+[
+  {
+    "timestamp": "2026-04-15T09:22:28.252747",
+    "provider": "DeepSeekClient",
+    "model": "deepseek-reasoner",
+    "prompt_tokens": 1401,
+    "completion_tokens": 1912,
+    "total_tokens": 3313,
+    "duration": 0.0,
+    "success": true,
+    "agent_name": "Agent 0",
+    "file_path": 
