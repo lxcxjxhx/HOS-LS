@@ -1,0 +1,1275 @@
+<!-- Jinja2 Template File - IDE should ignore JavaScript errors in this file -->
+<!-- eslint-disable -->
+<!-- tslint-disable -->
+<!-- prettier-ignore -->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HOS-LS 安全扫描报告</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg-primary: #0f1117;
+            --bg-secondary: #161a22;
+            --primary: #6f42c1;
+            --critical: #ff4d4f;
+            --high: #ff8c42;
+            --medium: #ffd166;
+            --low: #3ddc97;
+            --text-primary: #e6edf3;
+            --text-secondary: #8b949e;
+            --border: rgba(255,255,255,0.06);
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            position: relative;
+            min-height: 100vh;
+        }
+        
+        body::before {
+            content: "";
+            position: fixed;
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, rgba(111,66,193,0.15), transparent);
+            top: -200px;
+            left: -200px;
+            z-index: 0;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            position: relative;
+            z-index: 1;
+        }
+        
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            background: linear-gradient(135deg, #6f42c1, #4287f5);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-size: 2.5rem;
+            font-weight: 700;
+        }
+        
+        .hero {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 30px;
+            text-align: center;
+            backdrop-filter: blur(6px);
+        }
+        
+        .status {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 10px;
+            padding: 10px 20px;
+            border-radius: 25px;
+            display: inline-block;
+        }
+        
+        .status.safe {
+            background: rgba(61, 220, 151, 0.1);
+            color: var(--low);
+            border: 1px solid var(--low);
+        }
+        
+        .status.low {
+            background: rgba(61, 220, 151, 0.1);
+            color: var(--low);
+            border: 1px solid var(--low);
+        }
+        
+        .status.medium {
+            background: rgba(255, 209, 102, 0.1);
+            color: var(--medium);
+            border: 1px solid var(--medium);
+        }
+        
+        .status.high {
+            background: rgba(255, 140, 66, 0.1);
+            color: var(--high);
+            border: 1px solid var(--high);
+        }
+        
+        .status.critical {
+            background: rgba(255, 77, 79, 0.1);
+            color: var(--critical);
+            border: 1px solid var(--critical);
+        }
+        
+        .meta {
+            color: var(--text-secondary);
+            font-size: 1rem;
+        }
+        
+        .conclusion {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 30px;
+            text-align: center;
+            font-size: 1.1rem;
+        }
+        
+        .filter-bar {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 30px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            align-items: center;
+        }
+        
+        .filter-bar label {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+        
+        .filter-bar select,
+        .filter-bar input {
+            background: var(--bg-primary);
+            border: 1px solid #2a2f3a;
+            color: var(--text-primary);
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 0.9rem;
+        }
+        
+        .filter-bar input {
+            flex: 1;
+            min-width: 200px;
+        }
+        
+        .summary-section {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 25px;
+            margin-bottom: 30px;
+        }
+        
+        .summary-section h2 {
+            margin-bottom: 20px;
+            color: var(--text-primary);
+            font-size: 1.5rem;
+        }
+        
+        .summary-content {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 30px;
+        }
+        
+        .summary-stats {
+            flex: 1;
+            min-width: 250px;
+        }
+        
+        .summary-stats ul {
+            list-style: none;
+        }
+        
+        .summary-stats li {
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .summary-stats span {
+            font-weight: 600;
+        }
+        
+        .chart-container {
+            flex: 2;
+            min-width: 300px;
+            height: 300px;
+        }
+        
+        .empty-state {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 40px;
+            margin-bottom: 30px;
+            text-align: center;
+            font-size: 1.2rem;
+            color: var(--text-secondary);
+        }
+        
+        .clusters {
+            margin-bottom: 30px;
+        }
+        
+        .cluster {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            margin-bottom: 20px;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .cluster::after {
+            content: "";
+            height: 1px;
+            background: linear-gradient(to right, transparent, #6f42c1, transparent);
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+        }
+        
+        .cluster-header {
+            padding: 15px 20px;
+            font-weight: 600;
+            font-size: 1.1rem;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .cluster-critical .cluster-header {
+            color: var(--critical);
+            border-left: 4px solid var(--critical);
+        }
+        
+        .cluster-high .cluster-header {
+            color: var(--high);
+            border-left: 4px solid var(--high);
+        }
+        
+        .cluster-medium .cluster-header {
+            color: var(--medium);
+            border-left: 4px solid var(--medium);
+        }
+        
+        .cluster-low .cluster-header {
+            color: var(--low);
+            border-left: 4px solid var(--low);
+        }
+        
+        .cluster-info .cluster-header {
+            color: var(--text-secondary);
+            border-left: 4px solid var(--text-secondary);
+        }
+        
+        .petals {
+            padding: 20px;
+        }
+        
+        .petal {
+            background: rgba(255,255,255,0.02);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 10px;
+            transition: all 0.3s ease;
+        }
+        
+        .petal:hover {
+            background: rgba(255,255,255,0.04);
+            transform: translateY(-2px);
+        }
+        
+        .petal-title {
+            font-weight: 600;
+            margin-bottom: 5px;
+            color: var(--text-primary);
+        }
+        
+        .petal-meta {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin-bottom: 10px;
+        }
+        
+        .petal-description {
+            color: var(--text-primary);
+            margin-bottom: 10px;
+        }
+        
+        .code {
+            background: rgba(0,0,0,0.3);
+            padding: 12px;
+            border-radius: 6px;
+            font-family: "Consolas", "Monaco", "Courier New", monospace;
+            white-space: pre-wrap;
+            margin: 10px 0;
+            overflow-x: auto;
+            font-size: 0.9rem;
+            border-left: 3px solid var(--primary);
+        }
+        
+        .poc-section {
+            margin: 10px 0;
+            padding: 12px;
+            background: rgba(111,66,193,0.1);
+            border-radius: 6px;
+            border-left: 3px solid var(--primary);
+        }
+        
+        .poc-section h4 {
+            margin: 0 0 5px 0;
+            color: var(--primary);
+            font-size: 0.9rem;
+        }
+        
+        .fix-suggestion {
+            margin: 10px 0;
+            padding: 12px;
+            background: rgba(61, 220, 151, 0.1);
+            border-radius: 6px;
+            border-left: 3px solid var(--low);
+        }
+        
+        .fix-suggestion h4 {
+            margin: 0 0 5px 0;
+            color: var(--low);
+            font-size: 0.9rem;
+        }
+        
+        .attack-chain {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 25px;
+            margin-top: 30px;
+        }
+        
+        .attack-chain h2 {
+            margin-bottom: 20px;
+            color: var(--text-primary);
+        }
+        
+        .attack-chain h3 {
+            margin: 20px 0 10px 0;
+            color: var(--text-primary);
+            font-size: 1.2rem;
+        }
+        
+        .attack-chain ul {
+            margin-left: 20px;
+            margin-bottom: 15px;
+        }
+        
+        .attack-chain li {
+            margin-bottom: 5px;
+        }
+
+        .scanned-files-section {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 25px;
+            margin-top: 30px;
+        }
+
+        .scanned-files-section h2 {
+            margin-bottom: 20px;
+            color: var(--text-primary);
+            font-size: 1.5rem;
+        }
+
+        .file-details {
+            background: rgba(255,255,255,0.02);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            margin-bottom: 10px;
+            overflow: hidden;
+        }
+
+        .file-details summary {
+            padding: 12px 15px;
+            cursor: pointer;
+            font-weight: 600;
+            color: var(--text-primary);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            user-select: none;
+        }
+
+        .file-details summary:hover {
+            background: rgba(255,255,255,0.04);
+        }
+
+        .file-details summary::after {
+            content: "▶";
+            font-size: 0.8rem;
+            transition: transform 0.2s ease;
+        }
+
+        .file-details[open] summary::after {
+            transform: rotate(90deg);
+        }
+
+        .file-details summary .file-path {
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .file-details summary .finding-count {
+            margin-left: 15px;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.85rem;
+            background: rgba(111,66,193,0.3);
+        }
+
+        .file-findings {
+            padding: 15px;
+            border-top: 1px solid var(--border);
+        }
+
+        .file-findings .petal {
+            margin-bottom: 8px;
+        }
+
+        .file-findings .petal:last-child {
+            margin-bottom: 0;
+        }
+
+        .file-details.has-findings summary {
+            color: var(--high);
+        }
+
+        .file-details.no-findings summary {
+            color: var(--low);
+        }
+
+        .file-details.no-findings .finding-count {
+            background: rgba(61, 220, 151, 0.3);
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+            
+            h1 {
+                font-size: 2rem;
+            }
+            
+            .hero {
+                padding: 20px;
+            }
+            
+            .summary-content {
+                flex-direction: column;
+            }
+            
+            .chart-container {
+                height: 250px;
+            }
+            
+            .filter-bar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .filter-bar input {
+                min-width: unset;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>HOS-LS 安全扫描报告</h1>
+        
+        <div class="hero">
+            <div class="status critical">✓ 严重安全风险</div>
+            <div class="meta">扫描 1 文件 - 13 风险 - 用时 0.07s</div>
+        </div>
+        
+        <div class="conclusion">
+            本次扫描发现安全问题，建议及时修复。
+        </div>
+        
+        <div class="filter-bar">
+            <label for="severity-filter">按严重级别过滤:</label>
+            <select id="severity-filter" onchange="filterFindings()">
+                <option value="all">全部</option>
+                <option value="critical">严重</option>
+                <option value="high">高</option>
+                <option value="medium">中</option>
+                <option value="low">低</option>
+                <option value="info">信息</option>
+            </select>
+            <label for="search-input">搜索:</label>
+            <input type="text" id="search-input" placeholder="搜索漏洞...">
+        </div>
+        
+        <div class="summary-section">
+            <h2>扫描摘要</h2>
+            <div class="summary-content">
+                <div class="summary-stats">
+                    <ul>
+                        <li>扫描文件数: <span>1</span></li>
+                        <li>发现问题数: <span>13</span></li>
+                        <li>严重: <span style="color: var(--critical)">4</span></li>
+                        <li>高: <span style="color: var(--high)">7</span></li>
+                        <li>中: <span style="color: var(--medium)">2</span></li>
+                        <li>低: <span style="color: var(--low)">0</span></li>
+                        <li>信息: <span style="color: var(--text-secondary)">0</span></li>
+                    </ul>
+                </div>
+                
+                <div class="chart-container">
+                    <canvas id="severityChart"></canvas>
+                </div>
+                
+            </div>
+        </div>
+        
+        
+        
+        
+        <div class="clusters">
+            
+                
+                
+                    
+                        
+                    
+                        
+                            
+                        
+                    
+                        
+                    
+                        
+                    
+                        
+                            
+                        
+                    
+                        
+                    
+                        
+                    
+                        
+                    
+                        
+                            
+                        
+                    
+                        
+                    
+                        
+                            
+                        
+                    
+                        
+                    
+                        
+                    
+                
+                
+                <div class="cluster cluster-critical">
+                    <div class="cluster-header">critical (4)</div>
+                    <div class="petals">
+                        
+                        <div class="petal">
+                            <div class="petal-title">SQL Injection (位于 /api/user/profile endpoint, userId parameter) (SQL Injection)</div>
+                            <div class="petal-meta">/api/user/profile endpoint, userId parameter:0</div>
+                            <div class="petal-description">SQL Injection。[{'type': 'code_line', 'location': 'app/controllers/user_controller.py:45', 'reason': '直接拼接用户输入到SQL查询字符串中。', 'confidence': 1.0, 'source_agent': 'SAST-Scanner'}, {'type': 'adversarial_validation', 'location': 'ADVERSARIAL-VALIDATION-001', 'reason': '成功注入恶意负载，获取了非授权数据库信息。', 'confidence': 1.0, 'source_agent': 'Adversarial-Verifier'}] 建议：使用参数化查询或预编译语句。严格验证和过滤用户输入的userId参数。</div>
+                            
+                            
+                            
+                            <div class="fix-suggestion">
+                                <h4>修复建议</h4>
+                                <p>使用参数化查询或预编译语句。严格验证和过滤用户输入的userId参数。</p>
+                            </div>
+                            
+                        </div>
+                        
+                        <div class="petal">
+                            <div class="petal-title">SQL Injection (位于 UserDao.java:42) (SQL Injection)</div>
+                            <div class="petal-meta">UserDao.java:42:0</div>
+                            <div class="petal-description">SQL Injection。[{'type': 'code_line', 'location': 'UserDao.java:42', 'reason': '动态拼接用户输入`username`到SQL查询语句中。', 'confidence': 0.9, 'source_agent': 'Static-Analyzer-01'}, {'type': 'exploit_verification', 'location': 'UserDao.java:42', 'reason': "动态测试证实通过输入`admin' OR '1'='1`可绕过身份验证。", 'confidence': 1.0, 'source_agent': 'Dynamic-Verifier-02'}, {'type': 'adversarial_validation', 'location': 'UserDao.java:42', 'reason': '对抗验证Agent确认该注入点可被稳定利用，危害性高。', 'confidence': 0.95, 'source_agent': 'Adversarial-Validator'}] 建议：使用参数化查询（PreparedStatement）替换字符串拼接方式构建SQL语句。</div>
+                            
+                            
+                            
+                            <div class="fix-suggestion">
+                                <h4>修复建议</h4>
+                                <p>使用参数化查询（PreparedStatement）替换字符串拼接方式构建SQL语句。</p>
+                            </div>
+                            
+                        </div>
+                        
+                        <div class="petal">
+                            <div class="petal-title">SQL Injection (位于 /api/v1/user) (SQL Injection)</div>
+                            <div class="petal-meta">/api/v1/user:0</div>
+                            <div class="petal-description">SQL Injection。[{'type': 'code_line', 'location': 'app/controllers/user_controller.rb:45', 'reason': '代码中直接将用户输入的‘id’参数拼接进SQL查询字符串。', 'confidence': 1.0, 'source_agent': 'AST_ANALYZER'}, {'type': 'http_request', 'location': "http://target.com/api/v1/user?id=1' OR '1'='1", 'reason': '通过请求参数成功触发了异常SQL查询，返回了数据库错误信息。', 'confidence': 0.95, 'source_agent': 'ADVERSARIAL_VALIDATOR'}] 建议：使用参数化查询或预编译语句，对用户输入进行严格的白名单验证，避免直接将用户输入拼接到SQL语句中。</div>
+                            
+                            
+                            
+                            <div class="fix-suggestion">
+                                <h4>修复建议</h4>
+                                <p>使用参数化查询或预编译语句，对用户输入进行严格的白名单验证，避免直接将用户输入拼接到SQL语句中。</p>
+                            </div>
+                            
+                        </div>
+                        
+                        <div class="petal">
+                            <div class="petal-title">Authentication Bypass (位于 /api/v1/user/profile) (Authentication Bypass)</div>
+                            <div class="petal-meta">/api/v1/user/profile:0</div>
+                            <div class="petal-description">Authentication Bypass。[{'type': 'code_line', 'location': 'routes/api.js:127', 'reason': '使用客户端提供的 `req.body.userId` 直接进行权限判断，未验证其是否与当前认证会话用户匹配。', 'confidence': 0.95, 'source_agent': 'Static_Analyzer'}, {'type': 'attack_path', 'location': 'POST /api/v1/user/profile -> AuthMiddleware -> getUserProfile', 'reason': '攻击者可伪造请求，将 userId 参数修改为任意其他用户的 ID，从而访问或修改其敏感资料。', 'confidence': 0.9, 'source_agent': 'Pentest_Agent'}] 建议：修复 token 验证逻辑，确保用户 ID 来自服务器端可信会话，而非客户端可修改的输入。强制实施严格的访问控制策略。</div>
+                            
+                            
+                            
+                            <div class="fix-suggestion">
+                                <h4>修复建议</h4>
+                                <p>修复 token 验证逻辑，确保用户 ID 来自服务器端可信会话，而非客户端可修改的输入。强制实施严格的访问控制策略。</p>
+                            </div>
+                            
+                        </div>
+                        
+                    </div>
+                </div>
+                
+            
+                
+                
+                    
+                        
+                            
+                        
+                    
+                        
+                    
+                        
+                            
+                        
+                    
+                        
+                            
+                        
+                    
+                        
+                    
+                        
+                            
+                        
+                    
+                        
+                            
+                        
+                    
+                        
+                    
+                        
+                    
+                        
+                    
+                        
+                    
+                        
+                            
+                        
+                    
+                        
+                            
+                        
+                    
+                
+                
+                <div class="cluster cluster-high">
+                    <div class="cluster-header">high (7)</div>
+                    <div class="petals">
+                        
+                        <div class="petal">
+                            <div class="petal-title">SQL Injection (位于 /api/v1/user/profile?user_id=<input>) (SQL Injection)</div>
+                            <div class="petal-meta">/api/v1/user/profile?user_id=<input>:0</div>
+                            <div class="petal-description">SQL Injection。[{'type': 'code_line', 'location': 'app/controllers/user_controller.rb:42', 'reason': "存在直接拼接用户输入user_id到SQL查询字符串中的代码模式：'SELECT * FROM users WHERE id = ' + params[:user_id]", 'confidence': 1.0, 'source_agent': 'SQLIAgent'}] 建议：使用参数化查询或预编译语句，对user_id参数进行严格的数据类型验证（如强制转换为整数）。</div>
+                            
+                            
+                            
+                            <div class="fix-suggestion">
+                                <h4>修复建议</h4>
+                                <p>使用参数化查询或预编译语句，对user_id参数进行严格的数据类型验证（如强制转换为整数）。</p>
+                            </div>
+                            
+                        </div>
+                        
+                        <div class="petal">
+                            <div class="petal-title">Insecure Deserialization (位于 /api/data/import endpoint, request body) (Insecure Deserialization)</div>
+                            <div class="petal-meta">/api/data/import endpoint, request body:0</div>
+                            <div class="petal-description">Insecure Deserialization。[{'type': 'code_line', 'location': 'app/services/data_importer.rb:78', 'reason': '使用YAML.load处理用户可控的序列化数据。', 'confidence': 0.9, 'source_agent': 'Semgrep-Agent'}, {'type': 'adversarial_validation', 'location': 'ADVERSARIAL-VALIDATION-002', 'reason': '成功利用反序列化执行了系统命令，但环境受限。', 'confidence': 0.8, 'source_agent': 'Adversarial-Verifier'}] 建议：避免使用不安全的反序列化函数。实施严格的输入白名单验证，或使用安全的序列化格式如JSON。</div>
+                            
+                            
+                            
+                            <div class="fix-suggestion">
+                                <h4>修复建议</h4>
+                                <p>避免使用不安全的反序列化函数。实施严格的输入白名单验证，或使用安全的序列化格式如JSON。</p>
+                            </div>
+                            
+                        </div>
+                        
+                        <div class="petal">
+                            <div class="petal-title">Server-Side Request Forgery (SSRF) (位于 /api/fetch/external endpoint, url parameter) (Server-Side Request Forgery (SSRF))</div>
+                            <div class="petal-meta">/api/fetch/external endpoint, url parameter:0</div>
+                            <div class="petal-description">Server-Side Request Forgery (SSRF)。[{'type': 'code_line', 'location': 'app/lib/http_client.rb:33', 'reason': '使用用户完全可控的URL字符串发起网络请求。', 'confidence': 0.7, 'source_agent': 'CodeQL-Agent'}, {'type': 'adversarial_validation', 'location': 'ADVERSARIAL-VALIDATION-004', 'reason': '逻辑上存在风险，但无法验证是否可访问敏感内部服务，需要进一步上下文。', 'confidence': 0.5, 'source_agent': 'Adversarial-Verifier'}] 建议：对用户提供的URL实施严格的协议白名单（仅允许http/https），以及主机名/IP地址黑名单或白名单，禁止访问内部地址。</div>
+                            
+                            
+                            
+                            <div class="fix-suggestion">
+                                <h4>修复建议</h4>
+                                <p>对用户提供的URL实施严格的协议白名单（仅允许http/https），以及主机名/IP地址黑名单或白名单，禁止访问内部地址。</p>
+                            </div>
+                            
+                        </div>
+                        
+                        <div class="petal">
+                            <div class="petal-title">Stored XSS (位于 CommentServlet.java:78) (Stored XSS)</div>
+                            <div class="petal-meta">CommentServlet.java:78:0</div>
+                            <div class="petal-description">Stored XSS。[{'type': 'code_line', 'location': 'CommentServlet.java:78', 'reason': '将用户提交的评论内容`commentContent`直接写入HTTP响应，未做过滤或编码。', 'confidence': 0.9, 'source_agent': 'Static-Analyzer-01'}, {'type': 'exploit_verification', 'location': '/postComment', 'reason': 'Payload `<script>alert(1)</script>`被成功存储并在其他用户页面加载时执行。', 'confidence': 0.95, 'source_agent': 'Dynamic-Verifier-02'}, {'type': 'adversarial_validation', 'location': 'CommentServlet.java:78', 'reason': '对抗验证Agent确认漏洞存在，可稳定触发，能够窃取用户会话cookie。', 'confidence': 0.9, 'source_agent': 'Adversarial-Validator'}] 建议：对所有用户可控的输出进行HTML编码（如使用OWASP Java Encoder）。</div>
+                            
+                            
+                            
+                            <div class="fix-suggestion">
+                                <h4>修复建议</h4>
+                                <p>对所有用户可控的输出进行HTML编码（如使用OWASP Java Encoder）。</p>
+                            </div>
+                            
+                        </div>
+                        
+                        <div class="petal">
+                            <div class="petal-title">SSRF (位于 FileDownloadServlet.java:33) (SSRF)</div>
+                            <div class="petal-meta">FileDownloadServlet.java:33:0</div>
+                            <div class="petal-description">SSRF。[{'type': 'code_line', 'location': 'FileDownloadServlet.java:33', 'reason': '使用用户输入的`url`参数直接发起HTTP请求，未对内网地址进行限制。', 'confidence': 0.85, 'source_agent': 'Static-Analyzer-01'}, {'type': 'adversarial_validation', 'location': 'FileDownloadServlet.java:33', 'reason': '对抗验证Agent发现可构造请求访问`http://169.254.169.254/`等元数据服务，但外部网络环境未知，无法最终确认内部资产暴露情况。', 'confidence': 0.7, 'source_agent': 'Adversarial-Validator'}] 建议：对`url`参数实施严格的域名或IP白名单校验，并禁止访问内网地址段。</div>
+                            
+                            
+                            
+                            <div class="fix-suggestion">
+                                <h4>修复建议</h4>
+                                <p>对`url`参数实施严格的域名或IP白名单校验，并禁止访问内网地址段。</p>
+                            </div>
+                            
+                        </div>
+                        
+                        <div class="petal">
+                            <div class="petal-title">SQL Injection (位于 /api/search?q=) (SQL Injection)</div>
+                            <div class="petal-meta">/api/search?q=:0</div>
+                            <div class="petal-description">SQL Injection。[{'type': 'code_line', 'location': 'services/searchService.js:45', 'reason': "代码 `const query = 'SELECT * FROM products WHERE name LIKE \\'%' + userInput + '%\\''` 直接拼接用户输入 `userInput`。", 'confidence': 0.8, 'source_agent': 'Static_Analyzer'}, {'type': 'http_parameter', 'location': "GET /api/search?q=test'", 'reason': '输入单引号导致数据库语法错误，表明输入被直接传入 SQL 上下文。但尚未成功构造出数据泄露或篡改的利用载荷。', 'confidence': 0.7, 'source_agent': 'Pentest_Agent'}] 建议：使用参数化查询或预编译语句。禁止直接拼接用户输入到 SQL 语句中。</div>
+                            
+                            
+                            
+                            <div class="fix-suggestion">
+                                <h4>修复建议</h4>
+                                <p>使用参数化查询或预编译语句。禁止直接拼接用户输入到 SQL 语句中。</p>
+                            </div>
+                            
+                        </div>
+                        
+                        <div class="petal">
+                            <div class="petal-title">XSS (Reflected) (位于 /feedback?message=) (XSS (Reflected))</div>
+                            <div class="petal-meta">/feedback?message=:0</div>
+                            <div class="petal-description">XSS (Reflected)。[{'type': 'code_line', 'location': 'views/feedback.ejs:12', 'reason': '代码 `<p><%= message %></p>` 直接输出 URL 参数 `message` 且未进行 HTML 编码。', 'confidence': 0.85, 'source_agent': 'Static_Analyzer'}, {'type': 'http_parameter', 'location': 'GET /feedback?message=<script>alert(1)</script>', 'reason': '输入 `<script>alert(1)</script>` 被原样反射回页面，但因浏览器内置XSS过滤器或响应头阻止了执行，未弹出 alert。', 'confidence': 0.6, 'source_agent': 'Pentest_Agent'}] 建议：对所有输出到 HTML 页面的用户输入进行编码或过滤。设置 Content Security Policy (CSP)。</div>
+                            
+                            
+                            
+                            <div class="fix-suggestion">
+                                <h4>修复建议</h4>
+                                <p>对所有输出到 HTML 页面的用户输入进行编码或过滤。设置 Content Security Policy (CSP)。</p>
+                            </div>
+                            
+                        </div>
+                        
+                    </div>
+                </div>
+                
+            
+                
+                
+                    
+                        
+                    
+                        
+                    
+                        
+                    
+                        
+                    
+                        
+                    
+                        
+                    
+                        
+                    
+                        
+                            
+                        
+                    
+                        
+                    
+                        
+                            
+                        
+                    
+                        
+                    
+                        
+                    
+                        
+                    
+                
+                
+                <div class="cluster cluster-medium">
+                    <div class="cluster-header">medium (2)</div>
+                    <div class="petals">
+                        
+                        <div class="petal">
+                            <div class="petal-title">CSRF (位于 UserProfileUpdateServlet.java:56) (CSRF)</div>
+                            <div class="petal-meta">UserProfileUpdateServlet.java:56:0</div>
+                            <div class="petal-description">CSRF。[{'type': 'code_line', 'location': 'UserProfileUpdateServlet.java:56', 'reason': '该Servlet处理用户资料更新，但未检查任何防CSRF令牌。', 'confidence': 0.9, 'source_agent': 'Static-Analyzer-01'}, {'type': 'adversarial_validation', 'location': 'UserProfileUpdateServlet.java:56', 'reason': '对抗验证Agent成功构造恶意页面，诱使已登录用户点击后，其资料被篡改。', 'confidence': 0.95, 'source_agent': 'Adversarial-Validator'}] 建议：为敏感操作（如更新资料、修改密码）添加CSRF Token验证。</div>
+                            
+                            
+                            
+                            <div class="fix-suggestion">
+                                <h4>修复建议</h4>
+                                <p>为敏感操作（如更新资料、修改密码）添加CSRF Token验证。</p>
+                            </div>
+                            
+                        </div>
+                        
+                        <div class="petal">
+                            <div class="petal-title">Reflected XSS (位于 /search?q=) (Reflected XSS)</div>
+                            <div class="petal-meta">/search?q=:0</div>
+                            <div class="petal-description">Reflected XSS。[{'type': 'code_line', 'location': 'app/views/search/results.html.erb:12', 'reason': '视图模板中直接使用用户输入的搜索关键词‘<%= params[:q] %>’进行输出，未进行编码。', 'confidence': 0.8, 'source_agent': 'AST_ANALYZER'}, {'type': 'http_request', 'location': 'http://target.com/search?q=<script>alert(1)</script>', 'reason': '请求的响应中包含了未编码的原始Payload，但响应头‘Content-Type: text/html’与‘X-XSS-Protection’可能导致浏览器行为不一致。', 'confidence': 0.6, 'source_agent': 'ADVERSARIAL_VALIDATOR'}] 建议：对所有用户可控的输出进行编码或转义，使用安全的输出函数，并设置Content Security Policy (CSP) 头。</div>
+                            
+                            
+                            
+                            <div class="fix-suggestion">
+                                <h4>修复建议</h4>
+                                <p>对所有用户可控的输出进行编码或转义，使用安全的输出函数，并设置Content Security Policy (CSP) 头。</p>
+                            </div>
+                            
+                        </div>
+                        
+                    </div>
+                </div>
+                
+            
+                
+                
+                    
+                        
+                    
+                        
+                    
+                        
+                    
+                        
+                    
+                        
+                    
+                        
+                    
+                        
+                    
+                        
+                    
+                        
+                    
+                        
+                    
+                        
+                    
+                        
+                    
+                        
+                    
+                
+                
+            
+                
+                
+                    
+                        
+                    
+                        
+                    
+                        
+                    
+                        
+                    
+                        
+                    
+                        
+                    
+                        
+                    
+                        
+                    
+                        
+                    
+                        
+                    
+                        
+                    
+                        
+                    
+                        
+                    
+                
+                
+            
+        </div>
+        
+        
+        
+            
+        
+        
+        <script>
+            /* eslint-disable */
+            /* jshint ignore:start */
+            // 严重级别分布图表
+            
+            const ctx = document.getElementById('severityChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['严重', '高', '中', '低', '信息'],
+                    datasets: [{
+                        label: '漏洞数量',
+                        // Jinja2 template variables below - IDE should ignore
+                        data: [4, 7, 2, 0, 0],
+                        backgroundColor: [
+                            'rgba(255, 77, 79, 0.6)',
+                            'rgba(255, 140, 66, 0.6)',
+                            'rgba(255, 209, 102, 0.6)',
+                            'rgba(61, 220, 151, 0.6)',
+                            'rgba(139, 148, 158, 0.6)'
+                        ],
+                        borderColor: [
+                            'rgba(255, 77, 79, 1)',
+                            'rgba(255, 140, 66, 1)',
+                            'rgba(255, 209, 102, 1)',
+                            'rgba(61, 220, 151, 1)',
+                            'rgba(139, 148, 158, 1)'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        title: {
+                            display: true,
+                            text: '漏洞严重级别分布',
+                            color: '#e6edf3'
+                        }
+                    },
+                    scales: {
+                        x: {
+                            beginAtZero: true,
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            },
+                            ticks: {
+                                color: '#8b949e'
+                            }
+                        },
+                        y: {
+                            grid: {
+                                display: false
+                            },
+                            ticks: {
+                                color: '#e6edf3'
+                            }
+                        }
+                    }
+                }
+            });
+            
+            
+            // 防抖函数
+            function debounce(func, wait) {
+                let timeout;
+                return function() {
+                    clearTimeout(timeout);
+                    timeout = setTimeout(() => func.apply(this, arguments), wait);
+                };
+            }
+            
+            // 过滤功能
+            const filterFindings = debounce(function() {
+                const severityFilter = document.getElementById("severity-filter").value;
+                const searchInput = document.getElementById("search-input").value.toLowerCase();
+                const petals = document.querySelectorAll(".petal");
+                
+                petals.forEach(petal => {
+                    const cluster = petal.closest(".cluster");
+                    const severity = cluster.classList.contains("cluster-critical") ? "critical" : 
+                                   cluster.classList.contains("cluster-high") ? "high" :
+                                   cluster.classList.contains("cluster-medium") ? "medium" :
+                                   cluster.classList.contains("cluster-low") ? "low" : "info";
+                    const text = petal.textContent.toLowerCase();
+                    
+                    const severityMatch = severityFilter === "all" || severity === severityFilter;
+                    const searchMatch = text.includes(searchInput);
+                    
+                    petal.style.display = (severityMatch && searchMatch) ? "block" : "none";
+                    
+                    // 检查cluster是否有可见的petal
+                    const visiblePetals = cluster.querySelectorAll(".petal[style=\"display: block;\"]");
+                    cluster.style.display = visiblePetals.length > 0 ? "block" : "none";
+                });
+            }, 300);
+            
+            // 绑定事件
+            document.getElementById("search-input").addEventListener("keyup", filterFindings);
+            document.getElementById("severity-filter").addEventListener("change", filterFindings);
+
+            // 扫描文件详情区域搜索功能
+            document.getElementById("file-search-input").addEventListener("keyup", function() {
+                const searchText = this.value.toLowerCase();
+                const fileDetails = document.querySelectorAll(".file-details");
+
+                fileDetails.forEach(detail => {
+                    const filePath = detail.querySelector(".file-path").textContent.toLowerCase();
+                    const matches = filePath.includes(searchText);
+                    detail.style.display = matches ? "block" : "none";
+                });
+            });
+            /* jshint ignore:end */
+        </script>
+
+        
+        <div class="scanned-files-section">
+            <h2>扫描文件详情</h2>
+            <div class="filter-bar" style="margin-bottom: 20px;">
+                <label for="file-search-input">搜索文件:</label>
+                <input type="text" id="file-search-input" placeholder="输入文件名搜索...">
+            </div>
+            
+            <details class="file-details has-findings">
+                <summary>
+                    <span class="file-path"></span>
+                    <span class="finding-count">13 个问题</span>
+                </summary>
+                <div class="file-findings">
+                    
+                    
+                    <div class="petal">
+                        <div class="petal-title">SQL Injection (位于 /api/v1/user/profile?user_id=<input>) (SQL Injection)</div>
+                        <div class="petal-meta">/api/v1/user/profile?user_id=<input>:0</div>
+                        <div class="petal-description">SQL Injection。[{'type': 'code_line', 'location': 'app/controllers/user_controller.rb:42', 'reason': "存在直接拼接用户输入user_id到SQL查询字符串中的代码模式：'SELECT * FROM users WHERE id = ' + params[:user_id]", 'confidence': 1.0, 'source_agent': 'SQLIAgent'}] 建议：使用参数化查询或预编译语句，对user_id参数进行严格的数据类型验证（如强制转换为整数）。</div>
+                        
+                        
+                        
+                        <div class="fix-suggestion">
+                            <h4>修复建议</h4>
+                            <p>使用参数化查询或预编译语句，对user_id参数进行严格的数据类型验证（如强制转换为整数）。</p>
+                        </div>
+                        
+                    </div>
+                    
+                    <div class="petal">
+                        <div class="petal-title">SQL Injection (位于 /api/user/profile endpoint, userId parameter) (SQL Injection)</div>
+                        <div class="petal-meta">/api/user/profile endpoint, userId parameter:0</div>
+                        <div class="petal-description">SQL Injection。[{'type': 'code_line', 'location': 'app/controllers/user_controller.py:45', 'reason': '直接拼接用户输入到SQL查询字符串中。', 'confidence': 1.0, 'source_agent': 'SAST-Scanner'}, {'type': 'adversarial_validation', 'location': 'ADVERSARIAL-VALIDATION-001', 'reason': '成功注入恶意负载，获取了非授权数据库信息。', 'confidence': 1.0, 'source_agent': 'Adversarial-Verifier'}] 建议：使用参数化查询或预编译语句。严格验证和过滤用户输入的userId参数。</div>
+                        
+                        
+                        
+                        <div class="fix-suggestion">
+                            <h4>修复建议</h4>
+                            <p>使用参数化查询或预编译语句。严格验证和过滤用户输入的userId参数。</p>
+                        </div>
+                        
+                    </div>
+                    
+                    <div class="petal">
+                        <div class="petal-title">Insecure Deserialization (位于 /api/data/import endpoint, request body) (Insecure Deserialization)</div>
+                        <div class="petal-meta">/api/data/import endpoint, request body:0</div>
+                        <div class="petal-description">Insecure Deserialization。[{'type': 'code_line', 'location': 'app/services/data_importer.rb:78', 'reason': '使用YAML.load处理用户可控的序列化数据。', 'confidence': 0.9, 'source_agent': 'Semgrep-Agent'}, {'type': 'adversarial_validation', 'location': 'ADVERSARIAL-VALIDATION-002', 'reason': '成功利用反序列化执行了系统命令，但环境受限。', 'confidence': 0.8, 'source_agent': 'Adversarial-Verifier'}] 建议：避免使用不安全的反序列化函数。实施严格的输入白名单验证，或使用安全的序列化格式如JSON。</div>
+                        
+                        
+                        
+                        <div class="fix-suggestion">
+                            <h4>修复建议</h4>
+                            <p>避免使用不安全的反序列化函数。实施严格的输入白名单验证，或使用安全的序列化格式如JSON。</p>
+                        </div>
+                        
+                    </div>
+                    
+                    <div class="petal">
+                        <div class="petal-title">Server-Side Request Forgery (SSRF) (位于 /api/fetch/external endpoint, url parameter) (Server-Side Request Forgery (SSRF))</div>
+                        <div class="petal-meta">/api/fetch/external endpoint, url parameter:0</div>
+                        <div class="petal-description">Server-Side Request Forgery (SSRF)。[{'type': 'code_line', 'location': 'app/lib/http_client.rb:33', 'reason': '使用用户完全可控的URL字符串发起网络请求。', 'confidence': 0.7, 'source_agent': 'CodeQL-Agent'}, {'type': 'adversarial_validation', 'location': 'ADVERSARIAL-VALIDATION-004', 'reason': '逻辑上存在风险，但无法验证是否可访问敏感内部服务，需要进一步上下文。', 'confidence': 0.5, 'source_agent': 'Adversarial-Verifier'}] 建议：对用户提供的URL实施严格的协议白名单（仅允许http/https），以及主机名/IP地址黑名单或白名单，禁止访问内部地址。</div>
+                        
+                        
+                        
+                        <div class="fix-suggestion">
+                            <h4>修复建议</h4>
+                            <p>对用户提供的URL实施严格的协议白名单（仅允许http/https），以及主机名/IP地址黑名单或白名单，禁止访问内部地址。</p>
+                        </div>
+                        
+                    </div>
+                    
+                    <div class="petal">
+                        <div class="petal-title">SQL Injection (位于 UserDao.java:42) (SQL Injection)</div>
+                        <div class="petal-meta">UserDao.java:42:0</div>
+                        <div class="petal-description">SQL Injection。[{'type': 'code_line', 'location': 'UserDao.java:42', 'reason': '动态拼接用户输入`username`到SQL查询语句中。', 'confidence': 0.9, 'source_agent': 'Static-Analyzer-01'}, {'type': 'exploit_verification', 'location': 'UserDao.java:42', 'reason': "动态测试证实通过输入`admin' OR '1'='1`可绕过身份验证。", 'confidence': 1.0, 'source_agent': 'Dynamic-Verifier-02'}, {'type': 'adversarial_validation', 'location': 'UserDao.java:42', 'reason': '对抗验证Agent确认该注入点可被稳定利用，危害性高。', 'confidence': 0.95, 'source_agent': 'Adversarial-Validator'}] 建议：使用参数化查询（PreparedStatement）替换字符串拼接方式构建SQL语句。</div>
+                        
+                        
+                        
+                        <div class="fix-suggestion">
+                            <h4>修复建议</h4>
+                            <p>使用参数化查询（PreparedStatement）替换字符串拼接方式构建SQL语句。</p>
+                        </div>
+                        
+                    </div>
+                    
+                    <div class="petal">
+                        <div class="petal-title">Stored XSS (位于 CommentServlet.java:78) (Stored XSS)</div>
+                        <div class="petal-meta">CommentServlet.java:78:0</div>
+                        <div class="petal-description">Stored XSS。[{'type': 'code_line', 'location': 'CommentServlet.java:78', 'reason': '将用户提交的评论内容`commentContent`直接写入HTTP响应，未做过滤或编码。', 'confidence': 0.9, 'source_agent': 'Static-Analyzer-01'}, {'type': 'exploit_verification', 'location': '/postComment', 'reason': 'Payload `<script>alert(1)</script>`被成功存储并在其他用户页面加载时执行。', 'confidence': 0.95, 'source_agent': 'Dynamic-Verifier-02'}, {'type': 'adversarial_validation', 'location': 'CommentServlet.java:78', 'reason': '对抗验证Agent确认漏洞存在，可稳定触发，能够窃取用户会话cookie。', 'confidence': 0.9, 'source_agent': 'Adversarial-Validator'}] 建议：对所有用户可控的输出进行HTML编码（如使用OWASP Java Encoder）。</div>
+                        
+                        
+                        
+                        <div class="fix-suggestion">
+                            <h4>修复建议</h4>
+                            <p>对所有用户可控的输出进行HTML编码（如使用OWASP Java Encoder）。</p>
+                        </div>
+                        
+                    </div>
+                    
+                    <div class="petal">
+                        <div class="petal-title">SSRF (位于 FileDownloadServlet.java:33) (SSRF)</div>
+                        <div class="petal-meta">FileDownloadServlet.java:33:0</div>
+                        <div class="petal-description">SSRF。[{'type': 'code_line', 'location': 'FileDownloadServlet.java:33', 'reason': '使用用户输入的`url`参数直接发起HTTP请求，未对内网地址进行限制。', 'confidence': 0.85, 'source_agent': 'Static-Analyzer-01'}, {'type': 'adversarial_validation', 'location': 'FileDownloadServlet.java:33', 'reason': '对抗验证Agent发现可构造请求访问`http://169.254.169.254/`等元数据服务，但外部网络环境未知，无法最终确认内部资产暴露情况。', 'confidence': 0.7, 'source_agent': 'Adversarial-Validator'}] 建议：对`url`参数实施严格的域名或IP白名单校验，并禁止访问内网地址段。</div>
+                        
+                        
+                        
+                        <div class="fix-suggestion">
+                            <h4>修复建议</h4>
+                            <p>对`url`参数实施严格的域名或IP白名单校验，并禁止访问内网地址段。</p>
+                        </div>
+                        
+                    </div>
+                    
+                    <div class="petal">
+                        <div class="petal-title">CSRF (位于 UserProfileUpdateServlet.java:56) (CSRF)</div>
+                        <div class="petal-meta">UserProfileUpdateServlet.java:56:0</div>
+                        <div class="petal-description">CSRF。[{'type': 'code_line', 'location': 'UserProfileUpdateServlet.java:56', 'reason': '该Servlet处理用户资料更新，但未检查任何防CSRF令牌。', 'confidence': 0.9, 'source_agent': 'Static-Analyzer-01'}, {'type': 'adversarial_validation', 'location': 'UserProfileUpdateServlet.java:56', 'reason': '对抗验证Agent成功构造恶意页面，诱使已登录用户点击后，其资料被篡改。', 'confidence': 0.95, 'source_agent': 'Adversarial-Validator'}] 建议：为敏感操作（如更新资料、修改密码）添加CSRF Token验证。</div>
+                        
+                        
+                        
+                        <div class="fix-suggestion">
+                            <h4>修复建议</h4>
+                            <p>为敏感操作（如更新资料、修改密码）添加CSRF Token验证。</p>
+                        </div>
+                        
+                    </div>
+                    
+                    <div class="petal">
+                        <div class="petal-title">SQL Injection (位于 /api/v1/user) (SQL Injection)</div>
+                        <div class="petal-meta">/api/v1/user:0</div>
+                        <div class="petal-description">SQL Injection。[{'type': 'code_line', 'location': 'app/controllers/user_controller.rb:45', 'reason': '代码中直接将用户输入的‘id’参数拼接进SQL查询字符串。', 'confidence': 1.0, 'source_agent': 'AST_ANALYZER'}, {'type': 'http_request', 'location': "http://target.com/api/v1/user?id=1' OR '1'='1", 'reason': '通过请求参数成功触发了异常SQL查询，返回了数据库错误信息。', 'confidence': 0.95, 'source_agent': 'ADVERSARIAL_VALIDATOR'}] 建议：使用参数化查询或预编译语句，对用户输入进行严格的白名单验证，避免直接将用户输入拼接到SQL语句中。</div>
+                        
+                        
+                        
+                        <div class="fix-suggestion">
+                            <h4>修复建议</h4>
+                            <p>使用参数化查询或预编译语句，对用户输入进行严格的白名单验证，避免直接将用户输入拼接到SQL语句中。</p>
+                        </div>
+                        
+                    </div>
+                    
+                    <div class="petal">
+                        <div class="petal-title">Reflected XSS (位于 /search?q=) (Reflected XSS)</div>
+                        <div class="petal-meta">/search?q=:0</div>
+                        <div class="petal-description">Reflected XSS。[{'type': 'code_line', 'location': 'app/views/search/results.html.erb:12', 'reason': '视图模板中直接使用用户输入的搜索关键词‘<%= params[:q] %>’进行输出，未进行编码。', 'confidence': 0.8, 'source_agent': 'AST_ANALYZER'}, {'type': 'http_request', 'location': 'http://target.com/search?q=<script>alert(1)</script>', 'reason': '请求的响应中包含了未编码的原始Payload，但响应头‘Content-Type: text/html’与‘X-XSS-Protection’可能导致浏览器行为不一致。', 'confidence': 0.6, 'source_agent': 'ADVERSARIAL_VALIDATOR'}] 建议：对所有用户可控的输出进行编码或转义，使用安全的输出函数，并设置Content Security Policy (CSP) 头。</div>
+                        
+                        
+                        
+                        <div class="fix-suggestion">
+                            <h4>修复建议</h4>
+                            <p>对所有用户可控的输出进行编码或转义，使用安全的输出函数，并设置Content Security Policy (CSP) 头。</p>
+                        </div>
+                        
+                    </div>
+                    
+                    <div class="petal">
+                        <div class="petal-title">Authentication Bypass (位于 /api/v1/user/profile) (Authentication Bypass)</div>
+                        <div class="petal-meta">/api/v1/user/profile:0</div>
+                        <div class="petal-description">Authentication Bypass。[{'type': 'code_line', 'location': 'routes/api.js:127', 'reason': '使用客户端提供的 `req.body.userId` 直接进行权限判断，未验证其是否与当前认证会话用户匹配。', 'confidence': 0.95, 'source_agent': 'Static_Analyzer'}, {'type': 'attack_path', 'location': 'POST /api/v1/user/profile -> AuthMiddleware -> getUserProfile', 'reason': '攻击者可伪造请求，将 userId 参数修改为任意其他用户的 ID，从而访问或修改其敏感资料。', 'confidence': 0.9, 'source_agent': 'Pentest_Agent'}] 建议：修复 token 验证逻辑，确保用户 ID 来自服务器端可信会话，而非客户端可修改的输入。强制实施严格的访问控制策略。</div>
+                        
+                        
+                        
+                        <div class="fix-suggestion">
+                            <h4>修复建议</h4>
+                            <p>修复 token 验证逻辑，确保用户 ID 来自服务器端可信会话，而非客户端可修改的输入。强制实施严格的访问控制策略。</p>
+                        </div>
+                        
+                    </div>
+                    
+                    <div class="petal">
+                        <div class="petal-title">SQL Injection (位于 /api/search?q=) (SQL Injection)</div>
+                        <div class="petal-meta">/api/search?q=:0</div>
+                        <div class="petal-description">SQL Injection。[{'type': 'code_line', 'location': 'services/searchService.js:45', 'reason': "代码 `const query = 'SELECT * FROM products WHERE name LIKE \\'%' + userInput + '%\\''` 直接拼接用户输入 `userInput`。", 'confidence': 0.8, 'source_agent': 'Static_Analyzer'}, {'type': 'http_parameter', 'location': "GET /api/search?q=test'", 'reason': '输入单引号导致数据库语法错误，表明输入被直接传入 SQL 上下文。但尚未成功构造出数据泄露或篡改的利用载荷。', 'confidence': 0.7, 'source_agent': 'Pentest_Agent'}] 建议：使用参数化查询或预编译语句。禁止直接拼接用户输入到 SQL 语句中。</div>
+                        
+                        
+                        
+                        <div class="fix-suggestion">
+                            <h4>修复建议</h4>
+                            <p>使用参数化查询或预编译语句。禁止直接拼接用户输入到 SQL 语句中。</p>
+                        </div>
+                        
+                    </div>
+                    
+                    <div class="petal">
+                        <div class="petal-title">XSS (Reflected) (位于 /feedback?message=) (XSS (Reflected))</div>
+                        <div class="petal-meta">/feedback?message=:0</div>
+                        <div class="petal-description">XSS (Reflected)。[{'type': 'code_line', 'location': 'views/feedback.ejs:12', 'reason': '代码 `<p><%= message %></p>` 直接输出 URL 参数 `message` 且未进行 HTML 编码。', 'confidence': 0.85, 'source_agent': 'Static_Analyzer'}, {'type': 'http_parameter', 'location': 'GET /feedback?message=<script>alert(1)</script>', 'reason': '输入 `<script>alert(1)</script>` 被原样反射回页面，但因浏览器内置XSS过滤器或响应头阻止了执行，未弹出 alert。', 'confidence': 0.6, 'source_agent': 'Pentest_Agent'}] 建议：对所有输出到 HTML 页面的用户输入进行编码或过滤。设置 Content Security Policy (CSP)。</div>
+                        
+                        
+                        
+                        <div class="fix-suggestion">
+                            <h4>修复建议</h4>
+                            <p>对所有输出到 HTML 页面的用户输入进行编码或过滤。设置 Content Security Policy (CSP)。</p>
+                        </div>
+                        
+                    </div>
+                    
+                    
+                </div>
+            </details>
+            
+        </div>
+        
+    </div>
+</body>
+</html>
