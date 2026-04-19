@@ -1,0 +1,28 @@
+# === Auto-generated .gitignore ===
+# Ignore build and cache directories
+__pycache__/
+*.py[cod]
+.cache/
+.pytest_cache/
+.benchmarks/
+embeddings_cache/
+rag_knowledge_base/history/
+
+# Ignore IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.trae/
+.trae/documents/
+
+# Ignore OS files
+.DS_Store
+Thumbs.db
+
+# Ignore environment files
+.env
+.venv/
+env/
+venv/
