@@ -1,0 +1,49 @@
+# === Auto-generated .gitignore ===
+# Ignore build and cache directories
+__pycache__/
+*.py[cod]
+.cache/
+.pytest_cache/
+.benchmarks/
+embeddings_cache/
+rag_knowledge_base/history/
+
+# Ignore IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.trae/
+.trae/documents/
+
+# Ignore OS files
+.DS_Store
+Thumbs.db
+
+# Ignore environment files
+.env
+.venv/
+env/
+venv/
+
+# All Vulnerabilities - only first level subfolders
+"All Vulnerabilities/*/*"
+
+# All Vulnerabilities - excluded, only HOS_TEMP_SIGNAL.txt files are added
+All Vulnerabilities/
+
+# All Vulnerabilities - excluded, only HOS_TEMP_SIGNAL.txt files are added
+All Vulnerabilities/
+
+# All Vulnerabilities - excluded, only HOS_TEMP_SIGNAL.txt files are added
+All Vulnerabilities/
+
+# All Vulnerabilities - excluded, only HOS_TEMP_SIGNAL.txt files are added
+All Vulnerabilities/
+
+# All Vulnerabilities - excluded, only HOS_TEMP_SIGNAL.txt files are added
+All Vulnerabilities/
+
+# All Vulnerabilities - excluded, only HOS_TEMP_SIGNAL.txt files are added
+All Vulnerabilities/
