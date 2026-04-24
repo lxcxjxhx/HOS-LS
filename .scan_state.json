@@ -1,0 +1,326 @@
+{
+  "scan_id": "33825b02-8a47-495c-9534-8398bd6e8078",
+  "started_at": "2026-04-24T14:01:57.762019",
+  "last_updated": "2026-04-24T14:13:56.266370",
+  "total_files": 3,
+  "completed_files": [
+    "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\config\\HomeDirConfigProperties.java",
+    "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\config\\JacksonConfig.java",
+    "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\config\\MessageSourceConfig.java"
+  ],
+  "findings": [
+    {
+      "rule_id": "路径遍历风险",
+      "rule_name": "路径遍历风险",
+      "description": "硬编码路径风险：代码中包含硬编码的文件路径或资源路径，可能导致在不同环境或部署配置下出现路径错误，降低系统的可移植性和配置灵活性。",
+      "severity": "HIGH",
+      "confidence": 0.5,
+      "location": {
+        "file": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\config\\HomeDirConfigProperties.java",
+        "line": 23
+      },
+      "code_snippet": "@ConfigurationProperties(prefix = \"home-dir\")\npublic class HomeDirConfigProperties {\n\n\t/**\n\t *\n\t */\n\tprivate String windows = \"windows\";\n",
+      "fix_suggestion": "",
+      "explanation": "{\"title\": \"路径遍历风险\", \"severity\": \"HIGH\", \"location\": \"C:\\\\1AAA_PROJECT\\\\HOS\\\\HOS-LS\\\\real-project\\\\bizspring-open-main\\\\bizspring-base\\\\bizspring-base-core\\\\src\\\\main\\\\java\\\\cn\\\\bizspring\\\\cloud\\\\common\\\\core\\\\config\\\\HomeDirConfigProperties.java:23\", \"evidence\": [{\"type\": \"code_line\", \"location\": \"C:\\\\1AAA_PROJECT\\\\HOS\\\\HOS-LS\\\\real-project\\\\bizspring-open-main\\\\bizspring-base\\\\bizspring-base-core\\\\src\\\\main\\\\java\\\\cn\\\\bizspring\\\\cloud\\\\common\\\\core\\\\config\\\\HomeDirConfigProperties.java:23\", \"reason\": \"该行为配置属性绑定的入口点，未发现输入验证逻辑。\", \"confidence\": 0.85, \"code_snippet\": \"@ConfigurationProperties(prefix = \\\"home-dir\\\")\"}], \"cwe_id\": \"\", \"cvss_score\": \"8.6\", \"signal_id\": \"RISK-001\", \"signal_state\": \"CONFIRMED\", \"verification_decision\": \"CONFIRMED\", \"verification_reason\": \"location 文件在已知文件列表中，行号 23 在文件有效行数范围 1-30 内，location 有效。\", \"vulnerability\": \"路径遍历风险\"}",
+      "references": [],
+      "exploit_scenario": "",
+      "metadata": {
+        "evidence": [
+          {
+            "type": "code_line",
+            "location": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\config\\HomeDirConfigProperties.java:23",
+            "reason": "该行为配置属性绑定的入口点，未发现输入验证逻辑。",
+            "confidence": 0.85,
+            "code_snippet": "@ConfigurationProperties(prefix = \"home-dir\")"
+          }
+        ],
+        "requires_human_review": false
+      }
+    },
+    {
+      "rule_id": "不可信配置刷新风险",
+      "rule_name": "不可信配置刷新风险",
+      "description": "硬编码配置风险：代码中包含硬编码的配置值，降低了系统的可配置性和可维护性。建议将配置外部化到配置文件或环境变量中。",
+      "severity": "MEDIUM",
+      "confidence": 0.5,
+      "location": {
+        "file": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\config\\HomeDirConfigProperties.java",
+        "line": 21
+      },
+      "code_snippet": "@RefreshScope\n@Configuration\n@ConfigurationProperties(prefix = \"home-dir\")\npublic class HomeDirConfigProperties {\n\n\t/**\n\t *\n",
+      "fix_suggestion": "",
+      "explanation": "{\"title\": \"不可信配置刷新风险\", \"severity\": \"MEDIUM\", \"location\": \"C:\\\\1AAA_PROJECT\\\\HOS\\\\HOS-LS\\\\real-project\\\\bizspring-open-main\\\\bizspring-base\\\\bizspring-base-core\\\\src\\\\main\\\\java\\\\cn\\\\bizspring\\\\cloud\\\\common\\\\core\\\\config\\\\HomeDirConfigProperties.java:21\", \"evidence\": [{\"type\": \"code_line\", \"location\": \"C:\\\\1AAA_PROJECT\\\\HOS\\\\HOS-LS\\\\real-project\\\\bizspring-open-main\\\\bizspring-base\\\\bizspring-base-core\\\\src\\\\main\\\\java\\\\cn\\\\bizspring\\\\cloud\\\\common\\\\core\\\\config\\\\HomeDirConfigProperties.java:21\", \"reason\": \"@RefreshScope允许动态刷新，增加配置篡改风险。\", \"confidence\": 0.7, \"code_snippet\": \"@RefreshScope\"}], \"cwe_id\": \"\", \"cvss_score\": \"6.5\", \"signal_id\": \"RISK-002\", \"signal_state\": \"CONFIRMED\", \"verification_decision\": \"CONFIRMED\", \"verification_reason\": \"location 文件在已知文件列表中，行号 21 在文件有效行数范围 1-30 内，location 有效。\", \"vulnerability\": \"不可信配置刷新风险\"}",
+      "references": [],
+      "exploit_scenario": "",
+      "metadata": {
+        "evidence": [
+          {
+            "type": "code_line",
+            "location": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\config\\HomeDirConfigProperties.java:21",
+            "reason": "@RefreshScope允许动态刷新，增加配置篡改风险。",
+            "confidence": 0.7,
+            "code_snippet": "@RefreshScope"
+          }
+        ],
+        "requires_human_review": false
+      }
+    },
+    {
+      "rule_id": "信息泄露风险",
+      "rule_name": "信息泄露风险",
+      "description": "敏感数据泄露：应用程序在响应、日志或令牌中暴露了不应公开的敏感信息（如用户密码、身份证号、银行卡号等），违反数据保护合规要求。",
+      "severity": "LOW",
+      "confidence": 0.5,
+      "location": {
+        "file": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\config\\HomeDirConfigProperties.java",
+        "line": 14
+      },
+      "code_snippet": "\n/**\n * 文件存放目录配置\n *\n * @author\n */\n@Data\n",
+      "fix_suggestion": "",
+      "explanation": "{\"title\": \"信息泄露风险\", \"severity\": \"LOW\", \"location\": \"C:\\\\1AAA_PROJECT\\\\HOS\\\\HOS-LS\\\\real-project\\\\bizspring-open-main\\\\bizspring-base\\\\bizspring-base-core\\\\src\\\\main\\\\java\\\\cn\\\\bizspring\\\\cloud\\\\common\\\\core\\\\config\\\\HomeDirConfigProperties.java:14\", \"evidence\": [{\"type\": \"code_line\", \"location\": \"C:\\\\1AAA_PROJECT\\\\HOS\\\\HOS-LS\\\\real-project\\\\bizspring-open-main\\\\bizspring-base\\\\bizspring-base-core\\\\src\\\\main\\\\java\\\\cn\\\\bizspring\\\\cloud\\\\common\\\\core\\\\config\\\\HomeDirConfigProperties.java:14\", \"reason\": \"lombok.Data自动生成toString()，可能包含敏感配置值。\", \"confidence\": 0.6, \"code_snippet\": \"import lombok.Data;\"}], \"cwe_id\": \"\", \"cvss_score\": \"3.3\", \"signal_id\": \"RISK-003\", \"signal_state\": \"CONFIRMED\", \"verification_decision\": \"CONFIRMED\", \"verification_reason\": \"location 文件在已知文件列表中，行号 14 在文件有效行数范围 1-30 内，location 有效。\", \"vulnerability\": \"信息泄露风险\"}",
+      "references": [],
+      "exploit_scenario": "",
+      "metadata": {
+        "evidence": [
+          {
+            "type": "code_line",
+            "location": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\config\\HomeDirConfigProperties.java:14",
+            "reason": "lombok.Data自动生成toString()，可能包含敏感配置值。",
+            "confidence": 0.6,
+            "code_snippet": "import lombok.Data;"
+          }
+        ],
+        "requires_human_review": false
+      }
+    },
+    {
+      "rule_id": "缺少校验风险",
+      "rule_name": "缺少校验风险",
+      "description": "发现可疑代码模式：缺少校验注解，配置值可能未经验证直接使用。...",
+      "severity": "INFO",
+      "confidence": 0.5,
+      "location": {
+        "file": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\config\\HomeDirConfigProperties.java",
+        "line": 22
+      },
+      "code_snippet": "@Configuration\n@ConfigurationProperties(prefix = \"home-dir\")\npublic class HomeDirConfigProperties {\n\n\t/**\n\t *\n\t */\n",
+      "fix_suggestion": "",
+      "explanation": "{\"title\": \"缺少校验风险\", \"severity\": \"INFO\", \"location\": \"C:\\\\1AAA_PROJECT\\\\HOS\\\\HOS-LS\\\\real-project\\\\bizspring-open-main\\\\bizspring-base\\\\bizspring-base-core\\\\src\\\\main\\\\java\\\\cn\\\\bizspring\\\\cloud\\\\common\\\\core\\\\config\\\\HomeDirConfigProperties.java:22\", \"evidence\": [{\"type\": \"code_line\", \"location\": \"C:\\\\1AAA_PROJECT\\\\HOS\\\\HOS-LS\\\\real-project\\\\bizspring-open-main\\\\bizspring-base\\\\bizspring-base-core\\\\src\\\\main\\\\java\\\\cn\\\\bizspring\\\\cloud\\\\common\\\\core\\\\config\\\\HomeDirConfigProperties.java:22\", \"reason\": \"缺少校验注解，配置值可能未经验证直接使用。\", \"confidence\": 0.5, \"code_snippet\": \"@Configuration\"}], \"cwe_id\": \"\", \"cvss_score\": \"0.0\", \"signal_id\": \"RISK-004\", \"signal_state\": \"CONFIRMED\", \"verification_decision\": \"CONFIRMED\", \"verification_reason\": \"location 文件在已知文件列表中，行号 22 在文件有效行数范围 1-30 内，location 有效。\", \"vulnerability\": \"缺少校验风险\"}",
+      "references": [],
+      "exploit_scenario": "",
+      "metadata": {
+        "evidence": [
+          {
+            "type": "code_line",
+            "location": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\config\\HomeDirConfigProperties.java:22",
+            "reason": "缺少校验注解，配置值可能未经验证直接使用。",
+            "confidence": 0.5,
+            "code_snippet": "@Configuration"
+          }
+        ],
+        "requires_human_review": false
+      }
+    },
+    {
+      "rule_id": "信息泄露-时间戳精确暴露",
+      "rule_name": "信息泄露-时间戳精确暴露",
+      "description": "敏感数据泄露：应用程序在响应、日志或令牌中暴露了不应公开的敏感信息（如用户密码、身份证号、银行卡号等），违反数据保护合规要求。",
+      "severity": "LOW",
+      "confidence": 0.006999999999999999,
+      "location": {
+        "file": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\config\\JacksonConfig.java",
+        "line": 23
+      },
+      "code_snippet": " */\n@Configuration\n@ConditionalOnClass(ObjectMapper.class)\n@AutoConfigureBefore(JacksonAutoConfiguration.class)\npublic class JacksonConfig {\n\t@Bean\n\tpublic Jackson2ObjectMapperBuilderCustomizer customizer() {\n",
+      "fix_suggestion": "根据描述评估: 使用全局日期格式 'yyyy-MM-dd HH:mm:ss' 序列化所有日期字段，可能导致敏感时间信...",
+      "explanation": "{\"vulnerability\": \"信息泄露-时间戳精确暴露\", \"location\": \"C:\\\\1AAA_PROJECT\\\\HOS\\\\HOS-LS\\\\real-project\\\\bizspring-open-main\\\\bizspring-base\\\\bizspring-base-core\\\\src\\\\main\\\\java\\\\cn\\\\bizspring\\\\cloud\\\\common\\\\core\\\\config\\\\JacksonConfig.java:23\", \"severity\": \"LOW\", \"status\": \"UNCERTAIN\", \"confidence\": 0.7, \"cvss_score\": \"\", \"recommendation\": \"根据描述评估: 使用全局日期格式 'yyyy-MM-dd HH:mm:ss' 序列化所有日期字段，可能导致敏感时间信...\", \"evidence\": [{\"type\": \"code_line\", \"location\": \"C:\\\\1AAA_PROJECT\\\\HOS\\\\HOS-LS\\\\real-project\\\\bizspring-open-main\\\\bizspring-base\\\\bizspring-base-core\\\\src\\\\main\\\\java\\\\cn\\\\bizspring\\\\cloud\\\\common\\\\core\\\\config\\\\JacksonConfig.java:23\", \"reason\": \"配置中明确设置了全局日期格式 'DatePattern.NORM_DATETIME_PATTERN'，该格式为精确到秒的标准格式，所有未指定格式的日期字段均会使用此格式。\", \"confidence\": 0.7, \"code_snippet\": \"builder.simpleDateFormat(DatePattern.NORM_DATETIME_PATTERN);\"}], \"requires_human_review\": true}",
+      "references": [],
+      "exploit_scenario": "",
+      "metadata": {
+        "evidence": [
+          {
+            "type": "code_line",
+            "location": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\config\\JacksonConfig.java:23",
+            "reason": "配置中明确设置了全局日期格式 'DatePattern.NORM_DATETIME_PATTERN'，该格式为精确到秒的标准格式，所有未指定格式的日期字段均会使用此格式。",
+            "confidence": 0.7,
+            "code_snippet": "builder.simpleDateFormat(DatePattern.NORM_DATETIME_PATTERN);"
+          }
+        ],
+        "requires_human_review": true
+      }
+    },
+    {
+      "rule_id": "SUSPICIOUS_PATTERN-未显式禁用反序列化多态类型",
+      "rule_name": "SUSPICIOUS_PATTERN-未显式禁用反序列化多态类型",
+      "description": "不安全的反序列化漏洞：应用程序反序列化来自不可信源的数据，攻击者可通过构造恶意序列化对象执行任意代码或进行拒绝服务攻击。",
+      "severity": "MEDIUM",
+      "confidence": 0.005,
+      "location": {
+        "file": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\config\\JacksonConfig.java",
+        "line": 30
+      },
+      "code_snippet": "\t\treturn builder -> {\n\t\t\tbuilder.locale(Locale.CHINA);\n\t\t\tbuilder.timeZone(TimeZone.getTimeZone(ZoneId.systemDefault()));\n\t\t\tbuilder.simpleDateFormat(DatePattern.NORM_DATETIME_PATTERN);\n\t\t\tbuilder.modules(new JavaTimeModule());\n\t\t};\n\t}\n",
+      "fix_suggestion": "尽快修复：替换弱加密算法或默认配置，使用行业标准安全方案",
+      "explanation": "{\"vulnerability\": \"SUSPICIOUS_PATTERN-未显式禁用反序列化多态类型\", \"location\": \"C:\\\\1AAA_PROJECT\\\\HOS\\\\HOS-LS\\\\real-project\\\\bizspring-open-main\\\\bizspring-base\\\\bizspring-base-core\\\\src\\\\main\\\\java\\\\cn\\\\bizspring\\\\cloud\\\\common\\\\core\\\\config\\\\JacksonConfig.java:30\", \"severity\": \"MEDIUM\", \"status\": \"UNCERTAIN\", \"confidence\": 0.5, \"cvss_score\": \"\", \"recommendation\": \"尽快修复：替换弱加密算法或默认配置，使用行业标准安全方案\", \"evidence\": [{\"type\": \"code_line\", \"location\": \"C:\\\\1AAA_PROJECT\\\\HOS\\\\HOS-LS\\\\real-project\\\\bizspring-open-main\\\\bizspring-base\\\\bizspring-base-core\\\\src\\\\main\\\\java\\\\cn\\\\bizspring\\\\cloud\\\\common\\\\core\\\\config\\\\JacksonConfig.java:30\", \"reason\": \"当前配置只覆盖了日期格式、时区和自定义模块，未对ObjectMapper的反序列化策略进行限制，属于常见疏忽点。\", \"confidence\": 0.5, \"code_snippet\": \"@Bean\\npublic Jackson2ObjectMapperBuilderCustomizer customizer() {\\n    return builder -> {\\n        builder.simpleDateFormat(DatePattern.NORM_DATETIME_PATTERN);\\n        builder.locale(Locale.CHINA);\\n        builder.timeZone(TimeZone.getTimeZone(ZoneId.systemDefault()));\\n        builder.modules(new JavaTimeModule());\\n    };\\n}\"}], \"requires_human_review\": true}",
+      "references": [],
+      "exploit_scenario": "",
+      "metadata": {
+        "evidence": [
+          {
+            "type": "code_line",
+            "location": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\config\\JacksonConfig.java:30",
+            "reason": "当前配置只覆盖了日期格式、时区和自定义模块，未对ObjectMapper的反序列化策略进行限制，属于常见疏忽点。",
+            "confidence": 0.5,
+            "code_snippet": "@Bean\npublic Jackson2ObjectMapperBuilderCustomizer customizer() {\n    return builder -> {\n        builder.simpleDateFormat(DatePattern.NORM_DATETIME_PATTERN);\n        builder.locale(Locale.CHINA);\n        builder.timeZone(TimeZone.getTimeZone(ZoneId.systemDefault()));\n        builder.modules(new JavaTimeModule());\n    };\n}"
+          }
+        ],
+        "requires_human_review": true
+      }
+    },
+    {
+      "rule_id": "Lombok @Data 自动生成 toString 可能泄露敏感信息",
+      "rule_name": "Lombok @Data 自动生成 toString 可能泄露敏感信息",
+      "description": "敏感数据泄露：应用程序在响应、日志或令牌中暴露了不应公开的敏感信息（如用户密码、身份证号、银行卡号等），违反数据保护合规要求。",
+      "severity": "LOW",
+      "confidence": 0.006,
+      "location": {
+        "file": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\config\\HomeDirConfigProperties.java",
+        "line": 10
+      },
+      "code_snippet": "import lombok.Data;\nimport org.springframework.boot.context.properties.ConfigurationProperties;\nimport org.springframework.cloud.context.config.annotation.RefreshScope;\nimport org.springframework.context.annotation.Configuration;\n\n/**\n * 文件存放目录配置\n",
+      "fix_suggestion": "",
+      "explanation": "{\"title\": \"Lombok @Data 自动生成 toString 可能泄露敏感信息\", \"severity\": \"LOW\", \"location\": \"C:\\\\1AAA_PROJECT\\\\HOS\\\\HOS-LS\\\\real-project\\\\bizspring-open-main\\\\bizspring-base\\\\bizspring-base-core\\\\src\\\\main\\\\java\\\\cn\\\\bizspring\\\\cloud\\\\common\\\\core\\\\config\\\\HomeDirConfigProperties.java:10\", \"evidence\": [{\"type\": \"code_line\", \"location\": \"C:\\\\1AAA_PROJECT\\\\HOS\\\\HOS-LS\\\\real-project\\\\bizspring-open-main\\\\bizspring-base\\\\bizspring-base-core\\\\src\\\\main\\\\java\\\\cn\\\\bizspring\\\\cloud\\\\common\\\\core\\\\config\\\\HomeDirConfigProperties.java:10\", \"reason\": \"第10行推测存在 @Data 注解，但未提供文件内容确认，无法验证实际代码行。\", \"confidence\": 0.6, \"code_snippet\": \"@Data\"}], \"cwe_id\": \"CWE-200\", \"cvss_score\": \"3.3\", \"signal_id\": \"RISK-001\", \"signal_state\": \"REFINED\", \"verification_decision\": \"REFINED\", \"verification_reason\": \"location文件路径在已知文件列表中，行号10在有效范围1-30内，但未提供HomeDirConfigProperties.java的源代码内容，无法确认第10行确实存在@Data注解，因此无法完全验证该风险信号，需进一步获取文件内容确认。\", \"vulnerability\": \"Lombok @Data 自动生成 toString 可能泄露敏感信息\", \"status\": \"UNCERTAIN\", \"confidence\": 0.6}",
+      "references": [],
+      "exploit_scenario": "",
+      "metadata": {
+        "evidence": [
+          {
+            "type": "code_line",
+            "location": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\config\\HomeDirConfigProperties.java:10",
+            "reason": "第10行推测存在 @Data 注解，但未提供文件内容确认，无法验证实际代码行。",
+            "confidence": 0.6,
+            "code_snippet": "@Data"
+          }
+        ],
+        "requires_human_review": false
+      }
+    },
+    {
+      "rule_id": "@RefreshScope 配置动态刷新可能导致配置篡改",
+      "rule_name": "@RefreshScope 配置动态刷新可能导致配置篡改",
+      "description": "硬编码配置风险：代码中包含硬编码的配置值，降低了系统的可配置性和可维护性。建议将配置外部化到配置文件或环境变量中。",
+      "severity": "MEDIUM",
+      "confidence": 0.008,
+      "location": {
+        "file": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\config\\HomeDirConfigProperties.java",
+        "line": 11
+      },
+      "code_snippet": "import org.springframework.boot.context.properties.ConfigurationProperties;\nimport org.springframework.cloud.context.config.annotation.RefreshScope;\nimport org.springframework.context.annotation.Configuration;\n\n/**\n * 文件存放目录配置\n *\n",
+      "fix_suggestion": "",
+      "explanation": "{\"title\": \"@RefreshScope 配置动态刷新可能导致配置篡改\", \"severity\": \"MEDIUM\", \"location\": \"C:\\\\1AAA_PROJECT\\\\HOS\\\\HOS-LS\\\\real-project\\\\bizspring-open-main\\\\bizspring-base\\\\bizspring-base-core\\\\src\\\\main\\\\java\\\\cn\\\\bizspring\\\\cloud\\\\common\\\\core\\\\config\\\\HomeDirConfigProperties.java:11\", \"evidence\": [{\"type\": \"code_line\", \"location\": \"C:\\\\1AAA_PROJECT\\\\HOS\\\\HOS-LS\\\\real-project\\\\bizspring-open-main\\\\bizspring-base\\\\bizspring-base-core\\\\src\\\\main\\\\java\\\\cn\\\\bizspring\\\\cloud\\\\common\\\\core\\\\config\\\\HomeDirConfigProperties.java:11\", \"reason\": \"第11行推测存在 @RefreshScope 注解，但未提供文件内容确认，无法验证实际代码行。\", \"confidence\": 0.8, \"code_snippet\": \"@RefreshScope\"}], \"cwe_id\": \"CWE-74\", \"cvss_score\": \"6.5\", \"signal_id\": \"RISK-002\", \"signal_state\": \"REFINED\", \"verification_decision\": \"REFINED\", \"verification_reason\": \"location文件路径在已知文件列表中，行号11在有效范围1-30内，但未提供HomeDirConfigProperties.java的源代码内容，无法确认第11行确实存在@RefreshScope注解，因此无法完全验证该风险信号，需进一步获取文件内容确认。\", \"vulnerability\": \"@RefreshScope 配置动态刷新可能导致配置篡改\", \"status\": \"UNCERTAIN\", \"confidence\": 0.8}",
+      "references": [],
+      "exploit_scenario": "",
+      "metadata": {
+        "evidence": [
+          {
+            "type": "code_line",
+            "location": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\config\\HomeDirConfigProperties.java:11",
+            "reason": "第11行推测存在 @RefreshScope 注解，但未提供文件内容确认，无法验证实际代码行。",
+            "confidence": 0.8,
+            "code_snippet": "@RefreshScope"
+          }
+        ],
+        "requires_human_review": false
+      }
+    },
+    {
+      "rule_id": "DESERIALIZATION_CONFIG",
+      "rule_name": "DESERIALIZATION_CONFIG",
+      "description": "不安全的反序列化漏洞：应用程序反序列化来自不可信源的数据，攻击者可通过构造恶意序列化对象执行任意代码或进行拒绝服务攻击。",
+      "severity": "MEDIUM",
+      "confidence": 0.008,
+      "location": {
+        "file": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\config\\JacksonConfig.java",
+        "line": 22
+      },
+      "code_snippet": " *\n */\n@Configuration\n@ConditionalOnClass(ObjectMapper.class)\n@AutoConfigureBefore(JacksonAutoConfiguration.class)\npublic class JacksonConfig {\n\t@Bean\n",
+      "fix_suggestion": "尽快修复：避免反序列化不受信任的数据，使用安全的序列化方案",
+      "explanation": "{\"vulnerability\": \"DESERIALIZATION_CONFIG\", \"location\": \"C:\\\\1AAA_PROJECT\\\\HOS\\\\HOS-LS\\\\real-project\\\\bizspring-open-main\\\\bizspring-base\\\\bizspring-base-core\\\\src\\\\main\\\\java\\\\cn\\\\bizspring\\\\cloud\\\\common\\\\core\\\\config\\\\JacksonConfig.java:22\", \"severity\": \"MEDIUM\", \"status\": \"UNCERTAIN\", \"confidence\": 0.8, \"cvss_score\": \"\", \"recommendation\": \"尽快修复：避免反序列化不受信任的数据，使用安全的序列化方案\", \"evidence\": [{\"type\": \"code_line\", \"location\": \"C:\\\\1AAA_PROJECT\\\\HOS\\\\HOS-LS\\\\real-project\\\\bizspring-open-main\\\\bizspring-base\\\\bizspring-base-core\\\\src\\\\main\\\\java\\\\cn\\\\bizspring\\\\cloud\\\\common\\\\core\\\\config\\\\JacksonConfig.java:22\", \"reason\": \"固定日期格式将强制所有日期字段必须匹配该格式，反序列化时不会尝试其他格式，降低了容错性，可能被用于构造异常。\", \"confidence\": 0.8, \"code_snippet\": \"builder.simpleDateFormat(DatePattern.NORM_DATETIME_PATTERN);\"}], \"requires_human_review\": true}",
+      "references": [],
+      "exploit_scenario": "",
+      "metadata": {
+        "evidence": [
+          {
+            "type": "code_line",
+            "location": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\config\\JacksonConfig.java:22",
+            "reason": "固定日期格式将强制所有日期字段必须匹配该格式，反序列化时不会尝试其他格式，降低了容错性，可能被用于构造异常。",
+            "confidence": 0.8,
+            "code_snippet": "builder.simpleDateFormat(DatePattern.NORM_DATETIME_PATTERN);"
+          }
+        ],
+        "requires_human_review": true
+      }
+    },
+    {
+      "rule_id": "SUSPICIOUS_PATTERN",
+      "rule_name": "SUSPICIOUS_PATTERN",
+      "description": "发现可疑代码模式：setBasename方法使用硬编码字符串，未校验资源路径的安全性...",
+      "severity": "LOW",
+      "confidence": 0.004,
+      "location": {
+        "file": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\config\\MessageSourceConfig.java",
+        "line": 16
+      },
+      "code_snippet": "@Configuration\npublic class MessageSourceConfig {\n\n\t@Bean\n\tpublic MessageSource messageSource() {\n\t\tReloadableResourceBundleMessageSource messageSource\n\t\t\t= new ReloadableResourceBundleMessageSource();\n",
+      "fix_suggestion": "建议修复：将硬编码的路径改为从配置文件或环境变量读取，提高可移植性",
+      "explanation": "{\"vulnerability\": \"SUSPICIOUS_PATTERN\", \"location\": \"C:\\\\1AAA_PROJECT\\\\HOS\\\\HOS-LS\\\\real-project\\\\bizspring-open-main\\\\bizspring-base\\\\bizspring-base-core\\\\src\\\\main\\\\java\\\\cn\\\\bizspring\\\\cloud\\\\common\\\\core\\\\config\\\\MessageSourceConfig.java:16\", \"severity\": \"LOW\", \"status\": \"UNCERTAIN\", \"confidence\": 0.4, \"cvss_score\": \"\", \"recommendation\": \"建议修复：将硬编码的路径改为从配置文件或环境变量读取，提高可移植性\", \"evidence\": [{\"type\": \"code_line\", \"location\": \"C:\\\\1AAA_PROJECT\\\\HOS\\\\HOS-LS\\\\real-project\\\\bizspring-open-main\\\\bizspring-base\\\\bizspring-base-core\\\\src\\\\main\\\\java\\\\cn\\\\bizspring\\\\cloud\\\\common\\\\core\\\\config\\\\MessageSourceConfig.java:16\", \"reason\": \"setBasename方法使用硬编码字符串，未校验资源路径的安全性\", \"confidence\": 0.4, \"code_snippet\": \"messageSource.setBasename(\\\"classpath:i18n/messages\\\");\"}], \"requires_human_review\": true}",
+      "references": [],
+      "exploit_scenario": "",
+      "metadata": {
+        "evidence": [
+          {
+            "type": "code_line",
+            "location": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\config\\MessageSourceConfig.java:16",
+            "reason": "setBasename方法使用硬编码字符串，未校验资源路径的安全性",
+            "confidence": 0.4,
+            "code_snippet": "messageSource.setBasename(\"classpath:i18n/messages\");"
+          }
+        ],
+        "requires_human_review": true
+      }
+    },
+    {
+      "rule_id": "WEAK_SECURITY_SIGNAL",
+      "rule_name": "WEAK_SECURITY_SIGNAL",
+      "description": "弱加密算法风险：使用了存在已知攻击方法或密钥长度不足的加密算法（如MD5、SHA1、DES等），攻击者可能破解敏感数据。",
+      "severity": "INFO",
+      "confidence": 0.01,
+      "location": {
+        "file": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\config\\MessageSourceConfig.java",
+        "line": 0
+      },
+      "code_snippet": "package cn.bizspring.cloud.common.core.config;\n\nimport org.springframework.context.MessageSource;\nimport org.springframework.context.annotation.Bean;\n",
+      "fix_suggestion": "可选择修复：避免直接执行用户输入，使用安全的API或白名单验证",
+      "explanation": "{\"vulnerability\": \"WEAK_SECURITY_SIGNAL\", \"location\": \"C:\\\\1AAA_PROJECT\\\\HOS\\\\HOS-LS\\\\real-project\\\\bizspring-open-main\\\\bizspring-base\\\\bizspring-base-core\\\\src\\\\main\\\\java\\\\cn\\\\bizspring\\\\cloud\\\\common\\\\core\\\\config\\\\MessageSourceConfig.java:14\", \"severity\": \"INFO\", \"status\": \"UNCERTAIN\", \"confidence\": 1.0, \"cvss_score\": \"\", \"recommendation\": \"可选择修复：避免直接执行用户输入，使用安全的API或白名单验证\", \"evidence\": [{\"type\": \"missing_config\", \"location\": \"C:\\\\1AAA_PROJECT\\\\HOS\\\\HOS-LS\\\\real-project\\\\bizspring-open-main\\\\bizspring-base\\\\bizspring-base-core\\\\src\\\\main\\\\java\\\\cn\\\\bizspring\\\\cloud\\\\common\\\\core\\\\config\\\\MessageSourceConfig.java:14-18\", \"reason\": \"ReloadableResourceBundleMessageSource bean定义中没有调用setDefaultEncoding方法\", \"confidence\": 1.0, \"code_snippet\": \"public ReloadableResourceBundleMessageSource messageSource() {\\n    ReloadableResourceBundleMessageSource messageSource = new ReloadableResourceBundleMessageSource();\\n    messageSource.setBasename(\\\"classpath:i18n/messages\\\");\\n    return messageSource;\\n}\"}], \"requires_human_review\": true}",
+      "references": [],
+      "exploit_scenario": "",
+      "metadata": {
+        "evidence": [
+          {
+            "type": "missing_config",
+            "location": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\config\\MessageSourceConfig.java:14-18",
+            "reason": "ReloadableResourceBundleMessageSource bean定义中没有调用setDefaultEncoding方法",
+            "confidence": 1.0,
+            "code_snippet": "public ReloadableResourceBundleMessageSource messageSource() {\n    ReloadableResourceBundleMessageSource messageSource = new ReloadableResourceBundleMessageSource();\n    messageSource.setBasename(\"classpath:i18n/messages\");\n    return messageSource;\n}"
+          }
+        ],
+        "requires_human_review": true
+      }
+    }
+  ],
+  "truncated": true,
+  "truncation_reason": "max-files (2)",
+  "max_duration": 0,
+  "max_files": 2,
+  "start_time": 1777010517.7620385
+}

@@ -1,0 +1,1202 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HOS-LS 安全扫描报告</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg-primary: #0f1117;
+            --bg-secondary: #161a22;
+            --bg-card: #1c2128;
+            --critical: #ff4d4f;
+            --critical-bg: rgba(255, 77, 79, 0.15);
+            --high: #ff8c42;
+            --high-bg: rgba(255, 140, 66, 0.15);
+            --medium: #ffd166;
+            --medium-bg: rgba(255, 209, 102, 0.15);
+            --low: #3ddc97;
+            --low-bg: rgba(61, 220, 151, 0.15);
+            --info: #8b949e;
+            --info-bg: rgba(139, 148, 158, 0.15);
+            --text-primary: #e6edf3;
+            --text-secondary: #8b949e;
+            --text-muted: #6e7681;
+            --border: rgba(255, 255, 255, 0.08);
+            --border-light: rgba(255, 255, 255, 0.12);
+            --primary: #6f42c1;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 24px;
+        }
+
+        .report-header {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+
+        .report-title {
+            font-size: 2rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--primary), #4287f5);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 8px;
+        }
+
+        .report-meta {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .status-bar {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px 24px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+
+        .status-badge.safe, .status-badge.low {
+            background: var(--low-bg);
+            color: var(--low);
+            border: 1px solid var(--low);
+        }
+
+        .status-badge.medium {
+            background: var(--medium-bg);
+            color: var(--medium);
+            border: 1px solid var(--medium);
+        }
+
+        .status-badge.high {
+            background: var(--high-bg);
+            color: var(--high);
+            border: 1px solid var(--high);
+        }
+
+        .status-badge.critical {
+            background: var(--critical-bg);
+            color: var(--critical);
+            border: 1px solid var(--critical);
+        }
+
+        .scan-stats {
+            display: flex;
+            gap: 24px;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .scan-stats span {
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+
+        .filter-toolbar {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 16px 20px;
+            margin-bottom: 20px;
+            display: flex;
+            gap: 16px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .filter-toolbar label {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            white-space: nowrap;
+        }
+
+        .filter-toolbar select,
+        .filter-toolbar input {
+            background: var(--bg-primary);
+            border: 1px solid var(--border-light);
+            color: var(--text-primary);
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 0.9rem;
+        }
+
+        .filter-toolbar input {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .summary-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 24px;
+        }
+
+        @media (max-width: 768px) {
+            .summary-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .summary-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 20px;
+        }
+
+        .summary-card h3 {
+            font-size: 1rem;
+            color: var(--text-primary);
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .summary-stats {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .summary-stats .stat-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .summary-stats .stat-row:last-child {
+            border-bottom: none;
+        }
+
+        .summary-stats .stat-label {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .summary-stats .stat-value {
+            font-weight: 700;
+            font-size: 1.1rem;
+        }
+
+        .stat-critical { color: var(--critical); }
+        .stat-high { color: var(--high); }
+        .stat-medium { color: var(--medium); }
+        .stat-low { color: var(--low); }
+        .stat-info { color: var(--info); }
+
+        .chart-wrapper {
+            height: 200px;
+        }
+
+        .section-title {
+            font-size: 1.3rem;
+            color: var(--text-primary);
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .severity-clusters {
+            margin-bottom: 32px;
+        }
+
+        .cluster {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            margin-bottom: 16px;
+            overflow: hidden;
+        }
+
+        .cluster-header {
+            padding: 14px 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+            user-select: none;
+            transition: background 0.2s;
+        }
+
+        .cluster-header:hover {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .cluster-icon {
+            font-size: 1.2rem;
+        }
+
+        .cluster-name {
+            font-weight: 600;
+            font-size: 1.1rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .cluster-count {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin-left: auto;
+        }
+
+        .cluster-toggle {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            transition: transform 0.2s;
+        }
+
+        .cluster[open] .cluster-toggle {
+            transform: rotate(90deg);
+        }
+
+        .cluster-critical .cluster-header { color: var(--critical); border-left: 4px solid var(--critical); }
+        .cluster-high .cluster-header { color: var(--high); border-left: 4px solid var(--high); }
+        .cluster-medium .cluster-header { color: var(--medium); border-left: 4px solid var(--medium); }
+        .cluster-low .cluster-header { color: var(--low); border-left: 4px solid var(--low); }
+        .cluster-info .cluster-header { color: var(--info); border-left: 4px solid var(--info); }
+
+        .cluster-body {
+            padding: 16px 20px;
+            border-top: 1px solid var(--border);
+        }
+
+        .petal-card {
+            background: linear-gradient(135deg, var(--bg-card) 0%, var(--bg-secondary) 100%);
+            border: 1px solid var(--border);
+            border-left: 4px solid var(--severity-color, var(--primary));
+            border-radius: 8px;
+            margin-bottom: 12px;
+            transition: all 0.2s ease;
+            overflow: hidden;
+        }
+
+        .petal-card:last-child {
+            margin-bottom: 0;
+        }
+
+        .petal-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+            border-color: var(--border-light);
+        }
+
+        .petal-card[data-severity="critical"] { --severity-color: var(--critical); }
+        .petal-card[data-severity="high"] { --severity-color: var(--high); }
+        .petal-card[data-severity="medium"] { --severity-color: var(--medium); }
+        .petal-card[data-severity="low"] { --severity-color: var(--low); }
+        .petal-card[data-severity="info"] { --severity-color: var(--info); }
+
+        .petal-header {
+            display: flex;
+            align-items: center;
+            padding: 12px 16px;
+            gap: 12px;
+            border-bottom: 1px solid var(--border);
+            background: rgba(0, 0, 0, 0.2);
+        }
+
+        .severity-badge {
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            flex-shrink: 0;
+        }
+
+        .severity-critical { background: var(--critical-bg); color: var(--critical); }
+        .severity-high { background: var(--high-bg); color: var(--high); }
+        .severity-medium { background: var(--medium-bg); color: var(--medium); }
+        .severity-low { background: var(--low-bg); color: var(--low); }
+        .severity-info { background: var(--info-bg); color: var(--info); }
+
+        .source-badge {
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.65rem;
+            font-weight: 600;
+            letter-spacing: 0.3px;
+            text-transform: uppercase;
+            flex-shrink: 0;
+        }
+        .source-config { background: rgba(111, 66, 193, 0.3); color: #a855f7; }
+        .source-code_vuln_scanner { background: rgba(34, 197, 94, 0.3); color: #22c55e; }
+        .source-pure_ai { background: rgba(59, 130, 246, 0.3); color: #3b82f6; }
+        .source-nvd { background: rgba(249, 115, 22, 0.3); color: #f97316; }
+
+        .vuln-title {
+            flex: 1;
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .vuln-rule-id {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            font-family: "Consolas", "Monaco", monospace;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 2px 8px;
+            border-radius: 4px;
+        }
+
+        .petal-location {
+            padding: 8px 16px;
+            background: rgba(0, 0, 0, 0.2);
+            font-family: "Consolas", "Monaco", monospace;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .petal-location .icon {
+            color: var(--primary);
+        }
+
+        .petal-location .file-path {
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .petal-location .line-num {
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        .petal-body {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .petal-body > * {
+            display: grid;
+            grid-template-columns: 100px 1fr;
+        }
+
+        .field-label {
+            padding: 12px 16px;
+            background: rgba(255, 255, 255, 0.02);
+            color: var(--text-muted);
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: flex-start;
+        }
+
+        .field-content {
+            padding: 12px 16px;
+            color: var(--text-primary);
+            font-size: 0.9rem;
+            line-height: 1.6;
+            border-bottom: 1px solid var(--border);
+            word-break: break-word;
+            overflow-wrap: break-word;
+        }
+
+        .field-content:last-child {
+            border-bottom: none;
+        }
+
+        .code-block {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 4px;
+            margin: 4px 0;
+        }
+
+        .code-block pre {
+            font-family: "JetBrains Mono", "Fira Code", "Consolas", monospace;
+            font-size: 0.85rem;
+            color: var(--text-primary);
+            white-space: pre-wrap;
+            word-break: break-all;
+            margin: 0;
+            line-height: 1.5;
+        }
+
+        .fix-block {
+            background: rgba(61, 220, 151, 0.05);
+            border-left: 3px solid var(--low);
+        }
+
+        .evidence-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .evidence-list li {
+            padding: 6px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .evidence-list li:last-child {
+            border-bottom: none;
+        }
+
+        .evidence-reason {
+            flex: none;
+            word-break: break-word;
+        }
+
+        .evidence-loc {
+            font-size: 0.8rem;
+            color: var(--primary);
+            font-family: monospace;
+            white-space: normal;
+            word-break: break-all;
+        }
+
+        .poc-block {
+            background: rgba(111, 66, 193, 0.08);
+            border-left: 3px solid var(--primary);
+        }
+
+        .file-list-section {
+            margin-top: 32px;
+        }
+
+        .file-search-bar {
+            margin-bottom: 16px;
+        }
+
+        .file-search-bar input {
+            width: 100%;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            padding: 10px 16px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+        }
+
+        .file-search-bar input::placeholder {
+            color: var(--text-muted);
+        }
+
+        .file-item {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            margin-bottom: 8px;
+            overflow: hidden;
+        }
+
+        .file-item summary {
+            padding: 12px 16px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-weight: 500;
+            transition: background 0.2s;
+        }
+
+        .file-item summary:hover {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .file-item.has-issues summary {
+            color: var(--high);
+        }
+
+        .file-item.no-issues summary {
+            color: var(--low);
+        }
+
+        .file-status-icon {
+            font-size: 1rem;
+        }
+
+        .file-name {
+            flex: 1;
+            font-family: "Consolas", monospace;
+            font-size: 0.9rem;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .issue-count {
+            font-size: 0.8rem;
+            padding: 2px 10px;
+            border-radius: 10px;
+            font-weight: 600;
+        }
+
+        .badge-warning {
+            background: var(--high-bg);
+            color: var(--high);
+        }
+
+        .badge-success {
+            background: var(--low-bg);
+            color: var(--low);
+        }
+
+        .file-findings {
+            padding: 12px 16px;
+            border-top: 1px solid var(--border);
+            background: rgba(0, 0, 0, 0.2);
+        }
+
+        .file-findings .petal-card {
+            margin-bottom: 8px;
+        }
+
+        .file-findings .petal-card:last-child {
+            margin-bottom: 0;
+        }
+
+        .no-issue-msg {
+            color: var(--low);
+            font-size: 0.9rem;
+            padding: 8px 0;
+        }
+
+        .empty-state {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 40px;
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+        }
+
+        .debug-section, .token-section {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            margin-bottom: 16px;
+            overflow: hidden;
+        }
+
+        .debug-section summary, .token-section summary {
+            padding: 12px 16px;
+            cursor: pointer;
+            font-weight: 600;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            user-select: none;
+        }
+
+        .debug-section summary {
+            background: rgba(111, 66, 193, 0.1);
+            color: var(--primary);
+        }
+
+        .token-section summary {
+            background: rgba(255, 193, 7, 0.1);
+            color: #ffc107;
+        }
+
+        .debug-content, .token-content {
+            padding: 12px 16px;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: "Consolas", monospace;
+            font-size: 0.8rem;
+            background: rgba(0, 0, 0, 0.3);
+        }
+
+        .debug-line {
+            padding: 4px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+        }
+
+        .debug-line:last-child {
+            border-bottom: none;
+        }
+
+        .debug-prefix { color: var(--text-muted); }
+        .debug-level { color: var(--primary); }
+
+        .token-record {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+
+        .token-record:last-child {
+            margin-bottom: 0;
+        }
+
+        .token-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            padding-bottom: 6px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .token-model {
+            font-weight: 600;
+            color: var(--primary);
+            font-size: 0.85rem;
+        }
+
+        .token-count {
+            color: #ffc107;
+            font-weight: 600;
+        }
+
+        .token-detail {
+            margin-top: 6px;
+        }
+
+        .token-detail summary {
+            cursor: pointer;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            padding: 4px 8px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 4px;
+        }
+
+        .token-detail pre {
+            margin-top: 6px;
+            padding: 8px;
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 4px;
+            font-size: 0.75rem;
+            white-space: pre-wrap;
+            word-break: break-all;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 16px;
+            }
+
+            .report-title {
+                font-size: 1.5rem;
+            }
+
+            .status-bar {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .scan-stats {
+                flex-wrap: wrap;
+                gap: 12px;
+            }
+
+            .petal-body {
+                grid-template-columns: 1fr;
+            }
+
+            .field-label {
+                padding: 8px 16px;
+                background: rgba(255, 255, 255, 0.02);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="report-header">
+            <h1 class="report-title">🛡️HOS-LS 安全扫描报告</h1>
+            <p class="report-meta">AI驱动的代码安全扫描系统</p>
+        </header>
+
+        <div class="status-bar">
+            <span class="status-badge {{ status }}">{{ status_text }}</span>
+            <div class="scan-stats">
+                <div>扫描文件: <span>{{ summary.total_scans }}</span></div>
+                <div>发现问题: <span>{{ summary.total_findings }}</span></div>
+                <div>用时: <span>{{ total_duration }}s</span></div>
+            </div>
+        </div>
+
+        <div class="filter-toolbar">
+            <label for="severity-filter">按严重级别筛选</label>
+            <select id="severity-filter">
+                <option value="all">全部</option>
+                <option value="critical">严重</option>
+                <option value="high">高</option>
+                <option value="medium">中</option>
+                <option value="low">低</option>
+                <option value="info">信息</option>
+            </select>
+            <label for="main-search">🔍 搜索:</label>
+            <input type="text" id="main-search" placeholder="搜索漏洞、文件...">
+        </div>
+
+        <div class="summary-grid">
+            <div class="summary-card">
+                <h3>📊 漏洞统计</h3>
+                <div class="summary-stats">
+                    <div class="stat-row">
+                        <span class="stat-label">扫描文件数</span>
+                        <span class="stat-value">{{ summary.total_scans }}</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">发现问题数</span>
+                        <span class="stat-value">{{ summary.total_findings }}</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label stat-critical">严重 (CRITICAL)</span>
+                        <span class="stat-value stat-critical">{{ summary.severity_counts.critical }}</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label stat-high">高(HIGH)</span>
+                        <span class="stat-value stat-high">{{ summary.severity_counts.high }}</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label stat-medium">中(MEDIUM)</span>
+                        <span class="stat-value stat-medium">{{ summary.severity_counts.medium }}</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label stat-low">低(LOW)</span>
+                        <span class="stat-value stat-low">{{ summary.severity_counts.low }}</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label stat-info">信息 (INFO)</span>
+                        <span class="stat-value stat-info">{{ summary.severity_counts.info }}</span>
+                    </div>
+                </div>
+            </div>
+            <div class="summary-card">
+                <h3>📈 漏洞分布</h3>
+                <div class="chart-wrapper">
+                    {% if summary.total_findings > 0 %}
+                    <canvas id="severityChart"></canvas>
+                    {% else %}
+                    <div style="display: flex; align-items: center; justify-content: center; height: 100%; color: var(--text-muted);">
+                        暂无漏洞数据
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        {% if summary.total_findings == 0 %}
+        <div class="empty-state">
+            🌸 未发现安全问题，代码安全性良好。</div>
+        {% endif %}
+
+        {% if summary.total_findings > 0 %}
+        <section class="severity-clusters">
+            <h2 class="section-title">🐛 漏洞详情</h2>
+
+            {% for severity in ['critical', 'high', 'medium', 'low', 'info'] %}
+                {% set findings = [] %}
+                {% for result in results %}
+                    {% for finding in result.findings %}
+                        {% if finding.severity == severity %}
+                            {% set _ = findings.append(finding) %}
+                        {% endif %}
+                    {% endfor %}
+                {% endfor %}
+                {% if findings %}
+                <details class="cluster cluster-{{ severity }}" open>
+                    <summary class="cluster-header">
+                        <span class="cluster-icon">
+                            {% if severity == 'critical' %}🔴
+                            {% elif severity == 'high' %}🟠
+                            {% elif severity == 'medium' %}🟡
+                            {% elif severity == 'low' %}🟢
+                            {% else %}⚪{% endif %}
+                        </span>
+                        <span class="cluster-name">{{ severity|upper }}</span>
+                        <span class="cluster-count">({{ findings|length }} 个漏洞)</span>
+                        <span class="cluster-toggle">▶</span>
+                    </summary>
+                    <div class="cluster-body">
+                        {% for finding in findings %}
+                        <article class="petal-card" data-severity="{{ finding.severity.lower().split('.')[-1] }}">
+                            <div class="petal-header">
+                                <span class="severity-badge severity-{{ finding.severity.lower().split('.')[-1] }}">{{ finding.severity.upper().split('.')[-1] }}</span>
+                                {% if finding.metadata and finding.metadata.source %}
+                                <span class="source-badge source-{{ finding.metadata.source }}">{{ finding.metadata.source.replace('_', ' ') }}</span>
+                                {% endif %}
+                                <h3 class="vuln-title">{{ finding.rule_name }}</h3>
+                                <code class="vuln-rule-id">{{ finding.rule_id }}</code>
+                            </div>
+                            <div class="petal-location">
+                                <span class="icon">📍</span>
+                                <span class="file-path">{{ finding.location.file|default('未知位置') }}</span>
+                                <span class="line-num">{% if finding.location.line %}:{{ finding.location.line }}{% endif %}</span>
+                            </div>
+                            <div class="petal-body">
+                                {% if finding.description %}
+                                <div class="field-row">
+                                    <div class="field-label">漏洞描述</div>
+                                    <div class="field-content">{{ finding.description }}</div>
+                                </div>
+                                {% endif %}
+
+                                {% if finding.code_snippet %}
+                                <div class="field-row">
+                                    <div class="field-label">代码片段</div>
+                                    <div class="field-content">
+                                        <pre>{{ finding.code_snippet }}</pre>
+                                    </div>
+                                </div>
+                                {% endif %}
+
+                                {% if finding.evidence and finding.evidence is iterable and finding.evidence is not string %}
+                                <div class="field-row">
+                                    <div class="field-label">证据链</div>
+                                    <div class="field-content">
+                                        <ul class="evidence-list">
+                                        {% for e in finding.evidence[:5] %}
+                                            <li>
+                                                <span class="evidence-reason">{{ e.reason|default(e) }}</span>
+                                                {% if e.location %}
+                                                <span class="evidence-loc">📍 {{ e.location }}</span>
+                                                {% endif %}
+                                            </li>
+                                        {% endfor %}
+                                        </ul>
+                                    </div>
+                                </div>
+                                {% endif %}
+
+                                {% if finding.fix_suggestion %}
+                                <div class="field-row">
+                                    <div class="field-label">修复建议</div>
+                                    <div class="field-content fix-block">{{ finding.fix_suggestion }}</div>
+                                </div>
+                                {% endif %}
+
+                                {% if finding.poc %}
+                                <div class="field-row">
+                                    <div class="field-label">漏洞利用</div>
+                                    <div class="field-content poc-block">
+                                        <pre>{{ finding.poc }}</pre>
+                                    </div>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </article>
+                        {% endfor %}
+                    </div>
+                </details>
+                {% endif %}
+            {% endfor %}
+        </section>
+        {% endif %}
+
+        <section class="file-list-section">
+            <h2 class="section-title">📁 扫描文件详情</h2>
+
+            <div class="file-search-bar">
+                <input type="text" id="file-search" placeholder="输入文件名搜索...">
+            </div>
+
+            {% if debug_logs %}
+            <details class="debug-section">
+                <summary>🐛 调试日志 (AI API 输出)</summary>
+                <div class="debug-content">
+                    {% for log in debug_logs %}
+                    <div class="debug-line">
+                        <span class="debug-prefix">[</span><span class="debug-level">DEBUG</span><span class="debug-prefix">]</span>
+                        <span>{{ log }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </details>
+            {% endif %}
+
+            {% if token_records %}
+            <details class="token-section">
+                <summary>📊 Token 使用详情 ({{ token_records|length }} 条)</summary>
+                <div class="token-content">
+                    {% for record in token_records %}
+                    <div class="token-record">
+                        <div class="token-header">
+                            <span class="token-model">{{ record.agent_name|default('unknown') }} @ {{ record.file_path|truncate(25, killwords=True) }}</span>
+                            <span class="token-count">{{ record.total_tokens }} tokens</span>
+                        </div>
+                        {% if record.prompt %}
+                        <details class="token-detail">
+                            <summary>📝 Prompt ({{ record.prompt_tokens }} tokens)</summary>
+                            <pre>{{ record.prompt }}</pre>
+                        </details>
+                        {% endif %}
+                        {% if record.response %}
+                        <details class="token-detail">
+                            <summary>📨 Response ({{ record.completion_tokens }} tokens)</summary>
+                            <pre>{{ record.response }}</pre>
+                        </details>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </details>
+            {% endif %}
+
+            {% for result in results %}
+            <details class="file-item {% if result.findings %}has-issues{% else %}no-issues{% endif %}">
+                <summary>
+                    <span class="file-status-icon">{% if result.findings %}⚠️{% else %}✓{% endif %}</span>
+                    <span class="file-name">{{ result.file_path }}</span>
+                    <span class="issue-count {% if result.findings %}badge-warning{% else %}badge-success{% endif %}">
+                        {{ result.findings|length }} 个问题</span>
+                </summary>
+                <div class="file-findings">
+                    {% if result.findings %}
+                    {% for finding in result.findings %}
+                    <article class="petal-card" data-severity="{{ finding.severity.lower().split('.')[-1] }}">
+                        <div class="petal-header">
+                            <span class="severity-badge severity-{{ finding.severity.lower().split('.')[-1] }}">{{ finding.severity.upper().split('.')[-1] }}</span>
+                            <h3 class="vuln-title">{{ finding.rule_name }}</h3>
+                            <code class="vuln-rule-id">{{ finding.rule_id }}</code>
+                        </div>
+                        <div class="petal-location">
+                            <span class="icon">📍</span>
+                            <span class="file-path">{{ finding.location.file|default('未知位置') }}</span>
+                            <span class="line-num">{% if finding.location.line %}:{{ finding.location.line }}{% endif %}</span>
+                        </div>
+                        <div class="petal-body">
+                            {% if finding.description %}
+                            <div class="field-row">
+                                <div class="field-label">漏洞描述</div>
+                                <div class="field-content">{{ finding.description }}</div>
+                            </div>
+                            {% endif %}
+
+                            {% if finding.code_snippet %}
+                            <div class="field-row">
+                                <div class="field-label">代码片段</div>
+                                <div class="field-content">
+                                    <pre>{{ finding.code_snippet }}</pre>
+                                </div>
+                            </div>
+                            {% endif %}
+
+                            {% if finding.evidence and finding.evidence is iterable and finding.evidence is not string %}
+                            <div class="field-row">
+                                <div class="field-label">证据链</div>
+                                <div class="field-content">
+                                    <ul class="evidence-list">
+                                    {% for e in finding.evidence[:5] %}
+                                        <li>
+                                            <span class="evidence-reason">{{ e.reason|default(e) }}</span>
+                                            {% if e.location %}
+                                            <span class="evidence-loc">📍 {{ e.location }}</span>
+                                            {% endif %}
+                                        </li>
+                                    {% endfor %}
+                                    </ul>
+                                </div>
+                            </div>
+                            {% endif %}
+
+                            {% if finding.fix_suggestion %}
+                            <div class="field-row">
+                                <div class="field-label">修复建议</div>
+                                <div class="field-content fix-block">{{ finding.fix_suggestion }}</div>
+                            </div>
+                            {% endif %}
+
+                            {% if finding.poc %}
+                            <div class="field-row">
+                                <div class="field-label">漏洞利用</div>
+                                <div class="field-content poc-block">
+                                    <pre>{{ finding.poc }}</pre>
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </article>
+                    {% endfor %}
+                    {% else %}
+                    <p class="no-issue-msg">✓ 该文件未发现安全问题</p>
+                    {% endif %}
+                </div>
+            </details>
+            {% endfor %}
+        </section>
+    </div>
+
+    <script>
+        {% if summary.total_findings > 0 %}
+        const ctx = document.getElementById('severityChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['严重', '高', '中', '低', '信息'],
+                datasets: [{
+                    label: '漏洞数量',
+                    data: [
+                        {{ summary.severity_counts.critical|default(0) }},
+                        {{ summary.severity_counts.high|default(0) }},
+                        {{ summary.severity_counts.medium|default(0) }},
+                        {{ summary.severity_counts.low|default(0) }},
+                        {{ summary.severity_counts.info|default(0) }}
+                    ],
+                    backgroundColor: [
+                        'rgba(255, 77, 79, 0.7)',
+                        'rgba(255, 140, 66, 0.7)',
+                        'rgba(255, 209, 102, 0.7)',
+                        'rgba(61, 220, 151, 0.7)',
+                        'rgba(139, 148, 158, 0.7)'
+                    ],
+                    borderColor: [
+                        'rgba(255, 77, 79, 1)',
+                        'rgba(255, 140, 66, 1)',
+                        'rgba(255, 209, 102, 1)',
+                        'rgba(61, 220, 151, 1)',
+                        'rgba(139, 148, 158, 1)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    title: {
+                        display: true,
+                        text: '漏洞严重级别分布',
+                        color: '#e6edf3',
+                        font: { size: 14 }
+                    }
+                },
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                        ticks: { color: '#8b949e' }
+                    },
+                    y: {
+                        grid: { display: false },
+                        ticks: { color: '#e6edf3' }
+                    }
+                }
+            }
+        });
+        {% endif %}
+
+        function debounce(func, wait) {
+            let timeout;
+            return function() {
+                clearTimeout(timeout);
+                timeout = setTimeout(() => func.apply(this, arguments), wait);
+            };
+        }
+
+        function filterAll() {
+            const severityFilter = document.getElementById('severity-filter').value;
+            const searchQuery = document.getElementById('main-search').value.toLowerCase().trim();
+
+            document.querySelectorAll('.petal-card').forEach(card => {
+                const severity = card.dataset.severity;
+                const text = card.textContent.toLowerCase();
+                const matchSeverity = severityFilter === 'all' || severity === severityFilter;
+                const matchSearch = searchQuery === '' || text.includes(searchQuery);
+                card.style.display = (matchSeverity && matchSearch) ? 'block' : 'none';
+            });
+
+            document.querySelectorAll('.cluster').forEach(cluster => {
+                const clusterSeverity = cluster.className.replace('cluster cluster-', '').split(' ')[0];
+                const matchSeverity = severityFilter === 'all' || clusterSeverity === severityFilter;
+                if (!matchSeverity) {
+                    cluster.style.display = 'none';
+                    return;
+                }
+                const petalCards = cluster.querySelectorAll('.petal-card');
+                let hasMatch = false;
+                petalCards.forEach(card => {
+                    const cardText = card.textContent.toLowerCase();
+                    if (searchQuery === '' || cardText.includes(searchQuery)) {
+                        hasMatch = true;
+                    }
+                });
+                cluster.style.display = hasMatch ? 'block' : 'none';
+            });
+
+            document.querySelectorAll('.file-item').forEach(item => {
+                const text = item.textContent.toLowerCase();
+                const matchSearch = searchQuery === '' || text.includes(searchQuery);
+                const petalCards = item.querySelectorAll('.petal-card');
+                let hasMatch = false;
+                petalCards.forEach(card => {
+                    const cardText = card.textContent.toLowerCase();
+                    if (searchQuery === '' || cardText.includes(searchQuery)) {
+                        hasMatch = true;
+                    }
+                });
+                item.style.display = (matchSearch && hasMatch) ? 'block' : 'none';
+            });
+        }
+
+        function searchFiles() {
+            const query = document.getElementById('file-search').value.toLowerCase().trim();
+            document.querySelectorAll('.file-item').forEach(item => {
+                const fileName = item.querySelector('.file-name').textContent.toLowerCase();
+                item.style.display = query === '' || fileName.includes(query) ? 'block' : 'none';
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', filterAll);
+        document.getElementById('main-search').addEventListener('keyup', debounce(filterAll, 200));
+        document.getElementById('severity-filter').addEventListener('change', filterAll);
+        document.getElementById('file-search').addEventListener('keyup', debounce(searchFiles, 200));
+    </script>
+</body>
+</html>

@@ -1,0 +1,91 @@
+# HOS-LS 配置文件
+
+# 扫描配置
+scan:
+  max_workers: 4
+  incremental: true
+  cache_enabled: true
+
+# 规则配置
+rules:
+  ruleset: default
+  custom_rules: []
+  exclude_paths: []
+
+# AI 配置
+ai:
+  enabled: false
+  provider: deepseek
+  model: deepseek-chat  # 正确的 DeepSeek 模型名称
+  api_key: "sk-b235bbdc776f47c3bee2e8e8d4ec1232"
+  base_url: "https://api.deepseek.com"
+  max_tokens: 4096
+  temperature: 0.0
+  timeout: 60
+
+# 报告配置
+report:
+  format: html
+  output: ""
+  include_snippets: true
+  include_fix_suggestions: true
+
+# 日志配置
+log:
+  level: info
+  format: text
+  file: ""
+
+# 工具编排配置
+tools:
+  enabled: true
+  tool_chain:
+    - semgrep
+    - trivy
+    - gitleaks
+    - code_vuln_scanner
+  semgrep:
+    enabled: true
+    config: "auto"
+    timeout: 30
+  trivy:
+    enabled: true
+    severity: "HIGH,CRITICAL"
+    timeout: 300
+  syft:
+    enabled: true
+    format: "json"
+    package_managers: ["auto"]
+  gitleaks:
+    enabled: true
+    config: ""
+    no-git: true
+
+# 优先级配置
+priority:
+  enabled: true
+  weights:
+    cvss: 0.40
+    exploitability: 0.35
+    reachability: 0.25
+  thresholds:
+    critical: 9.0
+    high: 7.0
+    medium: 4.0
+
+# 验证配置
+validation:
+  enabled: true
+  auto_validate_high: true
+  auto_validate_medium: false
+  min_confidence_threshold: 0.7
+
+# Agent配置
+agent:
+  dynamic_selection: true
+  skip_context_if_sufficient: true
+
+# 其他配置
+debug: false
+verbose: false
+quiet: false
