@@ -1,0 +1,1183 @@
+{
+  "scan_id": "3d4343bf-5cc6-447e-8c51-9d2e5dc2a970",
+  "started_at": "2026-04-24T22:03:44.810616",
+  "last_updated": "2026-04-24T22:20:29.504615",
+  "total_files": 20,
+  "completed_files": [
+    "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\config\\HomeDirConfigProperties.java",
+    "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\config\\JacksonConfig.java",
+    "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\config\\MessageSourceConfig.java",
+    "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\config\\RestTemplateConfig.java",
+    "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\entity\\SafeKey.java",
+    "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\controller\\BizController.java",
+    "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\pom.xml",
+    "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\pom.xml",
+    "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\pom.xml",
+    "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\annotation\\CreatedTime.java",
+    "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\annotation\\UpdatedTime.java",
+    "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\dto\\ReportDto.java",
+    "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\entity\\BizEntity.java",
+    "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\entity\\Sn.java",
+    "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\entity\\SortEntity.java",
+    "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\enums\\CacheEnum.java",
+    "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\enums\\CommonEnum.java",
+    "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\enums\\FlowStatusEnum.java",
+    "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\enums\\PageEnum.java",
+    "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\enums\\ProcessStatusEnum.java"
+  ],
+  "findings": [
+    {
+      "rule_id": "外部配置可能覆盖默认值",
+      "rule_name": "外部配置可能覆盖默认值",
+      "description": "硬编码配置风险：代码中包含硬编码的配置值，降低了系统的可配置性和可维护性。建议将配置外部化到配置文件或环境变量中。",
+      "severity": "LOW",
+      "confidence": 0.5,
+      "location": {
+        "file": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\config\\HomeDirConfigProperties.java",
+        "line": 22
+      },
+      "code_snippet": "@Configuration\n@ConfigurationProperties(prefix = \"home-dir\")\npublic class HomeDirConfigProperties {\n\n\t/**\n\t *\n\t */\n",
+      "fix_suggestion": "",
+      "explanation": "{\"title\": \"外部配置可能覆盖默认值\", \"severity\": \"LOW\", \"location\": \"C:\\\\1AAA_PROJECT\\\\HOS\\\\HOS-LS\\\\real-project\\\\bizspring-open-main\\\\bizspring-base\\\\bizspring-base-core\\\\src\\\\main\\\\java\\\\cn\\\\bizspring\\\\cloud\\\\common\\\\core\\\\config\\\\HomeDirConfigProperties.java:22\", \"evidence\": [{\"type\": \"code_line\", \"location\": \"C:\\\\1AAA_PROJECT\\\\HOS\\\\HOS-LS\\\\real-project\\\\bizspring-open-main\\\\bizspring-base\\\\bizspring-base-core\\\\src\\\\main\\\\java\\\\cn\\\\bizspring\\\\cloud\\\\common\\\\core\\\\config\\\\HomeDirConfigProperties.java:22\", \"reason\": \"字段 'windows' 默认值为字符串 \\\"windows\\\"，可能被外部配置覆盖，但无路径遍历或注入风险。\", \"confidence\": 0.3, \"code_snippet\": \"private String windows = \\\"windows\\\";\"}], \"cwe_id\": \"\", \"cvss_score\": \"N/A\", \"signal_id\": \"RISK-001\", \"signal_state\": \"CONFIRMED\", \"verification_decision\": \"CONFIRMED\", \"verification_reason\": \"location 文件路径在已知文件列表中，行号22在文件HomeDirConfigProperties.java的30行范围内，代码行存在。\", \"vulnerability\": \"外部配置可能覆盖默认值\"}",
+      "references": [],
+      "exploit_scenario": "",
+      "metadata": {
+        "evidence": [
+          {
+            "type": "code_line",
+            "location": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\config\\HomeDirConfigProperties.java:22",
+            "reason": "字段 'windows' 默认值为字符串 \"windows\"，可能被外部配置覆盖，但无路径遍历或注入风险。",
+            "confidence": 0.3,
+            "code_snippet": "private String windows = \"windows\";"
+          }
+        ],
+        "requires_human_review": false
+      }
+    },
+    {
+      "rule_id": "外部配置可能覆盖默认值",
+      "rule_name": "外部配置可能覆盖默认值",
+      "description": "硬编码配置风险：代码中包含硬编码的配置值，降低了系统的可配置性和可维护性。建议将配置外部化到配置文件或环境变量中。",
+      "severity": "LOW",
+      "confidence": 0.5,
+      "location": {
+        "file": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\config\\HomeDirConfigProperties.java",
+        "line": 24
+      },
+      "code_snippet": "public class HomeDirConfigProperties {\n\n\t/**\n\t *\n\t */\n\tprivate String windows = \"windows\";\n\n",
+      "fix_suggestion": "",
+      "explanation": "{\"title\": \"外部配置可能覆盖默认值\", \"severity\": \"LOW\", \"location\": \"C:\\\\1AAA_PROJECT\\\\HOS\\\\HOS-LS\\\\real-project\\\\bizspring-open-main\\\\bizspring-base\\\\bizspring-base-core\\\\src\\\\main\\\\java\\\\cn\\\\bizspring\\\\cloud\\\\common\\\\core\\\\config\\\\HomeDirConfigProperties.java:24\", \"evidence\": [{\"type\": \"code_line\", \"location\": \"C:\\\\1AAA_PROJECT\\\\HOS\\\\HOS-LS\\\\real-project\\\\bizspring-open-main\\\\bizspring-base\\\\bizspring-base-core\\\\src\\\\main\\\\java\\\\cn\\\\bizspring\\\\cloud\\\\common\\\\core\\\\config\\\\HomeDirConfigProperties.java:24\", \"reason\": \"字段 'linux' 默认值为字符串 \\\"linux\\\"，可能被外部配置覆盖，但无路径遍历或注入风险。\", \"confidence\": 0.3, \"code_snippet\": \"private String linux = \\\"linux\\\";\"}], \"cwe_id\": \"\", \"cvss_score\": \"N/A\", \"signal_id\": \"RISK-002\", \"signal_state\": \"CONFIRMED\", \"verification_decision\": \"CONFIRMED\", \"verification_reason\": \"location 文件路径在已知文件列表中，行号24在文件HomeDirConfigProperties.java的30行范围内，代码行存在。\", \"vulnerability\": \"外部配置可能覆盖默认值\"}",
+      "references": [],
+      "exploit_scenario": "",
+      "metadata": {
+        "evidence": [
+          {
+            "type": "code_line",
+            "location": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\config\\HomeDirConfigProperties.java:24",
+            "reason": "字段 'linux' 默认值为字符串 \"linux\"，可能被外部配置覆盖，但无路径遍历或注入风险。",
+            "confidence": 0.3,
+            "code_snippet": "private String linux = \"linux\";"
+          }
+        ],
+        "requires_human_review": false
+      }
+    },
+    {
+      "rule_id": "动态刷新配置未校验",
+      "rule_name": "动态刷新配置未校验",
+      "description": "硬编码配置风险：代码中包含硬编码的配置值，降低了系统的可配置性和可维护性。建议将配置外部化到配置文件或环境变量中。",
+      "severity": "LOW",
+      "confidence": 0.5,
+      "location": {
+        "file": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\config\\HomeDirConfigProperties.java",
+        "line": 14
+      },
+      "code_snippet": "\n/**\n * 文件存放目录配置\n *\n * @author\n */\n@Data\n",
+      "fix_suggestion": "",
+      "explanation": "{\"title\": \"动态刷新配置未校验\", \"severity\": \"LOW\", \"location\": \"C:\\\\1AAA_PROJECT\\\\HOS\\\\HOS-LS\\\\real-project\\\\bizspring-open-main\\\\bizspring-base\\\\bizspring-base-core\\\\src\\\\main\\\\java\\\\cn\\\\bizspring\\\\cloud\\\\common\\\\core\\\\config\\\\HomeDirConfigProperties.java:14\", \"evidence\": [{\"type\": \"code_line\", \"location\": \"C:\\\\1AAA_PROJECT\\\\HOS\\\\HOS-LS\\\\real-project\\\\bizspring-open-main\\\\bizspring-base\\\\bizspring-base-core\\\\src\\\\main\\\\java\\\\cn\\\\bizspring\\\\cloud\\\\common\\\\core\\\\config\\\\HomeDirConfigProperties.java:14\", \"reason\": \"类使用 @RefreshScope 支持动态刷新配置，但未对配置值进行校验或清理。\", \"confidence\": 0.5, \"code_snippet\": \"@RefreshScope\"}], \"cwe_id\": \"\", \"cvss_score\": \"N/A\", \"signal_id\": \"RISK-003\", \"signal_state\": \"CONFIRMED\", \"verification_decision\": \"CONFIRMED\", \"verification_reason\": \"location 文件路径在已知文件列表中，行号14在文件HomeDirConfigProperties.java的30行范围内，代码行存在。\", \"vulnerability\": \"动态刷新配置未校验\"}",
+      "references": [],
+      "exploit_scenario": "",
+      "metadata": {
+        "evidence": [
+          {
+            "type": "code_line",
+            "location": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\config\\HomeDirConfigProperties.java:14",
+            "reason": "类使用 @RefreshScope 支持动态刷新配置，但未对配置值进行校验或清理。",
+            "confidence": 0.5,
+            "code_snippet": "@RefreshScope"
+          }
+        ],
+        "requires_human_review": false
+      }
+    },
+    {
+      "rule_id": "SUSPICIOUS_PATTERN",
+      "rule_name": "SUSPICIOUS_PATTERN",
+      "description": "发现可疑代码模式：builder.locale(Locale.CHINA) 强制使用固定区域，未根据请求头或环境动态设置。...",
+      "severity": "MEDIUM",
+      "confidence": 0.006999999999999999,
+      "location": {
+        "file": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\config\\JacksonConfig.java",
+        "line": 25
+      },
+      "code_snippet": "@ConditionalOnClass(ObjectMapper.class)\n@AutoConfigureBefore(JacksonAutoConfiguration.class)\npublic class JacksonConfig {\n\t@Bean\n\tpublic Jackson2ObjectMapperBuilderCustomizer customizer() {\n\t\treturn builder -> {\n\t\t\tbuilder.locale(Locale.CHINA);\n",
+      "fix_suggestion": "根据描述评估: 硬编码区域设置为Locale.CHINA，可能导致国际化场景下日期时间格式解析异常，引发反序列化漏洞...",
+      "explanation": "{\"vulnerability\": \"SUSPICIOUS_PATTERN\", \"location\": \"C:\\\\1AAA_PROJECT\\\\HOS\\\\HOS-LS\\\\real-project\\\\bizspring-open-main\\\\bizspring-base\\\\bizspring-base-core\\\\src\\\\main\\\\java\\\\cn\\\\bizspring\\\\cloud\\\\common\\\\core\\\\config\\\\JacksonConfig.java:25\", \"severity\": \"MEDIUM\", \"status\": \"UNCERTAIN\", \"confidence\": 0.7, \"cvss_score\": \"\", \"recommendation\": \"根据描述评估: 硬编码区域设置为Locale.CHINA，可能导致国际化场景下日期时间格式解析异常，引发反序列化漏洞...\", \"evidence\": [{\"type\": \"code_line\", \"location\": \"C:\\\\1AAA_PROJECT\\\\HOS\\\\HOS-LS\\\\real-project\\\\bizspring-open-main\\\\bizspring-base\\\\bizspring-base-core\\\\src\\\\main\\\\java\\\\cn\\\\bizspring\\\\cloud\\\\common\\\\core\\\\config\\\\JacksonConfig.java:25\", \"reason\": \"builder.locale(Locale.CHINA) 强制使用固定区域，未根据请求头或环境动态设置。\", \"confidence\": 0.7, \"code_snippet\": \"builder.locale(Locale.CHINA);\"}], \"requires_human_review\": true}",
+      "references": [],
+      "exploit_scenario": "",
+      "metadata": {
+        "evidence": [
+          {
+            "type": "code_line",
+            "location": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\config\\JacksonConfig.java:25",
+            "reason": "builder.locale(Locale.CHINA) 强制使用固定区域，未根据请求头或环境动态设置。",
+            "confidence": 0.7,
+            "code_snippet": "builder.locale(Locale.CHINA);"
+          }
+        ],
+        "requires_human_review": true
+      }
+    },
+    {
+      "rule_id": "WEAK_SECURITY_SIGNAL",
+      "rule_name": "WEAK_SECURITY_SIGNAL",
+      "description": "弱加密算法风险：使用了存在已知攻击方法或密钥长度不足的加密算法（如MD5、SHA1、DES等），攻击者可能破解敏感数据。",
+      "severity": "LOW",
+      "confidence": 0.008,
+      "location": {
+        "file": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\config\\JacksonConfig.java",
+        "line": 27
+      },
+      "code_snippet": "public class JacksonConfig {\n\t@Bean\n\tpublic Jackson2ObjectMapperBuilderCustomizer customizer() {\n\t\treturn builder -> {\n\t\t\tbuilder.locale(Locale.CHINA);\n\t\t\tbuilder.timeZone(TimeZone.getTimeZone(ZoneId.systemDefault()));\n\t\t\tbuilder.simpleDateFormat(DatePattern.NORM_DATETIME_PATTERN);\n",
+      "fix_suggestion": "建议修复：替换弱加密算法或默认配置，使用行业标准安全方案",
+      "explanation": "{\"vulnerability\": \"WEAK_SECURITY_SIGNAL\", \"location\": \"C:\\\\1AAA_PROJECT\\\\HOS\\\\HOS-LS\\\\real-project\\\\bizspring-open-main\\\\bizspring-base\\\\bizspring-base-core\\\\src\\\\main\\\\java\\\\cn\\\\bizspring\\\\cloud\\\\common\\\\core\\\\config\\\\JacksonConfig.java:27\", \"severity\": \"LOW\", \"status\": \"UNCERTAIN\", \"confidence\": 0.8, \"cvss_score\": \"\", \"recommendation\": \"建议修复：替换弱加密算法或默认配置，使用行业标准安全方案\", \"evidence\": [{\"type\": \"code_line\", \"location\": \"C:\\\\1AAA_PROJECT\\\\HOS\\\\HOS-LS\\\\real-project\\\\bizspring-open-main\\\\bizspring-base\\\\bizspring-base-core\\\\src\\\\main\\\\java\\\\cn\\\\bizspring\\\\cloud\\\\common\\\\core\\\\config\\\\JacksonConfig.java:27\", \"reason\": \"builder.simpleDateFormat(DatePattern.NORM_DATETIME_PATTERN) 设置全局SimpleDateFormat，该实现非线程安全。\", \"confidence\": 0.8, \"code_snippet\": \"builder.simpleDateFormat(DatePattern.NORM_DATETIME_PATTERN);\"}], \"requires_human_review\": true}",
+      "references": [],
+      "exploit_scenario": "",
+      "metadata": {
+        "evidence": [
+          {
+            "type": "code_line",
+            "location": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\config\\JacksonConfig.java:27",
+            "reason": "builder.simpleDateFormat(DatePattern.NORM_DATETIME_PATTERN) 设置全局SimpleDateFormat，该实现非线程安全。",
+            "confidence": 0.8,
+            "code_snippet": "builder.simpleDateFormat(DatePattern.NORM_DATETIME_PATTERN);"
+          }
+        ],
+        "requires_human_review": true
+      }
+    },
+    {
+      "rule_id": "SUSPICIOUS_PATTERN",
+      "rule_name": "SUSPICIOUS_PATTERN",
+      "description": "发现可疑代码模式：TimeZone.getTimeZone(ZoneId.systemDefault()) 使用运行时默认时区，未显式指定UTC或其他固定时区。...",
+      "severity": "INFO",
+      "confidence": 0.006,
+      "location": {
+        "file": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\config\\JacksonConfig.java",
+        "line": 26
+      },
+      "code_snippet": "@AutoConfigureBefore(JacksonAutoConfiguration.class)\npublic class JacksonConfig {\n\t@Bean\n\tpublic Jackson2ObjectMapperBuilderCustomizer customizer() {\n\t\treturn builder -> {\n\t\t\tbuilder.locale(Locale.CHINA);\n\t\t\tbuilder.timeZone(TimeZone.getTimeZone(ZoneId.systemDefault()));\n",
+      "fix_suggestion": "可选择修复：替换弱加密算法或默认配置，使用行业标准安全方案",
+      "explanation": "{\"vulnerability\": \"SUSPICIOUS_PATTERN\", \"location\": \"C:\\\\1AAA_PROJECT\\\\HOS\\\\HOS-LS\\\\real-project\\\\bizspring-open-main\\\\bizspring-base\\\\bizspring-base-core\\\\src\\\\main\\\\java\\\\cn\\\\bizspring\\\\cloud\\\\common\\\\core\\\\config\\\\JacksonConfig.java:26\", \"severity\": \"INFO\", \"status\": \"UNCERTAIN\", \"confidence\": 0.6, \"cvss_score\": \"\", \"recommendation\": \"可选择修复：替换弱加密算法或默认配置，使用行业标准安全方案\", \"evidence\": [{\"type\": \"code_line\", \"location\": \"C:\\\\1AAA_PROJECT\\\\HOS\\\\HOS-LS\\\\real-project\\\\bizspring-open-main\\\\bizspring-base\\\\bizspring-base-core\\\\src\\\\main\\\\java\\\\cn\\\\bizspring\\\\cloud\\\\common\\\\core\\\\config\\\\JacksonConfig.java:26\", \"reason\": \"TimeZone.getTimeZone(ZoneId.systemDefault()) 使用运行时默认时区，未显式指定UTC或其他固定时区。\", \"confidence\": 0.6, \"code_snippet\": \"TimeZone.getTimeZone(ZoneId.systemDefault())\"}], \"requires_human_review\": true}",
+      "references": [],
+      "exploit_scenario": "",
+      "metadata": {
+        "evidence": [
+          {
+            "type": "code_line",
+            "location": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\config\\JacksonConfig.java:26",
+            "reason": "TimeZone.getTimeZone(ZoneId.systemDefault()) 使用运行时默认时区，未显式指定UTC或其他固定时区。",
+            "confidence": 0.6,
+            "code_snippet": "TimeZone.getTimeZone(ZoneId.systemDefault())"
+          }
+        ],
+        "requires_human_review": true
+      }
+    },
+    {
+      "rule_id": "SUSPICIOUS_PATTERN",
+      "rule_name": "SUSPICIOUS_PATTERN",
+      "description": "发现可疑代码模式：setBasename方法直接使用硬编码字符串\"classpath:i18n/messages\"，未从配置文件或环境变量读取...",
+      "severity": "MEDIUM",
+      "confidence": 0.006999999999999999,
+      "location": {
+        "file": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\config\\MessageSourceConfig.java",
+        "line": 12
+      },
+      "code_snippet": " * @author\n * <p>\n * 国际化配置\n */\n@Configuration\npublic class MessageSourceConfig {\n\n",
+      "fix_suggestion": "根据描述评估: 硬编码资源文件基路径，未使用外部化配置或环境变量，可能导致路径遍历或资源泄露风险...",
+      "explanation": "{\"vulnerability\": \"SUSPICIOUS_PATTERN\", \"location\": \"C:\\\\1AAA_PROJECT\\\\HOS\\\\HOS-LS\\\\real-project\\\\bizspring-open-main\\\\bizspring-base\\\\bizspring-base-core\\\\src\\\\main\\\\java\\\\cn\\\\bizspring\\\\cloud\\\\common\\\\core\\\\config\\\\MessageSourceConfig.java:12\", \"severity\": \"MEDIUM\", \"status\": \"UNCERTAIN\", \"confidence\": 0.7, \"cvss_score\": \"\", \"recommendation\": \"根据描述评估: 硬编码资源文件基路径，未使用外部化配置或环境变量，可能导致路径遍历或资源泄露风险...\", \"evidence\": [{\"type\": \"code_line\", \"location\": \"C:\\\\1AAA_PROJECT\\\\HOS\\\\HOS-LS\\\\real-project\\\\bizspring-open-main\\\\bizspring-base\\\\bizspring-base-core\\\\src\\\\main\\\\java\\\\cn\\\\bizspring\\\\cloud\\\\common\\\\core\\\\config\\\\MessageSourceConfig.java:12\", \"reason\": \"setBasename方法直接使用硬编码字符串\\\"classpath:i18n/messages\\\"，未从配置文件或环境变量读取\", \"confidence\": 0.7, \"code_snippet\": \"messageSource.setBasename(\\\"classpath:i18n/messages\\\")\"}], \"requires_human_review\": true}",
+      "references": [],
+      "exploit_scenario": "",
+      "metadata": {
+        "evidence": [
+          {
+            "type": "code_line",
+            "location": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\config\\MessageSourceConfig.java:12",
+            "reason": "setBasename方法直接使用硬编码字符串\"classpath:i18n/messages\"，未从配置文件或环境变量读取",
+            "confidence": 0.7,
+            "code_snippet": "messageSource.setBasename(\"classpath:i18n/messages\")"
+          }
+        ],
+        "requires_human_review": true
+      }
+    },
+    {
+      "rule_id": "WEAK_SECURITY_SIGNAL",
+      "rule_name": "WEAK_SECURITY_SIGNAL",
+      "description": "弱加密算法风险：使用了存在已知攻击方法或密钥长度不足的加密算法（如MD5、SHA1、DES等），攻击者可能破解敏感数据。",
+      "severity": "LOW",
+      "confidence": 0.006,
+      "location": {
+        "file": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\config\\MessageSourceConfig.java",
+        "line": 11
+      },
+      "code_snippet": "/**\n * @author\n * <p>\n * 国际化配置\n */\n@Configuration\npublic class MessageSourceConfig {\n",
+      "fix_suggestion": "建议修复：避免直接执行用户输入，使用安全的API或白名单验证",
+      "explanation": "{\"vulnerability\": \"WEAK_SECURITY_SIGNAL\", \"location\": \"C:\\\\1AAA_PROJECT\\\\HOS\\\\HOS-LS\\\\real-project\\\\bizspring-open-main\\\\bizspring-base\\\\bizspring-base-core\\\\src\\\\main\\\\java\\\\cn\\\\bizspring\\\\cloud\\\\common\\\\core\\\\config\\\\MessageSourceConfig.java:11\", \"severity\": \"LOW\", \"status\": \"UNCERTAIN\", \"confidence\": 0.6, \"cvss_score\": \"\", \"recommendation\": \"建议修复：避免直接执行用户输入，使用安全的API或白名单验证\", \"evidence\": [{\"type\": \"code_line\", \"location\": \"C:\\\\1AAA_PROJECT\\\\HOS\\\\HOS-LS\\\\real-project\\\\bizspring-open-main\\\\bizspring-base\\\\bizspring-base-core\\\\src\\\\main\\\\java\\\\cn\\\\bizspring\\\\cloud\\\\common\\\\core\\\\config\\\\MessageSourceConfig.java:11\", \"reason\": \"未调用setCacheSeconds或setDefaultEncoding方法，使用默认缓存和编码行为\", \"confidence\": 0.6, \"code_snippet\": \"ReloadableResourceBundleMessageSource messageSource = new ReloadableResourceBundleMessageSource()\"}], \"requires_human_review\": true}",
+      "references": [],
+      "exploit_scenario": "",
+      "metadata": {
+        "evidence": [
+          {
+            "type": "code_line",
+            "location": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\config\\MessageSourceConfig.java:11",
+            "reason": "未调用setCacheSeconds或setDefaultEncoding方法，使用默认缓存和编码行为",
+            "confidence": 0.6,
+            "code_snippet": "ReloadableResourceBundleMessageSource messageSource = new ReloadableResourceBundleMessageSource()"
+          }
+        ],
+        "requires_human_review": true
+      }
+    },
+    {
+      "rule_id": "WEAK_SECURITY_SIGNAL",
+      "rule_name": "WEAK_SECURITY_SIGNAL",
+      "description": "弱加密算法风险：使用了存在已知攻击方法或密钥长度不足的加密算法（如MD5、SHA1、DES等），攻击者可能破解敏感数据。",
+      "severity": "HIGH",
+      "confidence": 0.0095,
+      "location": {
+        "file": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\config\\RestTemplateConfig.java",
+        "line": 14
+      },
+      "code_snippet": " */\n@Configuration\npublic class RestTemplateConfig {\n\t@Bean\n\t@SentinelRestTemplate\n\tpublic RestTemplate restTemplate() {\n\t\treturn new RestTemplate();\n",
+      "fix_suggestion": "优先修复：建立URL白名单验证，禁用对内部网络的访问",
+      "explanation": "{\"vulnerability\": \"WEAK_SECURITY_SIGNAL\", \"location\": \"C:\\\\1AAA_PROJECT\\\\HOS\\\\HOS-LS\\\\real-project\\\\bizspring-open-main\\\\bizspring-base\\\\bizspring-base-core\\\\src\\\\main\\\\java\\\\cn\\\\bizspring\\\\cloud\\\\common\\\\core\\\\config\\\\RestTemplateConfig.java:14\", \"severity\": \"HIGH\", \"status\": \"UNCERTAIN\", \"confidence\": 0.95, \"cvss_score\": \"\", \"recommendation\": \"优先修复：建立URL白名单验证，禁用对内部网络的访问\", \"evidence\": [{\"type\": \"code_line\", \"location\": \"C:\\\\1AAA_PROJECT\\\\HOS\\\\HOS-LS\\\\real-project\\\\bizspring-open-main\\\\bizspring-base\\\\bizspring-base-core\\\\src\\\\main\\\\java\\\\cn\\\\bizspring\\\\cloud\\\\common\\\\core\\\\config\\\\RestTemplateConfig.java:14\", \"reason\": \"RestTemplate默认构造器不配置任何安全参数，直接返回默认实例\", \"confidence\": 0.95, \"code_snippet\": \"public RestTemplate restTemplate() { return new RestTemplate(); }\"}], \"requires_human_review\": true}",
+      "references": [],
+      "exploit_scenario": "",
+      "metadata": {
+        "evidence": [
+          {
+            "type": "code_line",
+            "location": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\config\\RestTemplateConfig.java:14",
+            "reason": "RestTemplate默认构造器不配置任何安全参数，直接返回默认实例",
+            "confidence": 0.95,
+            "code_snippet": "public RestTemplate restTemplate() { return new RestTemplate(); }"
+          }
+        ],
+        "requires_human_review": true
+      }
+    },
+    {
+      "rule_id": "SUSPICIOUS_PATTERN",
+      "rule_name": "SUSPICIOUS_PATTERN",
+      "description": "发现可疑代码模式：@SentinelRestTemplate注解未指定fallback或blockHandler属性...",
+      "severity": "MEDIUM",
+      "confidence": 0.008,
+      "location": {
+        "file": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\config\\RestTemplateConfig.java",
+        "line": 13
+      },
+      "code_snippet": " * RestTemplate\n */\n@Configuration\npublic class RestTemplateConfig {\n\t@Bean\n\t@SentinelRestTemplate\n\tpublic RestTemplate restTemplate() {\n",
+      "fix_suggestion": "根据描述评估: 使用了@SentinelRestTemplate注解但未配置fallback或blockHandle...",
+      "explanation": "{\"vulnerability\": \"SUSPICIOUS_PATTERN\", \"location\": \"C:\\\\1AAA_PROJECT\\\\HOS\\\\HOS-LS\\\\real-project\\\\bizspring-open-main\\\\bizspring-base\\\\bizspring-base-core\\\\src\\\\main\\\\java\\\\cn\\\\bizspring\\\\cloud\\\\common\\\\core\\\\config\\\\RestTemplateConfig.java:13\", \"severity\": \"MEDIUM\", \"status\": \"UNCERTAIN\", \"confidence\": 0.8, \"cvss_score\": \"\", \"recommendation\": \"根据描述评估: 使用了@SentinelRestTemplate注解但未配置fallback或blockHandle...\", \"evidence\": [{\"type\": \"code_line\", \"location\": \"C:\\\\1AAA_PROJECT\\\\HOS\\\\HOS-LS\\\\real-project\\\\bizspring-open-main\\\\bizspring-base\\\\bizspring-base-core\\\\src\\\\main\\\\java\\\\cn\\\\bizspring\\\\cloud\\\\common\\\\core\\\\config\\\\RestTemplateConfig.java:13\", \"reason\": \"@SentinelRestTemplate注解未指定fallback或blockHandler属性\", \"confidence\": 0.8, \"code_snippet\": \"@SentinelRestTemplate\"}], \"requires_human_review\": true}",
+      "references": [],
+      "exploit_scenario": "",
+      "metadata": {
+        "evidence": [
+          {
+            "type": "code_line",
+            "location": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\config\\RestTemplateConfig.java:13",
+            "reason": "@SentinelRestTemplate注解未指定fallback或blockHandler属性",
+            "confidence": 0.8,
+            "code_snippet": "@SentinelRestTemplate"
+          }
+        ],
+        "requires_human_review": true
+      }
+    },
+    {
+      "rule_id": "SENSITIVE_DATA_EXPOSURE",
+      "rule_name": "SENSITIVE_DATA_EXPOSURE",
+      "description": "敏感数据泄露：应用程序在响应、日志或令牌中暴露了不应公开的敏感信息（如用户密码、身份证号、银行卡号等），违反数据保护合规要求。",
+      "severity": "HIGH",
+      "confidence": 0.0095,
+      "location": {
+        "file": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\entity\\SafeKey.java",
+        "line": 30
+      },
+      "code_snippet": "\t * 过期时间\n\t */\n\t@Column(name = \"safe_key_expire\")\n\tprivate Date expire;\n\n\t/**\n\t * 获取密钥\n",
+      "fix_suggestion": "优先修复：对敏感数据进行脱敏处理，最小化令牌中存储的信息，仅保留必要的用户标识",
+      "explanation": "{\"vulnerability\": \"SENSITIVE_DATA_EXPOSURE\", \"location\": \"C:\\\\1AAA_PROJECT\\\\HOS\\\\HOS-LS\\\\real-project\\\\bizspring-open-main\\\\bizspring-base\\\\bizspring-base-core\\\\src\\\\main\\\\java\\\\cn\\\\bizspring\\\\cloud\\\\common\\\\core\\\\entity\\\\SafeKey.java:30\", \"severity\": \"HIGH\", \"status\": \"UNCERTAIN\", \"confidence\": 0.95, \"cvss_score\": \"\", \"recommendation\": \"优先修复：对敏感数据进行脱敏处理，最小化令牌中存储的信息，仅保留必要的用户标识\", \"evidence\": [{\"type\": \"code_line\", \"location\": \"C:\\\\1AAA_PROJECT\\\\HOS\\\\HOS-LS\\\\real-project\\\\bizspring-open-main\\\\bizspring-base\\\\bizspring-base-core\\\\src\\\\main\\\\java\\\\cn\\\\bizspring\\\\cloud\\\\common\\\\core\\\\entity\\\\SafeKey.java:30\", \"reason\": \"方法直接返回私有字段value，无任何访问控制或输出过滤\", \"confidence\": 0.95, \"code_snippet\": \"public String getValue() { return value; }\"}], \"requires_human_review\": true}",
+      "references": [],
+      "exploit_scenario": "",
+      "metadata": {
+        "evidence": [
+          {
+            "type": "code_line",
+            "location": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\entity\\SafeKey.java:30",
+            "reason": "方法直接返回私有字段value，无任何访问控制或输出过滤",
+            "confidence": 0.95,
+            "code_snippet": "public String getValue() { return value; }"
+          }
+        ],
+        "requires_human_review": true
+      }
+    },
+    {
+      "rule_id": "INPUT_VALIDATION_MISSING",
+      "rule_name": "INPUT_VALIDATION_MISSING",
+      "description": "发现可疑代码模式：方法参数直接赋值给字段，无任何校验或清理逻辑...",
+      "severity": "HIGH",
+      "confidence": 0.009000000000000001,
+      "location": {
+        "file": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\entity\\SafeKey.java",
+        "line": 36
+      },
+      "code_snippet": "\t * 获取密钥\n\t * \n\t * @return 密钥\n\t */\n\tpublic String getValue() {\n\t\treturn value;\n\t}\n",
+      "fix_suggestion": "优先修复：添加缺失的安全控制或验证机制",
+      "explanation": "{\"vulnerability\": \"INPUT_VALIDATION_MISSING\", \"location\": \"C:\\\\1AAA_PROJECT\\\\HOS\\\\HOS-LS\\\\real-project\\\\bizspring-open-main\\\\bizspring-base\\\\bizspring-base-core\\\\src\\\\main\\\\java\\\\cn\\\\bizspring\\\\cloud\\\\common\\\\core\\\\entity\\\\SafeKey.java:36\", \"severity\": \"HIGH\", \"status\": \"UNCERTAIN\", \"confidence\": 0.9, \"cvss_score\": \"\", \"recommendation\": \"优先修复：添加缺失的安全控制或验证机制\", \"evidence\": [{\"type\": \"code_line\", \"location\": \"C:\\\\1AAA_PROJECT\\\\HOS\\\\HOS-LS\\\\real-project\\\\bizspring-open-main\\\\bizspring-base\\\\bizspring-base-core\\\\src\\\\main\\\\java\\\\cn\\\\bizspring\\\\cloud\\\\common\\\\core\\\\entity\\\\SafeKey.java:36\", \"reason\": \"方法参数直接赋值给字段，无任何校验或清理逻辑\", \"confidence\": 0.9, \"code_snippet\": \"public void setValue(String value) { this.value = value; }\"}], \"requires_human_review\": true}",
+      "references": [],
+      "exploit_scenario": "",
+      "metadata": {
+        "evidence": [
+          {
+            "type": "code_line",
+            "location": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\entity\\SafeKey.java:36",
+            "reason": "方法参数直接赋值给字段，无任何校验或清理逻辑",
+            "confidence": 0.9,
+            "code_snippet": "public void setValue(String value) { this.value = value; }"
+          }
+        ],
+        "requires_human_review": true
+      }
+    },
+    {
+      "rule_id": "INPUT_VALIDATION_MISSING",
+      "rule_name": "INPUT_VALIDATION_MISSING",
+      "description": "发现可疑代码模式：方法参数直接赋值给字段，无日期范围或合法性校验...",
+      "severity": "MEDIUM",
+      "confidence": 0.0085,
+      "location": {
+        "file": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\entity\\SafeKey.java",
+        "line": 46
+      },
+      "code_snippet": "\t * \n\t * @param value\n\t *            密钥\n\t */\n\tpublic void setValue(String value) {\n\t\tthis.value = value;\n\t}\n",
+      "fix_suggestion": "尽快修复：添加缺失的安全控制或验证机制",
+      "explanation": "{\"vulnerability\": \"INPUT_VALIDATION_MISSING\", \"location\": \"C:\\\\1AAA_PROJECT\\\\HOS\\\\HOS-LS\\\\real-project\\\\bizspring-open-main\\\\bizspring-base\\\\bizspring-base-core\\\\src\\\\main\\\\java\\\\cn\\\\bizspring\\\\cloud\\\\common\\\\core\\\\entity\\\\SafeKey.java:46\", \"severity\": \"MEDIUM\", \"status\": \"UNCERTAIN\", \"confidence\": 0.85, \"cvss_score\": \"\", \"recommendation\": \"尽快修复：添加缺失的安全控制或验证机制\", \"evidence\": [{\"type\": \"code_line\", \"location\": \"C:\\\\1AAA_PROJECT\\\\HOS\\\\HOS-LS\\\\real-project\\\\bizspring-open-main\\\\bizspring-base\\\\bizspring-base-core\\\\src\\\\main\\\\java\\\\cn\\\\bizspring\\\\cloud\\\\common\\\\core\\\\entity\\\\SafeKey.java:46\", \"reason\": \"方法参数直接赋值给字段，无日期范围或合法性校验\", \"confidence\": 0.85, \"code_snippet\": \"public void setExpire(Date expire) { this.expire = expire; }\"}], \"requires_human_review\": true}",
+      "references": [],
+      "exploit_scenario": "",
+      "metadata": {
+        "evidence": [
+          {
+            "type": "code_line",
+            "location": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\entity\\SafeKey.java:46",
+            "reason": "方法参数直接赋值给字段，无日期范围或合法性校验",
+            "confidence": 0.85,
+            "code_snippet": "public void setExpire(Date expire) { this.expire = expire; }"
+          }
+        ],
+        "requires_human_review": true
+      }
+    },
+    {
+      "rule_id": "WEAK_SECURITY_SIGNAL",
+      "rule_name": "WEAK_SECURITY_SIGNAL",
+      "description": "弱加密算法风险：使用了存在已知攻击方法或密钥长度不足的加密算法（如MD5、SHA1、DES等），攻击者可能破解敏感数据。",
+      "severity": "MEDIUM",
+      "confidence": 0.009000000000000001,
+      "location": {
+        "file": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\entity\\SafeKey.java",
+        "line": 63
+      },
+      "code_snippet": "\t/**\n\t * 设置过期时间\n\t * \n\t * @param expire\n\t *            过期时间\n\t */\n\tpublic void setExpire(Date expire) {\n",
+      "fix_suggestion": "尽快修复：替换弱加密算法或默认配置，使用行业标准安全方案",
+      "explanation": "{\"vulnerability\": \"WEAK_SECURITY_SIGNAL\", \"location\": \"C:\\\\1AAA_PROJECT\\\\HOS\\\\HOS-LS\\\\real-project\\\\bizspring-open-main\\\\bizspring-base\\\\bizspring-base-core\\\\src\\\\main\\\\java\\\\cn\\\\bizspring\\\\cloud\\\\common\\\\core\\\\entity\\\\SafeKey.java:63\", \"severity\": \"MEDIUM\", \"status\": \"UNCERTAIN\", \"confidence\": 0.9, \"cvss_score\": \"\", \"recommendation\": \"尽快修复：替换弱加密算法或默认配置，使用行业标准安全方案\", \"evidence\": [{\"type\": \"code_line\", \"location\": \"C:\\\\1AAA_PROJECT\\\\HOS\\\\HOS-LS\\\\real-project\\\\bizspring-open-main\\\\bizspring-base\\\\bizspring-base-core\\\\src\\\\main\\\\java\\\\cn\\\\bizspring\\\\cloud\\\\common\\\\core\\\\entity\\\\SafeKey.java:63\", \"reason\": \"expire为null时条件短路返回false，未处理null情况\", \"confidence\": 0.9, \"code_snippet\": \"return getExpire() != null && !getExpire().after(new Date());\"}], \"requires_human_review\": true}",
+      "references": [],
+      "exploit_scenario": "",
+      "metadata": {
+        "evidence": [
+          {
+            "type": "code_line",
+            "location": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\entity\\SafeKey.java:63",
+            "reason": "expire为null时条件短路返回false，未处理null情况",
+            "confidence": 0.9,
+            "code_snippet": "return getExpire() != null && !getExpire().after(new Date());"
+          }
+        ],
+        "requires_human_review": true
+      }
+    },
+    {
+      "rule_id": "SUSPICIOUS_PATTERN",
+      "rule_name": "SUSPICIOUS_PATTERN",
+      "description": "发现可疑代码模式：返回可变Date对象引用，未使用防御性拷贝...",
+      "severity": "LOW",
+      "confidence": 0.008,
+      "location": {
+        "file": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\entity\\SafeKey.java",
+        "line": 42
+      },
+      "code_snippet": "\t}\n\n\t/**\n\t * 设置密钥\n\t * \n\t * @param value\n\t *            密钥\n",
+      "fix_suggestion": "根据描述评估: getExpire方法直接返回私有字段expire，未进行防御性拷贝，可能导致外部修改内部状态...",
+      "explanation": "{\"vulnerability\": \"SUSPICIOUS_PATTERN\", \"location\": \"C:\\\\1AAA_PROJECT\\\\HOS\\\\HOS-LS\\\\real-project\\\\bizspring-open-main\\\\bizspring-base\\\\bizspring-base-core\\\\src\\\\main\\\\java\\\\cn\\\\bizspring\\\\cloud\\\\common\\\\core\\\\entity\\\\SafeKey.java:42\", \"severity\": \"LOW\", \"status\": \"UNCERTAIN\", \"confidence\": 0.8, \"cvss_score\": \"\", \"recommendation\": \"根据描述评估: getExpire方法直接返回私有字段expire，未进行防御性拷贝，可能导致外部修改内部状态...\", \"evidence\": [{\"type\": \"code_line\", \"location\": \"C:\\\\1AAA_PROJECT\\\\HOS\\\\HOS-LS\\\\real-project\\\\bizspring-open-main\\\\bizspring-base\\\\bizspring-base-core\\\\src\\\\main\\\\java\\\\cn\\\\bizspring\\\\cloud\\\\common\\\\core\\\\entity\\\\SafeKey.java:42\", \"reason\": \"返回可变Date对象引用，未使用防御性拷贝\", \"confidence\": 0.8, \"code_snippet\": \"public Date getExpire() { return expire; }\"}], \"requires_human_review\": true}",
+      "references": [],
+      "exploit_scenario": "",
+      "metadata": {
+        "evidence": [
+          {
+            "type": "code_line",
+            "location": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\entity\\SafeKey.java:42",
+            "reason": "返回可变Date对象引用，未使用防御性拷贝",
+            "confidence": 0.8,
+            "code_snippet": "public Date getExpire() { return expire; }"
+          }
+        ],
+        "requires_human_review": true
+      }
+    },
+    {
+      "rule_id": "SUSPICIOUS_PATTERN",
+      "rule_name": "SUSPICIOUS_PATTERN",
+      "description": "发现可疑代码模式：将约束违规集合直接存入请求属性，未做任何过滤或脱敏...",
+      "severity": "MEDIUM",
+      "confidence": 0.0085,
+      "location": {
+        "file": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\controller\\BizController.java",
+        "line": 30
+      },
+      "code_snippet": "\t *            验证组\n\t * @return 验证结果\n\t */\n\tprotected boolean isValid(Object target, Class<?>... groups) {\n\t\tSet<ConstraintViolation<Object>> constraintViolations = validator.validate(target, groups);\n\t\tif (constraintViolations.isEmpty()) {\n\t\t\treturn true;\n",
+      "fix_suggestion": "根据描述评估: 将验证失败的约束违规信息直接存储到RequestAttributes中，未对内容进行过滤或限制，可能...",
+      "explanation": "{\"vulnerability\": \"SUSPICIOUS_PATTERN\", \"location\": \"C:\\\\1AAA_PROJECT\\\\HOS\\\\HOS-LS\\\\real-project\\\\bizspring-open-main\\\\bizspring-base\\\\bizspring-base-core\\\\src\\\\main\\\\java\\\\cn\\\\bizspring\\\\cloud\\\\common\\\\core\\\\controller\\\\BizController.java:30\", \"severity\": \"MEDIUM\", \"status\": \"UNCERTAIN\", \"confidence\": 0.85, \"cvss_score\": \"\", \"recommendation\": \"根据描述评估: 将验证失败的约束违规信息直接存储到RequestAttributes中，未对内容进行过滤或限制，可能...\", \"evidence\": [{\"type\": \"code_line\", \"location\": \"C:\\\\1AAA_PROJECT\\\\HOS\\\\HOS-LS\\\\real-project\\\\bizspring-open-main\\\\bizspring-base\\\\bizspring-base-core\\\\src\\\\main\\\\java\\\\cn\\\\bizspring\\\\cloud\\\\common\\\\core\\\\controller\\\\BizController.java:30\", \"reason\": \"将约束违规集合直接存入请求属性，未做任何过滤或脱敏\", \"confidence\": 0.85, \"code_snippet\": \"requestAttributes.setAttribute(\\\"constraintViolations\\\", constraintViolations, RequestAttributes.SCOPE_REQUEST);\"}], \"requires_human_review\": true}",
+      "references": [],
+      "exploit_scenario": "",
+      "metadata": {
+        "evidence": [
+          {
+            "type": "code_line",
+            "location": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\controller\\BizController.java:30",
+            "reason": "将约束违规集合直接存入请求属性，未做任何过滤或脱敏",
+            "confidence": 0.85,
+            "code_snippet": "requestAttributes.setAttribute(\"constraintViolations\", constraintViolations, RequestAttributes.SCOPE_REQUEST);"
+          }
+        ],
+        "requires_human_review": true
+      }
+    },
+    {
+      "rule_id": "SUSPICIOUS_PATTERN",
+      "rule_name": "SUSPICIOUS_PATTERN",
+      "description": "发现可疑代码模式：将约束违规集合直接存入请求属性，未做任何过滤或脱敏...",
+      "severity": "MEDIUM",
+      "confidence": 0.0085,
+      "location": {
+        "file": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\controller\\BizController.java",
+        "line": 56
+      },
+      "code_snippet": "\t\t\t}\n\t\t}\n\t\treturn true;\n\t}\n\n\t/**\n\t * 数据验证\n",
+      "fix_suggestion": "根据描述评估: 与第30行相同模式，将验证失败的约束违规信息存储到RequestAttributes中...",
+      "explanation": "{\"vulnerability\": \"SUSPICIOUS_PATTERN\", \"location\": \"C:\\\\1AAA_PROJECT\\\\HOS\\\\HOS-LS\\\\real-project\\\\bizspring-open-main\\\\bizspring-base\\\\bizspring-base-core\\\\src\\\\main\\\\java\\\\cn\\\\bizspring\\\\cloud\\\\common\\\\core\\\\controller\\\\BizController.java:56\", \"severity\": \"MEDIUM\", \"status\": \"UNCERTAIN\", \"confidence\": 0.85, \"cvss_score\": \"\", \"recommendation\": \"根据描述评估: 与第30行相同模式，将验证失败的约束违规信息存储到RequestAttributes中...\", \"evidence\": [{\"type\": \"code_line\", \"location\": \"C:\\\\1AAA_PROJECT\\\\HOS\\\\HOS-LS\\\\real-project\\\\bizspring-open-main\\\\bizspring-base\\\\bizspring-base-core\\\\src\\\\main\\\\java\\\\cn\\\\bizspring\\\\cloud\\\\common\\\\core\\\\controller\\\\BizController.java:56\", \"reason\": \"将约束违规集合直接存入请求属性，未做任何过滤或脱敏\", \"confidence\": 0.85, \"code_snippet\": \"requestAttributes.setAttribute(\\\"constraintViolations\\\", constraintViolations, RequestAttributes.SCOPE_REQUEST);\"}], \"requires_human_review\": true}",
+      "references": [],
+      "exploit_scenario": "",
+      "metadata": {
+        "evidence": [
+          {
+            "type": "code_line",
+            "location": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\controller\\BizController.java:56",
+            "reason": "将约束违规集合直接存入请求属性，未做任何过滤或脱敏",
+            "confidence": 0.85,
+            "code_snippet": "requestAttributes.setAttribute(\"constraintViolations\", constraintViolations, RequestAttributes.SCOPE_REQUEST);"
+          }
+        ],
+        "requires_human_review": true
+      }
+    },
+    {
+      "rule_id": "WEAK_SECURITY_SIGNAL",
+      "rule_name": "WEAK_SECURITY_SIGNAL",
+      "description": "弱加密算法风险：使用了存在已知攻击方法或密钥长度不足的加密算法（如MD5、SHA1、DES等），攻击者可能破解敏感数据。",
+      "severity": "LOW",
+      "confidence": 0.006999999999999999,
+      "location": {
+        "file": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\controller\\BizController.java",
+        "line": 22
+      },
+      "code_snippet": "\t@Resource\n\tprivate Validator validator;\n\n\t/**\n\t * 数据验证\n\t * @param target\n\t *            验证对象\n",
+      "fix_suggestion": "建议修复：替换弱加密算法或默认配置，使用行业标准安全方案",
+      "explanation": "{\"vulnerability\": \"WEAK_SECURITY_SIGNAL\", \"location\": \"C:\\\\1AAA_PROJECT\\\\HOS\\\\HOS-LS\\\\real-project\\\\bizspring-open-main\\\\bizspring-base\\\\bizspring-base-core\\\\src\\\\main\\\\java\\\\cn\\\\bizspring\\\\cloud\\\\common\\\\core\\\\controller\\\\BizController.java:22\", \"severity\": \"LOW\", \"status\": \"UNCERTAIN\", \"confidence\": 0.7, \"cvss_score\": \"\", \"recommendation\": \"建议修复：替换弱加密算法或默认配置，使用行业标准安全方案\", \"evidence\": [{\"type\": \"code_line\", \"location\": \"C:\\\\1AAA_PROJECT\\\\HOS\\\\HOS-LS\\\\real-project\\\\bizspring-open-main\\\\bizspring-base\\\\bizspring-base-core\\\\src\\\\main\\\\java\\\\cn\\\\bizspring\\\\cloud\\\\common\\\\core\\\\controller\\\\BizController.java:22\", \"reason\": \"方法参数target直接来自调用方，未进行任何校验或清洗\", \"confidence\": 0.7, \"code_snippet\": \"protected boolean isValid(Object target, Class<?>... groups)\"}], \"requires_human_review\": true}",
+      "references": [],
+      "exploit_scenario": "",
+      "metadata": {
+        "evidence": [
+          {
+            "type": "code_line",
+            "location": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\controller\\BizController.java:22",
+            "reason": "方法参数target直接来自调用方，未进行任何校验或清洗",
+            "confidence": 0.7,
+            "code_snippet": "protected boolean isValid(Object target, Class<?>... groups)"
+          }
+        ],
+        "requires_human_review": true
+      }
+    },
+    {
+      "rule_id": "WEAK_SECURITY_SIGNAL",
+      "rule_name": "WEAK_SECURITY_SIGNAL",
+      "description": "弱加密算法风险：使用了存在已知攻击方法或密钥长度不足的加密算法（如MD5、SHA1、DES等），攻击者可能破解敏感数据。",
+      "severity": "LOW",
+      "confidence": 0.006999999999999999,
+      "location": {
+        "file": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\controller\\BizController.java",
+        "line": 53
+      },
+      "code_snippet": "\t\tfor (Object target : targets) {\n\t\t\tif (!isValid(target, groups)) {\n\t\t\t\treturn false;\n\t\t\t}\n\t\t}\n\t\treturn true;\n\t}\n",
+      "fix_suggestion": "建议修复：替换弱加密算法或默认配置，使用行业标准安全方案",
+      "explanation": "{\"vulnerability\": \"WEAK_SECURITY_SIGNAL\", \"location\": \"C:\\\\1AAA_PROJECT\\\\HOS\\\\HOS-LS\\\\real-project\\\\bizspring-open-main\\\\bizspring-base\\\\bizspring-base-core\\\\src\\\\main\\\\java\\\\cn\\\\bizspring\\\\cloud\\\\common\\\\core\\\\controller\\\\BizController.java:53\", \"severity\": \"LOW\", \"status\": \"UNCERTAIN\", \"confidence\": 0.7, \"cvss_score\": \"\", \"recommendation\": \"建议修复：替换弱加密算法或默认配置，使用行业标准安全方案\", \"evidence\": [{\"type\": \"code_line\", \"location\": \"C:\\\\1AAA_PROJECT\\\\HOS\\\\HOS-LS\\\\real-project\\\\bizspring-open-main\\\\bizspring-base\\\\bizspring-base-core\\\\src\\\\main\\\\java\\\\cn\\\\bizspring\\\\cloud\\\\common\\\\core\\\\controller\\\\BizController.java:53\", \"reason\": \"方法参数value直接来自调用方，未进行任何校验或清洗\", \"confidence\": 0.7, \"code_snippet\": \"protected boolean isValid(Class<?> type, String property, Object value, Class<?>... groups)\"}], \"requires_human_review\": true}",
+      "references": [],
+      "exploit_scenario": "",
+      "metadata": {
+        "evidence": [
+          {
+            "type": "code_line",
+            "location": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\controller\\BizController.java:53",
+            "reason": "方法参数value直接来自调用方，未进行任何校验或清洗",
+            "confidence": 0.7,
+            "code_snippet": "protected boolean isValid(Class<?> type, String property, Object value, Class<?>... groups)"
+          }
+        ],
+        "requires_human_review": true
+      }
+    },
+    {
+      "rule_id": "WEAK_SECURITY_SIGNAL",
+      "rule_name": "WEAK_SECURITY_SIGNAL",
+      "description": "弱加密算法风险：使用了存在已知攻击方法或密钥长度不足的加密算法（如MD5、SHA1、DES等），攻击者可能破解敏感数据。",
+      "severity": "LOW",
+      "confidence": 0.006999999999999999,
+      "location": {
+        "file": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\controller\\BizController.java",
+        "line": 66
+      },
+      "code_snippet": "\t * @param property\n\t *            属性\n\t * @param value\n\t *            值\n\t * @param groups\n\t *            验证组\n\t * @return 验证结果\n",
+      "fix_suggestion": "建议修复：替换弱加密算法或默认配置，使用行业标准安全方案",
+      "explanation": "{\"vulnerability\": \"WEAK_SECURITY_SIGNAL\", \"location\": \"C:\\\\1AAA_PROJECT\\\\HOS\\\\HOS-LS\\\\real-project\\\\bizspring-open-main\\\\bizspring-base\\\\bizspring-base-core\\\\src\\\\main\\\\java\\\\cn\\\\bizspring\\\\cloud\\\\common\\\\core\\\\controller\\\\BizController.java:66\", \"severity\": \"LOW\", \"status\": \"UNCERTAIN\", \"confidence\": 0.7, \"cvss_score\": \"\", \"recommendation\": \"建议修复：替换弱加密算法或默认配置，使用行业标准安全方案\", \"evidence\": [{\"type\": \"code_line\", \"location\": \"C:\\\\1AAA_PROJECT\\\\HOS\\\\HOS-LS\\\\real-project\\\\bizspring-open-main\\\\bizspring-base\\\\bizspring-base-core\\\\src\\\\main\\\\java\\\\cn\\\\bizspring\\\\cloud\\\\common\\\\core\\\\controller\\\\BizController.java:66\", \"reason\": \"方法参数properties直接来自调用方，未进行任何校验或清洗\", \"confidence\": 0.7, \"code_snippet\": \"protected boolean isValid(Class<?> type, Map<String, Object> properties, Class<?>... groups)\"}], \"requires_human_review\": true}",
+      "references": [],
+      "exploit_scenario": "",
+      "metadata": {
+        "evidence": [
+          {
+            "type": "code_line",
+            "location": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\controller\\BizController.java:66",
+            "reason": "方法参数properties直接来自调用方，未进行任何校验或清洗",
+            "confidence": 0.7,
+            "code_snippet": "protected boolean isValid(Class<?> type, Map<String, Object> properties, Class<?>... groups)"
+          }
+        ],
+        "requires_human_review": true
+      }
+    },
+    {
+      "rule_id": "WEAK_SECURITY_SIGNAL",
+      "rule_name": "WEAK_SECURITY_SIGNAL",
+      "description": "弱加密算法风险：使用了存在已知攻击方法或密钥长度不足的加密算法（如MD5、SHA1、DES等），攻击者可能破解敏感数据。",
+      "severity": "LOW",
+      "confidence": 0.004,
+      "location": {
+        "file": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\annotation\\CreatedTime.java",
+        "line": 5
+      },
+      "code_snippet": "\nimport java.lang.annotation.ElementType;\nimport java.lang.annotation.Retention;\nimport java.lang.annotation.RetentionPolicy;\nimport java.lang.annotation.Target;\n\n/**\n",
+      "fix_suggestion": "建议修复：替换弱加密算法或默认配置，使用行业标准安全方案",
+      "explanation": "{\"vulnerability\": \"WEAK_SECURITY_SIGNAL\", \"location\": \"C:\\\\1AAA_PROJECT\\\\HOS\\\\HOS-LS\\\\real-project\\\\bizspring-open-main\\\\bizspring-base\\\\bizspring-base-core\\\\src\\\\main\\\\java\\\\cn\\\\bizspring\\\\cloud\\\\common\\\\core\\\\annotation\\\\CreatedTime.java:5\", \"severity\": \"LOW\", \"status\": \"UNCERTAIN\", \"confidence\": 0.4, \"cvss_score\": \"\", \"recommendation\": \"建议修复：替换弱加密算法或默认配置，使用行业标准安全方案\", \"evidence\": [{\"type\": \"code_line\", \"location\": \"C:\\\\1AAA_PROJECT\\\\HOS\\\\HOS-LS\\\\real-project\\\\bizspring-open-main\\\\bizspring-base\\\\bizspring-base-core\\\\src\\\\main\\\\java\\\\cn\\\\bizspring\\\\cloud\\\\common\\\\core\\\\annotation\\\\CreatedTime.java:5\", \"reason\": \"运行时保留策略使得注解值在内存中可被反射访问，但无签名或加密保护。\", \"confidence\": 0.4, \"code_snippet\": \"@Retention(RetentionPolicy.RUNTIME)\"}], \"requires_human_review\": true}",
+      "references": [],
+      "exploit_scenario": "",
+      "metadata": {
+        "evidence": [
+          {
+            "type": "code_line",
+            "location": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\annotation\\CreatedTime.java:5",
+            "reason": "运行时保留策略使得注解值在内存中可被反射访问，但无签名或加密保护。",
+            "confidence": 0.4,
+            "code_snippet": "@Retention(RetentionPolicy.RUNTIME)"
+          }
+        ],
+        "requires_human_review": true
+      }
+    },
+    {
+      "rule_id": "SUSPICIOUS_PATTERN",
+      "rule_name": "SUSPICIOUS_PATTERN",
+      "description": "发现可疑代码模式：注解定义中未包含任何安全约束或验证逻辑...",
+      "severity": "LOW",
+      "confidence": 0.006999999999999999,
+      "location": {
+        "file": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\annotation\\UpdatedTime.java",
+        "line": 1
+      },
+      "code_snippet": "package cn.bizspring.cloud.common.core.annotation;\n\nimport java.lang.annotation.ElementType;\nimport java.lang.annotation.Retention;\n",
+      "fix_suggestion": "根据描述评估: 注解类仅包含元注解，无任何业务逻辑或数据验证，可能被用于自动填充时间字段但缺乏安全控制...",
+      "explanation": "{\"vulnerability\": \"SUSPICIOUS_PATTERN\", \"location\": \"C:\\\\1AAA_PROJECT\\\\HOS\\\\HOS-LS\\\\real-project\\\\bizspring-open-main\\\\bizspring-base\\\\bizspring-base-core\\\\src\\\\main\\\\java\\\\cn\\\\bizspring\\\\cloud\\\\common\\\\core\\\\annotation\\\\UpdatedTime.java:1\", \"severity\": \"LOW\", \"status\": \"UNCERTAIN\", \"confidence\": 0.7, \"cvss_score\": \"\", \"recommendation\": \"根据描述评估: 注解类仅包含元注解，无任何业务逻辑或数据验证，可能被用于自动填充时间字段但缺乏安全控制...\", \"evidence\": [{\"type\": \"code_line\", \"location\": \"C:\\\\1AAA_PROJECT\\\\HOS\\\\HOS-LS\\\\real-project\\\\bizspring-open-main\\\\bizspring-base\\\\bizspring-base-core\\\\src\\\\main\\\\java\\\\cn\\\\bizspring\\\\cloud\\\\common\\\\core\\\\annotation\\\\UpdatedTime.java:1\", \"reason\": \"注解定义中未包含任何安全约束或验证逻辑\", \"confidence\": 0.7, \"code_snippet\": \"@Target(value = { ElementType.FIELD, ElementType.METHOD })\"}], \"requires_human_review\": true}",
+      "references": [],
+      "exploit_scenario": "",
+      "metadata": {
+        "evidence": [
+          {
+            "type": "code_line",
+            "location": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\annotation\\UpdatedTime.java:1",
+            "reason": "注解定义中未包含任何安全约束或验证逻辑",
+            "confidence": 0.7,
+            "code_snippet": "@Target(value = { ElementType.FIELD, ElementType.METHOD })"
+          }
+        ],
+        "requires_human_review": true
+      }
+    },
+    {
+      "rule_id": "WEAK_SECURITY_SIGNAL",
+      "rule_name": "WEAK_SECURITY_SIGNAL",
+      "description": "弱加密算法风险：使用了存在已知攻击方法或密钥长度不足的加密算法（如MD5、SHA1、DES等），攻击者可能破解敏感数据。",
+      "severity": "INFO",
+      "confidence": 0.006,
+      "location": {
+        "file": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\annotation\\UpdatedTime.java",
+        "line": 1
+      },
+      "code_snippet": "package cn.bizspring.cloud.common.core.annotation;\n\nimport java.lang.annotation.ElementType;\nimport java.lang.annotation.Retention;\n",
+      "fix_suggestion": "可选择修复：替换弱加密算法或默认配置，使用行业标准安全方案",
+      "explanation": "{\"vulnerability\": \"WEAK_SECURITY_SIGNAL\", \"location\": \"C:\\\\1AAA_PROJECT\\\\HOS\\\\HOS-LS\\\\real-project\\\\bizspring-open-main\\\\bizspring-base\\\\bizspring-base-core\\\\src\\\\main\\\\java\\\\cn\\\\bizspring\\\\cloud\\\\common\\\\core\\\\annotation\\\\UpdatedTime.java:1\", \"severity\": \"INFO\", \"status\": \"UNCERTAIN\", \"confidence\": 0.6, \"cvss_score\": \"\", \"recommendation\": \"可选择修复：替换弱加密算法或默认配置，使用行业标准安全方案\", \"evidence\": [{\"type\": \"code_line\", \"location\": \"C:\\\\1AAA_PROJECT\\\\HOS\\\\HOS-LS\\\\real-project\\\\bizspring-open-main\\\\bizspring-base\\\\bizspring-base-core\\\\src\\\\main\\\\java\\\\cn\\\\bizspring\\\\cloud\\\\common\\\\core\\\\annotation\\\\UpdatedTime.java:1\", \"reason\": \"RetentionPolicy.RUNTIME 允许运行时反射访问，增加攻击面\", \"confidence\": 0.6, \"code_snippet\": \"@Retention(RetentionPolicy.RUNTIME)\"}], \"requires_human_review\": true}",
+      "references": [],
+      "exploit_scenario": "",
+      "metadata": {
+        "evidence": [
+          {
+            "type": "code_line",
+            "location": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\annotation\\UpdatedTime.java:1",
+            "reason": "RetentionPolicy.RUNTIME 允许运行时反射访问，增加攻击面",
+            "confidence": 0.6,
+            "code_snippet": "@Retention(RetentionPolicy.RUNTIME)"
+          }
+        ],
+        "requires_human_review": true
+      }
+    },
+    {
+      "rule_id": "DTO无输入验证或安全控制逻辑",
+      "rule_name": "DTO无输入验证或安全控制逻辑",
+      "description": "发现可疑代码模式：文件第1行至第28行仅定义字段x, Y, column1-5，无方法体，无输入验证注解或自定义验证逻辑...",
+      "severity": "MEDIUM",
+      "confidence": 0.5,
+      "location": {
+        "file": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\dto\\ReportDto.java",
+        "line": 1
+      },
+      "code_snippet": "package cn.bizspring.cloud.common.core.dto;\n\nimport lombok.Data;\nimport lombok.EqualsAndHashCode;\n",
+      "fix_suggestion": "",
+      "explanation": "{\"title\": \"DTO无输入验证或安全控制逻辑\", \"severity\": \"MEDIUM\", \"location\": \"C:\\\\1AAA_PROJECT\\\\HOS\\\\HOS-LS\\\\real-project\\\\bizspring-open-main\\\\bizspring-base\\\\bizspring-base-core\\\\src\\\\main\\\\java\\\\cn\\\\bizspring\\\\cloud\\\\common\\\\core\\\\dto\\\\ReportDto.java:1\", \"evidence\": [{\"type\": \"code_line\", \"location\": \"C:\\\\1AAA_PROJECT\\\\HOS\\\\HOS-LS\\\\real-project\\\\bizspring-open-main\\\\bizspring-base\\\\bizspring-base-core\\\\src\\\\main\\\\java\\\\cn\\\\bizspring\\\\cloud\\\\common\\\\core\\\\dto\\\\ReportDto.java:1\", \"reason\": \"文件第1行至第28行仅定义字段x, Y, column1-5，无方法体，无输入验证注解或自定义验证逻辑\", \"confidence\": 0.85, \"code_snippet\": \"public class ReportDto implements Serializable { ... }\"}], \"cwe_id\": \"CWE-20\", \"cvss_score\": \"5.3\", \"signal_id\": \"RISK-001\", \"signal_state\": \"CONFIRMED\", \"verification_decision\": \"CONFIRMED\", \"verification_reason\": \"location文件路径在已知文件列表中，行号1在有效范围1-44内，代码内容为字段定义且无输入验证逻辑，信号真实存在\", \"vulnerability\": \"DTO无输入验证或安全控制逻辑\"}",
+      "references": [],
+      "exploit_scenario": "",
+      "metadata": {
+        "evidence": [
+          {
+            "type": "code_line",
+            "location": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\dto\\ReportDto.java:1",
+            "reason": "文件第1行至第28行仅定义字段x, Y, column1-5，无方法体，无输入验证注解或自定义验证逻辑",
+            "confidence": 0.85,
+            "code_snippet": "public class ReportDto implements Serializable { ... }"
+          }
+        ],
+        "requires_human_review": false
+      }
+    },
+    {
+      "rule_id": "使用lombok.Data自动生成getter/setter，缺乏访问控制",
+      "rule_name": "使用lombok.Data自动生成getter/setter，缺乏访问控制",
+      "description": "发现可疑代码模式：import lombok.Data; 自动生成所有字段的setter方法，无限制...",
+      "severity": "LOW",
+      "confidence": 0.5,
+      "location": {
+        "file": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\dto\\ReportDto.java",
+        "line": 1
+      },
+      "code_snippet": "package cn.bizspring.cloud.common.core.dto;\n\nimport lombok.Data;\nimport lombok.EqualsAndHashCode;\n",
+      "fix_suggestion": "",
+      "explanation": "{\"title\": \"使用lombok.Data自动生成getter/setter，缺乏访问控制\", \"severity\": \"LOW\", \"location\": \"C:\\\\1AAA_PROJECT\\\\HOS\\\\HOS-LS\\\\real-project\\\\bizspring-open-main\\\\bizspring-base\\\\bizspring-base-core\\\\src\\\\main\\\\java\\\\cn\\\\bizspring\\\\cloud\\\\common\\\\core\\\\dto\\\\ReportDto.java:1\", \"evidence\": [{\"type\": \"code_line\", \"location\": \"C:\\\\1AAA_PROJECT\\\\HOS\\\\HOS-LS\\\\real-project\\\\bizspring-open-main\\\\bizspring-base\\\\bizspring-base-core\\\\src\\\\main\\\\java\\\\cn\\\\bizspring\\\\cloud\\\\common\\\\core\\\\dto\\\\ReportDto.java:1\", \"reason\": \"import lombok.Data; 自动生成所有字段的setter方法，无限制\", \"confidence\": 0.9, \"code_snippet\": \"import lombok.Data;\"}], \"cwe_id\": \"CWE-284\", \"cvss_score\": \"3.7\", \"signal_id\": \"RISK-002\", \"signal_state\": \"CONFIRMED\", \"verification_decision\": \"CONFIRMED\", \"verification_reason\": \"location文件路径在已知文件列表中，行号1在有效范围1-44内，代码包含import lombok.Data，信号真实存在\", \"vulnerability\": \"使用lombok.Data自动生成getter/setter，缺乏访问控制\"}",
+      "references": [],
+      "exploit_scenario": "",
+      "metadata": {
+        "evidence": [
+          {
+            "type": "code_line",
+            "location": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\dto\\ReportDto.java:1",
+            "reason": "import lombok.Data; 自动生成所有字段的setter方法，无限制",
+            "confidence": 0.9,
+            "code_snippet": "import lombok.Data;"
+          }
+        ],
+        "requires_human_review": false
+      }
+    },
+    {
+      "rule_id": "实现Serializable接口但未定义serialVersionUID",
+      "rule_name": "实现Serializable接口但未定义serialVersionUID",
+      "description": "发现可疑代码模式：import java.io.Serializable; 但类定义中未显式声明serialVersionUID...",
+      "severity": "INFO",
+      "confidence": 0.5,
+      "location": {
+        "file": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\dto\\ReportDto.java",
+        "line": 4
+      },
+      "code_snippet": "package cn.bizspring.cloud.common.core.dto;\n\nimport lombok.Data;\nimport lombok.EqualsAndHashCode;\n\nimport java.io.Serializable;\n\n",
+      "fix_suggestion": "",
+      "explanation": "{\"title\": \"实现Serializable接口但未定义serialVersionUID\", \"severity\": \"INFO\", \"location\": \"C:\\\\1AAA_PROJECT\\\\HOS\\\\HOS-LS\\\\real-project\\\\bizspring-open-main\\\\bizspring-base\\\\bizspring-base-core\\\\src\\\\main\\\\java\\\\cn\\\\bizspring\\\\cloud\\\\common\\\\core\\\\dto\\\\ReportDto.java:4\", \"evidence\": [{\"type\": \"code_line\", \"location\": \"C:\\\\1AAA_PROJECT\\\\HOS\\\\HOS-LS\\\\real-project\\\\bizspring-open-main\\\\bizspring-base\\\\bizspring-base-core\\\\src\\\\main\\\\java\\\\cn\\\\bizspring\\\\cloud\\\\common\\\\core\\\\dto\\\\ReportDto.java:4\", \"reason\": \"import java.io.Serializable; 但类定义中未显式声明serialVersionUID\", \"confidence\": 0.95, \"code_snippet\": \"import java.io.Serializable;\"}], \"cwe_id\": \"CWE-502\", \"cvss_score\": \"2.1\", \"signal_id\": \"RISK-003\", \"signal_state\": \"CONFIRMED\", \"verification_decision\": \"CONFIRMED\", \"verification_reason\": \"location文件路径在已知文件列表中，行号4在有效范围1-44内，代码包含import java.io.Serializable且类定义中无serialVersionUID声明，信号真实存在\", \"vulnerability\": \"实现Serializable接口但未定义serialVersionUID\"}",
+      "references": [],
+      "exploit_scenario": "",
+      "metadata": {
+        "evidence": [
+          {
+            "type": "code_line",
+            "location": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\dto\\ReportDto.java:4",
+            "reason": "import java.io.Serializable; 但类定义中未显式声明serialVersionUID",
+            "confidence": 0.95,
+            "code_snippet": "import java.io.Serializable;"
+          }
+        ],
+        "requires_human_review": false
+      }
+    },
+    {
+      "rule_id": "SUSPICIOUS_PATTERN",
+      "rule_name": "SUSPICIOUS_PATTERN",
+      "description": "发现可疑代码模式：三元表达式仅处理了左侧为null的情况，但未处理右侧other.getId()为null的情况...",
+      "severity": "MEDIUM",
+      "confidence": 0.0085,
+      "location": {
+        "file": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\entity\\BizEntity.java",
+        "line": 170
+      },
+      "code_snippet": "\t * @return 是否为新建对象\n\t */\n\tpublic boolean isNew() {\n\t\treturn getId() == null;\n\t}\n\n\n",
+      "fix_suggestion": "根据描述评估: equals方法中getId()可能为null，但比较时直接调用getId().equals(oth...",
+      "explanation": "{\"vulnerability\": \"SUSPICIOUS_PATTERN\", \"location\": \"C:\\\\1AAA_PROJECT\\\\HOS\\\\HOS-LS\\\\real-project\\\\bizspring-open-main\\\\bizspring-base\\\\bizspring-base-core\\\\src\\\\main\\\\java\\\\cn\\\\bizspring\\\\cloud\\\\common\\\\core\\\\entity\\\\BizEntity.java:170\", \"severity\": \"MEDIUM\", \"status\": \"UNCERTAIN\", \"confidence\": 0.85, \"cvss_score\": \"\", \"recommendation\": \"根据描述评估: equals方法中getId()可能为null，但比较时直接调用getId().equals(oth...\", \"evidence\": [{\"type\": \"code_line\", \"location\": \"C:\\\\1AAA_PROJECT\\\\HOS\\\\HOS-LS\\\\real-project\\\\bizspring-open-main\\\\bizspring-base\\\\bizspring-base-core\\\\src\\\\main\\\\java\\\\cn\\\\bizspring\\\\cloud\\\\common\\\\core\\\\entity\\\\BizEntity.java:170\", \"reason\": \"三元表达式仅处理了左侧为null的情况，但未处理右侧other.getId()为null的情况\", \"confidence\": 0.85, \"code_snippet\": \"return getId() != null ? getId().equals(other.getId()) : false;\"}], \"requires_human_review\": true}",
+      "references": [],
+      "exploit_scenario": "",
+      "metadata": {
+        "evidence": [
+          {
+            "type": "code_line",
+            "location": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\entity\\BizEntity.java:170",
+            "reason": "三元表达式仅处理了左侧为null的情况，但未处理右侧other.getId()为null的情况",
+            "confidence": 0.85,
+            "code_snippet": "return getId() != null ? getId().equals(other.getId()) : false;"
+          }
+        ],
+        "requires_human_review": true
+      }
+    },
+    {
+      "rule_id": "WEAK_SECURITY_SIGNAL",
+      "rule_name": "WEAK_SECURITY_SIGNAL",
+      "description": "弱加密算法风险：使用了存在已知攻击方法或密钥长度不足的加密算法（如MD5、SHA1、DES等），攻击者可能破解敏感数据。",
+      "severity": "INFO",
+      "confidence": 0.006500000000000001,
+      "location": {
+        "file": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\entity\\BizEntity.java",
+        "line": 14
+      },
+      "code_snippet": "import io.swagger.annotations.ApiModelProperty;\n\nimport javax.validation.groups.Default;\nimport java.io.Serializable;\nimport java.util.Date;\n\n/**\n",
+      "fix_suggestion": "可选择修复：替换弱加密算法或默认配置，使用行业标准安全方案",
+      "explanation": "{\"vulnerability\": \"WEAK_SECURITY_SIGNAL\", \"location\": \"C:\\\\1AAA_PROJECT\\\\HOS\\\\HOS-LS\\\\real-project\\\\bizspring-open-main\\\\bizspring-base\\\\bizspring-base-core\\\\src\\\\main\\\\java\\\\cn\\\\bizspring\\\\cloud\\\\common\\\\core\\\\entity\\\\BizEntity.java:14\", \"severity\": \"INFO\", \"status\": \"UNCERTAIN\", \"confidence\": 0.65, \"cvss_score\": \"\", \"recommendation\": \"可选择修复：替换弱加密算法或默认配置，使用行业标准安全方案\", \"evidence\": [{\"type\": \"code_line\", \"location\": \"C:\\\\1AAA_PROJECT\\\\HOS\\\\HOS-LS\\\\real-project\\\\bizspring-open-main\\\\bizspring-base\\\\bizspring-base-core\\\\src\\\\main\\\\java\\\\cn\\\\bizspring\\\\cloud\\\\common\\\\core\\\\entity\\\\BizEntity.java:14\", \"reason\": \"导入MyBatis-Plus注解，但未在代码中看到字段级别的验证注解（如@NotNull、@Size等）\", \"confidence\": 0.65, \"code_snippet\": \"import com.baomidou.mybatisplus.annotation.*;\"}], \"requires_human_review\": true}",
+      "references": [],
+      "exploit_scenario": "",
+      "metadata": {
+        "evidence": [
+          {
+            "type": "code_line",
+            "location": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\entity\\BizEntity.java:14",
+            "reason": "导入MyBatis-Plus注解，但未在代码中看到字段级别的验证注解（如@NotNull、@Size等）",
+            "confidence": 0.65,
+            "code_snippet": "import com.baomidou.mybatisplus.annotation.*;"
+          }
+        ],
+        "requires_human_review": true
+      }
+    },
+    {
+      "rule_id": "SUSPICIOUS_PATTERN",
+      "rule_name": "SUSPICIOUS_PATTERN",
+      "description": "发现可疑代码模式：导入@JsonFormat注解，但未在代码中看到时区参数（如timezone=\"GMT+8\"）...",
+      "severity": "LOW",
+      "confidence": 0.006999999999999999,
+      "location": {
+        "file": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\entity\\BizEntity.java",
+        "line": 15
+      },
+      "code_snippet": "\nimport javax.validation.groups.Default;\nimport java.io.Serializable;\nimport java.util.Date;\n\n/**\n * Entity - BizEntity\n",
+      "fix_suggestion": "根据描述评估: 使用@JsonFormat注解格式化日期，但未指定时区，可能导致跨时区解析错误...",
+      "explanation": "{\"vulnerability\": \"SUSPICIOUS_PATTERN\", \"location\": \"C:\\\\1AAA_PROJECT\\\\HOS\\\\HOS-LS\\\\real-project\\\\bizspring-open-main\\\\bizspring-base\\\\bizspring-base-core\\\\src\\\\main\\\\java\\\\cn\\\\bizspring\\\\cloud\\\\common\\\\core\\\\entity\\\\BizEntity.java:15\", \"severity\": \"LOW\", \"status\": \"UNCERTAIN\", \"confidence\": 0.7, \"cvss_score\": \"\", \"recommendation\": \"根据描述评估: 使用@JsonFormat注解格式化日期，但未指定时区，可能导致跨时区解析错误...\", \"evidence\": [{\"type\": \"code_line\", \"location\": \"C:\\\\1AAA_PROJECT\\\\HOS\\\\HOS-LS\\\\real-project\\\\bizspring-open-main\\\\bizspring-base\\\\bizspring-base-core\\\\src\\\\main\\\\java\\\\cn\\\\bizspring\\\\cloud\\\\common\\\\core\\\\entity\\\\BizEntity.java:15\", \"reason\": \"导入@JsonFormat注解，但未在代码中看到时区参数（如timezone=\\\"GMT+8\\\"）\", \"confidence\": 0.7, \"code_snippet\": \"import com.fasterxml.jackson.annotation.JsonFormat;\"}], \"requires_human_review\": true}",
+      "references": [],
+      "exploit_scenario": "",
+      "metadata": {
+        "evidence": [
+          {
+            "type": "code_line",
+            "location": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\entity\\BizEntity.java:15",
+            "reason": "导入@JsonFormat注解，但未在代码中看到时区参数（如timezone=\"GMT+8\"）",
+            "confidence": 0.7,
+            "code_snippet": "import com.fasterxml.jackson.annotation.JsonFormat;"
+          }
+        ],
+        "requires_human_review": true
+      }
+    },
+    {
+      "rule_id": "SUSPICIOUS_PATTERN",
+      "rule_name": "SUSPICIOUS_PATTERN",
+      "description": "发现可疑代码模式：类级别注解@Data和@Entity同时使用，暴露所有字段的setter方法，且无@Setter(AccessLevel.NONE)限制。...",
+      "severity": "MEDIUM",
+      "confidence": 0.006999999999999999,
+      "location": {
+        "file": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\entity\\Sn.java",
+        "line": 1
+      },
+      "code_snippet": "package cn.bizspring.cloud.common.core.entity;\n\nimport com.baomidou.mybatisplus.annotation.TableName;\nimport com.baomidou.mybatisplus.core.enums.IEnum;\n",
+      "fix_suggestion": "根据描述评估: 类Sn使用@Data和@Entity注解，自动生成getter/setter，可能导致实体属性被外部...",
+      "explanation": "{\"vulnerability\": \"SUSPICIOUS_PATTERN\", \"location\": \"C:\\\\1AAA_PROJECT\\\\HOS\\\\HOS-LS\\\\real-project\\\\bizspring-open-main\\\\bizspring-base\\\\bizspring-base-core\\\\src\\\\main\\\\java\\\\cn\\\\bizspring\\\\cloud\\\\common\\\\core\\\\entity\\\\Sn.java:1\", \"severity\": \"MEDIUM\", \"status\": \"UNCERTAIN\", \"confidence\": 0.7, \"cvss_score\": \"\", \"recommendation\": \"根据描述评估: 类Sn使用@Data和@Entity注解，自动生成getter/setter，可能导致实体属性被外部...\", \"evidence\": [{\"type\": \"code_line\", \"location\": \"C:\\\\1AAA_PROJECT\\\\HOS\\\\HOS-LS\\\\real-project\\\\bizspring-open-main\\\\bizspring-base\\\\bizspring-base-core\\\\src\\\\main\\\\java\\\\cn\\\\bizspring\\\\cloud\\\\common\\\\core\\\\entity\\\\Sn.java:1\", \"reason\": \"类级别注解@Data和@Entity同时使用，暴露所有字段的setter方法，且无@Setter(AccessLevel.NONE)限制。\", \"confidence\": 0.7, \"code_snippet\": \"@Data\\n@Entity\\n@TableName(\\\"biz_sn\\\")\"}], \"requires_human_review\": true}",
+      "references": [],
+      "exploit_scenario": "",
+      "metadata": {
+        "evidence": [
+          {
+            "type": "code_line",
+            "location": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\entity\\Sn.java:1",
+            "reason": "类级别注解@Data和@Entity同时使用，暴露所有字段的setter方法，且无@Setter(AccessLevel.NONE)限制。",
+            "confidence": 0.7,
+            "code_snippet": "@Data\n@Entity\n@TableName(\"biz_sn\")"
+          }
+        ],
+        "requires_human_review": true
+      }
+    },
+    {
+      "rule_id": "WEAK_SECURITY_SIGNAL",
+      "rule_name": "WEAK_SECURITY_SIGNAL",
+      "description": "弱加密算法风险：使用了存在已知攻击方法或密钥长度不足的加密算法（如MD5、SHA1、DES等），攻击者可能破解敏感数据。",
+      "severity": "LOW",
+      "confidence": 0.005,
+      "location": {
+        "file": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\entity\\Sn.java",
+        "line": 1
+      },
+      "code_snippet": "package cn.bizspring.cloud.common.core.entity;\n\nimport com.baomidou.mybatisplus.annotation.TableName;\nimport com.baomidou.mybatisplus.core.enums.IEnum;\n",
+      "fix_suggestion": "建议修复：替换弱加密算法或默认配置，使用行业标准安全方案",
+      "explanation": "{\"vulnerability\": \"WEAK_SECURITY_SIGNAL\", \"location\": \"C:\\\\1AAA_PROJECT\\\\HOS\\\\HOS-LS\\\\real-project\\\\bizspring-open-main\\\\bizspring-base\\\\bizspring-base-core\\\\src\\\\main\\\\java\\\\cn\\\\bizspring\\\\cloud\\\\common\\\\core\\\\entity\\\\Sn.java:1\", \"severity\": \"LOW\", \"status\": \"UNCERTAIN\", \"confidence\": 0.5, \"cvss_score\": \"\", \"recommendation\": \"建议修复：替换弱加密算法或默认配置，使用行业标准安全方案\", \"evidence\": [{\"type\": \"code_line\", \"location\": \"C:\\\\1AAA_PROJECT\\\\HOS\\\\HOS-LS\\\\real-project\\\\bizspring-open-main\\\\bizspring-base\\\\bizspring-base-core\\\\src\\\\main\\\\java\\\\cn\\\\bizspring\\\\cloud\\\\common\\\\core\\\\entity\\\\Sn.java:1\", \"reason\": \"枚举Type实现IEnum<Integer>，但未提供@JsonCreator或@JsonValue等反序列化校验，也未在枚举中定义所有可能值。\", \"confidence\": 0.5, \"code_snippet\": \"public enum Type implements IEnum<Integer>\"}], \"requires_human_review\": true}",
+      "references": [],
+      "exploit_scenario": "",
+      "metadata": {
+        "evidence": [
+          {
+            "type": "code_line",
+            "location": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\entity\\Sn.java:1",
+            "reason": "枚举Type实现IEnum<Integer>，但未提供@JsonCreator或@JsonValue等反序列化校验，也未在枚举中定义所有可能值。",
+            "confidence": 0.5,
+            "code_snippet": "public enum Type implements IEnum<Integer>"
+          }
+        ],
+        "requires_human_review": true
+      }
+    },
+    {
+      "rule_id": "SUSPICIOUS_PATTERN",
+      "rule_name": "SUSPICIOUS_PATTERN",
+      "description": "发现可疑代码模式：@JsonView(BaseView.class)引用了一个未在当前文件中定义的类BaseView，且未提供任何导入或定义。...",
+      "severity": "INFO",
+      "confidence": 0.006,
+      "location": {
+        "file": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\entity\\Sn.java",
+        "line": 1
+      },
+      "code_snippet": "package cn.bizspring.cloud.common.core.entity;\n\nimport com.baomidou.mybatisplus.annotation.TableName;\nimport com.baomidou.mybatisplus.core.enums.IEnum;\n",
+      "fix_suggestion": "根据描述评估: 使用@JsonView(BaseView.class)控制序列化视图，但未定义BaseView接口或...",
+      "explanation": "{\"vulnerability\": \"SUSPICIOUS_PATTERN\", \"location\": \"C:\\\\1AAA_PROJECT\\\\HOS\\\\HOS-LS\\\\real-project\\\\bizspring-open-main\\\\bizspring-base\\\\bizspring-base-core\\\\src\\\\main\\\\java\\\\cn\\\\bizspring\\\\cloud\\\\common\\\\core\\\\entity\\\\Sn.java:1\", \"severity\": \"INFO\", \"status\": \"UNCERTAIN\", \"confidence\": 0.6, \"cvss_score\": \"\", \"recommendation\": \"根据描述评估: 使用@JsonView(BaseView.class)控制序列化视图，但未定义BaseView接口或...\", \"evidence\": [{\"type\": \"code_line\", \"location\": \"C:\\\\1AAA_PROJECT\\\\HOS\\\\HOS-LS\\\\real-project\\\\bizspring-open-main\\\\bizspring-base\\\\bizspring-base-core\\\\src\\\\main\\\\java\\\\cn\\\\bizspring\\\\cloud\\\\common\\\\core\\\\entity\\\\Sn.java:1\", \"reason\": \"@JsonView(BaseView.class)引用了一个未在当前文件中定义的类BaseView，且未提供任何导入或定义。\", \"confidence\": 0.6, \"code_snippet\": \"@JsonView(BaseView.class)\"}], \"requires_human_review\": true}",
+      "references": [],
+      "exploit_scenario": "",
+      "metadata": {
+        "evidence": [
+          {
+            "type": "code_line",
+            "location": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\entity\\Sn.java:1",
+            "reason": "@JsonView(BaseView.class)引用了一个未在当前文件中定义的类BaseView，且未提供任何导入或定义。",
+            "confidence": 0.6,
+            "code_snippet": "@JsonView(BaseView.class)"
+          }
+        ],
+        "requires_human_review": true
+      }
+    },
+    {
+      "rule_id": "compareTo方法中getSort()和getId()返回值未做null检查可能导致NullPointerException",
+      "rule_name": "compareTo方法中getSort()和getId()返回值未做null检查可能导致NullPointerException",
+      "description": "发现可疑代码模式：compareTo方法中sortEntity参数已做null检查，但后续调用getSort()和getId()未做null检查，存在空指针风险。...",
+      "severity": "MEDIUM",
+      "confidence": 0.5,
+      "location": {
+        "file": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\entity\\SortEntity.java",
+        "line": 47
+      },
+      "code_snippet": "\tpublic void setSort(Integer sort) {\n\t\tthis.sort = sort;\n\t}\n\n\t/**\n\t * 实现compareTo方法\n\t * \n",
+      "fix_suggestion": "",
+      "explanation": "{\"title\": \"compareTo方法中getSort()和getId()返回值未做null检查可能导致NullPointerException\", \"severity\": \"MEDIUM\", \"location\": \"C:\\\\1AAA_PROJECT\\\\HOS\\\\HOS-LS\\\\real-project\\\\bizspring-open-main\\\\bizspring-base\\\\bizspring-base-core\\\\src\\\\main\\\\java\\\\cn\\\\bizspring\\\\cloud\\\\common\\\\core\\\\entity\\\\SortEntity.java:47\", \"evidence\": [{\"type\": \"code_line\", \"location\": \"C:\\\\1AAA_PROJECT\\\\HOS\\\\HOS-LS\\\\real-project\\\\bizspring-open-main\\\\bizspring-base\\\\bizspring-base-core\\\\src\\\\main\\\\java\\\\cn\\\\bizspring\\\\cloud\\\\common\\\\core\\\\entity\\\\SortEntity.java:47\", \"reason\": \"compareTo方法中sortEntity参数已做null检查，但后续调用getSort()和getId()未做null检查，存在空指针风险。\", \"confidence\": 0.85, \"code_snippet\": \"public int compareTo(SortEntity<T> sortEntity) {\\n\\t\\tif (sortEntity == null) {\\n\\t\\t\\treturn 1;\\n\\t\\t}\\n\\t\\treturn new CompareToBuilder().append(getSort(), sortEntity.getSort()).append(getId(), sortEntity.getId()).toComparison();\\n\\t}\"}], \"cwe_id\": \"CWE-476\", \"cvss_score\": \"5.3\", \"signal_id\": \"RISK-001\", \"signal_state\": \"CONFIRMED\", \"verification_decision\": \"CONFIRMED\", \"verification_reason\": \"location文件路径在已知文件列表中，行号47在SortEntity.java的62行范围内，代码片段与文件内容一致，compareTo方法中sortEntity.getSort()和sortEntity.getId()在sortEntity非空后未进行null检查，若返回null则CompareToBuilder.append可能抛出NullPointerException，风险真实存在。\", \"vulnerability\": \"compareTo方法中getSort()和getId()返回值未做null检查可能导致NullPointerException\"}",
+      "references": [],
+      "exploit_scenario": "",
+      "metadata": {
+        "evidence": [
+          {
+            "type": "code_line",
+            "location": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\entity\\SortEntity.java:47",
+            "reason": "compareTo方法中sortEntity参数已做null检查，但后续调用getSort()和getId()未做null检查，存在空指针风险。",
+            "confidence": 0.85,
+            "code_snippet": "public int compareTo(SortEntity<T> sortEntity) {\n\t\tif (sortEntity == null) {\n\t\t\treturn 1;\n\t\t}\n\t\treturn new CompareToBuilder().append(getSort(), sortEntity.getSort()).append(getId(), sortEntity.getId()).toComparison();\n\t}"
+          }
+        ],
+        "requires_human_review": false
+      }
+    },
+    {
+      "rule_id": "compareTo方法中泛型类型未显式检查可能导致ClassCastException",
+      "rule_name": "compareTo方法中泛型类型未显式检查可能导致ClassCastException",
+      "description": "发现可疑代码模式：CompareToBuilder.append方法依赖泛型类型一致性，但代码中未显式检查类型匹配。...",
+      "severity": "LOW",
+      "confidence": 0.5,
+      "location": {
+        "file": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\entity\\SortEntity.java",
+        "line": 47
+      },
+      "code_snippet": "\tpublic void setSort(Integer sort) {\n\t\tthis.sort = sort;\n\t}\n\n\t/**\n\t * 实现compareTo方法\n\t * \n",
+      "fix_suggestion": "",
+      "explanation": "{\"title\": \"compareTo方法中泛型类型未显式检查可能导致ClassCastException\", \"severity\": \"LOW\", \"location\": \"C:\\\\1AAA_PROJECT\\\\HOS\\\\HOS-LS\\\\real-project\\\\bizspring-open-main\\\\bizspring-base\\\\bizspring-base-core\\\\src\\\\main\\\\java\\\\cn\\\\bizspring\\\\cloud\\\\common\\\\core\\\\entity\\\\SortEntity.java:47\", \"evidence\": [{\"type\": \"code_line\", \"location\": \"C:\\\\1AAA_PROJECT\\\\HOS\\\\HOS-LS\\\\real-project\\\\bizspring-open-main\\\\bizspring-base\\\\bizspring-base-core\\\\src\\\\main\\\\java\\\\cn\\\\bizspring\\\\cloud\\\\common\\\\core\\\\entity\\\\SortEntity.java:47\", \"reason\": \"CompareToBuilder.append方法依赖泛型类型一致性，但代码中未显式检查类型匹配。\", \"confidence\": 0.7, \"code_snippet\": \"return new CompareToBuilder().append(getSort(), sortEntity.getSort()).append(getId(), sortEntity.getId()).toComparison();\"}], \"cwe_id\": \"CWE-843\", \"cvss_score\": \"3.7\", \"signal_id\": \"RISK-002\", \"signal_state\": \"CONFIRMED\", \"verification_decision\": \"CONFIRMED\", \"verification_reason\": \"location文件路径在已知文件列表中，行号47在SortEntity.java的62行范围内，代码片段与文件内容一致，CompareToBuilder.append在运行时依赖泛型类型一致性，若T与实际类型不匹配可能抛出ClassCastException，风险真实存在。\", \"vulnerability\": \"compareTo方法中泛型类型未显式检查可能导致ClassCastException\"}",
+      "references": [],
+      "exploit_scenario": "",
+      "metadata": {
+        "evidence": [
+          {
+            "type": "code_line",
+            "location": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\entity\\SortEntity.java:47",
+            "reason": "CompareToBuilder.append方法依赖泛型类型一致性，但代码中未显式检查类型匹配。",
+            "confidence": 0.7,
+            "code_snippet": "return new CompareToBuilder().append(getSort(), sortEntity.getSort()).append(getId(), sortEntity.getId()).toComparison();"
+          }
+        ],
+        "requires_human_review": false
+      }
+    },
+    {
+      "rule_id": "缓存键为静态字符串可能引发缓存投掷",
+      "rule_name": "缓存键为静态字符串可能引发缓存投掷",
+      "description": "缓存安全配置问题：缓存机制未进行适当的访问控制或数据隔离，不同用户/租户的数据可能发生混淆，导致信息泄露。",
+      "severity": "MEDIUM",
+      "confidence": 0.5,
+      "location": {
+        "file": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\enums\\CacheEnum.java",
+        "line": 1
+      },
+      "code_snippet": "package cn.bizspring.cloud.common.core.enums;\n\n/**\n\n",
+      "fix_suggestion": "",
+      "explanation": "{\"title\": \"缓存键为静态字符串可能引发缓存投掷\", \"severity\": \"MEDIUM\", \"location\": \"C:\\\\1AAA_PROJECT\\\\HOS\\\\HOS-LS\\\\real-project\\\\bizspring-open-main\\\\bizspring-base\\\\bizspring-base-core\\\\src\\\\main\\\\java\\\\cn\\\\bizspring\\\\cloud\\\\common\\\\core\\\\enums\\\\CacheEnum.java:1\", \"evidence\": [{\"type\": \"code_line\", \"location\": \"C:\\\\1AAA_PROJECT\\\\HOS\\\\HOS-LS\\\\real-project\\\\bizspring-open-main\\\\bizspring-base\\\\bizspring-base-core\\\\src\\\\main\\\\java\\\\cn\\\\bizspring\\\\cloud\\\\common\\\\core\\\\enums\\\\CacheEnum.java:1\", \"reason\": \"静态缓存键定义，未使用命名空间或输入校验，存在被恶意拼接的风险\", \"confidence\": 0.7, \"code_snippet\": \"String USER_CACHE = \\\"user_cache\\\";\"}], \"cwe_id\": \"CWE-20\", \"cvss_score\": \"5.3\", \"signal_id\": \"RISK-001\", \"signal_state\": \"CONFIRMED\", \"verification_decision\": \"CONFIRMED\", \"verification_reason\": \"location 文件路径在已知文件列表中，行号1在文件行数范围1-50内，代码片段存在静态字符串定义，符合缓存投掷风险模式\", \"vulnerability\": \"缓存键为静态字符串可能引发缓存投掷\"}",
+      "references": [],
+      "exploit_scenario": "",
+      "metadata": {
+        "evidence": [
+          {
+            "type": "code_line",
+            "location": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\enums\\CacheEnum.java:1",
+            "reason": "静态缓存键定义，未使用命名空间或输入校验，存在被恶意拼接的风险",
+            "confidence": 0.7,
+            "code_snippet": "String USER_CACHE = \"user_cache\";"
+          }
+        ],
+        "requires_human_review": false
+      }
+    },
+    {
+      "rule_id": "硬编码默认密码",
+      "rule_name": "硬编码默认密码",
+      "description": "硬编码凭据风险：代码中包含硬编码的敏感凭据（如密码、API密钥、加密密钥），可能被源码泄露或通过代码审查被发现，造成严重安全风险。建议使用环境变量或密钥管理系统存储敏感信息。",
+      "severity": "HIGH",
+      "confidence": 0.5,
+      "location": {
+        "file": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\enums\\CommonEnum.java",
+        "line": 17
+      },
+      "code_snippet": "\t/** 主子表（增删改查） */\n\tpublic static final String TPL_SUB = \"sub\";\n\n\t/** 树编码字段 */\n\tpublic static final String TREE_CODE = \"treeCode\";\n\n\t/** 树父编码字段 */\n",
+      "fix_suggestion": "",
+      "explanation": "{\"title\": \"硬编码默认密码\", \"severity\": \"HIGH\", \"location\": \"C:\\\\1AAA_PROJECT\\\\HOS\\\\HOS-LS\\\\real-project\\\\bizspring-open-main\\\\bizspring-base\\\\bizspring-base-core\\\\src\\\\main\\\\java\\\\cn\\\\bizspring\\\\cloud\\\\common\\\\core\\\\enums\\\\CommonEnum.java:17\", \"evidence\": [{\"type\": \"code_line\", \"location\": \"C:\\\\1AAA_PROJECT\\\\HOS\\\\HOS-LS\\\\real-project\\\\bizspring-open-main\\\\bizspring-base\\\\bizspring-base-core\\\\src\\\\main\\\\java\\\\cn\\\\bizspring\\\\cloud\\\\common\\\\core\\\\enums\\\\CommonEnum.java:17\", \"reason\": \"第17行定义了DEFAULT_PASSWORD=\\\"123456\\\"，该密码为常见弱口令，且作为默认密码使用\", \"confidence\": 0.95, \"code_snippet\": \"String DEFAULT_PASSWORD=\\\"123456\\\";\"}], \"cwe_id\": \"CWE-259\", \"cvss_score\": \"7.5\", \"signal_id\": \"RISK-001\", \"signal_state\": \"CONFIRMED\", \"verification_decision\": \"CONFIRMED\", \"verification_reason\": \"location文件路径在已知文件列表中，行号17在CommonEnum.java的143行范围内，代码行存在硬编码默认密码\\\"123456\\\"，符合弱口令风险特征。\", \"vulnerability\": \"硬编码默认密码\"}",
+      "references": [],
+      "exploit_scenario": "",
+      "metadata": {
+        "evidence": [
+          {
+            "type": "code_line",
+            "location": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\enums\\CommonEnum.java:17",
+            "reason": "第17行定义了DEFAULT_PASSWORD=\"123456\"，该密码为常见弱口令，且作为默认密码使用",
+            "confidence": 0.95,
+            "code_snippet": "String DEFAULT_PASSWORD=\"123456\";"
+          }
+        ],
+        "requires_human_review": false
+      }
+    },
+    {
+      "rule_id": "枚举类使用@Getter注解自动生成getter方法",
+      "rule_name": "枚举类使用@Getter注解自动生成getter方法",
+      "description": "发现可疑代码模式：@Getter注解自动生成getter方法，暴露枚举字段。...",
+      "severity": "LOW",
+      "confidence": 0.5,
+      "location": {
+        "file": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\enums\\FlowStatusEnum.java",
+        "line": 9
+      },
+      "code_snippet": "/**\n * @author\n * 流程状态\n */\n@Getter\n@AllArgsConstructor\npublic enum FlowStatusEnum {\n",
+      "fix_suggestion": "",
+      "explanation": "{\"title\": \"枚举类使用@Getter注解自动生成getter方法\", \"severity\": \"LOW\", \"location\": \"C:\\\\1AAA_PROJECT\\\\HOS\\\\HOS-LS\\\\real-project\\\\bizspring-open-main\\\\bizspring-base\\\\bizspring-base-core\\\\src\\\\main\\\\java\\\\cn\\\\bizspring\\\\cloud\\\\common\\\\core\\\\enums\\\\FlowStatusEnum.java:9\", \"evidence\": [{\"type\": \"code_line\", \"location\": \"C:\\\\1AAA_PROJECT\\\\HOS\\\\HOS-LS\\\\real-project\\\\bizspring-open-main\\\\bizspring-base\\\\bizspring-base-core\\\\src\\\\main\\\\java\\\\cn\\\\bizspring\\\\cloud\\\\common\\\\core\\\\enums\\\\FlowStatusEnum.java:9\", \"reason\": \"@Getter注解自动生成getter方法，暴露枚举字段。\", \"confidence\": 0.7, \"code_snippet\": \"@Getter\"}], \"cwe_id\": \"CWE-200\", \"cvss_score\": \"N/A\", \"signal_id\": \"RISK-001\", \"signal_state\": \"CONFIRMED\", \"verification_decision\": \"CONFIRMED\", \"verification_reason\": \"location文件路径在已知文件列表中，行号9在FlowStatusEnum.java的1-42行范围内，代码中存在@Getter注解，信号真实存在。\", \"vulnerability\": \"枚举类使用@Getter注解自动生成getter方法\"}",
+      "references": [],
+      "exploit_scenario": "",
+      "metadata": {
+        "evidence": [
+          {
+            "type": "code_line",
+            "location": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\enums\\FlowStatusEnum.java:9",
+            "reason": "@Getter注解自动生成getter方法，暴露枚举字段。",
+            "confidence": 0.7,
+            "code_snippet": "@Getter"
+          }
+        ],
+        "requires_human_review": false
+      }
+    },
+    {
+      "rule_id": "枚举类使用@AllArgsConstructor注解自动生成全参构造函数",
+      "rule_name": "枚举类使用@AllArgsConstructor注解自动生成全参构造函数",
+      "description": "发现可疑代码模式：@AllArgsConstructor注解自动生成全参构造函数，破坏枚举的实例控制。...",
+      "severity": "LOW",
+      "confidence": 0.5,
+      "location": {
+        "file": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\enums\\FlowStatusEnum.java",
+        "line": 10
+      },
+      "code_snippet": " * @author\n * 流程状态\n */\n@Getter\n@AllArgsConstructor\npublic enum FlowStatusEnum {\n\t/**\n",
+      "fix_suggestion": "",
+      "explanation": "{\"title\": \"枚举类使用@AllArgsConstructor注解自动生成全参构造函数\", \"severity\": \"LOW\", \"location\": \"C:\\\\1AAA_PROJECT\\\\HOS\\\\HOS-LS\\\\real-project\\\\bizspring-open-main\\\\bizspring-base\\\\bizspring-base-core\\\\src\\\\main\\\\java\\\\cn\\\\bizspring\\\\cloud\\\\common\\\\core\\\\enums\\\\FlowStatusEnum.java:10\", \"evidence\": [{\"type\": \"code_line\", \"location\": \"C:\\\\1AAA_PROJECT\\\\HOS\\\\HOS-LS\\\\real-project\\\\bizspring-open-main\\\\bizspring-base\\\\bizspring-base-core\\\\src\\\\main\\\\java\\\\cn\\\\bizspring\\\\cloud\\\\common\\\\core\\\\enums\\\\FlowStatusEnum.java:10\", \"reason\": \"@AllArgsConstructor注解自动生成全参构造函数，破坏枚举的实例控制。\", \"confidence\": 0.6, \"code_snippet\": \"@AllArgsConstructor\"}], \"cwe_id\": \"CWE-665\", \"cvss_score\": \"N/A\", \"signal_id\": \"RISK-002\", \"signal_state\": \"CONFIRMED\", \"verification_decision\": \"CONFIRMED\", \"verification_reason\": \"location文件路径在已知文件列表中，行号10在FlowStatusEnum.java的1-42行范围内，代码中存在@AllArgsConstructor注解，信号真实存在。\", \"vulnerability\": \"枚举类使用@AllArgsConstructor注解自动生成全参构造函数\"}",
+      "references": [],
+      "exploit_scenario": "",
+      "metadata": {
+        "evidence": [
+          {
+            "type": "code_line",
+            "location": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\enums\\FlowStatusEnum.java:10",
+            "reason": "@AllArgsConstructor注解自动生成全参构造函数，破坏枚举的实例控制。",
+            "confidence": 0.6,
+            "code_snippet": "@AllArgsConstructor"
+          }
+        ],
+        "requires_human_review": false
+      }
+    },
+    {
+      "rule_id": "SUSPICIOUS_PATTERN",
+      "rule_name": "SUSPICIOUS_PATTERN",
+      "description": "发现可疑代码模式：枚举类PageEnum没有定义任何枚举常量，可能被用于动态生成或反射调用。...",
+      "severity": "INFO",
+      "confidence": 0.005,
+      "location": {
+        "file": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\enums\\PageEnum.java",
+        "line": 1
+      },
+      "code_snippet": "package cn.bizspring.cloud.common.core.enums;\n\n/**\n * 分页常量\n",
+      "fix_suggestion": "根据描述评估: 枚举类未定义任何枚举常量，可能被用于动态生成或反射调用，存在未预期的行为风险。...",
+      "explanation": "{\"vulnerability\": \"SUSPICIOUS_PATTERN\", \"location\": \"C:\\\\1AAA_PROJECT\\\\HOS\\\\HOS-LS\\\\real-project\\\\bizspring-open-main\\\\bizspring-base\\\\bizspring-base-core\\\\src\\\\main\\\\java\\\\cn\\\\bizspring\\\\cloud\\\\common\\\\core\\\\enums\\\\PageEnum.java:1\", \"severity\": \"INFO\", \"status\": \"UNCERTAIN\", \"confidence\": 0.5, \"cvss_score\": \"\", \"recommendation\": \"根据描述评估: 枚举类未定义任何枚举常量，可能被用于动态生成或反射调用，存在未预期的行为风险。...\", \"evidence\": [{\"type\": \"code_line\", \"location\": \"C:\\\\1AAA_PROJECT\\\\HOS\\\\HOS-LS\\\\real-project\\\\bizspring-open-main\\\\bizspring-base\\\\bizspring-base-core\\\\src\\\\main\\\\java\\\\cn\\\\bizspring\\\\cloud\\\\common\\\\core\\\\enums\\\\PageEnum.java:1\", \"reason\": \"枚举类PageEnum没有定义任何枚举常量，可能被用于动态生成或反射调用。\", \"confidence\": 0.5, \"code_snippet\": \"public enum PageEnum {\"}], \"requires_human_review\": true}",
+      "references": [],
+      "exploit_scenario": "",
+      "metadata": {
+        "evidence": [
+          {
+            "type": "code_line",
+            "location": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\enums\\PageEnum.java:1",
+            "reason": "枚举类PageEnum没有定义任何枚举常量，可能被用于动态生成或反射调用。",
+            "confidence": 0.5,
+            "code_snippet": "public enum PageEnum {"
+          }
+        ],
+        "requires_human_review": true
+      }
+    },
+    {
+      "rule_id": "枚举类使用@AllArgsConstructor自动生成全参构造函数",
+      "rule_name": "枚举类使用@AllArgsConstructor自动生成全参构造函数",
+      "description": "发现可疑代码模式：使用@AllArgsConstructor自动生成构造函数，未显式定义构造函数，可能隐藏参数依赖...",
+      "severity": "LOW",
+      "confidence": 0.5,
+      "location": {
+        "file": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\enums\\ProcessStatusEnum.java",
+        "line": 1
+      },
+      "code_snippet": "package cn.bizspring.cloud.common.core.enums;\n\nimport lombok.AllArgsConstructor;\nimport lombok.Getter;\n",
+      "fix_suggestion": "",
+      "explanation": "{\"title\": \"枚举类使用@AllArgsConstructor自动生成全参构造函数\", \"severity\": \"LOW\", \"location\": \"C:\\\\1AAA_PROJECT\\\\HOS\\\\HOS-LS\\\\real-project\\\\bizspring-open-main\\\\bizspring-base\\\\bizspring-base-core\\\\src\\\\main\\\\java\\\\cn\\\\bizspring\\\\cloud\\\\common\\\\core\\\\enums\\\\ProcessStatusEnum.java:1\", \"evidence\": [{\"type\": \"code_line\", \"location\": \"C:\\\\1AAA_PROJECT\\\\HOS\\\\HOS-LS\\\\real-project\\\\bizspring-open-main\\\\bizspring-base\\\\bizspring-base-core\\\\src\\\\main\\\\java\\\\cn\\\\bizspring\\\\cloud\\\\common\\\\core\\\\enums\\\\ProcessStatusEnum.java:1\", \"reason\": \"使用@AllArgsConstructor自动生成构造函数，未显式定义构造函数，可能隐藏参数依赖\", \"confidence\": 0.3, \"code_snippet\": \"@AllArgsConstructor\"}], \"cwe_id\": \"N/A\", \"cvss_score\": \"0.0\", \"signal_id\": \"RISK-001\", \"signal_state\": \"CONFIRMED\", \"verification_decision\": \"CONFIRMED\", \"verification_reason\": \"location文件路径在已知文件列表中，行号1在文件行数范围(1-32)内，代码行存在@AllArgsConstructor注解，信号描述与代码事实一致。\", \"vulnerability\": \"枚举类使用@AllArgsConstructor自动生成全参构造函数\"}",
+      "references": [],
+      "exploit_scenario": "",
+      "metadata": {
+        "evidence": [
+          {
+            "type": "code_line",
+            "location": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\enums\\ProcessStatusEnum.java:1",
+            "reason": "使用@AllArgsConstructor自动生成构造函数，未显式定义构造函数，可能隐藏参数依赖",
+            "confidence": 0.3,
+            "code_snippet": "@AllArgsConstructor"
+          }
+        ],
+        "requires_human_review": false
+      }
+    },
+    {
+      "rule_id": "枚举类使用@Getter自动生成getter方法",
+      "rule_name": "枚举类使用@Getter自动生成getter方法",
+      "description": "发现可疑代码模式：使用@Getter自动生成getter，未限制字段访问范围...",
+      "severity": "LOW",
+      "confidence": 0.5,
+      "location": {
+        "file": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\enums\\ProcessStatusEnum.java",
+        "line": 2
+      },
+      "code_snippet": "package cn.bizspring.cloud.common.core.enums;\n\nimport lombok.AllArgsConstructor;\nimport lombok.Getter;\n\n",
+      "fix_suggestion": "",
+      "explanation": "{\"title\": \"枚举类使用@Getter自动生成getter方法\", \"severity\": \"LOW\", \"location\": \"C:\\\\1AAA_PROJECT\\\\HOS\\\\HOS-LS\\\\real-project\\\\bizspring-open-main\\\\bizspring-base\\\\bizspring-base-core\\\\src\\\\main\\\\java\\\\cn\\\\bizspring\\\\cloud\\\\common\\\\core\\\\enums\\\\ProcessStatusEnum.java:2\", \"evidence\": [{\"type\": \"code_line\", \"location\": \"C:\\\\1AAA_PROJECT\\\\HOS\\\\HOS-LS\\\\real-project\\\\bizspring-open-main\\\\bizspring-base\\\\bizspring-base-core\\\\src\\\\main\\\\java\\\\cn\\\\bizspring\\\\cloud\\\\common\\\\core\\\\enums\\\\ProcessStatusEnum.java:2\", \"reason\": \"使用@Getter自动生成getter，未限制字段访问范围\", \"confidence\": 0.2, \"code_snippet\": \"@Getter\"}], \"cwe_id\": \"N/A\", \"cvss_score\": \"2.1\", \"signal_id\": \"RISK-002\", \"signal_state\": \"CONFIRMED\", \"verification_decision\": \"CONFIRMED\", \"verification_reason\": \"location文件路径在已知文件列表中，行号2在文件行数范围(1-32)内，代码行存在@Getter注解，信号描述与代码事实一致。\", \"vulnerability\": \"枚举类使用@Getter自动生成getter方法\"}",
+      "references": [],
+      "exploit_scenario": "",
+      "metadata": {
+        "evidence": [
+          {
+            "type": "code_line",
+            "location": "C:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main\\bizspring-base\\bizspring-base-core\\src\\main\\java\\cn\\bizspring\\cloud\\common\\core\\enums\\ProcessStatusEnum.java:2",
+            "reason": "使用@Getter自动生成getter，未限制字段访问范围",
+            "confidence": 0.2,
+            "code_snippet": "@Getter"
+          }
+        ],
+        "requires_human_review": false
+      }
+    }
+  ],
+  "truncated": false,
+  "truncation_reason": null,
+  "max_duration": 0,
+  "max_files": 100,
+  "start_time": 1777039424.8106694
+}
