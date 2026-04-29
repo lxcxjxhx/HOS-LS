@@ -1,0 +1,277 @@
+# HOS-LS 配置文件
+
+# 扫描配置
+scan:
+  max_workers: 4
+  incremental: true
+  cache_enabled: true
+
+# 规则配置
+rules:
+  ruleset: default
+  custom_rules: []
+  exclude_paths: []
+
+# AI 配置
+ai:
+  enabled: false
+  provider: deepseek  # 可选: deepseek, aliyun
+  model: deepseek-chat  # 默认模型（所有模块的fallback）
+  api_key: "sk-b235bbdc776f47c3bee2e8e8d4ec1232"  # DeepSeek API Key
+  base_url: "https://api.deepseek.com"
+  max_tokens: 4096
+  temperature: 0.1
+  timeout: 60
+
+  # 阿里云百炼API配置（用于Qwen3-Coder系列模型）
+  aliyun:
+    enabled: false  # 设置为true启用阿里云API
+    api_key: "sk-ada1f16bc0e64ce0a76762dfea0f566a"  # 阿里云API Key
+    base_url: "https://dashscope.aliyuncs.com/compatible-mode/v1"
+    model: qwen3-coder-next  # 阿里云推荐模型
+
+  # 模块级配置（可选，不设置则使用上面的默认值）
+  modules:
+    # 纯AI深度分析模块
+    pure_ai:
+      enabled: true
+      model: qwen3-coder-next  # 使用阿里云Qwen3-Coder-Next（推荐）
+      provider: aliyun  # 指定使用阿里云
+    # RAG检索模块
+    rag:
+      enabled: true
+      embedding_model: Qwen/Qwen3-Embedding-0.6B
+      rerank_model: BAAI/bge-reranker-large
+      provider: aliyun
+    # NVD漏洞匹配模块
+    nvd:
+      enabled: true
+      model: deepseek-chat  # 使用默认chat模型
+
+  # 双层模型架构配置
+  tiered_architecture:
+    enabled: false  # 设置为true启用双层架构
+    # 第一层：低成本快速预扫描
+    first_tier:
+      model: deepseek-v4-flash
+      provider: deepseek
+      purpose: "快速预扫描，识别可疑文件"
+    # 第二层：深度分析
+    second_tier:
+      model: qwen3-coder-next
+      provider: aliyun
+      purpose: "深度分析危险路径"
+    # 可疑文件判定阈值
+    risk_threshold: 0.5
+
+# 报告配置
+report:
+  format: html
+  output: ""
+  include_snippets: true
+  include_fix_suggestions: true
+
+# 日志配置
+log:
+  level: info
+  format: text
+  file: ""
+
+# 工具编排配置
+tools:
+  enabled: true
+  tool_chain:
+    - semgrep
+    - trivy
+    - gitleaks
+    - code_vuln_scanner
+  semgrep:
+    enabled: true
+    config: "auto"
+    timeout: 30
+  trivy:
+    enabled: true
+    severity: "HIGH,CRITICAL"
+    timeout: 300
+  syft:
+    enabled: true
+    format: "json"
+    package_managers: ["auto"]
+  gitleaks:
+    enabled: true
+    config: ""
+    no-git: true
+
+# 优先级配置
+priority:
+  enabled: true
+  weights:
+    cvss: 0.40
+    exploitability: 0.35
+    reachability: 0.25
+  thresholds:
+    critical: 9.0
+    high: 7.0
+    medium: 4.0
+
+# 验证配置
+validation:
+  enabled: true
+  auto_validate_high: true
+  auto_validate_medium: false
+  min_confidence_threshold: 0.7
+  # 行号偏差容忍度（单位：行）
+  # 注意：此值仅用于决定是否显示警告，不用于排除漏洞
+  # 任何找到代码片段匹配的漏洞都会被保留
+  # 默认值5行表示：偏差超过5行时会显示"偏差较大"警告
+  line_number_tolerance: 5
+
+# Agent配置
+agent:
+  dynamic_selection: true
+  skip_context_if_sufficient: true
+
+# 其他配置
+debug: false
+verbose: false
+quiet: false
+
+# ====== 推荐模型配置（2026年最新）=======
+# 根据用户反馈的模型选型文档优化
+#
+# 【双层模型架构 - 推荐配置】
+# 第一层（低成本快速预扫描）：
+#   - DeepSeek-V4-Flash：成本低、速度快，适合快速预扫描
+#   - 用于 sink 检测、source 检测、风险函数提取
+# 第二层（深度分析）：
+#   - Qwen3-Coder-Next（阿里云）：多文件分析能力强、tool calling 稳定
+#   - 只分析第一层标记的可疑文件
+#   - 超长上下文适合代码仓库分析
+#
+# 【阿里云百炼配置】
+# - API Key: sk-ada1f16bc0e64ce0a76762dfea0f566a
+# - Base URL: https://dashscope.aliyuncs.com/compatible-mode/v1
+# - 推荐模型: qwen3-coder-next
+#
+# 【启用双层架构】
+# ai:
+#   tiered_architecture:
+#     enabled: true  # 设为 true 启用双层架构
+#     risk_threshold: 0.5
+#     first_tier:
+#       model: deepseek-v4-flash
+#       provider: deepseek
+#     second_tier:
+#       model: qwen3-coder-next
+#       provider: aliyun
+#
+# 【单层模式（默认）】
+# 如果不需要双层架构，可以直接配置单层模型：
+# ai:
+#   provider: aliyun  # 或 deepseek
+#   modules:
+#     pure_ai:
+#       model: qwen3-coder-next  # 使用阿里云
+#       provider: aliyun
+#
+# ====== 行号准确性优化配置 ======
+# validation:
+#   line_number_tolerance: 5  # 建议值范围 3-10
+#   min_confidence_threshold: 0.7  # 置信度阈值
+
+# ====== 渗透测试配置 ======
+pentest:
+  enabled: true
+  nvd_db_path: "All Vulnerabilities/sql_data/nvd_vulnerability.db"
+
+  fallback:
+    notify_user: true      # 降级时通知用户
+    log_history: true     # 记录降级历史
+    show_available: true   # 显示可用方法
+    auto_fallback: true    # 自动降级
+
+  tools:
+    sqlmap:
+      enabled: true
+      auto_install: true
+      path: "sqlmap"
+    nuclei:
+      enabled: true
+      auto_install: true
+      template_dir: "nuclei-templates"
+
+  ai_helper:
+    enabled: true
+    provider: deepseek
+    model: deepseek-chat
+    generate_poc: true
+    analyze_result: true
+
+  execution:
+    timeout: 300           # 单个测试超时(秒)
+    parallel: 3            # 并行测试数
+    proxy: ""              # 代理地址，留空则不使用
+
+  nvd_lookup:
+    enabled: true
+    fuzzy_match: true
+    max_results: 50
+
+# ====== 插件系统配置 ======
+plugins:
+  enabled: true
+  plugin_dirs:
+    - "./src/plugins/builtin"
+    - "./plugins"
+    - "~/.hos-ls/plugins"
+
+  # MCP 工具插件
+  mcp:
+    - name: "sqlmap"
+      enabled: true
+      path: "./src/plugins/builtin/mcp/sqlmap_plugin.py"
+      config:
+        auto_install: true
+        risk_level: 2
+        timeout: 600
+
+    - name: "nuclei"
+      enabled: true
+      path: "./src/plugins/builtin/mcp/nuclei_plugin.py"
+      config:
+        auto_install: true
+        template_dir: "./nuclei-templates"
+        timeout: 600
+
+    - name: "zap"
+      enabled: true
+      path: "./src/plugins/builtin/mcp/zap_plugin.py"
+      config:
+        auto_install: true
+        api_mode: true
+        timeout: 900
+
+  # SKILL 技能插件
+  skills:
+    - name: "code-analysis"
+      enabled: true
+      path: "./src/plugins/builtin/skills/code_analysis_skill.py"
+      config:
+        languages: ["python", "javascript", "java", "typescript", "go", "rust"]
+
+    - name: "report-generation"
+      enabled: true
+      path: "./src/plugins/builtin/skills/report_generation_skill.py"
+      config:
+        formats: ["html", "json", "markdown"]
+
+  # 功能插件
+  functional:
+    - name: "custom-scanner"
+      enabled: true
+      path: "./src/plugins/builtin/functional/custom_scanner_plugin.py"
+      config:
+        patterns:
+          - "*.py"
+          - "*.js"
+          - "*.ts"

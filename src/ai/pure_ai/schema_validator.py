@@ -1,0 +1,1515 @@
+"""Schema验证器模块
+
+提供Schema验证、自动修复和重试机制。
+"""
+
+import json
+import re
+from typing import Dict, Any, Optional, Callable, List
+from src.ai.pure_ai.schema import (
+    FINAL_DECISION_SCHEMA,
+    VULNERABILITY_SCHEMA,
+    ADVERSARIAL_SCHEMA,
+    RISK_ENUMERATION_SCHEMA,
+    SignalState,
+    LineMatchStatus
+)
+from src.ai.pure_ai.line_number_mapper import LineNumberMapper
+import yaml
+import os
+
+FORBIDDEN_PATTERNS = [
+    r'^Unknown$',
+    r'^未知$',
+    r'^Unknown\s+risk',
+    r'^未知\s+风险',
+    r'Unable to determine',
+    r'无法确定',
+]
+
+STRUCTURED_TAGS = [
+    "SUSPICIOUS_PATTERN",
+    "WEAK_SECURITY_SIGNAL",
+    "NEEDS_VERIFICATION",
+    "ARCHITECTURAL_RISK"
+]
+
+class SchemaValidationError(Exception):
+    """Schema验证异常"""
+    pass
+
+class ForbiddenOutputError(Exception):
+    """禁止的输出异常"""
+    pass
+
+class SchemaValidator:
+    """Schema验证器
+
+    提供结构验证、自动修复和重试功能。
+    """
+
+    def __init__(self):
+        self.schemas = {
+            "final_decision": FINAL_DECISION_SCHEMA,
+            "vulnerability": VULNERABILITY_SCHEMA,
+            "adversarial": ADVERSARIAL_SCHEMA,
+            "risk_enumeration": RISK_ENUMERATION_SCHEMA
+        }
+
+    def validate(self, data: Any, schema_name: str) -> tuple[bool, Optional[str]]:
+        """验证数据是否符合Schema
+
+        Args:
+            data: 待验证的数据
+            schema_name: Schema名称
+
+        Returns:
+            (是否通过, 错误信息)
+        """
+        schema = self.schemas.get(schema_name)
+        if not schema:
+            return True, None
+
+        if not isinstance(data, dict):
+            return False, f"Expected dict, got {type(data).__name__}"
+
+        errors = self._validate_object(data, schema, "")
+        if errors:
+            return False, "; ".join(errors)
+        return True, None
+
+    def validate_strict_output_contract(self, data: Dict[str, Any], schema_name: str) -> tuple[bool, List[str]]:
+        """严格验证输出契约
+
+        检查是否有禁止的Unknown输出，确保evidence结构完整。
+
+        Args:
+            data: 待验证的数据
+            schema_name: Schema名称
+
+        Returns:
+            (是否通过, 错误列表)
+        """
+        errors = []
+
+        forbidden_violations = self._check_forbidden_patterns(data)
+        if forbidden_violations:
+            errors.extend(forbidden_violations)
+
+        evidence_errors = self._check_evidence_structure(data, schema_name)
+        if evidence_errors:
+            errors.extend(evidence_errors)
+
+        signal_errors = self._check_signal_tracking(data, schema_name)
+        if signal_errors:
+            errors.extend(signal_errors)
+
+        return len(errors) == 0, errors
+
+    def _check_forbidden_patterns(self, data: Dict[str, Any], path: str = "") -> List[str]:
+        """检查禁止的输出模式
+
+        Args:
+            data: 待检查的数据
+            path: 当前路径
+
+        Returns:
+            错误列表
+        """
+        errors = []
+
+        if isinstance(data, dict):
+            for key, value in data.items():
+                current_path = f"{path}.{key}" if path else key
+                if isinstance(value, str):
+                    for pattern in FORBIDDEN_PATTERNS:
+                        if re.search(pattern, value, re.IGNORECASE):
+                            if value.strip() in STRUCTURED_TAGS:
+                                continue
+                            if value.count('Unknown') == 1 and len(value.split()) <= 2:
+                                errors.append(f"Forbidden pattern at {current_path}: '{value}' - use STRUCTURED_TAGS instead")
+                elif isinstance(value, (dict, list)):
+                    errors.extend(self._check_forbidden_patterns(value, current_path))
+        elif isinstance(data, list):
+            for i, item in enumerate(data):
+                current_path = f"{path}[{i}]"
+                if isinstance(item, (dict, list)):
+                    errors.extend(self._check_forbidden_patterns(item, current_path))
+
+        return errors
+
+    def _check_evidence_structure(self, data: Dict[str, Any], schema_name: str) -> List[str]:
+        """检查evidence结构
+
+        Args:
+            data: 待检查的数据
+            schema_name: Schema名称
+
+        Returns:
+            错误列表
+        """
+        errors = []
+
+        evidence_required_schemas = {
+            "final_decision": ["final_findings"],
+            "vulnerability": ["vulnerabilities"],
+            "adversarial": ["adversarial_analysis"],
+            "risk_enumeration": ["risks"],
+            "attack_chain": ["attack_chains"]
+        }
+
+        if schema_name not in evidence_required_schemas:
+            return errors
+
+        required_fields = evidence_required_schemas.get(schema_name, [])
+
+        for field in required_fields:
+            if field in data and isinstance(data[field], list):
+                for i, item in enumerate(data[field]):
+                    if isinstance(item, dict) and "evidence" in item:
+                        evidence = item["evidence"]
+                        if not isinstance(evidence, list):
+                            errors.append(f"Evidence at {field}[{i}] must be array, got {type(evidence).__name__}")
+                        elif len(evidence) == 0 and item.get("signal_state") not in ["REFINED", "NEW"]:
+                            pass
+
+        return errors
+
+    def _check_signal_tracking(self, data: Dict[str, Any], schema_name: str) -> List[str]:
+        """检查信号追踪结构
+
+        Args:
+            data: 待检查的数据
+            schema_name: Schema名称
+
+        Returns:
+            错误列表
+        """
+        errors = []
+
+        signal_tracking_schemas = {
+            "vulnerability": ["vulnerabilities"],
+            "risk_enumeration": ["risks"],
+            "attack_chain": ["attack_chains"]
+        }
+
+        if schema_name not in signal_tracking_schemas:
+            return errors
+
+        if "signal_tracking" in data:
+            tracking = data["signal_tracking"]
+            if not isinstance(tracking, dict):
+                errors.append("signal_tracking must be dict")
+            else:
+                base_fields = ["signals_confirmed", "signals_rejected", "signals_new"]
+                if schema_name == "attack_chain":
+                    expected_fields = base_fields
+                else:
+                    expected_fields = base_fields + ["signals_refined"]
+                for field in expected_fields:
+                    if field not in tracking:
+                        errors.append(f"Missing signal_tracking.{field}")
+
+        return errors
+
+    def sanitize_forbidden_output(self, value: str) -> str:
+        """将禁止的输出转换为结构化标签
+
+        Args:
+            value: 原始值
+
+        Returns:
+            替换后的值
+        """
+        for pattern in FORBIDDEN_PATTERNS:
+            if re.search(pattern, value, re.IGNORECASE):
+                if "risk" in value.lower():
+                    return "WEAK_SECURITY_SIGNAL"
+                return "SUSPICIOUS_PATTERN"
+        return value
+
+    def fix_unknown_outputs(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        """修复禁止的Unknown输出
+
+        Args:
+            data: 待修复的数据
+
+        Returns:
+            修复后的数据
+        """
+        if isinstance(data, dict):
+            fixed = {}
+            for key, value in data.items():
+                if isinstance(value, str):
+                    fixed[key] = self.sanitize_forbidden_output(value)
+                elif isinstance(value, (dict, list)):
+                    fixed[key] = self.fix_unknown_outputs(value)
+                else:
+                    fixed[key] = value
+            return fixed
+        elif isinstance(data, list):
+            return [self.fix_unknown_outputs(item) if isinstance(item, (dict, list)) else
+                    self.sanitize_forbidden_output(item) if isinstance(item, str) else item
+                    for item in data]
+        return data
+
+    def fix_invalid_locations(self, data: Dict[str, Any], schema_name: str = None) -> Dict[str, Any]:
+        """修复无效的位置信息
+
+        将包含 :line、:行号未知 等无效行号的位置尝试修复。
+
+        Args:
+            data: 待修复的数据
+            schema_name: Schema名称（用于确定需要修复的字段）
+
+        Returns:
+            修复后的数据
+        """
+        if not isinstance(data, (dict, list)):
+            return data
+
+        invalid_patterns = [
+            (r':line$', ':1'),
+            (r':Line$', ':1'),
+            (r':LINE$', ':1'),
+            (r':行号未知$', ':1'),
+            (r':行号$', ':1'),
+            (r':未知$', ':1'),
+            (r':unknown$', ':1'),
+            (r':Unknown$', ':1'),
+        ]
+
+        def fix_location(location_str: str) -> str:
+            """修复单个location字符串"""
+            if not isinstance(location_str, str):
+                return location_str
+            for pattern, replacement in invalid_patterns:
+                new_location = re.sub(pattern, replacement, location_str, flags=re.IGNORECASE)
+                if new_location != location_str:
+                    return new_location
+            return location_str
+
+        def fix_item(item):
+            if isinstance(item, dict):
+                fixed = {}
+                for key, value in item.items():
+                    if key == 'location' and isinstance(value, str):
+                        fixed[key] = fix_location(value)
+                    elif isinstance(value, (dict, list)):
+                        fixed[key] = fix_item(value)
+                    else:
+                        fixed[key] = value
+                return fixed
+            elif isinstance(item, list):
+                return [fix_item(i) if isinstance(i, (dict, list)) else
+                        fix_location(i) if isinstance(i, str) else i
+                        for i in item]
+            return item
+
+        return fix_item(data)
+
+    def _validate_object(self, data: Dict, schema: Dict, path: str) -> List[str]:
+        """递归验证对象
+
+        Args:
+            data: 待验证的数据
+            schema: Schema定义
+            path: 当前路径（用于错误信息）
+
+        Returns:
+            错误列表
+        """
+        errors = []
+
+        required = schema.get("required", [])
+        for field in required:
+            if field not in data:
+                errors.append(f"Missing required field: {path}.{field}")
+
+        properties = schema.get("properties", {})
+        for field, field_schema in properties.items():
+            if field in data:
+                field_value = data[field]
+                field_type = field_schema.get("type")
+
+                if field_type == "object":
+                    if not isinstance(field_value, dict):
+                        errors.append(f"Expected dict for {path}.{field}, got {type(field_value).__name__}")
+                    elif "properties" in field_schema:
+                        errors.extend(self._validate_object(field_value, field_schema, f"{path}.{field}"))
+                elif field_type == "array":
+                    if not isinstance(field_value, list):
+                        errors.append(f"Expected array for {path}.{field}, got {type(field_value).__name__}")
+                    elif len(field_value) == 0:
+                        pass
+                    elif "items" in field_schema:
+                        item_schema = field_schema["items"]
+                        for i, item in enumerate(field_value):
+                            if isinstance(item, dict) and "properties" in item_schema:
+                                errors.extend(self._validate_object(item, item_schema, f"{path}.{field}[{i}]"))
+                            if isinstance(item, dict) and "required" in item_schema:
+                                for req_field in item_schema["required"]:
+                                    if req_field not in item or item[req_field] is None or item[req_field] == "":
+                                        errors.append(f"Missing required field: {path}.{field}[{i}].{req_field}")
+
+        return errors
+
+    def validate_with_fallback(self, data: Any, schema_name: str) -> Dict[str, Any]:
+        """验证数据，如果不符合Schema则尝试修复（宽松模式）
+
+        Args:
+            data: 待验证的数据
+            schema_name: Schema名称
+
+        Returns:
+            修复后的数据
+        """
+        is_valid, error = self.validate(data, schema_name)
+        if is_valid:
+            strict_valid, strict_errors = self.validate_strict_output_contract(data, schema_name)
+            if not strict_valid:
+                print(f"[WARN] Strict output contract violations for {schema_name}: {strict_errors}")
+                data = self.fix_unknown_outputs(data)
+            data = self.fix_invalid_locations(data, schema_name)
+            return data
+
+        print(f"[WARN] Schema validation failed for {schema_name}: {error}")
+        print(f"[DEBUG] Attempting to fix structure...")
+
+        fixed_data = self._fix_structure(data, schema_name)
+        fixed_data = self.fix_unknown_outputs(fixed_data)
+        fixed_data = self.fix_invalid_locations(fixed_data, schema_name)
+        return fixed_data
+
+    def _get_empty_result_for_schema(self, schema_name: str) -> Dict[str, Any]:
+        """根据schema类型返回空结果
+
+        Args:
+            schema_name: Schema名称
+
+        Returns:
+            对应schema的空结果
+        """
+        if schema_name == "vulnerability":
+            return {
+                "vulnerabilities": [],
+                "signal_tracking": {
+                    "signals_confirmed": 0,
+                    "signals_rejected": 0,
+                    "signals_refined": 0,
+                    "signals_new": 0
+                }
+            }
+        elif schema_name == "adversarial":
+            return {
+                "adversarial_analysis": [],
+                "cross_agent_agreement": []
+            }
+        elif schema_name == "risk_enumeration":
+            return {
+                "risks": [],
+                "signal_tracking": {
+                    "signals_confirmed": 0,
+                    "signals_rejected": 0,
+                    "signals_refined": 0,
+                    "signals_new": 0
+                }
+            }
+        elif schema_name == "attack_chain":
+            return {
+                "attack_chains": [],
+                "signal_tracking": {
+                    "signals_confirmed": 0,
+                    "signals_rejected": 0,
+                    "signals_new": 0
+                }
+            }
+        elif schema_name == "final_decision":
+            return {
+                "final_findings": [],
+                "summary": {
+                    "total_vulnerabilities": 0,
+                    "valid_vulnerabilities": 0,
+                    "uncertain_vulnerabilities": 0,
+                    "invalid_vulnerabilities": 0,
+                    "high_severity_count": 0,
+                    "medium_severity_count": 0,
+                    "low_severity_count": 0
+                }
+            }
+        else:
+            return {"unknown_schema": schema_name, "data": data if 'data' in dir() else {}}
+
+    def validate_with_retry(self, data: Any, schema_name: str, max_retries: int = 3) -> Dict[str, Any]:
+        """验证数据，如果不符合Schema则修复并重试验证
+
+        Args:
+            data: 待验证的数据
+            schema_name: Schema名称
+            max_retries: 最大修复次数
+
+        Returns:
+            修复后的数据
+        """
+        current_data = data
+        for attempt in range(max_retries):
+            is_valid, error = self.validate(current_data, schema_name)
+            if is_valid:
+                strict_valid, strict_errors = self.validate_strict_output_contract(current_data, schema_name)
+                if strict_valid:
+                    print(f"[DEBUG] Schema validation passed on attempt {attempt + 1}")
+                    current_data = self.fix_invalid_locations(current_data, schema_name)
+                    return current_data
+                print(f"[WARN] Strict contract violations on attempt {attempt + 1}: {strict_errors}")
+
+            if attempt < max_retries - 1:
+                print(f"[DEBUG] Fixing structure (attempt {attempt + 1}/{max_retries})...")
+                current_data = self._fix_structure(current_data, schema_name)
+                current_data = self.fix_unknown_outputs(current_data)
+                current_data = self.fix_invalid_locations(current_data, schema_name)
+            else:
+                print(f"[WARN] Max retries reached for {schema_name}, using last fixed data")
+
+        return current_data
+
+    def _fix_structure(self, data: Any, schema_name: str) -> Dict[str, Any]:
+        """尝试修复数据结构
+
+        Args:
+            data: 待修复的数据
+            schema_name: Schema名称
+
+        Returns:
+            修复后的数据
+        """
+        schema = self.schemas.get(schema_name)
+        if not schema or not isinstance(data, dict):
+            return data
+
+        fixed = {}
+
+        for field, field_schema in schema.get("properties", {}).items():
+            if field in data:
+                fixed[field] = data[field]
+                if field_schema.get("type") == "array" and isinstance(data[field], list):
+                    item_schema = field_schema.get("items", {})
+                    if "properties" in item_schema:
+                        for i, item in enumerate(fixed[field]):
+                            if isinstance(item, dict):
+                                fixed[field][i] = self._fix_item_structure(item, item_schema, schema_name)
+            elif field in schema.get("required", []):
+                if field == "signal_tracking":
+                    vulnerabilities = data.get("vulnerabilities", [])
+                    confirmed = sum(1 for v in vulnerabilities if v.get("signal_state") == "CONFIRMED")
+                    rejected = sum(1 for v in vulnerabilities if v.get("signal_state") == "REJECTED")
+                    refined = sum(1 for v in vulnerabilities if v.get("signal_state") == "REFINED")
+                    new_count = sum(1 for v in vulnerabilities if v.get("signal_state") == "NEW")
+                    fixed[field] = {
+                        "total_signals": len(vulnerabilities),
+                        "signals_new": new_count,
+                        "signals_confirmed": confirmed,
+                        "signals_rejected": rejected,
+                        "signals_refined": refined
+                    }
+                else:
+                    fixed[field] = self._get_default_value(field_schema)
+        for key in data:
+            if key not in fixed:
+                fixed[key] = data[key]
+
+        if "signal_tracking" in fixed and isinstance(fixed["signal_tracking"], dict):
+            if not any(k in fixed["signal_tracking"] for k in ["signals_confirmed", "signals_rejected", "signals_refined", "signals_new"]):
+                vulnerabilities = fixed.get("vulnerabilities", data.get("vulnerabilities", []))
+                confirmed = sum(1 for v in vulnerabilities if isinstance(v, dict) and v.get("signal_state") == "CONFIRMED")
+                rejected = sum(1 for v in vulnerabilities if isinstance(v, dict) and v.get("signal_state") == "REJECTED")
+                refined = sum(1 for v in vulnerabilities if isinstance(v, dict) and v.get("signal_state") == "REFINED")
+                new_count = sum(1 for v in vulnerabilities if isinstance(v, dict) and v.get("signal_state") == "NEW")
+                fixed["signal_tracking"] = {
+                    "total_signals": len(vulnerabilities),
+                    "signals_new": new_count,
+                    "signals_confirmed": confirmed,
+                    "signals_rejected": rejected,
+                    "signals_refined": refined
+                }
+
+        return fixed
+
+    def _convert_potential_to_risks(self, potential_vulnerabilities: List[Dict]) -> List[Dict[str, Any]]:
+        """将 potential_vulnerabilities 转换为 risks 格式"""
+        risks = []
+        for i, pv in enumerate(potential_vulnerabilities):
+            if isinstance(pv, dict):
+                risks.append({
+                    "risk_type": pv.get("type", "Unknown Risk"),
+                    "severity": self._infer_severity(pv),
+                    "location": pv.get("location", "Unknown"),
+                    "signal_id": pv.get("signal_id", f"RISK-POTENTIAL-{i}"),
+                    "signal_state": "NEW",
+                    "description": pv.get("description", ""),
+                    "evidence": pv.get("evidence", [])
+                })
+        return risks
+
+    def _fix_item_structure(self, item: Dict[str, Any], item_schema: Dict[str, Any], schema_name: str = None) -> Dict[str, Any]:
+        """修复数组项的结构
+
+        Args:
+            item: 数组项数据
+            item_schema: 数组项的Schema
+            schema_name: Schema名称（用于特殊处理）
+
+        Returns:
+            修复后的数组项
+        """
+        fixed = dict(item)
+        properties = item_schema.get("properties", {})
+        required = item_schema.get("required", [])
+
+        for prop, prop_schema in properties.items():
+            needs_fix = False
+            if prop not in fixed:
+                needs_fix = True
+            elif fixed[prop] is None or fixed[prop] == "":
+                needs_fix = True
+
+            if needs_fix and prop in required:
+                if prop == "severity":
+                    fixed[prop] = self._infer_severity(item)
+                elif prop == "signal_tracking":
+                    fixed[prop] = {
+                        "signal_id": item.get("risk_id", "unknown"),
+                        "state": "NEW",
+                        "created_at": datetime.now().isoformat()
+                    }
+                elif prop == "attack_chain_name" and schema_name == "adversarial":
+                    fixed[prop] = item.get("chain_name", item.get("name", f"CHAIN-{item.get('signal_id', 'unknown')}"))
+                elif prop == "evidence" and isinstance(fixed.get("reason"), str):
+                    fixed[prop] = [{
+                        "type": "code_line",
+                        "location": item.get("location", "unknown"),
+                        "reason": fixed["reason"],
+                        "confidence": 0.5
+                    }]
+                elif prop == "signal_id" and schema_name == "risk_enumeration":
+                    fixed[prop] = item.get("risk_id", f"RISK-{item.get('risk_type', 'unknown')}")
+                else:
+                    fixed[prop] = self._get_default_value(prop_schema)
+
+        for prop, prop_schema in properties.items():
+            if prop in fixed and isinstance(fixed[prop], list):
+                if prop_schema.get("type") == "array" and "items" in prop_schema:
+                    item_schema_inner = prop_schema["items"]
+                    if isinstance(item_schema_inner, dict) and "properties" in item_schema_inner:
+                        fixed_items = []
+                        for inner_item in fixed[prop]:
+                            if isinstance(inner_item, dict):
+                                fixed_items.append(self._fix_item_structure(inner_item, item_schema_inner, schema_name))
+                            else:
+                                fixed_items.append(inner_item)
+                        fixed[prop] = fixed_items
+
+        return fixed
+
+    def _infer_severity(self, item: Dict[str, Any]) -> str:
+        """从risk_type或description推断severity
+
+        Args:
+            item: 数组项数据
+
+        Returns:
+            推断的severity值
+        """
+        risk_type = item.get("risk_type", "").upper()
+        description = item.get("description", "").upper()
+        title = item.get("title", "").upper()
+
+        combined_text = f"{risk_type} {description} {title}"
+
+        high_keywords = ["SQL", "INJECT", "XSS", "CSRF", "COMMAND", "RCE", "PRIVILEGE",
+                         "AUTHENTICATION", "CREDENTIAL", "SECRET", "KEY", "PASSWORD",
+                         "UNSAFE", "DESERIALIZ"]
+        for kw in high_keywords:
+            if kw in combined_text:
+                return "HIGH"
+
+        medium_keywords = ["WEAK", "DEFAULT", "SUSPICIOUS", "PATTERN", "MISSING",
+                          "INSUFFICIENT", "HARDCODED", "CONFIGURATION", "BROKEN",
+                          "INSECURE", "PATH", "TRAVERSAL"]
+        for kw in medium_keywords:
+            if kw in combined_text:
+                return "MEDIUM"
+
+        low_keywords = ["INFO", "LOGGING", "DEBUG", "REMEDIATION", "BEST", "PRACTICE"]
+        for kw in low_keywords:
+            if kw in combined_text:
+                return "LOW"
+
+        return "INFO"
+
+    def _get_default_value(self, field_schema: Dict) -> Any:
+        """获取字段的默认值
+
+        Args:
+            field_schema: 字段Schema
+
+        Returns:
+            默认值
+        """
+        field_type = field_schema.get("type")
+
+        if field_type == "object":
+            return {}
+        elif field_type == "array":
+            return []
+        elif field_type == "string":
+            if "enum" in field_schema:
+                return field_schema["enum"][0] if field_schema["enum"] else ""
+            return ""
+        elif field_type == "number":
+            if "minimum" in field_schema:
+                return field_schema["minimum"]
+            return 0
+        elif field_type == "boolean":
+            return False
+
+        return None
+
+    def parse_json_response(self, response_text: str, schema_name: str) -> Optional[Dict[str, Any]]:
+        """解析JSON响应
+
+        Args:
+            response_text: AI响应文本
+            schema_name: Schema名称
+
+        Returns:
+            解析后的数据或None
+        """
+        try:
+            json_str = self._extract_json(response_text)
+            if not json_str:
+                print(f"[WARN] No JSON found in response for {schema_name}")
+                return None
+
+            data = json.loads(json_str)
+            validated_data = self.validate_with_fallback(data, schema_name)
+            return validated_data
+
+        except json.JSONDecodeError as e:
+            print(f"[ERROR] JSON parse error for {schema_name}: {e}")
+            return self._emergency_fix(response_text, schema_name)
+        except Exception as e:
+            print(f"[ERROR] Unexpected error parsing {schema_name}: {e}")
+            return None
+
+    def _extract_json(self, text: str) -> Optional[str]:
+        """从文本中提取JSON
+
+        Args:
+            text: 文本
+
+        Returns:
+            JSON字符串或None
+        """
+        patterns = [
+            r'\{[^{}]*\}',
+            r'\{[\s\S]*"final_findings"[\s\S]*\}',
+            r'\{[\s\S]*"vulnerabilities"[\s\S]*\}',
+            r'\{[\s\S]*"adversarial_analysis"[\s\S]*\}'
+        ]
+
+        for pattern in patterns:
+            matches = re.findall(pattern, text)
+            for match in matches:
+                try:
+                    json.loads(match)
+                    return match
+                except:
+                    continue
+
+        return None
+
+    def _emergency_fix(self, response_text: str, schema_name: str) -> Optional[Dict[str, Any]]:
+        """紧急修复
+
+        当JSON解析完全失败时，尝试从文本中提取信息
+
+        Args:
+            response_text: 响应文本
+            schema_name: Schema名称
+
+        Returns:
+            修复后的数据
+        """
+        print(f"[DEBUG] Attempting emergency fix for {schema_name}")
+
+        if schema_name == "final_decision":
+            vulnerabilities = self._extract_vulnerabilities_from_text(response_text)
+            if vulnerabilities:
+                return {
+                    "final_findings": vulnerabilities,
+                    "summary": {
+                        "total_vulnerabilities": len(vulnerabilities),
+                        "valid_vulnerabilities": len(vulnerabilities),
+                        "uncertain_vulnerabilities": 0,
+                        "invalid_vulnerabilities": 0,
+                        "high_severity_count": sum(1 for v in vulnerabilities if v.get("severity") == "HIGH"),
+                        "medium_severity_count": sum(1 for v in vulnerabilities if v.get("severity") == "MEDIUM"),
+                        "low_severity_count": sum(1 for v in vulnerabilities if v.get("severity") == "LOW")
+                    }
+                }
+
+        return {"final_findings": [], "summary": {"total_vulnerabilities": 0}}
+
+    def _extract_vulnerabilities_from_text(self, text: str) -> List[Dict]:
+        """从文本中提取漏洞信息
+
+        Args:
+            text: 文本
+
+        Returns:
+            漏洞列表
+        """
+        vulnerabilities = []
+
+        severity_keywords = {
+            "CRITICAL": ["critical", "严重", "高危"],
+            "HIGH": ["high", "高风险", "高"],
+            "MEDIUM": ["medium", "中风险", "中"],
+            "LOW": ["low", "低风险", "低"]
+        }
+
+        vulnerability_keywords = [
+            "sql injection", "sql注入",
+            "xss", "cross-site", "跨站",
+            "command injection", "命令注入",
+            "path traversal", "路径遍历",
+            "ssrf", "服务器端请求伪造",
+            "csrf", "跨站请求伪造",
+            "authentication", "认证",
+            "authorization", "授权",
+            "sensitive data", "敏感数据",
+            "hardcoded", "硬编码"
+        ]
+
+        for severity, keywords in severity_keywords.items():
+            for keyword in keywords:
+                if keyword.lower() in text.lower():
+                    vulnerabilities.append({
+                        "vulnerability": f"Detected {severity} issue",
+                        "location": "Unknown (extracted from text)",
+                        "severity": severity,
+                        "status": "UNCERTAIN",
+                        "confidence": "MEDIUM",
+                        "evidence": text[:500],
+                        "recommendation": "Manual review required",
+                        "requires_human_review": True
+                    })
+                    break
+
+        return vulnerabilities[:5]
+
+def retry_with_validation(max_retries: int = 3):
+    """重试装饰器
+
+    Args:
+        max_retries: 最大重试次数
+
+    Returns:
+        装饰器函数
+    """
+    def decorator(func: Callable):
+        async def wrapper(*args, **kwargs):
+            last_error = None
+            for attempt in range(max_retries):
+                try:
+                    result = await func(*args, **kwargs)
+                    validator = SchemaValidator()
+                    is_valid, error = validator.validate(result, "final_decision")
+                    if is_valid:
+                        return result
+                    print(f"[WARN] Attempt {attempt + 1} validation failed: {error}")
+                    last_error = error
+                except Exception as e:
+                    last_error = e
+                    print(f"[WARN] Attempt {attempt + 1} failed: {e}")
+
+            print(f"[ERROR] All {max_retries} attempts failed. Last error: {last_error}")
+            raise SchemaValidationError(f"Failed after {max_retries} attempts: {last_error}")
+
+        return wrapper
+    return decorator
+
+
+class LineNumberValidator:
+    """LineNumber验证器
+
+    验证和校正AI报告的行号，确保漏洞位置准确。
+    """
+
+    DEFAULT_CONFIG_PATH = "hos-ls.yaml"
+
+    def __init__(self, tolerance: int = None):
+        self.tolerance = self._load_tolerance(tolerance)
+        self.mapper = LineNumberMapper()
+
+    def _load_tolerance(self, tolerance: int = None) -> int:
+        """从配置文件加载tolerance值
+
+        Args:
+            tolerance: 直接传入的tolerance值，如果不为None则优先使用
+
+        Returns:
+            tolerance值
+        """
+        if tolerance is not None:
+            return tolerance
+
+        try:
+            config_path = self.DEFAULT_CONFIG_PATH
+            if not os.path.exists(config_path):
+                project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+                config_path = os.path.join(project_root, "hos-ls.yaml")
+
+            if os.path.exists(config_path):
+                with open(config_path, 'r', encoding='utf-8') as f:
+                    config = yaml.safe_load(f)
+                    validation_config = config.get("validation", {})
+                    return validation_config.get("line_number_tolerance", 0)
+        except Exception:
+            pass
+
+        return 0
+
+    def validate_location(self, vulnerability: dict, file_content: str) -> dict:
+        """验证并校正行号
+
+        Args:
+            vulnerability: 漏洞数据
+            file_content: 文件内容
+
+        Returns:
+            扩展后的漏洞数据
+        """
+        result = dict(vulnerability)
+
+        location = vulnerability.get("location", "")
+        evidence = vulnerability.get("evidence", [])
+        code_snippet = ""
+        for ev in evidence:
+            if isinstance(ev, dict) and ev.get("code_snippet"):
+                code_snippet = ev["code_snippet"]
+                break
+
+        ai_reported_line = -1
+        _, parsed_line = self.mapper.parse_location(location)
+        if parsed_line is not None:
+            ai_reported_line = parsed_line
+
+        result["ai_reported_line"] = ai_reported_line
+
+        if not file_content:
+            result["verified_line"] = -1
+            result["line_match_status"] = LineMatchStatus.UNVERIFIED.value
+            result["candidate_lines"] = []
+            return result
+
+        actual_line, match_status, candidates = self.find_actual_line(vulnerability, file_content)
+        result["verified_line"] = actual_line
+        result["candidate_lines"] = candidates
+
+        if actual_line == -1:
+            result["line_match_status"] = LineMatchStatus.UNVERIFIED.value
+            return result
+
+        if match_status == "EXACT":
+            deviation = self.mapper.calculate_line_deviation(ai_reported_line, actual_line)
+            if self.mapper.is_within_tolerance(deviation, self.tolerance):
+                result["line_match_status"] = LineMatchStatus.EXACT.value
+            else:
+                if self.tolerance == 0:
+                    result["line_match_status"] = LineMatchStatus.UNVERIFIED.value
+                else:
+                    result["line_match_status"] = LineMatchStatus.ADJUSTED.value
+        elif match_status == "FUZZY":
+            deviation = self.mapper.calculate_line_deviation(ai_reported_line, actual_line)
+            if self.tolerance == 0:
+                result["line_match_status"] = LineMatchStatus.UNVERIFIED.value
+            else:
+                result["line_match_status"] = LineMatchStatus.ADJUSTED.value
+        elif match_status == "ADJUSTED":
+            result["line_match_status"] = LineMatchStatus.ADJUSTED.value
+        elif match_status == "REPORTED":
+            result["line_match_status"] = LineMatchStatus.EXACT.value
+        else:
+            result["line_match_status"] = LineMatchStatus.UNVERIFIED.value
+
+        return result
+
+    def find_actual_line(self, vulnerability: dict, file_content: str) -> tuple[int, str, list]:
+        """查找实际匹配行
+
+        Args:
+            vulnerability: 漏洞数据
+            file_content: 文件内容
+
+        Returns:
+            (实际行号, 匹配状态, 候选行列表)
+            匹配状态: "EXACT", "ADJUSTED", "FUZZY", "NOT_FOUND"
+        """
+        rule_name = vulnerability.get("rule_name", "unknown")
+        print(f"\n[DEBUG] ====== find_actual_line START ======")
+        print(f"[DEBUG] Rule: {rule_name}")
+
+        evidence = vulnerability.get("evidence", [])
+        code_snippet = ""
+        ai_reported_line = None
+
+        for ev in evidence:
+            if isinstance(ev, dict) and ev.get("code_snippet"):
+                code_snippet = ev["code_snippet"]
+                break
+
+        location = vulnerability.get("location", "")
+        if location:
+            parts = str(location).split(":")
+            if len(parts) >= 2:
+                try:
+                    ai_reported_line = int(parts[-1])
+                except ValueError:
+                    pass
+
+        print(f"[DEBUG] AI reported line: {ai_reported_line}")
+        print(f"[DEBUG] code_snippet length: {len(code_snippet) if code_snippet else 0}")
+
+        if code_snippet:
+            print(f"[DEBUG] Trying code_snippet exact match...")
+            actual_line, match_status, _ = self.mapper.find_matching_line(
+                code_snippet, file_content, ai_reported_line
+            )
+            if actual_line > 0:
+                print(f"[DEBUG] code_snippet matched: line {actual_line}, status {match_status}")
+                print(f"[DEBUG] ====== find_actual_line END ======\n")
+                return actual_line, match_status, []
+
+        if ai_reported_line and file_content:
+            lines = file_content.split('\n')
+            if 1 <= ai_reported_line <= len(lines):
+                reported_content = lines[ai_reported_line - 1]
+                description = vulnerability.get("description", "")
+                extracted_identifiers = self._extract_identifiers_from_description(description)
+
+                is_valid, reason = self._is_valid_ai_reported_line(reported_content, ai_reported_line)
+                if is_valid:
+                    print(f"[DEBUG] Using AI reported line directly (has valid code): {ai_reported_line}")
+                    print(f"[DEBUG] Content: {reported_content[:60]}...")
+
+                    if extracted_identifiers:
+                        print(f"[DEBUG] Extracted identifiers from description: {extracted_identifiers}")
+                        line_lower = reported_content.lower()
+                        matched = any(ident in line_lower for ident in extracted_identifiers)
+                        if matched:
+                            print(f"[DEBUG] Semantic validation passed: line contains identifier from description")
+                            return ai_reported_line, "REPORTED", []
+                        else:
+                            print(f"[DEBUG] Semantic validation FAILED: line does not contain identifier from description")
+                            print(f"[DEBUG] Falling back to identifier-based matching...")
+
+                            keywords = self._extract_keywords(vulnerability)
+                            if keywords and file_content:
+                                candidates = self._find_lines_by_keywords(
+                                    keywords, file_content, ai_reported_line, extracted_identifiers
+                                )
+                                if candidates:
+                                    print(f"[DEBUG] Identifier-based matched: line {candidates[0]}, candidates {candidates}")
+                                    return candidates[0], "FUZZY", candidates
+
+                            print(f"[DEBUG] Fallback failed, returning NOT_FOUND")
+                            return -1, "NOT_FOUND", []
+
+                    return ai_reported_line, "REPORTED", []
+                else:
+                    print(f"[DEBUG] AI reported line rejected: {reason}, line {ai_reported_line}: {reported_content[:40]}...")
+                    fallback_matched = False
+                    if extracted_identifiers and file_content:
+                        print(f"[DEBUG] Trying identifier-based matching after rejection...")
+                        candidates = self._find_lines_by_keywords(
+                            [], file_content, ai_reported_line, extracted_identifiers
+                        )
+                        if candidates:
+                            print(f"[DEBUG] Fallback identifier matched: line {candidates[0]}, candidates {candidates}")
+                            return candidates[0], "FUZZY", candidates
+                        else:
+                            fallback_matched = True
+                            print(f"[DEBUG] Fallback identifier matching returned no candidates")
+
+                    if fallback_matched or not extracted_identifiers:
+                        print(f"[DEBUG] No valid match found after AI line rejected, returning NOT_FOUND")
+                        print(f"[DEBUG] ====== find_actual_line END ======\n")
+                        return -1, "NOT_FOUND", []
+
+        description = vulnerability.get("description", "")
+        extracted_identifiers = self._extract_identifiers_from_description(description)
+        if extracted_identifiers:
+            print(f"[DEBUG] Extracted identifiers from description: {extracted_identifiers}")
+
+        keywords = self._extract_keywords(vulnerability)
+        print(f"[DEBUG] Keywords extracted: {len(keywords)}")
+
+        if keywords and file_content:
+            print(f"[DEBUG] Trying keyword fuzzy match...")
+            candidates = self._find_lines_by_keywords(
+                keywords, file_content, ai_reported_line, extracted_identifiers
+            )
+            if candidates:
+                print(f"[DEBUG] Keyword matched: line {candidates[0]}, candidates {candidates}")
+                print(f"[DEBUG] ====== find_actual_line END ======\n")
+                return candidates[0], "FUZZY", candidates
+
+        if not keywords and extracted_identifiers and file_content:
+            print(f"[DEBUG] No keywords but identifiers found, trying identifier-only match...")
+            candidates = self._find_lines_by_keywords(
+                [], file_content, ai_reported_line, extracted_identifiers
+            )
+            if candidates:
+                print(f"[DEBUG] Identifier-only matched: line {candidates[0]}, candidates {candidates}")
+                print(f"[DEBUG] ====== find_actual_line END ======\n")
+                return candidates[0], "FUZZY", candidates
+
+        print(f"[DEBUG] No match found, returning NOT_FOUND")
+        print(f"[DEBUG] Keywords or file_content empty, cannot use AI reported line directly")
+        print(f"[DEBUG] ====== find_actual_line END ======\n")
+        return -1, "NOT_FOUND", []
+
+    def _extract_keywords(self, vulnerability: dict) -> list:
+        """从漏洞数据中提取英文关键词
+
+        只提取英文代码标识符，不包含中文。
+        """
+        keywords = []
+
+        rule_name = vulnerability.get("rule_name", "")
+        if rule_name:
+            words = rule_name.split()
+            for w in words:
+                w_lower = w.lower()
+                if w_lower in ['jsoup', 'shiro', 'struts', 'spring', 'log4j', 'jackson', 'fastjson', 'commons', 'hibernate']:
+                    keywords.append(w_lower)
+                elif len(w) > 3 and not self._contains_chinese(w):
+                    keywords.append(w_lower)
+                    camel_parts = self._split_camel_case(w)
+                    keywords.extend([p for p in camel_parts if not self._contains_chinese(p)])
+
+        description = vulnerability.get("description", "")
+        if description:
+            version_pattern = r'(\d+\.\d+\.\d+[a-zA-Z]*)'
+            versions = re.findall(version_pattern, description)
+            keywords.extend([v.lower() for v in versions])
+
+            important_patterns = [
+                r'([a-zA-Z]+(?:[-_]?[a-zA-Z]+){1,3})\s*version\s*(\d+\.\d+\.\d+)',
+                r'version\s*(\d+\.\d+\.\d+)',
+                r'@(\w+)',
+            ]
+            for pattern in important_patterns:
+                matches = re.findall(pattern, description.lower())
+                for m in matches:
+                    if isinstance(m, tuple):
+                        keywords.extend([x for x in m if x and not self._contains_chinese(x)])
+                    else:
+                        if not self._contains_chinese(m):
+                            keywords.append(m)
+
+            annotation_pattern = r'@(\w+)'
+            annotations = re.findall(annotation_pattern, description)
+            for ann in annotations:
+                if not self._contains_chinese(ann):
+                    keywords.append(f"@{ann.lower()}")
+                    if len(ann) > 3:
+                        keywords.append(ann.lower())
+
+        vulnerability_type = vulnerability.get("vulnerability_type", vulnerability.get("type", ""))
+        if vulnerability_type:
+            type_keywords = self._extract_type_keywords(vulnerability_type)
+            keywords.extend([k for k in type_keywords if not self._contains_chinese(k)])
+
+        keywords = list(set(keywords))
+        keywords = [k for k in keywords if k and len(k) > 1 and not self._contains_chinese(k)]
+        return keywords[:30]
+
+    def _extract_type_keywords(self, vulnerability_type: str) -> list:
+        """从漏洞类型提取英文关键词"""
+        keywords = []
+        type_lower = vulnerability_type.lower()
+
+        if "configuration" in type_lower or "config" in type_lower:
+            keywords.extend(["configuration", "config", "properties", "configurationproperties"])
+        if "refreshscope" in type_lower or "refresh" in type_lower:
+            keywords.extend(["refreshscope", "refresh", "scope", "refreshbeanscope"])
+        if "data" in type_lower and "lombok" not in keywords:
+            keywords.extend(["data", "lombok", "tostring"])
+        if "sql" in type_lower or "injection" in type_lower:
+            keywords.extend(["sql", "injection", "sqlInjection", "parameterized"])
+        if "xss" in type_lower or "crosssite" in type_lower:
+            keywords.extend(["xss", "crosssite", "escape", "htmlencode"])
+        if "path" in type_lower and "traversal" in type_lower:
+            keywords.extend(["path", "traversal", "pathtraversal", "pathinjection"])
+        if "annotation" in type_lower:
+            keywords.extend(["annotation", "annotations", "@"])
+
+        return keywords
+
+    def _is_valid_ai_reported_line(self, line_content: str, line_number: int = None) -> tuple[bool, str]:
+        """检查AI报告的行是否为有效的漏洞位置
+
+        Args:
+            line_content: 行内容
+            line_number: 行号（可选）
+
+        Returns:
+            (是否有效, 原因)
+        """
+        if not line_content or not line_content.strip():
+            return False, "空行"
+
+        stripped = line_content.strip()
+
+        if stripped.startswith("//"):
+            return False, "单行注释"
+
+        if stripped.startswith("/*"):
+            return False, "多行注释开始"
+
+        if stripped == "*/":
+            return False, "多行注释结束"
+
+        if stripped.startswith("*") and not stripped.startswith("* @"):
+            return False, "Javadoc注释行"
+
+        if line_number is not None and line_number <= 15:
+            if stripped.startswith("package "):
+                return False, "package声明"
+
+            if stripped.startswith("import "):
+                return False, "import声明"
+
+        java_keywords = ["public ", "private ", "protected ", "class ", "interface ", "enum "]
+        for kw in java_keywords:
+            if stripped.startswith(kw):
+                return True, "VALID"
+
+        if "@" in stripped and not stripped.startswith("*"):
+            annotation_pattern = r'^\s*@(RefreshScope|ConfigurationProperties|Data|Validated|NotNull|NotBlank|Pattern|Value|Component|Controller|RestController|Service|Repository|Bean)'
+            if re.search(annotation_pattern, stripped):
+                return True, "注解"
+            if stripped.startswith("import ") and "@" in stripped:
+                return False, "import声明"
+            return False, "非注解行包含@"
+
+        if "=" in stripped and not stripped.startswith("//"):
+            return True, "赋值语句"
+
+        if stripped.endswith("{") or stripped.endswith("}"):
+            return True, "代码块"
+
+        if len(stripped) > 3 and not self._contains_chinese(stripped):
+            return True, "有效代码"
+
+        return False, "无效行"
+
+    def _extract_identifiers_from_description(self, description: str) -> list:
+        """从描述中提取标识符（字段名、变量名等）
+
+        Args:
+            description: 漏洞描述文本
+
+        Returns:
+            提取的标识符列表
+        """
+        identifiers = []
+
+        if not description:
+            return identifiers
+
+        single_quoted_pattern = r"'([^']+)'"
+        matches = re.findall(single_quoted_pattern, description)
+        for m in matches:
+            if len(m) > 1 and not self._contains_chinese(m):
+                identifiers.append(m.lower())
+
+        double_quoted_pattern = r'"([^"]+)"'
+        matches = re.findall(double_quoted_pattern, description)
+        for m in matches:
+            if len(m) > 1 and not self._contains_chinese(m):
+                identifiers.append(m.lower())
+
+        var_pattern = r'变量\s+([a-zA-Z_][a-zA-Z0-9_]*)'
+        matches = re.findall(var_pattern, description)
+        for m in matches:
+            if not self._contains_chinese(m):
+                identifiers.append(m.lower())
+
+        field_pattern = r'字段\s+([a-zA-Z_][a-zA-Z0-9_]*)'
+        matches = re.findall(field_pattern, description)
+        for m in matches:
+            if not self._contains_chinese(m):
+                identifiers.append(m.lower())
+
+        common_field_names = [
+            'windows', 'linux', 'mac', 'os', 'platform',
+            'username', 'user', 'password', 'pass', 'secret', 'key',
+            'token', 'api', 'apikey', 'api_key', 'access',
+            'host', 'server', 'url', 'endpoint', 'uri',
+            'database', 'db', 'sql', 'query',
+            'email', 'phone', 'mobile', 'tel',
+            'address', 'ip', 'port', 'path', 'file',
+            'timeout', 'retry', 'max', 'min', 'limit',
+            'enabled', 'disabled', 'active', 'status', 'state',
+        ]
+
+        desc_lower = description.lower()
+        for field_name in common_field_names:
+            if field_name in desc_lower and len(field_name) > 2:
+                identifiers.append(field_name)
+
+        annotation_pattern = r'@(RefreshScope|ConfigurationProperties|Data|Validated|NotNull|NotBlank|Pattern|Value)'
+        matches = re.findall(annotation_pattern, description, re.IGNORECASE)
+        for m in matches:
+            identifiers.append(f"@{m.lower()}")
+
+        words = description.split()
+        for word in words:
+            word_clean = word.strip('.,;:!?()[]{}').lower()
+            if word_clean in ['refreshscope', 'configurationproperties', 'lombok', 'spring', 'java']:
+                identifiers.append(word_clean)
+
+        identifiers = list(set(identifiers))
+        identifiers = [i for i in identifiers if len(i) > 1]
+        return identifiers
+
+    def _contains_chinese(self, text: str) -> bool:
+        """检查文本是否包含中文"""
+        for char in text:
+            if '\u4e00' <= char <= '\u9fff':
+                return True
+        return False
+
+    def _split_camel_case(self, word: str) -> list:
+        """拆分驼峰命名和蛇形命名"""
+        parts = []
+        current = ""
+
+        for i, char in enumerate(word):
+            if char.isupper() and i > 0:
+                if len(current) >= 2:
+                    parts.append(current.lower())
+                current = char
+            elif char == '_' or char == '-':
+                if len(current) >= 2:
+                    parts.append(current.lower())
+                current = ""
+            else:
+                current += char
+
+        if len(current) >= 2:
+            parts.append(current.lower())
+
+        return parts
+
+    def _find_lines_by_keywords(self, keywords: list, file_content: str, preferred_line: int = None, extracted_identifiers: list = None) -> list:
+        """根据关键词查找可能的匹配行
+
+        Args:
+            keywords: 关键词列表
+            file_content: 文件内容
+            preferred_line: AI报告的首选行号
+            extracted_identifiers: 从描述中提取的标识符列表（字段名等）
+        """
+        identifiers = extracted_identifiers or []
+        if not file_content:
+            return []
+
+        if not keywords and not identifiers:
+            return []
+
+        if not keywords and identifiers:
+            print(f"[DEBUG] Keyword-only mode: using identifiers only (no keywords provided)")
+
+        lines = file_content.split('\n')
+        scored_lines = []
+
+        for i, line in enumerate(lines):
+            line_lower = line.lower()
+            score = 0
+            matched_kws = []
+            identifier_bonus = 0
+
+            for kw in keywords:
+                if isinstance(kw, str) and kw.lower() in line_lower:
+                    score += 1
+                    matched_kws.append(kw)
+
+            for ident in identifiers:
+                ident_lower = ident.lower()
+                if ident_lower in line_lower:
+                    if self._is_word_boundary_match(ident_lower, line_lower):
+                        identifier_bonus += 5
+                        matched_kws.append(ident)
+                    elif self._is_field_identifier_match(ident_lower, line, line_lower):
+                        identifier_bonus += 5
+                        matched_kws.append(ident)
+
+            if identifier_bonus > 0 and self._is_field_declaration(line):
+                identifier_bonus += 3
+
+            total_score = score + identifier_bonus
+            if total_score > 0:
+                scored_lines.append((i + 1, total_score, matched_kws, identifier_bonus))
+
+        scored_lines.sort(key=lambda x: (x[1], x[3], -abs(x[0] - (preferred_line or 0)) if preferred_line else 0), reverse=True)
+
+        print(f"[DEBUG] Keyword match: {len(keywords)} keywords, {len(identifiers)} identifiers, {len(scored_lines)} candidates")
+        print(f"[DEBUG] Keywords: {keywords[:10]}...")
+        print(f"[DEBUG] Identifiers: {identifiers[:10]}...")
+        if scored_lines:
+            print(f"[DEBUG] Best candidate: line {scored_lines[0][0]}, score {scored_lines[0][1]}, identifier_bonus {scored_lines[0][3]}, matched {scored_lines[0][2][:5]}")
+            if preferred_line:
+                print(f"[DEBUG] AI reported: {preferred_line}, offset: {abs(scored_lines[0][0] - preferred_line)} lines")
+
+        if scored_lines:
+            best_match = scored_lines[0][0]
+            best_identifier_bonus = scored_lines[0][3]
+            tolerance = self.tolerance if self.tolerance > 0 else 5  # 使用配置的tolerance值，默认5
+
+            if preferred_line and abs(best_match - preferred_line) <= tolerance:
+                print(f"[DEBUG] Tolerance check passed: offset {abs(best_match - preferred_line)} <= {tolerance}")
+                return [best_match]
+            elif not preferred_line and best_identifier_bonus > 0:
+                print(f"[DEBUG] Identifier match found, accepting match")
+                return [best_match]
+            elif best_identifier_bonus > 0:
+                print(f"[DEBUG] Best match has identifier bonus but tolerance failed, checking target candidates...")
+
+            if identifiers:
+                target_candidates = [(ln, score, kws, ib) for ln, score, kws, ib in scored_lines
+                                   if any(ident in kws for ident in identifiers)]
+                if target_candidates:
+                    best_target = target_candidates[0]
+                    print(f"[DEBUG] Found target identifier match: line {best_target[0]}, score {best_target[1]}")
+                    return [best_target[0]]
+                else:
+                    print(f"[DEBUG] No target identifier found in candidates")
+
+            top_candidates = [ln for ln, _, _, _ in scored_lines[:5]]
+            print(f"[DEBUG] Returning top 5 candidates: {top_candidates}")
+            return top_candidates
+
+    def _is_field_declaration(self, line: str) -> bool:
+        """检查行是否为字段声明"""
+        line_stripped = line.strip()
+        if not line_stripped:
+            return False
+        field_patterns = [
+            r'private\s+\w+',
+            r'public\s+\w+',
+            r'protected\s+\w+',
+            r'\w+\s+\w+\s*=',
+        ]
+        import re
+        for pattern in field_patterns:
+            if re.search(pattern, line):
+                return True
+        return False
+
+    def _is_word_boundary_match(self, word: str, text: str) -> bool:
+        """检查单词是否作为独立单词出现在文本中（使用单词边界）
+
+        Args:
+            word: 要检查的单词
+            text: 文本（已转换为小写）
+
+        Returns:
+            是否作为独立单词出现
+        """
+        import re
+        pattern = r'\b' + re.escape(word) + r'\b'
+        return bool(re.search(pattern, text))
+
+    def _is_field_identifier_match(self, word: str, line: str, line_lower: str = None) -> bool:
+        """检查单词是否作为字段标识符出现在行中
+
+        字段标识符匹配的情况：
+        1. 单词作为变量名出现在赋值语句中（如 private String xxx = xxx）
+        2. 单词作为方法参数名出现
+
+        Args:
+            word: 要检查的单词
+            line: 行内容
+            line_lower: 行内容的小写版本（可选，如果为None会重新计算）
+
+        Returns:
+            是否作为字段标识符出现
+        """
+        if line_lower is None:
+            line_lower = line.lower()
+
+        import re
+        field_assignment_patterns = [
+            r'private\s+\w+\s+\w+\s*=',
+            r'public\s+\w+\s+\w+\s*=',
+            r'protected\s+\w+\s+\w+\s*=',
+            r'\w+\s+\w+\s*=\s*"?\w+"?\s*;',
+        ]
+
+        for pattern in field_assignment_patterns:
+            if re.search(pattern, line, re.IGNORECASE):
+                if word in line_lower:
+                    return True
+        return False
+
+    def adjust_line_number(self, vulnerability: dict, file_content: str) -> dict:
+        """执行自动校正
+
+        Args:
+            vulnerability: 漏洞数据
+            file_content: 文件内容
+
+        Returns:
+            校正后的漏洞数据
+        """
+        validated = self.validate_location(vulnerability, file_content)
+
+        if validated.get("line_match_status") == LineMatchStatus.UNVERIFIED.value:
+            return self.mark_unverified(validated, validated.get("candidate_lines", []))
+
+        if validated.get("verified_line", -1) > 0:
+            location = validated.get("location", "")
+            file_path, _ = self.mapper.parse_location(location)
+            if file_path and validated.get("verified_line", -1) > 0:
+                adjusted_location = f"{file_path}:{validated['verified_line']}"
+                validated["location"] = adjusted_location
+
+        return validated
+
+    def mark_unverified(self, vulnerability: dict, candidates: list) -> dict:
+        """标记无法验证的漏洞
+
+        Args:
+            vulnerability: 漏洞数据
+            candidates: 候选行号列表
+
+        Returns:
+            标记后的漏洞数据
+        """
+        result = dict(vulnerability)
+        result["line_match_status"] = LineMatchStatus.UNVERIFIED.value
+        result["candidate_lines"] = candidates
+
+        if result.get("signal_state") == SignalState.CONFIRMED.value:
+            result["signal_state"] = SignalState.UNCERTAIN.value
+            result["verification_decision"] = "UNCERTAIN"
+            result["verification_reason"] = (
+                f"行号无法验证，候选行: {candidates[:5]}" if candidates
+                else "行号无法验证，未找到匹配代码"
+            )
+
+        return result
