@@ -1,0 +1,26 @@
+llm:
+  provider: deepseek
+  model: deepseek-v4-flash
+  temperature: 0.0
+  max_tokens: 4096
+  timeout: 60
+  retry:
+    max_attempts: 3
+    backoff_factor: 2
+  cache:
+    enabled: true
+    ttl: 3600
+
+providers:
+  openai:
+    model: gpt-4
+    temperature: 0.0
+    max_tokens: 4096
+  anthropic:
+    model: claude-3-sonnet
+    temperature: 0.0
+    max_tokens: 4096
+  deepseek:
+    model: deepseek-v4-flash
+    temperature: 0.0
+    max_tokens: 4096
