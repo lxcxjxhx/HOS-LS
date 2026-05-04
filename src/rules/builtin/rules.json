@@ -1,0 +1,325 @@
+{
+  "rules": [
+    {
+      "id": "SQLI-001",
+      "cwe": "CWE-89",
+      "name": "SQL Injection",
+      "description": "Detects potential SQL injection vulnerabilities via string concatenation",
+      "severity": "high",
+      "category": "injection",
+      "languages": ["python", "javascript"],
+      "sources": [
+        "request.args",
+        "request.json",
+        "request.form",
+        "request.values",
+        "input",
+        "sys.stdin.read",
+        "POST",
+        "GET"
+      ],
+      "sinks": [
+        "cursor.execute",
+        "executemany",
+        "execute",
+        "query",
+        "raw",
+        "mysql.query",
+        "pg.query",
+        "mongodb.find"
+      ],
+      "sanitizers": [
+        "sqlalchemy.text",
+        "psycopg2.sql.SQL",
+        "prepared_statement",
+        "parameterized"
+      ],
+      "references": [
+        "https://cwe.mitre.org/data/definitions/89.html"
+      ],
+      "tags": ["sql", "injection", "database"],
+      "enabled": true
+    },
+    {
+      "id": "CMD-001",
+      "cwe": "CWE-78",
+      "name": "Command Injection",
+      "description": "Detects potential command injection via shell commands",
+      "severity": "critical",
+      "category": "injection",
+      "languages": ["python", "javascript"],
+      "sources": [
+        "input",
+        "request.args",
+        "sys.argv",
+        "process.argv"
+      ],
+      "sinks": [
+        "os.system",
+        "os.popen",
+        "subprocess.Popen",
+        "subprocess.call",
+        "subprocess.run",
+        "subprocess.exec",
+        "child_process.exec",
+        "child_process.spawn",
+        "exec",
+        "eval"
+      ],
+      "sanitizers": [
+        "shlex.quote",
+        "subprocess.list2cmdline"
+      ],
+      "references": [
+        "https://cwe.mitre.org/data/definitions/78.html"
+      ],
+      "tags": ["command", "injection", "os"],
+      "enabled": true
+    },
+    {
+      "id": "CODE-001",
+      "cwe": "CWE-94",
+      "name": "Code Injection",
+      "description": "Detects potential code injection via eval/exec",
+      "severity": "critical",
+      "category": "injection",
+      "languages": ["python", "javascript"],
+      "sources": [
+        "input",
+        "request.json",
+        "request.data"
+      ],
+      "sinks": [
+        "eval",
+        "exec",
+        "execfile",
+        "compile",
+        "new Function",
+        "Function",
+        "setTimeout",
+        "setInterval"
+      ],
+      "sanitizers": [],
+      "references": [
+        "https://cwe.mitre.org/data/definitions/94.html"
+      ],
+      "tags": ["code", "injection", "eval"],
+      "enabled": true
+    },
+    {
+      "id": "XSS-001",
+      "cwe": "CWE-79",
+      "name": "Cross-Site Scripting (XSS)",
+      "description": "Detects potential XSS vulnerabilities",
+      "severity": "high",
+      "category": "injection",
+      "languages": ["python", "javascript"],
+      "sources": [
+        "request.args",
+        "request.json",
+        "request.form",
+        "innerHTML",
+        "outerHTML"
+      ],
+      "sinks": [
+        "document.write",
+        "innerHTML",
+        "outerHTML",
+        "insertAdjacentHTML",
+        "django.utils.html.format_html",
+        "flask.render_template_string"
+      ],
+      "sanitizers": [
+        "html.escape",
+        "cgi.escape",
+        "markupsafe.escape",
+        "bleach.clean",
+        "DOMPurify.sanitize",
+        "encodeURIComponent"
+      ],
+      "references": [
+        "https://cwe.mitre.org/data/definitions/79.html"
+      ],
+      "tags": ["xss", "web", "javascript"],
+      "enabled": true
+    },
+    {
+      "id": "PATH-001",
+      "cwe": "CWE-22",
+      "name": "Path Traversal",
+      "description": "Detects potential path traversal vulnerabilities",
+      "severity": "high",
+      "category": "data_protection",
+      "languages": ["python", "javascript"],
+      "sources": [
+        "request.args",
+        "request.json",
+        "input"
+      ],
+      "sinks": [
+        "open",
+        "file",
+        "os.path.join",
+        "os.path.expanduser",
+        "fs.readFile",
+        "fs.readFileSync",
+        "path.join"
+      ],
+      "sanitizers": [
+        "os.path.realpath",
+        "os.path.abspath"
+      ],
+      "references": [
+        "https://cwe.mitre.org/data/definitions/22.html"
+      ],
+      "tags": ["path", "traversal", "file"],
+      "enabled": true
+    },
+    {
+      "id": "SSRF-001",
+      "cwe": "CWE-918",
+      "name": "Server-Side Request Forgery",
+      "description": "Detects potential SSRF vulnerabilities",
+      "severity": "high",
+      "category": "injection",
+      "languages": ["python", "javascript"],
+      "sources": [
+        "request.args",
+        "request.json",
+        "input",
+        "url"
+      ],
+      "sinks": [
+        "requests.get",
+        "requests.post",
+        "urllib.request",
+        "urllib3.request",
+        "fetch",
+        "axios"
+      ],
+      "sanitizers": [
+        "urlparse",
+        "validator.isURL"
+      ],
+      "references": [
+        "https://cwe.mitre.org/data/definitions/918.html"
+      ],
+      "tags": ["ssrf", "web", "network"],
+      "enabled": true
+    },
+    {
+      "id": "DESER-001",
+      "cwe": "CWE-502",
+      "name": "Deserialization",
+      "description": "Detects potential unsafe deserialization",
+      "severity": "critical",
+      "category": "injection",
+      "languages": ["python", "javascript"],
+      "sources": [
+        "input",
+        "request.data",
+        "request.body"
+      ],
+      "sinks": [
+        "pickle.loads",
+        "pickle.load",
+        "yaml.load",
+        "marshal.loads",
+        "JSON.parse"
+      ],
+      "sanitizers": [
+        "yaml.safe_load",
+        "json.loads"
+      ],
+      "references": [
+        "https://cwe.mitre.org/data/definitions/502.html"
+      ],
+      "tags": ["deserialization", "pickle", "yaml"],
+      "enabled": true
+    },
+    {
+      "id": "AUTH-001",
+      "cwe": "CWE-287",
+      "name": "Authentication Bypass",
+      "description": "Detects potential authentication bypass",
+      "severity": "critical",
+      "category": "authentication",
+      "languages": ["python", "javascript"],
+      "sources": [
+        "request.headers",
+        "request.cookies"
+      ],
+      "sinks": [
+        "session",
+        "login",
+        "authenticate",
+        "check_password"
+      ],
+      "sanitizers": [],
+      "references": [
+        "https://cwe.mitre.org/data/definitions/287.html"
+      ],
+      "tags": ["auth", "authentication", "bypass"],
+      "enabled": true
+    },
+    {
+      "id": "CRYPTO-001",
+      "cwe": "CWE-327",
+      "name": "Weak Cryptography",
+      "description": "Detects use of weak cryptographic algorithms",
+      "severity": "high",
+      "category": "cryptography",
+      "languages": ["python", "javascript"],
+      "sources": [],
+      "sinks": [
+        "hashlib.md5",
+        "hashlib.sha1",
+        "Crypto.Cipher.DES",
+        "Crypto.Cipher.Blowfish"
+      ],
+      "sanitizers": [
+        "hashlib.sha256",
+        "hashlib.sha512",
+        "Crypto.Cipher.AES",
+        "Crypto.Cipher.CHACHA20"
+      ],
+      "references": [
+        "https://cwe.mitre.org/data/definitions/327.html"
+      ],
+      "tags": ["crypto", "md5", "sha1", "weak"],
+      "enabled": true
+    },
+    {
+      "id": "HARDCODED-001",
+      "cwe": "CWE-798",
+      "name": "Hardcoded Credentials",
+      "description": "Detects hardcoded credentials in code",
+      "severity": "critical",
+      "category": "data_protection",
+      "languages": ["python", "javascript"],
+      "sources": [],
+      "sinks": [
+        "password",
+        "secret",
+        "api_key",
+        "APikey",
+        "auth_token"
+      ],
+      "sanitizers": [
+        "os.getenv",
+        "environ",
+        "process.env"
+      ],
+      "references": [
+        "https://cwe.mitre.org/data/definitions/798.html"
+      ],
+      "tags": ["credentials", "hardcoded", "secret"],
+      "enabled": true
+    }
+  ],
+  "metadata": {
+    "version": "1.0.0",
+    "total_rules": 10,
+    "last_updated": "2026-04-19"
+  }
+}
