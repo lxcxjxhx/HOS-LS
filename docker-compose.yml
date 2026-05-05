@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  hos-ls:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: hos-ls:latest
+    container_name: hos-ls-scanner
+    volumes:
+      - ./src:/app/src:ro
+      - ./config:/app/config:ro
+      - ./prompts:/app/prompts:ro
+      - ./output:/output
+      - ./cache:/cache
+    environment:
+      - HOS_LS_AI__PROVIDER=${HOS_LS_AI__PROVIDER:-deepseek}
+      - HOS_LS_AI__MODEL=${HOS_LS_AI__MODEL:-deepseek-chat}
+      - HOS_LS_AI__API_KEY=${DEEPSEEK_API_KEY:-}
+      - HOS_LS_AI__BASE_URL=${HOS_LS_AI__BASE_URL:-https://api.deepseek.com}
+      - HOS_LS_DEBUG=false
+    command: scan /app/src -f html -o /output/report.html
+
+  hos-ls-interactive:
+    image: hos-ls:latest
+    container_name: hos-ls-interactive
+    volumes:
+      - .:/workspace
+      - ./output:/output
+    working_dir: /workspace
+    stdin_open: true
+    tty: true
+    entrypoint: ["/bin/bash"]
+
+  hos-ls-ci:
+    image: hos-ls:latest
+    container_name: hos-ls-ci
+    volumes:
+      - .:/workspace:ro
+      - ./output:/output
+    working_dir: /workspace
+    environment:
+      - HOS_LS_AI__PROVIDER=${HOS_LS_AI__PROVIDER:-deepseek}
+      - HOS_LS_AI__MODEL=${HOS_LS_AI__MODEL:-deepseek-chat}
+      - HOS_LS_AI__API_KEY=${DEEPSEEK_API_KEY:-}
+      - HOS_LS_AI__BASE_URL=${HOS_LS_AI__BASE_URL:-https://api.deepseek.com}
+      - HOS_LS_QUIET=true
+    command: scan . -f sarif -o /output/results.sarif

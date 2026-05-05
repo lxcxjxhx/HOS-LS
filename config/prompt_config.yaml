@@ -1,0 +1,32 @@
+prompt:
+  version: v1
+  language: zh
+  templates_dir: prompts/templates
+
+agents:
+  context_builder:
+    template: context_builder.jinja2
+    max_context_length: 8000
+  code_understanding:
+    template: code_understanding.jinja2
+    max_context_length: 6000
+  risk_enumeration:
+    template: risk_enumeration.jinja2
+    max_context_length: 6000
+  vulnerability_verification:
+    template: vulnerability_verification.jinja2
+    max_context_length: 8000
+  attack_chain:
+    template: attack_chain.jinja2
+    max_context_length: 6000
+  adversarial_validation:
+    template: adversarial_validation.jinja2
+    max_context_length: 6000
+  final_decision:
+    template: final_decision.jinja2
+    max_context_length: 4000
+
+validation:
+  strict_mode: true
+  allow_unknown_fields: false
+  fallback_enabled: true
