@@ -1,0 +1,64 @@
+llm:
+  provider: deepseek
+  model: deepseek-v4-flash
+  temperature: 0.0
+  max_tokens: 4096
+  timeout: 60
+  retry:
+    max_attempts: 3
+    backoff_factor: 2
+  cache:
+    enabled: true
+    ttl: 3600
+
+providers:
+  openai:
+    model: gpt-4
+    temperature: 0.0
+    max_tokens: 4096
+  anthropic:
+    model: claude-3-sonnet
+    temperature: 0.0
+    max_tokens: 4096
+  deepseek:
+    model: deepseek-v4-flash
+    temperature: 0.0
+    max_tokens: 4096
+
+sandbox_ai:
+  enabled: true
+  provider: deepseek
+  model: deepseek-chat
+  temperature: 0.3
+  max_tokens: 2000
+  timeout: 60
+  fallback_to_static: false
+  cache_enabled: true
+  cache_ttl: 3600
+  integrated: true
+
+sandbox:
+  docker_enabled: true
+  docker_auto_pull: true
+  docker_timeout: 30
+  max_execution_time: 30
+  enable_ai_monitoring: true
+  enable_dynamic_analysis: true
+  enable_static_analysis: true
+
+poc_auto_generate:
+  enabled: true
+  use_api_context: true
+  fallback_to_template: true
+  supported_languages:
+    - python
+    - javascript
+    - bash
+    - go
+
+report_optimization:
+  gzip_compression: true
+  chunked_loading: true
+  chunk_size: 100
+  virtual_scroll: true
+  max_report_size_mb: 50
