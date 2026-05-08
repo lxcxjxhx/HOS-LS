@@ -1,0 +1,130 @@
+validators:
+  sql_injection:
+    - name: mybatis_dollar_brace
+      module: validators/sql_injection/mybatis_dollar_brace.py
+      enabled: true
+      priority: high
+      description: 检测 MyBatis ${} 拼接是否硬编码
+
+    - name: entity_wrapper_safe
+      module: validators/sql_injection/entity_wrapper.py
+      enabled: true
+      priority: medium
+      description: 检测 EntityWrapper 是否安全封装
+
+    - name: string_concat
+      module: validators/sql_injection/string_concat.py
+      enabled: true
+      priority: high
+      description: 检测字符串拼接 SQL 注入
+
+  auth_bypass:
+    - name: csrf_disabled
+      module: validators/auth_bypass/csrf_disabled.py
+      enabled: true
+      priority: high
+      description: CSRF 保护禁用检测
+
+    - name: permit_all
+      module: validators/auth_bypass/permit_all.py
+      enabled: true
+      priority: high
+      description: permitAll 配置检测
+
+    - name: wildcard_bypass
+      module: validators/auth_bypass/wildcard_bypass.py
+      enabled: true
+      priority: high
+      description: 通配符绕过检测
+
+  secrets:
+    - name: code_hardcoded
+      module: validators/secrets/code_hardcoded.py
+      enabled: true
+      priority: high
+      description: 代码硬编码凭证检测
+
+    - name: config_stored
+      module: validators/secrets/config_stored.py
+      enabled: true
+      priority: medium
+      description: 配置文件存储凭证检测
+
+    - name: database_stored
+      module: validators/secrets/database_stored.py
+      enabled: true
+      priority: low
+      description: 数据库配置中心存储检测
+
+  ssrf:
+    - name: resttemplate
+      module: validators/ssrf/resttemplate.py
+      enabled: true
+      priority: high
+      description: RestTemplate URL 可控性检测
+
+    - name: url_controllable
+      module: validators/ssrf/url_controllable.py
+      enabled: true
+      priority: high
+      description: URL 可控性检测
+
+  deserialization:
+    - name: objectinputstream
+      module: validators/deserialization/objectinputstream.py
+      enabled: true
+      priority: high
+      description: ObjectInputStream 入口检测
+
+    - name: jackson_config
+      module: validators/deserialization/jackson_config.py
+      enabled: true
+      priority: medium
+      description: Jackson 反序列化配置检测
+
+  spel:
+    - name: spel_injection
+      module: validators/spel/spel_injection.py
+      enabled: true
+      priority: high
+      description: SpEL 表达式注入检测
+
+rules:
+  sql_injection:
+    confidence_threshold: 0.7
+    min_evidence_count: 2
+    check_hardcoded: true
+    check_user_controllable: true
+    check_input_validation: true
+
+  auth_bypass:
+    confidence_threshold: 0.6
+    check_annotation: true
+    check_method_security: true
+    check_web_security: true
+
+  secrets:
+    confidence_threshold: 0.8
+    allow_config_center: true
+    allow_encrypted: false
+
+  ssrf:
+    confidence_threshold: 0.7
+    check_url_validation: true
+    check_dns_rebinding: true
+
+  deserialization:
+    confidence_threshold: 0.8
+    check_input_validation: true
+    check_type_validation: true
+
+global:
+  verification_enabled: true
+  ai_verification_enabled: true
+  ai_fallback_threshold: 0.6
+  auto_generate_poc: false
+  output_reports_dir: reports/verified
+  pocs_output_dir: dynamic_code/pocs/generated
+  methods_storage_dir: dynamic_code/methods
+  max_verification_time: 300
+  parallel_workers: 4

