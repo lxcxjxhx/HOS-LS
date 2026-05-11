@@ -1,0 +1,203 @@
+[tool.poetry]
+name = "hos-ls"
+version = "0.3.3.17"
+description = "HOS-LS: AI生成代码安全扫描工具 - 基于LangGraph的Multi-Agent架构，支持语义搜索、两阶段扫描、CVE集成、攻击链分析和断点续传"
+authors = ["HOS Team <team@hos-ls.com>"]
+readme = "README.md"
+license = "MIT"
+homepage = "https://github.com/hos-ls/hos-ls"
+repository = "https://github.com/hos-ls/hos-ls"
+documentation = "https://hos-ls.readthedocs.io"
+keywords = ["security", "ai", "code-scanning", "vulnerability-detection", "static-analysis"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Security",
+    "Topic :: Software Development :: Quality Assurance",
+]
+
+[tool.poetry.dependencies]
+python = "^3.8"
+# Core dependencies
+pydantic = "^2.0.0"
+pydantic-settings = "^2.0.0"
+click = "^8.1.0"
+rich = "^13.0.0"
+tqdm = "^4.66.0"
+pyyaml = "^6.0.1"
+python-dotenv = "^1.0.0"
+
+# AI/LLM dependencies
+anthropic = "^0.39.0"
+openai = "^1.0.0"
+langchain = "^0.1.0"
+langchain-openai = "^0.1.0"
+langgraph = "^1.0.0"
+dspy = "^3.1.3"
+langsmith = "^0.1.0"
+
+# Code analysis dependencies
+tree-sitter = "^0.20.0"
+tree-sitter-python = "^0.20.0"
+tree-sitter-javascript = "^0.20.0"
+tree-sitter-typescript = "^0.20.0"
+tree-sitter-java = "^0.20.0"
+tree-sitter-cpp = "^0.20.0"
+libcst = "^1.0.0"
+
+# Graph and network analysis
+networkx = "^3.0.0"
+
+# Vector storage
+chromadb = "^1.0.0"
+faiss-cpu = "^1.7.4"
+
+# Git operations
+gitpython = "^3.1.0"
+
+# HTTP clients
+httpx = "^0.25.0"
+aiohttp = "^3.9.0"
+aiofiles = "^23.2.0"
+
+# Database
+aiosqlite = "^0.19.0"
+diskcache = "^5.6.0"
+neo4j = "^5.15.0"
+neo4j-graphrag = "^1.0.0"
+
+# Data processing
+numpy = "^1.24.0"
+scikit-learn = "^1.3.0"
+
+# Embedding and model training
+sentence-transformers = "^2.2.0"
+torch = "^2.0.0"
+
+# Report generation
+jinja2 = "^3.1.0"
+markdown = "^3.5.0"
+python-docx = "^0.8.11"
+
+# GitHub integration
+pygithub = "^1.59.0"
+requests = "^2.31.0"
+
+# Web scraping and additional utilities
+beautifulsoup4 = "^4.12.0"
+lxml = "^4.9.0"
+ratelimit = "^2.2.1"
+
+# Local model support (optional, for advanced features)
+transformers = { version = "^4.30.0", optional = true }
+unsloth = { version = "^2024.0.0", optional = true }
+
+# Testing
+pytest = { version = "^7.4.0", optional = true }
+pytest-asyncio = { version = "^0.21.0", optional = true }
+pytest-cov = { version = "^4.1.0", optional = true }
+
+# Development
+black = { version = "^23.0.0", optional = true }
+isort = { version = "^5.12.0", optional = true }
+flake8 = { version = "^6.0.0", optional = true }
+mypy = { version = "^1.5.0", optional = true }
+
+[tool.poetry.extras]
+local = ["transformers", "sentence-transformers", "torch"]
+dev = ["pytest", "pytest-asyncio", "pytest-cov", "black", "isort", "flake8", "mypy"]
+all = ["transformers", "sentence-transformers", "torch", "pytest", "pytest-asyncio", "pytest-cov", "black", "isort", "flake8", "mypy"]
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^7.4.0"
+pytest-asyncio = "^0.21.0"
+pytest-cov = "^4.1.0"
+black = "^23.0.0"
+isort = "^5.12.0"
+flake8 = "^6.0.0"
+mypy = "^1.5.0"
+
+[tool.poetry.scripts]
+hos-ls = "src.cli.main:main"
+hosls = "src.cli.main:main"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.black]
+line-length = 100
+target-version = ['py38', 'py39', 'py310', 'py311', 'py312']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  # directories
+  \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | build
+  | dist
+)/
+'''
+
+[tool.isort]
+profile = "black"
+line_length = 100
+multi_line_output = 3
+include_trailing_comma = true
+force_grid_wrap = 0
+use_parentheses = true
+ensure_newline_before_comments = true
+
+[tool.mypy]
+python_version = "3.8"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+warn_unreachable = true
+strict_equality = true
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+addopts = "-ra -q --strict-markers --strict-config"
+testpaths = ["tests"]
+markers = [
+    "unit: Unit tests",
+    "integration: Integration tests",
+    "slow: Slow tests",
+]
+
+[tool.coverage.run]
+source = ["src"]
+omit = ["*/tests/*", "*/test_*"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if self.debug:",
+    "if settings.DEBUG",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if 0:",
+    "if __name__ == .__main__.:",
+    "class .*\\bProtocol\\):",
+    "@(abc\\.)?abstractmethod",
+]
