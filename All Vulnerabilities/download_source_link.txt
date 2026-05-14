@@ -1,0 +1,6 @@
+https://github.com/fkie-cad/nvd-json-data-feeds
+https://github.com/CVEProject/cvelistV5
+https://gitlab.com/exploit-database/exploitdb
+https://github.com/cisagov/kev-data
+https://github.com/nomi-sec/PoC-in-GitHub
+https://cwe.mitre.org/data/xml/cwec_latest.xml.zip
