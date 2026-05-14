@@ -1,0 +1,141 @@
+methods:
+  auth_bypass_csrf_disabled:
+    id: auth_bypass_csrf_disabled
+    name: CSRF 保护禁用验证
+    vuln_type: auth_bypass
+    pattern: "@CsrfDisable|csrf.*=.*false"
+    confidence_level: high
+
+    validation:
+      type: config_analysis
+      steps:
+        - check_csrf_annotation
+        - verify_protected_endpoints
+        - test_csrf_bypass
+        - evaluate_risk_level
+
+    poc_template: |
+      def verify_csrf_bypass(target_endpoint):
+          """
+          验证 CSRF 保护是否被正确禁用或启用
+
+          测试步骤:
+          1. 检查 CSRF token 是否存在
+          2. 尝试不带 token 的请求
+          3. 验证 CSRF 保护是否生效
+          """
+          test_cases = [
+              {'request': 'POST', 'path': target_endpoint, 'data': {}, 'has_csrf': False},
+              {'request': 'POST', 'path': target_endpoint, 'data': {}, 'has_csrf': True},
+          ]
+
+          results = []
+          for test in test_cases:
+              response = send_request(**test)
+              if test['has_csrf'] and response.status_code == 403:
+                  results.append({'csrf_protected': True})
+              elif not test['has_csrf'] and response.status_code == 200:
+                  results.append({'csrf_bypassed': True, 'exploitable': True})
+
+          return {
+              'is_exploitable': any('exploitable' in r for r in results),
+              'evidence': results
+          }
+
+    evidence_required:
+      - csrf_annotation
+      - endpoint_configuration
+
+  auth_bypass_permit_all:
+    id: auth_bypass_permit_all
+    name: permitAll 配置验证
+    vuln_type: auth_bypass
+    pattern: "@PermitAll|permitAll\\(\\)"
+    confidence_level: high
+
+    validation:
+      type: config_analysis
+      steps:
+        - identify_permitall_endpoints
+        - analyze_access_control
+        - verify_sensitive_endpoints
+        - evaluate_authorization_bypass
+
+    poc_template: |
+      def verify_permit_all(target_endpoint):
+          """
+          验证 permitAll 配置的端点是否包含敏感操作
+
+          测试步骤:
+          1. 识别 permitAll 端点
+          2. 检查是否包含敏感操作
+          3. 尝试未授权访问
+          """
+          sensitive_actions = ['admin', 'user', 'delete', 'update', 'config']
+
+          results = []
+          for action in sensitive_actions:
+              endpoint = f"{target_endpoint}/{action}"
+              response = send_request('GET', endpoint, auth=None)
+              if response.status_code == 200:
+                  results.append({
+                      'endpoint': endpoint,
+                      'exposed': True,
+                      'sensitive_action': action
+                  })
+
+          return {
+              'is_exploitable': len(results) > 0,
+              'evidence': results
+          }
+
+    evidence_required:
+      - permitall_config
+      - endpoint_list
+
+  auth_bypass_wildcard:
+    id: auth_bypass_wildcard
+    name: 通配符绕过验证
+    vuln_type: auth_bypass
+    pattern: "\\*\\*|/\\*"
+    confidence_level: high
+
+    validation:
+      type: config_analysis
+      steps:
+        - detect_wildcard_patterns
+        - analyze_path_matching
+        - test_bypass_variations
+        - verify_proper_security
+
+    poc_template: |
+      def verify_wildcard_bypass(target_base):
+          """
+          验证通配符模式是否存在绕过
+
+          测试步骤:
+          1. 分析通配符模式
+          2. 构造各种路径变体
+          3. 测试是否可绕过
+          """
+          bypass_variations = [
+              f"{target_base}/admin",
+              f"{target_base}/ADMIN",
+              f"{target_base}/..;/admin",
+              f"{target_base}/%2e%2e/admin",
+          ]
+
+          results = []
+          for variation in bypass_variations:
+              response = send_request('GET', variation)
+              if response.status_code == 200:
+                  results.append({'variation': variation, 'bypassed': True})
+
+          return {
+              'is_exploitable': len(results) > 0,
+              'evidence': results
+          }
+
+    evidence_required:
+      - wildcard_pattern
+      - matching_rules
