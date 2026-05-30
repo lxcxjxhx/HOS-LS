@@ -1,0 +1,33 @@
+# HOS-LS 配置文件
+# 位置: ~/.hos-ls/config.yaml
+# 生成时间: 2024-01-01
+
+# 代理配置
+proxy:
+  enabled: true
+  url: "http://127.0.0.1:7897"
+  domestic_bypass: true  # 国内源不使用代理
+
+# 更新源配置
+sources:
+  priority:  # 源优先级（从高到低）
+    - "NVD NIST"
+    - "GitHub Mirror"
+    - "CNNVD"
+    - "CNVD RSS"
+    - "OpenCVE API"
+  enabled:  # 启用的源
+    - "NVD NIST"
+    - "GitHub Mirror"
+    - "CNNVD"
+    - "CNVD RSS"
+
+# 更新检查配置
+update:
+  auto_check_days: 15  # 多少天检查一次更新
+  last_sync_time: null  # 上次同步时间
+
+# 扫描配置
+scan:
+  max_concurrent_files: 5
+  confidence_threshold: 0.60

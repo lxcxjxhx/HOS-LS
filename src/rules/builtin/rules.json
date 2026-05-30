@@ -1,0 +1,643 @@
+{
+  "rules": [
+    {
+      "id": "SQLI-001",
+      "cwe": "CWE-89",
+      "name": "SQL Injection",
+      "description": "Detects potential SQL injection vulnerabilities via string concatenation",
+      "severity": "high",
+      "category": "injection",
+      "languages": ["python", "javascript"],
+      "sources": [
+        "request.args",
+        "request.json",
+        "request.form",
+        "request.values",
+        "input",
+        "sys.stdin.read",
+        "POST",
+        "GET"
+      ],
+      "sinks": [
+        "cursor.execute",
+        "executemany",
+        "execute",
+        "query",
+        "raw",
+        "mysql.query",
+        "pg.query",
+        "mongodb.find"
+      ],
+      "sanitizers": [
+        "sqlalchemy.text",
+        "psycopg2.sql.SQL",
+        "prepared_statement",
+        "parameterized"
+      ],
+      "references": [
+        "https://cwe.mitre.org/data/definitions/89.html"
+      ],
+      "tags": ["sql", "injection", "database"],
+      "enabled": true,
+      "owasp_category": "A03:2021",
+      "aisvs_requirement": "v1.0-C2.1.1"
+    },
+    {
+      "id": "CMD-001",
+      "cwe": "CWE-78",
+      "name": "Command Injection",
+      "description": "Detects potential command injection via shell commands",
+      "severity": "critical",
+      "category": "injection",
+      "languages": ["python", "javascript"],
+      "sources": [
+        "input",
+        "request.args",
+        "sys.argv",
+        "process.argv"
+      ],
+      "sinks": [
+        "os.system",
+        "os.popen",
+        "subprocess.Popen",
+        "subprocess.call",
+        "subprocess.run",
+        "subprocess.exec",
+        "child_process.exec",
+        "child_process.spawn",
+        "exec",
+        "eval"
+      ],
+      "sanitizers": [
+        "shlex.quote",
+        "subprocess.list2cmdline"
+      ],
+      "references": [
+        "https://cwe.mitre.org/data/definitions/78.html"
+      ],
+      "tags": ["command", "injection", "os"],
+      "enabled": true,
+      "owasp_category": "A03:2021",
+      "aisvs_requirement": "v1.0-C2.1.1"
+    },
+    {
+      "id": "CODE-001",
+      "cwe": "CWE-94",
+      "name": "Code Injection",
+      "description": "Detects potential code injection via eval/exec",
+      "severity": "critical",
+      "category": "injection",
+      "languages": ["python", "javascript"],
+      "sources": [
+        "input",
+        "request.json",
+        "request.data"
+      ],
+      "sinks": [
+        "eval",
+        "exec",
+        "execfile",
+        "compile",
+        "new Function",
+        "Function",
+        "setTimeout",
+        "setInterval"
+      ],
+      "sanitizers": [],
+      "references": [
+        "https://cwe.mitre.org/data/definitions/94.html"
+      ],
+      "tags": ["code", "injection", "eval"],
+      "enabled": true,
+      "owasp_category": "A03:2021",
+      "aisvs_requirement": "v1.0-C2.1.1"
+    },
+    {
+      "id": "XSS-001",
+      "cwe": "CWE-79",
+      "name": "Cross-Site Scripting (XSS)",
+      "description": "Detects potential XSS vulnerabilities",
+      "severity": "high",
+      "category": "injection",
+      "languages": ["python", "javascript"],
+      "sources": [
+        "request.args",
+        "request.json",
+        "request.form",
+        "innerHTML",
+        "outerHTML"
+      ],
+      "sinks": [
+        "document.write",
+        "innerHTML",
+        "outerHTML",
+        "insertAdjacentHTML",
+        "django.utils.html.format_html",
+        "flask.render_template_string"
+      ],
+      "sanitizers": [
+        "html.escape",
+        "cgi.escape",
+        "markupsafe.escape",
+        "bleach.clean",
+        "DOMPurify.sanitize",
+        "encodeURIComponent"
+      ],
+      "references": [
+        "https://cwe.mitre.org/data/definitions/79.html"
+      ],
+      "tags": ["xss", "web", "javascript"],
+      "enabled": true,
+      "owasp_category": "A03:2021",
+      "aisvs_requirement": "v1.0-C2.3.1"
+    },
+    {
+      "id": "PATH-001",
+      "cwe": "CWE-22",
+      "name": "Path Traversal",
+      "description": "Detects potential path traversal vulnerabilities",
+      "severity": "high",
+      "category": "data_protection",
+      "languages": ["python", "javascript"],
+      "sources": [
+        "request.args",
+        "request.json",
+        "input"
+      ],
+      "sinks": [
+        "open",
+        "file",
+        "os.path.join",
+        "os.path.expanduser",
+        "fs.readFile",
+        "fs.readFileSync",
+        "path.join"
+      ],
+      "sanitizers": [
+        "os.path.realpath",
+        "os.path.abspath"
+      ],
+      "references": [
+        "https://cwe.mitre.org/data/definitions/22.html"
+      ],
+      "tags": ["path", "traversal", "file"],
+      "enabled": true,
+      "owasp_category": "A01:2021",
+      "aisvs_requirement": "v1.0-C2.4.1"
+    },
+    {
+      "id": "SSRF-001",
+      "cwe": "CWE-918",
+      "name": "Server-Side Request Forgery",
+      "description": "Detects potential SSRF vulnerabilities",
+      "severity": "high",
+      "category": "injection",
+      "languages": ["python", "javascript"],
+      "sources": [
+        "request.args",
+        "request.json",
+        "input",
+        "url"
+      ],
+      "sinks": [
+        "requests.get",
+        "requests.post",
+        "urllib.request",
+        "urllib3.request",
+        "fetch",
+        "axios"
+      ],
+      "sanitizers": [
+        "urlparse",
+        "validator.isURL"
+      ],
+      "references": [
+        "https://cwe.mitre.org/data/definitions/918.html"
+      ],
+      "tags": ["ssrf", "web", "network"],
+      "enabled": true,
+      "owasp_category": "A10:2021",
+      "aisvs_requirement": "v1.0-C2.5.1"
+    },
+    {
+      "id": "DESER-001",
+      "cwe": "CWE-502",
+      "name": "Deserialization",
+      "description": "Detects potential unsafe deserialization",
+      "severity": "critical",
+      "category": "injection",
+      "languages": ["python", "javascript"],
+      "sources": [
+        "input",
+        "request.data",
+        "request.body"
+      ],
+      "sinks": [
+        "pickle.loads",
+        "pickle.load",
+        "yaml.load",
+        "marshal.loads",
+        "JSON.parse"
+      ],
+      "sanitizers": [
+        "yaml.safe_load",
+        "json.loads"
+      ],
+      "references": [
+        "https://cwe.mitre.org/data/definitions/502.html"
+      ],
+      "tags": ["deserialization", "pickle", "yaml"],
+      "enabled": true,
+      "owasp_category": "A08:2021",
+      "aisvs_requirement": "v1.0-C2.6.1"
+    },
+    {
+      "id": "AUTH-001",
+      "cwe": "CWE-287",
+      "name": "Authentication Bypass",
+      "description": "Detects potential authentication bypass",
+      "severity": "critical",
+      "category": "authentication",
+      "languages": ["python", "javascript"],
+      "sources": [
+        "request.headers",
+        "request.cookies"
+      ],
+      "sinks": [
+        "session",
+        "login",
+        "authenticate",
+        "check_password"
+      ],
+      "sanitizers": [],
+      "references": [
+        "https://cwe.mitre.org/data/definitions/287.html"
+      ],
+      "tags": ["auth", "authentication", "bypass"],
+      "enabled": true,
+      "owasp_category": "A01:2021,A07:2021",
+      "aisvs_requirement": "v1.0-C1.2.1"
+    },
+    {
+      "id": "CRYPTO-001",
+      "cwe": "CWE-327",
+      "name": "Weak Cryptography",
+      "description": "Detects use of weak cryptographic algorithms",
+      "severity": "high",
+      "category": "cryptography",
+      "languages": ["python", "javascript"],
+      "sources": [],
+      "sinks": [
+        "hashlib.md5",
+        "hashlib.sha1",
+        "Crypto.Cipher.DES",
+        "Crypto.Cipher.Blowfish"
+      ],
+      "sanitizers": [
+        "hashlib.sha256",
+        "hashlib.sha512",
+        "Crypto.Cipher.AES",
+        "Crypto.Cipher.CHACHA20"
+      ],
+      "references": [
+        "https://cwe.mitre.org/data/definitions/327.html"
+      ],
+      "tags": ["crypto", "md5", "sha1", "weak"],
+      "enabled": true,
+      "owasp_category": "A02:2021",
+      "aisvs_requirement": "v1.0-C3.1.1"
+    },
+    {
+      "id": "HARDCODED-001",
+      "cwe": "CWE-798",
+      "name": "Hardcoded Credentials",
+      "description": "Detects hardcoded credentials in code",
+      "severity": "critical",
+      "category": "data_protection",
+      "languages": ["python", "javascript"],
+      "sources": [],
+      "sinks": [
+        "password",
+        "secret",
+        "api_key",
+        "APikey",
+        "auth_token"
+      ],
+      "sanitizers": [
+        "os.getenv",
+        "environ",
+        "process.env"
+      ],
+      "references": [
+        "https://cwe.mitre.org/data/definitions/798.html"
+      ],
+      "tags": ["credentials", "hardcoded", "secret"],
+      "enabled": true,
+      "owasp_category": "A05:2021",
+      "aisvs_requirement": "v1.0-C3.2.1"
+    },
+    {
+      "id": "A04-001",
+      "cwe": "CWE-639",
+      "name": "Insecure Direct Object Reference (IDOR)",
+      "description": "检测缺少访问控制验证的直接对象引用，攻击者可能通过修改 ID 参数访问其他用户的数据",
+      "severity": "high",
+      "category": "insecure_design",
+      "languages": ["python", "javascript"],
+      "sources": [
+        "request.args",
+        "request.json",
+        "request.form",
+        "request.values",
+        "params",
+        "args",
+        "form",
+        "json",
+        "body",
+        "query"
+      ],
+      "sinks": [
+        ".get(",
+        ".find(",
+        ".filter(",
+        ".query(",
+        ".fetch(",
+        ".select(",
+        "cursor.execute",
+        "db.find",
+        "db.findOne",
+        "Model.findById",
+        "Model.findOne",
+        "collection.find",
+        "collection.findOne",
+        "table.select",
+        "session.get",
+        "cache.get"
+      ],
+      "sanitizers": [
+        "is_authenticated",
+        "check_permission",
+        "verify_access",
+        "authorize",
+        "has_permission",
+        "check_ownership",
+        "verify_ownership",
+        "validate_access",
+        "can_access"
+      ],
+      "references": [
+        "https://owasp.org/Top10/A04_2021-Insecure_Design/",
+        "https://cwe.mitre.org/data/definitions/639.html"
+      ],
+      "tags": ["owasp", "idor", "access-control", "insecure-design"],
+      "enabled": true,
+      "owasp_category": "A04:2021",
+      "aisvs_requirement": "v1.0-C7.1.1"
+    },
+    {
+      "id": "A04-002",
+      "cwe": "CWE-841",
+      "name": "Business Logic Flaw",
+      "description": "检测常见的业务逻辑安全缺陷，包括越权操作、价格/数量绕过、时间检验绕过等",
+      "severity": "medium",
+      "category": "insecure_design",
+      "languages": ["python", "javascript"],
+      "sources": [
+        "request.args",
+        "request.json",
+        "request.form",
+        "params",
+        "args",
+        "form",
+        "json"
+      ],
+      "sinks": [
+        "price",
+        "amount",
+        "quantity",
+        "discount",
+        "coupon",
+        "rate",
+        "fee",
+        "balance",
+        "stock"
+      ],
+      "sanitizers": [
+        "validate",
+        "verify",
+        "check",
+        "assert"
+      ],
+      "references": [
+        "https://owasp.org/Top10/A04_2021-Insecure_Design/",
+        "https://cwe.mitre.org/data/definitions/841.html"
+      ],
+      "tags": ["owasp", "business-logic", "insecure-design"],
+      "enabled": true,
+      "owasp_category": "A04:2021",
+      "aisvs_requirement": "v1.0-C7.2.1"
+    },
+    {
+      "id": "A04-003",
+      "cwe": "CWE-362",
+      "name": "Race Condition (TOCTOU)",
+      "description": "检测可能导致竞态条件的并发访问模式，包括检查时间到使用时间 (TOCTOU) 漏洞",
+      "severity": "medium",
+      "category": "insecure_design",
+      "languages": ["python", "javascript"],
+      "sources": [
+        "file_exists",
+        "os.path.exists",
+        "is_file",
+        "is_dir",
+        "exists",
+        "stat"
+      ],
+      "sinks": [
+        "open",
+        "read",
+        "write",
+        "execute",
+        "chmod",
+        "chown",
+        "delete",
+        "remove",
+        "unlink",
+        "balance",
+        "stock",
+        "quantity"
+      ],
+      "sanitizers": [
+        "lock",
+        "acquire",
+        "atomic",
+        "transaction",
+        "semaphore",
+        "mutex"
+      ],
+      "references": [
+        "https://owasp.org/Top10/A04_2021-Insecure_Design/",
+        "https://cwe.mitre.org/data/definitions/362.html"
+      ],
+      "tags": ["owasp", "race-condition", "toctou", "insecure-design"],
+      "enabled": true,
+      "owasp_category": "A04:2021",
+      "aisvs_requirement": "v1.0-C7.3.1"
+    },
+    {
+      "id": "A09-001",
+      "cwe": "CWE-778",
+      "name": "Missing Security Event Logging",
+      "description": "检测敏感操作缺少安全事件日志记录，包括登录、注销、权限变更、账户锁定等",
+      "severity": "medium",
+      "category": "security_logging",
+      "languages": ["python", "javascript"],
+      "sources": [],
+      "sinks": [
+        "login",
+        "logout",
+        "sign_in",
+        "sign_out",
+        "authenticate",
+        "change_password",
+        "reset_password",
+        "delete_account",
+        "lock_account",
+        "unlock_account",
+        "grant_permission",
+        "revoke_permission",
+        "session.create",
+        "session.destroy",
+        "token.create",
+        "token.revoke"
+      ],
+      "sanitizers": [
+        "log.",
+        "logger.",
+        "logging.",
+        "audit",
+        "event.log",
+        "log_event",
+        "record_event"
+      ],
+      "references": [
+        "https://owasp.org/Top10/A09_2021-Security_Logging_and_Monitoring_Failures/",
+        "https://cwe.mitre.org/data/definitions/778.html"
+      ],
+      "tags": ["owasp", "logging", "security-events", "audit"],
+      "enabled": true,
+      "owasp_category": "A09:2021",
+      "aisvs_requirement": "v1.0-C8.1.1"
+    },
+    {
+      "id": "A09-002",
+      "cwe": "CWE-779",
+      "name": "Insufficient Audit Trail",
+      "description": "检测审计日志缺少必要字段或信息不完整，如缺少时间戳、用户ID、IP地址等关键信息",
+      "severity": "medium",
+      "category": "security_logging",
+      "languages": ["python", "javascript"],
+      "sources": [],
+      "sinks": [
+        "log.",
+        "logger.",
+        "logging."
+      ],
+      "sanitizers": [
+        "timestamp",
+        "datetime",
+        "user_id",
+        "username",
+        "ip_address",
+        "session_id",
+        "action",
+        "operation"
+      ],
+      "references": [
+        "https://owasp.org/Top10/A09_2021-Security_Logging_and_Monitoring_Failures/",
+        "https://cwe.mitre.org/data/definitions/779.html"
+      ],
+      "tags": ["owasp", "audit", "logging", "traceability"],
+      "enabled": true,
+      "owasp_category": "A09:2021",
+      "aisvs_requirement": "v1.0-C8.2.1"
+    },
+    {
+      "id": "A09-003",
+      "cwe": "CWE-532",
+      "name": "Sensitive Data in Logs",
+      "description": "检测敏感数据被写入日志的安全问题，包括密码、API密钥、令牌、信用卡号等",
+      "severity": "high",
+      "category": "security_logging",
+      "languages": ["python", "javascript"],
+      "sources": [
+        "password",
+        "passwd",
+        "secret",
+        "api_key",
+        "apikey",
+        "access_token",
+        "refresh_token",
+        "auth_token",
+        "credential",
+        "private_key",
+        "credit_card",
+        "card_number",
+        "ssn",
+        "jwt"
+      ],
+      "sinks": [
+        "log.",
+        "logger.",
+        "logging.",
+        "print",
+        "console.log",
+        "syslog",
+        "audit",
+        "event.log"
+      ],
+      "sanitizers": [
+        "mask",
+        "redact",
+        "sanitize",
+        "hide",
+        "replace"
+      ],
+      "references": [
+        "https://owasp.org/Top10/A09_2021-Security_Logging_and_Monitoring_Failures/",
+        "https://cwe.mitre.org/data/definitions/532.html"
+      ],
+      "tags": ["owasp", "logging", "sensitive-data", "pii"],
+      "enabled": true,
+      "owasp_category": "A09:2021",
+      "aisvs_requirement": "v1.0-C8.3.1"
+    }
+  ],
+  "metadata": {
+    "version": "2.1.0",
+    "total_rules": 16,
+    "last_updated": "2026-05-05",
+    "owasp_mappings": {
+      "A01:2021": "Broken Access Control",
+      "A02:2021": "Cryptographic Failures",
+      "A03:2021": "Injection",
+      "A04:2021": "Insecure Design",
+      "A05:2021": "Security Misconfiguration",
+      "A06:2021": "Vulnerable Components",
+      "A07:2021": "Authentication Failures",
+      "A08:2021": "Software and Data Integrity",
+      "A09:2021": "Logging Failures",
+      "A10:2021": "Server-Side Request Forgery"
+    },
+    "aisvs_mappings": {
+      "v1.0-C1.2.1": "Authentication Controls",
+      "v1.0-C2.1.1": "Input Validation",
+      "v1.0-C2.3.1": "Content Screening",
+      "v1.0-C2.4.1": "File Integrity",
+      "v1.0-C2.5.1": "Network Segmentation",
+      "v1.0-C2.6.1": "Data Integrity",
+      "v1.0-C3.1.1": "Cryptographic Controls",
+      "v1.0-C3.2.1": "Secret Management"
+    }
+  }
+}
