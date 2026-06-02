@@ -1,0 +1,16 @@
+{
+  "session_id": "c83b4663",
+  "target": "c:\\1AAA_PROJECT\\HOS\\HOS-LS\\real-project\\bizspring-open-main",
+  "start_time": "2026-06-02T15:58:12.165904",
+  "last_update": "2026-06-02T15:58:14.496253",
+  "config": {
+    "pure_ai": true
+  },
+  "progress": {
+    "total_files": 0,
+    "completed_files": 0,
+    "completed_file_paths": [],
+    "failed_file_paths": []
+  },
+  "results": []
+}
