@@ -1,0 +1,166 @@
+# === .gitignore ===
+# Ignore build and cache directories
+__pycache__/
+*.py[cod]
+.cache/
+.pytest_cache/
+.benchmarks/
+embeddings_cache/
+rag_knowledge_base/history/
+
+# Ignore IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.trae/
+.trae/documents/
+
+# Ignore OS files
+.DS_Store
+Thumbs.db
+
+# Ignore environment files
+.env
+.venv/
+env/
+venv/
+
+# All Vulnerabilities - excluded, only HOS_TEMP_SIGNAL.txt files are added
+All Vulnerabilities/
+
+# Database files
+nvd_vulnerability.db
+
+# All Vulnerabilities - excluded, only HOS_TEMP_SIGNAL.txt files are added
+All Vulnerabilities/
+
+# All Vulnerabilities - excluded, only HOS_TEMP_SIGNAL.txt files are added
+All Vulnerabilities/
+
+# All Vulnerabilities - excluded, only HOS_TEMP_SIGNAL.txt files are added
+All Vulnerabilities/
+
+# Sensitive config file - excluded from upload
+HOS-LS/hos-ls.yaml
+
+# All Vulnerabilities - excluded, only HOS_TEMP_SIGNAL.txt files are added
+All Vulnerabilities/
+
+# Sensitive config file - excluded from upload
+HOS-LS/hos-ls.yaml
+
+# Local Python environment files
+.local_python/
+
+# Local user data files
+.local/
+
+# All Vulnerabilities - excluded, only HOS_TEMP_SIGNAL.txt files are added
+All Vulnerabilities/
+
+# Sensitive config file - excluded from upload
+HOS-LS/hos-ls.yaml
+
+# Local Python environment files
+.local_python/
+
+# Local user data files
+.local/
+
+# All Vulnerabilities - excluded, only HOS_TEMP_SIGNAL.txt files are added
+All Vulnerabilities/
+
+# Sensitive config file - excluded from upload
+HOS-LS/hos-ls.yaml
+
+# Local Python environment files
+.local_python/
+
+# Local user data files
+.local/
+
+# Frontend dependencies
+src/frontend/web-workbench/node_modules/
+
+# Mypy type checker cache
+.mypy_cache/
+
+# HOS-LS internal indexes
+.hos-ls/
+
+# HOS-LS cache
+.hos-ls-cache/
+
+# All Vulnerabilities - excluded, only HOS_TEMP_SIGNAL.txt files are added
+All Vulnerabilities/
+
+# Sensitive config file - excluded from upload
+HOS-LS/hos-ls.yaml
+
+# Local Python environment files
+.local_python/
+
+# Local user data files
+.local/
+
+# Frontend dependencies
+src/frontend/web-workbench/node_modules/
+
+# Mypy type checker cache
+.mypy_cache/
+
+# HOS-LS internal indexes
+.hos-ls/
+
+# HOS-LS cache
+.hos-ls-cache/
+
+# All Vulnerabilities - excluded, only HOS_TEMP_SIGNAL.txt files are added
+All Vulnerabilities/
+
+# Sensitive config file - excluded from upload
+HOS-LS/hos-ls.yaml
+
+# Local Python environment files
+.local_python/
+
+# Local user data files
+.local/
+
+# Frontend dependencies
+src/frontend/web-workbench/node_modules/
+
+# Mypy type checker cache
+.mypy_cache/
+
+# HOS-LS internal indexes
+.hos-ls/
+
+# HOS-LS cache
+.hos-ls-cache/
+
+# All Vulnerabilities - excluded, only HOS_TEMP_SIGNAL.txt files are added
+All Vulnerabilities/
+
+# Sensitive config file - excluded from upload
+HOS-LS/hos-ls.yaml
+
+# Local Python environment files
+.local_python/
+
+# Local user data files
+.local/
+
+# Frontend dependencies
+src/frontend/web-workbench/node_modules/
+
+# Mypy type checker cache
+.mypy_cache/
+
+# HOS-LS internal indexes
+.hos-ls/
+
+# HOS-LS cache
+.hos-ls-cache/

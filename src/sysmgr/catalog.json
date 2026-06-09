@@ -1,0 +1,378 @@
+{
+  "version": "1.0.0",
+  "last_updated": "2026-06-07",
+  "tools": [
+    {
+      "name": "nuclei",
+      "category": "go",
+      "description": "基于模板的快速可定制漏洞扫描器",
+      "install_cmd": {
+        "go": "go install -v github.com/projectdiscovery/nuclei/v3/cmd/nuclei@latest",
+        "brew": "brew install nuclei"
+      },
+      "version_cmd": "-version",
+      "tags": ["scanner", "vulnerability", "cve"],
+      "ai_capability": "根据URL/域名列表进行自动化漏洞扫描，支持数千种CVE和漏洞模板",
+      "ai_input_format": "URL列表、域名列表、IP范围或目标文件",
+      "ai_output_format": "JSON/Markdown格式的漏洞发现报告，包含严重等级、CVE编号、PoC详情"
+    },
+    {
+      "name": "httpx",
+      "category": "go",
+      "description": "快速HTTP探测工具，支持多种Web指纹识别",
+      "install_cmd": {
+        "go": "go install -v github.com/projectdiscovery/httpx/cmd/httpx@latest",
+        "brew": "brew install httpx"
+      },
+      "version_cmd": "-version",
+      "tags": ["recon", "http", "fingerprint"],
+      "ai_capability": "批量探测HTTP服务存活状态、标题、状态码、技术栈和响应时间",
+      "ai_input_format": "域名列表或URL列表（每行一个）",
+      "ai_output_format": "结构化输出：URL、状态码、标题、内容长度、技术栈、响应时间"
+    },
+    {
+      "name": "ffuf",
+      "category": "go",
+      "description": "超高速Web模糊测试和目录枚举工具",
+      "install_cmd": {
+        "go": "go install -v github.com/ffuf/ffuf/v2@latest",
+        "brew": "brew install ffuf",
+        "apt": "apt install ffuf"
+      },
+      "version_cmd": "-version",
+      "tags": ["fuzzer", "enum", "directory"],
+      "ai_capability": "对Web应用进行目录爆破、参数模糊测试、虚拟主机发现和API端点枚举",
+      "ai_input_format": "目标URL（含FUZZ占位符）、字典文件路径、自定义Header",
+      "ai_output_format": "找到的有效端点列表：URL、状态码、大小、行数、字数"
+    },
+    {
+      "name": "subfinder",
+      "category": "go",
+      "description": "被动子域名发现工具，聚合多个数据源",
+      "install_cmd": {
+        "go": "go install -v github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest",
+        "brew": "brew install subfinder"
+      },
+      "version_cmd": "-version",
+      "tags": ["recon", "subdomain", "enum"],
+      "ai_capability": "从多个公开数据源被动收集目标域名的所有子域名",
+      "ai_input_format": "主域名（如 example.com）",
+      "ai_output_format": "子域名列表（每行一个），可选择JSON格式包含数据源信息"
+    },
+    {
+      "name": "katana",
+      "category": "go",
+      "description": "下一代爬虫和Web蜘蛛工具",
+      "install_cmd": {
+        "go": "go install -v github.com/projectdiscovery/katana/cmd/katana@latest",
+        "brew": "brew install katana"
+      },
+      "version_cmd": "-version",
+      "tags": ["recon", "crawler", "spider"],
+      "ai_capability": "深度爬取目标网站，发现隐藏页面、端点、JavaScript文件和API路由",
+      "ai_input_format": "种子URL列表、爬取深度、范围限制",
+      "ai_output_format": "发现的URL列表，包含来源、方法、状态码、内容类型"
+    },
+    {
+      "name": "dnsx",
+      "category": "go",
+      "description": "快速DNS查询和枚举工具",
+      "install_cmd": {
+        "go": "go install -v github.com/projectdiscovery/dnsx/cmd/dnsx@latest",
+        "brew": "brew install dnsx"
+      },
+      "version_cmd": "-version",
+      "tags": ["recon", "dns", "enum"],
+      "ai_capability": "批量DNS查询、区域传输测试、DNS记录枚举和子域名爆破验证",
+      "ai_input_format": "域名列表、DNS服务器列表、查询类型(A/AAAA/CNAME/MX等)",
+      "ai_output_format": "DNS解析结果：域名、查询类型、响应值、响应代码"
+    },
+    {
+      "name": "naabu",
+      "category": "go",
+      "description": "快速端口扫描工具，支持SYN/CONNECT扫描",
+      "install_cmd": {
+        "go": "go install -v github.com/projectdiscovery/naabu/v2/cmd/naabu@latest",
+        "brew": "brew install naabu"
+      },
+      "version_cmd": "-version",
+      "tags": ["scanner", "port", "recon"],
+      "ai_capability": "对目标主机/网段进行高速端口扫描，识别开放端口和服务",
+      "ai_input_format": "IP地址、CIDR范围或域名列表、端口范围",
+      "ai_output_format": "开放端口列表：IP、端口、协议、服务名称"
+    },
+    {
+      "name": "tlsx",
+      "category": "go",
+      "description": "TLS/SSL证书收集和分析工具",
+      "install_cmd": {
+        "go": "go install -v github.com/projectdiscovery/tlsx/cmd/tlsx@latest",
+        "brew": "brew install tlsx"
+      },
+      "version_cmd": "-version",
+      "tags": ["recon", "tls", "certificate"],
+      "ai_capability": "批量收集和分析TLS证书，识别过期证书、弱配置和证书链问题",
+      "ai_input_format": "主机:端口列表",
+      "ai_output_format": "证书信息：主题、颁发者、有效期、SAN、协议版本、加密套件"
+    },
+    {
+      "name": "mapcidr",
+      "category": "go",
+      "description": "CIDR操作和IP范围处理工具",
+      "install_cmd": {
+        "go": "go install -v github.com/projectdiscovery/mapcidr/cmd/mapcidr@latest",
+        "brew": "brew install mapcidr"
+      },
+      "version_cmd": "-version",
+      "tags": ["recon", "network", "cidr"],
+      "ai_capability": "CIDR范围扩展/收缩、IP列表去重排序、子网划分和IP段计算",
+      "ai_input_format": "CIDR范围、IP列表或IP段（支持多种输入格式）",
+      "ai_output_format": "处理后的IP列表或CIDR范围"
+    },
+    {
+      "name": "ecchi",
+      "category": "go",
+      "description": "快速主机发现和存活检测工具",
+      "install_cmd": {
+        "go": "go install -v github.com/projectdiscovery/naabu/v2/cmd/naabu@latest"
+      },
+      "version_cmd": "-version",
+      "tags": ["recon", "host-discovery", "network"],
+      "ai_capability": "快速检测大规模IP范围内的存活主机",
+      "ai_input_format": "IP范围、CIDR列表或域名",
+      "ai_output_format": "存活主机IP列表"
+    },
+    {
+      "name": "sqlmap",
+      "category": "python",
+      "description": "自动化SQL注入检测和利用工具",
+      "install_cmd": {
+        "pip": "pip install sqlmap",
+        "apt": "apt install sqlmap",
+        "brew": "brew install sqlmap",
+        "choco": "choco install sqlmap"
+      },
+      "version_cmd": "--version",
+      "tags": ["exploit", "sqli", "database"],
+      "ai_capability": "自动检测和利用SQL注入漏洞，支持多种数据库后端和注入技术",
+      "ai_input_format": "目标URL、请求文件、数据库类型提示",
+      "ai_output_format": "注入点详情：参数、注入类型、数据库类型、提取的数据"
+    },
+    {
+      "name": "impacket",
+      "category": "python",
+      "description": "Python实现的网络协议工具集，专注于Windows协议",
+      "install_cmd": {
+        "pip": "pip install impacket",
+        "apt": "apt install impacket-scripts",
+        "brew": "brew install impacket"
+      },
+      "version_cmd": "python -c \"import impacket; print(impacket.__version__)\"",
+      "tags": ["exploit", "windows", "protocol", "lateral-movement"],
+      "ai_capability": "执行Windows域协议交互、凭证提取、票据伪造和横向移动",
+      "ai_input_format": "目标域/主机、凭证、协议类型",
+      "ai_output_format": "协议交互结果、提取的凭证、会话信息"
+    },
+    {
+      "name": "mitm6",
+      "category": "python",
+      "description": "IPv6中间人攻击工具，利用Windows DHCPv6行为",
+      "install_cmd": {
+        "pip": "pip install mitm6",
+        "apt": "apt install mitm6"
+      },
+      "version_cmd": "--help",
+      "tags": ["exploit", "ipv6", "mitm", "active-directory"],
+      "ai_capability": "通过IPv6 DHCPv6劫持进行内网中间人攻击，配合NTLM中继",
+      "ai_input_format": "目标域名、监听接口、中继目标",
+      "ai_output_format": "捕获的NTLM哈希、DHCPv6租约信息"
+    },
+    {
+      "name": "bloodhound",
+      "category": "python",
+      "description": "Active Directory攻击路径分析工具(SharpHound/Python版)",
+      "install_cmd": {
+        "pip": "pip install bloodhound",
+        "apt": "apt install bloodhound"
+      },
+      "version_cmd": "--version",
+      "tags": ["enum", "active-directory", "attack-path"],
+      "ai_capability": "分析Active Directory域环境中的权限关系和攻击路径",
+      "ai_input_format": "域控制器地址、凭证、收集参数",
+      "ai_output_format": "JSON格式的AD关系图数据、攻击路径列表"
+    },
+    {
+      "name": "dnspython",
+      "category": "python",
+      "description": "Python DNS工具库，支持所有DNS记录类型",
+      "install_cmd": {
+        "pip": "pip install dnspython"
+      },
+      "version_cmd": "python -c \"import dns; print(dns.__version__)\"",
+      "tags": ["enum", "dns", "library"],
+      "ai_capability": "执行DNS查询、区域传输、动态更新和DNSSEC验证",
+      "ai_input_format": "域名、DNS服务器、记录类型",
+      "ai_output_format": "DNS记录对象、解析结果或错误信息"
+    },
+    {
+      "name": "scapy",
+      "category": "python",
+      "description": "Python网络数据包操作和嗅探库",
+      "install_cmd": {
+        "pip": "pip install scapy",
+        "apt": "apt install python3-scapy",
+        "brew": "brew install scapy"
+      },
+      "version_cmd": "python -c \"import scapy; print(scapy.__version__)\"",
+      "tags": ["scanner", "packet", "network", "library"],
+      "ai_capability": "构造/解析/发送/嗅探任意网络协议数据包，支持自定义协议",
+      "ai_input_format": "协议定义、数据包字段、目标地址、过滤规则",
+      "ai_output_format": "捕获的数据包对象、协议字段解析、统计信息"
+    },
+    {
+      "name": "nmap",
+      "category": "system",
+      "description": "网络发现和安全审计标准工具",
+      "install_cmd": {
+        "apt": "apt install nmap",
+        "brew": "brew install nmap",
+        "choco": "choco install nmap"
+      },
+      "version_cmd": "--version",
+      "tags": ["scanner", "recon", "port", "enum"],
+      "ai_capability": "对目标网络进行全面端口扫描、服务探测、OS识别和漏洞脚本执行",
+      "ai_input_format": "IP范围、主机名、端口范围、扫描参数",
+      "ai_output_format": "XML/JSON/Grep格式报告：开放端口、服务版本、OS信息、脚本结果"
+    },
+    {
+      "name": "masscan",
+      "category": "system",
+      "description": "超高速互联网规模端口扫描器",
+      "install_cmd": {
+        "apt": "apt install masscan",
+        "brew": "brew install masscan"
+      },
+      "version_cmd": "--version",
+      "tags": ["scanner", "port", "recon"],
+      "ai_capability": "在几分钟内扫描整个互联网的指定端口，速度可达1000万包/秒",
+      "ai_input_format": "IP范围（CIDR格式）、目标端口、速率限制",
+      "ai_output_format": "开放端口列表：IP、端口、协议"
+    },
+    {
+      "name": "nikto",
+      "category": "system",
+      "description": "Web服务器漏洞扫描器",
+      "install_cmd": {
+        "apt": "apt install nikto",
+        "brew": "brew install nikto"
+      },
+      "version_cmd": "-Version",
+      "tags": ["scanner", "web", "vulnerability"],
+      "ai_capability": "对Web服务器进行全面的漏洞扫描，包括危险文件、过时软件和配置问题",
+      "ai_input_format": "目标URL、扫描选项（SSL、代理、认证）",
+      "ai_output_format": "发现的漏洞列表：严重等级、描述、受影响URL、修复建议"
+    },
+    {
+      "name": "hydra",
+      "category": "system",
+      "description": "快速网络登录破解工具，支持多种协议",
+      "install_cmd": {
+        "apt": "apt install hydra",
+        "brew": "brew install hydra",
+        "choco": "choco install hydra"
+      },
+      "version_cmd": "-h",
+      "tags": ["exploit", "bruteforce", "auth"],
+      "ai_capability": "对多种网络服务（SSH/FTP/HTTP/SMTP等）进行暴力破解和密码喷洒攻击",
+      "ai_input_format": "目标主机、服务类型、用户名列表、密码列表",
+      "ai_output_format": "成功凭证对：协议、主机、用户名、密码"
+    },
+    {
+      "name": "john",
+      "category": "system",
+      "description": "John the Ripper密码恢复工具",
+      "install_cmd": {
+        "apt": "apt install john",
+        "brew": "brew install john-jumbo",
+        "choco": "choco install john"
+      },
+      "version_cmd": "--version",
+      "tags": ["exploit", "crack", "password"],
+      "ai_capability": "破解多种哈希格式的密码，支持字典攻击、暴力破解和规则攻击",
+      "ai_input_format": "哈希文件、字典文件、规则文件、格式指定",
+      "ai_output_format": "破解的密码：哈希值、明文密码、耗时"
+    },
+    {
+      "name": "burpsuite",
+      "category": "system",
+      "description": "Web应用安全测试集成平台",
+      "install_cmd": {
+        "brew": "brew install --cask burp-suite",
+        "choco": "choco install burpsuite"
+      },
+      "version_cmd": "--help",
+      "tags": ["scanner", "web", "proxy", "exploit"],
+      "ai_capability": "拦截/修改HTTP请求、自动化扫描、爬虫和手动渗透测试",
+      "ai_input_format": "目标URL、代理配置、扫描范围",
+      "ai_output_format": "漏洞报告、拦截的请求/响应、站点地图"
+    },
+    {
+      "name": "wireshark",
+      "category": "system",
+      "description": "网络协议分析器和数据包捕获工具",
+      "install_cmd": {
+        "apt": "apt install wireshark",
+        "brew": "brew install --cask wireshark",
+        "choco": "choco install wireshark"
+      },
+      "version_cmd": "--version",
+      "tags": ["scanner", "network", "packet", "analysis"],
+      "ai_capability": "捕获和分析网络流量，支持数百种协议的深度解析和过滤",
+      "ai_input_format": "网络接口、捕获过滤器、显示过滤器、pcap文件",
+      "ai_output_format": "数据包详情：协议层次、字段解析、流重组、统计信息"
+    },
+    {
+      "name": "dirb",
+      "category": "system",
+      "description": "Web内容字典爆破工具",
+      "install_cmd": {
+        "apt": "apt install dirb",
+        "brew": "brew install dirb"
+      },
+      "version_cmd": "-v",
+      "tags": ["enum", "directory", "fuzzer"],
+      "ai_capability": "使用字典对Web服务器进行目录和文件枚举",
+      "ai_input_format": "目标URL、字典文件、扩展名",
+      "ai_output_format": "发现的URL：完整路径、HTTP状态码、大小"
+    },
+    {
+      "name": "gobuster",
+      "category": "system",
+      "description": "快速目录、DNS和S3桶枚举工具",
+      "install_cmd": {
+        "apt": "apt install gobuster",
+        "brew": "brew install gobuster",
+        "choco": "choco install gobuster"
+      },
+      "version_cmd": "--version",
+      "tags": ["enum", "directory", "dns", "fuzzer"],
+      "ai_capability": "枚举Web目录、DNS子域名、S3桶和TFTP服务器",
+      "ai_input_format": "目标URL/域名、模式(dir/dns/s3/tftp)、字典文件",
+      "ai_output_format": "发现结果：类型、URL/域名、状态码、大小"
+    },
+    {
+      "name": "whatweb",
+      "category": "system",
+      "description": "Web技术指纹识别工具",
+      "install_cmd": {
+        "apt": "apt install whatweb",
+        "brew": "brew install whatweb"
+      },
+      "version_cmd": "--version",
+      "tags": ["recon", "fingerprint", "web"],
+      "ai_capability": "识别Web应用使用的技术栈：CMS、框架、服务器、JavaScript库等",
+      "ai_input_format": "目标URL列表",
+      "ai_output_format": "技术栈识别结果：组件名称、版本、置信度"
+    }
+  ]
+}
