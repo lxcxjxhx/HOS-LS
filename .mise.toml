@@ -1,0 +1,29 @@
+[tools]
+# Go 安全工具（projectdiscovery 生态）
+# mise Go 工具语法: go:<完整模块路径>@<版本>
+"go:github.com/projectdiscovery/nuclei/v3/cmd/nuclei" = "v3.4.1"
+"go:github.com/projectdiscovery/httpx/cmd/httpx" = "v1.6.7"
+"go:github.com/ffuf/ffuf/v2" = "v2.1.0"
+"go:github.com/projectdiscovery/subfinder/v2/cmd/subfinder" = "v2.6.7"
+"go:github.com/projectdiscovery/katana/cmd/katana" = "v1.1.2"
+"go:github.com/projectdiscovery/dnsx/cmd/dnsx" = "v1.2.2"
+"go:github.com/projectdiscovery/naabu/v2/cmd/naabu" = "v2.2.5"
+"go:github.com/projectdiscovery/tlsx/cmd/tlsx" = "v1.2.1"
+
+# Python 安全工具
+"pipx:sqlmap" = "latest"
+"pipx:garak" = "latest"
+
+# 系统工具（手动安装，仅版本提示）
+[env]
+_NMAP_VERSION = "7.95"
+_NIKTO_VERSION = "2.5.0"
+
+# 自动安装钩子
+[tasks.setup]
+description = "安装所有安全工具到指定版本"
+run = ["mise install", "python -m src.pentest.tools.package_manager sync"]
+
+[tasks.health]
+description = "检查所有工具健康状态"
+run = ["python -m src.pentest.tools.package_manager health-check"]

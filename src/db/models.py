@@ -1,0 +1,488 @@
+"""数据库模型模块
+
+定义数据库表结构的数据模型。
+"""
+
+import json
+from dataclasses import dataclass, field
+from datetime import datetime
+from typing import Any, Dict, List, Optional
+
+
+@dataclass
+class Scan:
+    """扫描记录"""
+
+    id: Optional[int] = None
+    target: str = ""
+    status: str = "pending"
+    start_time: Optional[datetime] = None
+    end_time: Optional[datetime] = None
+    duration: float = 0.0
+    total_findings: int = 0
+    metadata: Dict[str, Any] = field(default_factory=dict)
+    created_at: Optional[datetime] = None
+
+    def to_dict(self) -> Dict[str, Any]:
+        """转换为字典"""
+        return {
+            "id": self.id,
+            "target": self.target,
+            "status": self.status,
+            "start_time": self.start_time.isoformat() if self.start_time else None,
+            "end_time": self.end_time.isoformat() if self.end_time else None,
+            "duration": self.duration,
+            "total_findings": self.total_findings,
+            "metadata": self.metadata,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+        }
+
+    def to_db_tuple(self) -> tuple:
+        """转换为数据库元组"""
+        return (
+            self.target,
+            self.status,
+            self.start_time.isoformat() if self.start_time else None,
+            self.end_time.isoformat() if self.end_time else None,
+            self.duration,
+            self.total_findings,
+            json.dumps(self.metadata) if self.metadata else None,
+        )
+
+    @classmethod
+    def from_db_row(cls, row: tuple) -> "Scan":
+        """从数据库行创建实例"""
+        return cls(
+            id=row[0],
+            target=row[1],
+            status=row[2],
+            start_time=datetime.fromisoformat(row[3]) if row[3] else None,
+            end_time=datetime.fromisoformat(row[4]) if row[4] else None,
+            duration=row[5] or 0.0,
+            total_findings=row[6] or 0,
+            metadata=json.loads(row[7]) if row[7] else {},
+            created_at=datetime.fromisoformat(row[8]) if row[8] else None,
+        )
+
+
+@dataclass
+class Finding:
+    """安全发现记录"""
+
+    id: Optional[int] = None
+    scan_id: int = 0
+    rule_id: str = ""
+    rule_name: str = ""
+    description: str = ""
+    severity: str = "medium"
+    file_path: str = ""
+    line: int = 0
+    column: int = 0
+    confidence: float = 1.0
+    message: str = ""
+    code_snippet: str = ""
+    fix_suggestion: str = ""
+    metadata: Dict[str, Any] = field(default_factory=dict)
+    created_at: Optional[datetime] = None
+    files: List[str] = field(default_factory=list)
+    snippets: Dict[str, str] = field(default_factory=dict)
+    chain: List["VulnerabilityStep"] = field(default_factory=list)
+    cross_file_vulnerability: Optional["CrossFileVulnerability"] = None
+
+    def to_dict(self) -> Dict[str, Any]:
+        """转换为字典"""
+        return {
+            "id": self.id,
+            "scan_id": self.scan_id,
+            "rule_id": self.rule_id,
+            "rule_name": self.rule_name,
+            "description": self.description,
+            "severity": self.severity,
+            "file_path": self.file_path,
+            "line": self.line,
+            "column": self.column,
+            "confidence": self.confidence,
+            "message": self.message,
+            "code_snippet": self.code_snippet,
+            "fix_suggestion": self.fix_suggestion,
+            "metadata": self.metadata,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "files": self.files,
+            "snippets": self.snippets,
+            "chain": [step.to_dict() for step in self.chain] if self.chain else [],
+            "is_multi_file": self.is_multi_file(),
+        }
+
+    def is_multi_file(self) -> bool:
+        """判断是否为多文件漏洞"""
+        return len(self.files) > 1
+
+    def add_related_file(self, file_path: str, snippet: str = "", line: int = 0) -> None:
+        """添加关联文件
+
+        Args:
+            file_path: 关联文件路径
+            snippet: 代码片段
+            line: 行号
+        """
+        if file_path not in self.files:
+            self.files.append(file_path)
+        if snippet:
+            self.snippets[file_path] = snippet
+        if line > 0 and file_path not in self.snippets:
+            self.metadata[f"{file_path}_line"] = line
+
+    def to_db_tuple(self) -> tuple:
+        """转换为数据库元组"""
+        return (
+            self.scan_id,
+            self.rule_id,
+            self.rule_name,
+            self.description,
+            self.severity,
+            self.file_path,
+            self.line,
+            self.column,
+            self.confidence,
+            self.message,
+            self.code_snippet,
+            self.fix_suggestion,
+            json.dumps(self.metadata) if self.metadata else None,
+        )
+
+    @classmethod
+    def from_db_row(cls, row: tuple) -> "Finding":
+        """从数据库行创建实例"""
+        return cls(
+            id=row[0],
+            scan_id=row[1],
+            rule_id=row[2],
+            rule_name=row[3],
+            description=row[4] or "",
+            severity=row[5],
+            file_path=row[6] or "",
+            line=row[7] or 0,
+            column=row[8] or 0,
+            confidence=row[9] or 1.0,
+            message=row[10] or "",
+            code_snippet=row[11] or "",
+            fix_suggestion=row[12] or "",
+            metadata=json.loads(row[13]) if row[13] else {},
+            created_at=datetime.fromisoformat(row[14]) if row[14] else None,
+        )
+
+
+@dataclass
+class VulnerabilityStep:
+    """漏洞攻击链中的单个步骤"""
+    file_path: str
+    line: int
+    description: str
+    code_snippet: str
+    function_name: Optional[str] = None
+    call_type: str = "direct"
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "file_path": self.file_path,
+            "line": self.line,
+            "description": self.description,
+            "code_snippet": self.code_snippet,
+            "function_name": self.function_name,
+            "call_type": self.call_type,
+        }
+
+
+@dataclass
+class CrossFileVulnerability:
+    """跨文件漏洞数据结构
+
+    用于表示涉及多个文件的复杂漏洞，典型场景：
+    - 配置错误 + 业务逻辑漏洞
+    - 入口文件 + 处理器漏洞
+    - 数据流跨越多个文件
+    """
+    vuln_id: str
+    files: List[str]
+    line_ranges: Dict[str, tuple]
+    snippets: Dict[str, str]
+    chain: List[VulnerabilityStep]
+    score: float
+    confidence: float
+    severity: str = "medium"
+    rule_id: str = ""
+    rule_name: str = ""
+    description: str = ""
+    fix_suggestion: str = ""
+    metadata: Dict[str, Any] = field(default_factory=dict)
+
+    def is_multi_file(self) -> bool:
+        """判断是否为多文件漏洞"""
+        return len(self.files) > 1
+
+    def get_primary_file(self) -> str:
+        """获取主漏洞文件（攻击入口点）"""
+        return self.files[0] if self.files else ""
+
+    def get_related_files(self) -> List[str]:
+        """获取关联文件（排除主文件）"""
+        return self.files[1:] if len(self.files) > 1 else []
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "vuln_id": self.vuln_id,
+            "files": self.files,
+            "line_ranges": {k: list(v) for k, v in self.line_ranges.items()},
+            "snippets": self.snippets,
+            "chain": [step.to_dict() for step in self.chain],
+            "score": self.score,
+            "confidence": self.confidence,
+            "severity": self.severity,
+            "rule_id": self.rule_id,
+            "rule_name": self.rule_name,
+            "description": self.description,
+            "fix_suggestion": self.fix_suggestion,
+            "metadata": self.metadata,
+        }
+
+    @classmethod
+    def from_finding(cls, finding: "Finding", related_findings: List["Finding"] = None) -> "CrossFileVulnerability":
+        """从 Finding 对象创建 CrossFileVulnerability
+
+        Args:
+            finding: 主漏洞 Finding 对象
+            related_findings: 关联的 Finding 对象列表
+
+        Returns:
+            CrossFileVulnerability 实例
+        """
+        files = [finding.file_path]
+        snippets = {finding.file_path: finding.code_snippet}
+        line_ranges = {finding.file_path: (finding.line, finding.line + 10)}
+        chain = [VulnerabilityStep(
+            file_path=finding.file_path,
+            line=finding.line,
+            description=finding.description,
+            code_snippet=finding.code_snippet,
+        )]
+
+        if related_findings:
+            for rf in related_findings:
+                if rf.file_path not in files:
+                    files.append(rf.file_path)
+                    snippets[rf.file_path] = rf.code_snippet
+                    line_ranges[rf.file_path] = (rf.line, rf.line + 10)
+                    chain.append(VulnerabilityStep(
+                        file_path=rf.file_path,
+                        line=rf.line,
+                        description=rf.description,
+                        code_snippet=rf.code_snippet,
+                    ))
+
+        return cls(
+            vuln_id=f"xfv_{finding.rule_id}_{finding.file_path}_{finding.line}",
+            files=files,
+            line_ranges=line_ranges,
+            snippets=snippets,
+            chain=chain,
+            score=finding.confidence,
+            confidence=finding.confidence,
+            severity=finding.severity,
+            rule_id=finding.rule_id,
+            rule_name=finding.rule_name,
+            description=finding.description,
+            fix_suggestion=finding.fix_suggestion,
+            metadata=finding.metadata,
+        )
+
+
+@dataclass
+class ScanResult:
+    """扫描结果"""
+
+    scan: Scan
+    findings: List[Finding] = field(default_factory=list)
+
+    def to_dict(self) -> Dict[str, Any]:
+        """转换为字典"""
+        return {
+            "scan": self.scan.to_dict(),
+            "findings": [f.to_dict() for f in self.findings],
+        }
+
+
+@dataclass
+class CVE:
+    """CVE 漏洞数据模型（v3 优化版）"""
+
+    cve_id: str = ""
+    description: str = ""
+    cwe: Optional[str] = None
+    cvss_v3_score: Optional[float] = None
+    cvss_v3_vector: Optional[str] = None
+    cvss_v2_score: Optional[float] = None
+    cvss_v2_vector: Optional[str] = None
+    cpe: List[str] = field(default_factory=list)
+    exploit: bool = False
+    exploit_refs: List[str] = field(default_factory=list)
+    patch_refs: List[str] = field(default_factory=list)
+    attack_vector: Optional[str] = None
+    tags: List[str] = field(default_factory=list)
+    published_date: Optional[datetime] = None
+    last_modified_date: Optional[datetime] = None
+    affected_products: List[str] = field(default_factory=list)
+    references: List[Dict[str, str]] = field(default_factory=list)
+    metadata: Dict[str, Any] = field(default_factory=dict)
+
+    def to_dict(self) -> Dict[str, Any]:
+        """转换为字典"""
+        return {
+            "cve_id": self.cve_id,
+            "description": self.description,
+            "cwe": self.cwe,
+            "cvss_v3_score": self.cvss_v3_score,
+            "cvss_v3_vector": self.cvss_v3_vector,
+            "cvss_v2_score": self.cvss_v2_score,
+            "cvss_v2_vector": self.cvss_v2_vector,
+            "cpe": self.cpe,
+            "exploit": self.exploit,
+            "exploit_refs": self.exploit_refs,
+            "patch_refs": self.patch_refs,
+            "attack_vector": self.attack_vector,
+            "tags": self.tags,
+            "published_date": self.published_date.isoformat() if self.published_date else None,
+            "last_modified_date": self.last_modified_date.isoformat() if self.last_modified_date else None,
+            "affected_products": self.affected_products,
+            "references": self.references,
+            "metadata": self.metadata,
+        }
+
+    def to_json(self) -> str:
+        """转换为 JSON 字符串"""
+        return json.dumps(self.to_dict(), ensure_ascii=False)
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "CVE":
+        """从字典创建实例"""
+        published_date = None
+        if data.get("published_date"):
+            try:
+                published_date = datetime.fromisoformat(data["published_date"])
+            except (ValueError, TypeError):
+                pass
+
+        last_modified_date = None
+        if data.get("last_modified_date"):
+            try:
+                last_modified_date = datetime.fromisoformat(data["last_modified_date"])
+            except (ValueError, TypeError):
+                pass
+
+        return cls(
+            cve_id=data.get("cve_id", ""),
+            description=data.get("description", ""),
+            cwe=data.get("cwe"),
+            cvss_v3_score=data.get("cvss_v3_score"),
+            cvss_v3_vector=data.get("cvss_v3_vector"),
+            cvss_v2_score=data.get("cvss_v2_score"),
+            cvss_v2_vector=data.get("cvss_v2_vector"),
+            cpe=data.get("cpe", []),
+            exploit=data.get("exploit", False),
+            exploit_refs=data.get("exploit_refs", []),
+            patch_refs=data.get("patch_refs", []),
+            attack_vector=data.get("attack_vector"),
+            tags=data.get("tags", []),
+            published_date=published_date,
+            last_modified_date=last_modified_date,
+            affected_products=data.get("affected_products", []),
+            references=data.get("references", []),
+            metadata=data.get("metadata", {}),
+        )
+
+    @classmethod
+    def from_json(cls, json_str: str) -> "CVE":
+        """从 JSON 字符串创建实例"""
+        data = json.loads(json_str)
+        return cls.from_dict(data)
+
+    @property
+    def severity(self) -> str:
+        """根据 CVSS 分数获取严重级别"""
+        if self.cvss_v3_score is not None:
+            score = self.cvss_v3_score
+        elif self.cvss_v2_score is not None:
+            score = self.cvss_v2_score
+        else:
+            return "medium"
+
+        if score >= 9.0:
+            return "critical"
+        elif score >= 7.0:
+            return "high"
+        elif score >= 4.0:
+            return "medium"
+        else:
+            return "low"
+
+
+@dataclass
+class CVECollection:
+    """CVE 数据集合（用于批量操作）"""
+
+    cves: List[CVE] = field(default_factory=list)
+    last_sync_time: Optional[datetime] = None
+    sync_source: str = ""
+
+    def to_dict(self) -> Dict[str, Any]:
+        """转换为字典"""
+        return {
+            "cves": [cve.to_dict() for cve in self.cves],
+            "last_sync_time": self.last_sync_time.isoformat() if self.last_sync_time else None,
+            "sync_source": self.sync_source,
+        }
+
+    def to_json(self) -> str:
+        """转换为 JSON 字符串"""
+        return json.dumps(self.to_dict(), ensure_ascii=False)
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "CVECollection":
+        """从字典创建实例"""
+        last_sync_time = None
+        if data.get("last_sync_time"):
+            try:
+                last_sync_time = datetime.fromisoformat(data["last_sync_time"])
+            except (ValueError, TypeError):
+                pass
+
+        cves = [CVE.from_dict(cve_data) for cve_data in data.get("cves", [])]
+        return cls(
+            cves=cves,
+            last_sync_time=last_sync_time,
+            sync_source=data.get("sync_source", ""),
+        )
+
+    def add_cve(self, cve: CVE) -> None:
+        """添加 CVE"""
+        self.cves.append(cve)
+
+    def get_cve(self, cve_id: str) -> Optional[CVE]:
+        """根据 ID 获取 CVE"""
+        for cve in self.cves:
+            if cve.cve_id == cve_id:
+                return cve
+        return None
+
+    def filter_by_severity(self, severity: str) -> "CVECollection":
+        """按严重级别过滤"""
+        filtered_cves = [cve for cve in self.cves if cve.severity == severity]
+        return CVECollection(cves=filtered_cves, last_sync_time=self.last_sync_time, sync_source=self.sync_source)
+
+    def filter_by_exploit(self, has_exploit: bool = True) -> "CVECollection":
+        """按是否有 exploit 过滤"""
+        filtered_cves = [cve for cve in self.cves if cve.exploit == has_exploit]
+        return CVECollection(cves=filtered_cves, last_sync_time=self.last_sync_time, sync_source=self.sync_source)
+
+
+# 基类（用于类型提示）
+Base = Scan

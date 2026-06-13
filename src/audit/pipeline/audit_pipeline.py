@@ -1,0 +1,2566 @@
+"""AI 代码审计管线
+
+串联完整 AI 代码审计流水线：
+静态预扫描 → AI深度分析 → 攻击链分析 → 最终报告
+
+核心原则：
+- 每个阶段独立可降级
+- 静态扫描结果仅作为参考信号，AI 独立推理
+- 多文件攻击链分析（跨文件数据流追踪、入口点识别）
+- 最终输出可审计的结构化报告
+"""
+
+from __future__ import annotations
+
+import asyncio
+import json
+import logging
+import re
+import time
+from dataclasses import dataclass, field
+from datetime import datetime
+from pathlib import Path
+from typing import Any, Dict, List, Optional
+
+from src.utils.logger import get_logger
+
+logger = get_logger(__name__)
+
+
+# ============================================================================
+#  数据模型
+# ============================================================================
+
+@dataclass
+class PipelineStageResult:
+    """管线阶段执行结果"""
+    stage: str
+    success: bool
+    elapsed: float = 0.0
+    findings_count: int = 0
+    error: Optional[str] = None
+    metadata: Dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass
+class AuditResult:
+    """AI 代码审计最终结果"""
+    target: str
+    timestamp: str
+    total_findings: int = 0
+    verified_findings: int = 0
+    findings: List[Dict[str, Any]] = field(default_factory=list)
+    stage_results: List[Dict[str, Any]] = field(default_factory=list)
+    attack_chains: List[Dict[str, Any]] = field(default_factory=list)
+    pre_scan_signals: List[Dict[str, Any]] = field(default_factory=list)
+    ast_findings: List[Dict[str, Any]] = field(default_factory=list)
+    taint_paths: List[Dict[str, Any]] = field(default_factory=list)
+    report: str = ""
+    summary: str = ""
+
+
+# ============================================================================
+#  AuditPipeline — 主编排器
+# ============================================================================
+
+class AuditPipeline:
+    """AI 代码审计管线
+
+    完整流水线：
+    1. 静态预扫描 (基线，零LLM成本，仅作为参考信号)
+    2. AI深度分析 (增强，LLM驱动，独立推理)
+    3. 发现合并去重
+    4. 三重验证 (路径+代码+CWE模式)
+    5. 攻击链分析 (跨文件数据流追踪、入口点识别)
+    6. 生成报告
+
+    Args:
+        config: 配置对象
+        target: 目标路径（文件或目录）
+        ai_client: AI 客户端（可选，None时降级为纯静态分析）
+        enable_ai_analysis: 是否启用AI分析 (默认True)
+        enable_learning: 是否启用经验学习 (默认False)
+    """
+
+    def __init__(
+        self,
+        target: str,
+        config=None,
+        ai_client=None,
+        enable_ai_analysis: bool = True,
+        enable_learning: bool = False,
+        max_files: Optional[int] = None,
+    ):
+        self.target = target
+        self.config = config
+        self.ai_client = ai_client
+        self.enable_ai_analysis = enable_ai_analysis
+        self.enable_learning = enable_learning
+        self.max_files = max_files
+
+        # 阶段结果记录
+        self.stage_results: List[PipelineStageResult] = []
+
+        # 发现收集
+        self._pre_scan_signals: List[Dict[str, Any]] = []  # 静态预扫描（参考信号）
+        self._ast_signals: List[Dict[str, Any]] = []       # AST预分析信号
+        self._ast_findings: List[Dict[str, Any]] = []      # AST分析发现
+        self._taint_paths: List[Dict[str, Any]] = []       # 污点传播路径
+        self._call_graph: Dict[str, List[str]] = {}        # 函数调用图
+        self._controllability_results: List[Dict[str, Any]] = []  # 输入可控性分析结果
+        self._ai_findings: List[Dict[str, Any]] = []
+        self._all_findings: List[Dict[str, Any]] = []
+        self._verified_findings: List[Dict[str, Any]] = []
+        self._attack_chains: List[Dict[str, Any]] = []
+
+        # 子模块（延迟初始化）
+        self._static_scanner = None
+        self._ai_analyzer = None
+        self._pure_ai_analyzer = None
+        self._ast_analyzer = None
+        self._taint_engine = None
+        self._finding_verifier = None
+        self._attack_chain_analyzer = None
+
+        # 审计模式
+        self.audit_mode: str = "standard"  # quick, standard, deep
+
+    def enable_pure_ai_analyzer(self, analyzer) -> None:
+        """启用 PureAIAnalyzer 深度分析（用于 deep 模式）
+
+        Args:
+            analyzer: PureAIAnalyzer 实例
+        """
+        self._pure_ai_analyzer = analyzer
+        self.audit_mode = "deep"
+        logger.info("[AuditPipeline] PureAIAnalyzer 深度分析已启用")
+
+    def enable_ast_analyzer(self, analyzer) -> None:
+        """启用 ASTAnalyzer 预分析
+
+        Args:
+            analyzer: ASTAnalyzer 实例
+        """
+        self._ast_analyzer = analyzer
+        logger.info("[AuditPipeline] AST预分析已启用")
+
+    def enable_taint_engine(self, engine=None) -> None:
+        """启用 TaintEngine 污点追踪引擎
+
+        Args:
+            engine: TaintEngine 实例（可选，None时自动创建）
+        """
+        self._taint_engine = engine
+        logger.info("[AuditPipeline] 污点追踪引擎已启用")
+
+    def set_audit_mode(self, mode: str) -> None:
+        """设置审计模式
+
+        Args:
+            mode: quick, standard, 或 deep
+        """
+        self.audit_mode = mode.lower()
+        logger.info(f"[AuditPipeline] 审计模式设置为: {mode}")
+
+    # =========================================================================
+    #  主入口
+    # =========================================================================
+
+    async def execute(self) -> AuditResult:
+        """执行完整 AI 代码审计管线
+
+        Returns:
+            AuditResult 包含所有发现和结果的最终报告
+        """
+        t_start = time.time()
+        logger.info(f"[AuditPipeline] 开始执行 target={self.target}")
+        self._log_config()
+
+        try:
+            # ── Stage 0.5: AST预分析（收集结构化信号）─
+            await self._stage_ast_pre_analysis()
+
+            # ── Stage 1: 污点追踪分析（在AST之后，使用AST信号）─
+            await self._stage_taint_analysis()
+
+            # ── Stage 1.1: 输入可控性追踪（在污点分析之后，使用污点路径）─
+            await self._stage_controllability_analysis()
+
+            # ── Stage 1.2: 调用图构建（与污点分析并行使用AST信号）─
+            await self._stage_call_graph_building()
+
+            # ── Stage 1.5: 静态预扫描（参考信号）─
+            await self._stage_static_scan()
+
+            # ── Stage 2: AI深度分析 ──
+            if self.enable_ai_analysis:
+                await self._stage_ai_analysis()
+            else:
+                self._record_stage("ai_analysis", success=False, metadata={"skipped": True, "reason": "AI分析已禁用"})
+
+            # ── Stage 2.5: 跨文件数据流追踪 ──
+            await self._stage_cross_file_analysis()
+
+            # ── Stage 3: 修复建议生成 ──
+            await self._stage_fix_suggestions()
+
+            # ── Stage 4: 合并去重 ──
+            self._stage_merge_dedup()
+
+            # ── Stage 5: 三重验证 ──
+            await self._stage_verification()
+
+            # ── Stage 6: 攻击链分析 ──
+            await self._stage_attack_chain_analysis()
+
+            # ── Stage 7: 生成报告 ──
+            report = self._generate_report(t_start)
+
+        except Exception as e:
+            logger.error(f"[AuditPipeline] 管线执行异常: {e}")
+            report = self._generate_error_report(t_start, str(e))
+
+        elapsed = time.time() - t_start
+        logger.info(f"[AuditPipeline] 管线执行完成 (总耗时 {elapsed:.1f}s)")
+
+        return self._build_final_result(report, elapsed)
+
+    # =========================================================================
+    #  Stage 0.5: AST预分析
+    # =========================================================================
+
+    async def _stage_ast_pre_analysis(self) -> None:
+        """Stage 0.5: 执行 AST 预分析（收集结构化信号供 AI 分析使用）
+
+        AST 分析在 AI 分析之前运行，收集可疑模式（危险函数、SQL注入风险等），
+        作为结构化上下文传递给 AI 分析器。
+        """
+        t0 = time.time()
+        logger.info("[AuditPipeline] Stage 0.5/7: AST 预分析")
+
+        try:
+            from src.analyzers.ast_analyzer import ASTAnalyzer
+            from src.analyzers.base import AnalysisContext, AnalysisType
+
+            # 初始化 AST 分析器（如果外部未注入）
+            if self._ast_analyzer is None:
+                self._ast_analyzer = ASTAnalyzer()
+
+            self._ast_analyzer.initialize()
+
+            # 分析目标文件
+            code_extensions = {'.py', '.js', '.ts', '.java', '.go', '.rb', '.php', '.c', '.cpp', '.h'}
+            files_to_analyze = []
+
+            target_path = Path(self.target)
+            if target_path.is_file() and target_path.suffix in code_extensions:
+                files_to_analyze.append(target_path)
+            elif target_path.is_dir():
+                files_to_analyze = [f for f in target_path.rglob('*') if f.suffix in code_extensions and f.is_file()]
+
+            if not files_to_analyze:
+                logger.info("[AuditPipeline] 无 AST 可分析的文件")
+                self._record_stage("ast_pre_analysis", success=True, findings_count=0)
+                return
+
+            total_signals = 0
+            all_ast_findings = []
+
+            for file_path in files_to_analyze:
+                try:
+                    content = file_path.read_text(encoding='utf-8', errors='replace')
+                    ext = file_path.suffix.lower()
+                    ext_to_lang = {
+                        '.py': 'python', '.js': 'javascript', '.ts': 'typescript',
+                        '.java': 'java', '.go': 'go', '.rb': 'ruby', '.php': 'php',
+                        '.c': 'c', '.cpp': 'cpp', '.h': 'c',
+                    }
+                    language = ext_to_lang.get(ext, 'python')
+
+                    ctx = AnalysisContext(
+                        file_path=Path(file_path),
+                        file_content=content,
+                        language=language,
+                    )
+
+                    result = self._ast_analyzer.analyze(ctx)
+
+                    # 收集信号
+                    signals = self._ast_analyzer.get_signals_for_ai()
+                    total_signals += len(signals)
+                    self._ast_signals.extend(signals)
+
+                    # 将 AST result.issues 转换为 findings
+                    if hasattr(result, 'issues') and result.issues:
+                        for issue in result.issues:
+                            finding_dict = self._normalize_finding(issue)
+                            finding_dict['source'] = 'ast_analysis'
+                            all_ast_findings.append(finding_dict)
+
+                except Exception as e:
+                    logger.debug(f"[AuditPipeline] AST 分析失败 {file_path}: {e}")
+
+            self._ast_findings = all_ast_findings
+
+            self._record_stage(
+                "ast_pre_analysis",
+                success=True,
+                findings_count=len(all_ast_findings),
+                elapsed=time.time() - t0,
+                metadata={
+                    "files_analyzed": len(files_to_analyze),
+                    "signals_collected": total_signals,
+                },
+            )
+            logger.info(f"[AuditPipeline] AST 预分析完成: {len(files_to_analyze)} 个文件, {total_signals} 个信号, {len(all_ast_findings)} 个发现")
+
+        except ImportError as e:
+            logger.warning(f"[AuditPipeline] AST 分析模块不可用: {e}")
+            self._record_stage("ast_pre_analysis", success=False, error=str(e))
+        except Exception as e:
+            logger.error(f"[AuditPipeline] AST 预分析异常: {e}")
+            self._record_stage("ast_pre_analysis", success=False, error=str(e))
+
+    # =========================================================================
+    #  Stage 1: 污点追踪分析
+    # =========================================================================
+
+    async def _stage_taint_analysis(self) -> None:
+        """Stage 1: 执行污点追踪分析（在 AST 之后，将 Source→Sink 路径传递给 AI）
+
+        使用 TaintEngine 分析目标文件，检测用户输入源点到危险汇聚点的传播路径，
+        并将结构化污点路径作为上下文注入 AI 分析器。
+        """
+        t0 = time.time()
+        logger.info("[AuditPipeline] Stage 1/8: 污点追踪分析")
+
+        try:
+            from src.taint.engine import TaintEngine, get_taint_engine
+
+            # 初始化 TaintEngine（如果外部未注入）
+            if self._taint_engine is None:
+                self._taint_engine = get_taint_engine()
+
+            # 收集目标文件（排除测试文件）
+            code_extensions = {'.py', '.js', '.ts', '.java', '.go', '.rb', '.php', '.c', '.cpp', '.h'}
+            files_to_analyze = []
+
+            target_path = Path(self.target)
+            if target_path.is_file() and target_path.suffix in code_extensions:
+                files_to_analyze.append(str(target_path))
+            elif target_path.is_dir():
+                for f in target_path.rglob('*'):
+                    if f.suffix in code_extensions and f.is_file():
+                        # 排除测试文件
+                        fp_lower = str(f).lower()
+                        if any(ind in fp_lower for ind in ['test_', '_test.', '/tests/', '/test/', 'spec_']):
+                            continue
+                        files_to_analyze.append(str(f))
+
+            if not files_to_analyze:
+                logger.info("[AuditPipeline] 无污点可分析的文件")
+                self._record_stage("taint_analysis", success=True, findings_count=0)
+                return
+
+            # 运行污点分析
+            taint_paths = self._taint_engine.analyze(files_to_analyze)
+
+            # 转换为字典格式存储
+            taint_dicts = []
+            for tp in taint_paths:
+                td = tp.to_dict() if hasattr(tp, 'to_dict') else {
+                    "source": tp.source.to_dict() if hasattr(tp.source, 'to_dict') else vars(tp.source),
+                    "sink": tp.sink.to_dict() if hasattr(tp.sink, 'to_dict') else vars(tp.sink),
+                    "intermediate_steps": tp.intermediate_steps,
+                    "path_confidence": tp.path_confidence,
+                    "sanitizers": tp.sanitizers_encountered,
+                }
+                taint_dicts.append(td)
+
+            self._taint_paths = taint_dicts
+
+            self._record_stage(
+                "taint_analysis",
+                success=True,
+                findings_count=len(taint_dicts),
+                elapsed=time.time() - t0,
+                metadata={
+                    "files_analyzed": len(files_to_analyze),
+                    "taint_paths_found": len(taint_dicts),
+                },
+            )
+            logger.info(f"[AuditPipeline] 污点追踪分析完成: {len(files_to_analyze)} 个文件, {len(taint_dicts)} 条传播路径")
+
+        except ImportError as e:
+            logger.warning(f"[AuditPipeline] 污点追踪引擎不可用: {e}")
+            self._record_stage("taint_analysis", success=False, error=str(e))
+        except Exception as e:
+            logger.error(f"[AuditPipeline] 污点追踪分析异常: {e}")
+            self._record_stage("taint_analysis", success=False, error=str(e))
+
+    # =========================================================================
+    #  Stage 1.1: 输入可控性追踪
+    # =========================================================================
+
+    async def _stage_controllability_analysis(self) -> None:
+        """Stage 1.1: 输入可控性追踪分析（在污点分析之后，利用污点路径）
+
+        使用 InputTracer 对污点路径中的 sink 点进行可控性评估，
+        判断用户输入是否可控，从而验证漏洞的可利用性。
+        """
+        t0 = time.time()
+        logger.info("[AuditPipeline] Stage 1.1/8: 输入可控性追踪")
+
+        if not self._taint_paths:
+            logger.info("[AuditPipeline] 无污点路径，跳过可控性分析")
+            self._record_stage("controllability_analysis", success=True, findings_count=0)
+            return
+
+        try:
+            from src.analyzers.input_tracer import InputTracer
+
+            tracer = InputTracer(project_root=str(Path(self.target).parent if Path(self.target).is_file() else self.target))
+
+            results = []
+            for tp in self._taint_paths:
+                try:
+                    sink = tp.get('sink', {})
+                    file_path = sink.get('file_path', '')
+                    line_number = sink.get('line', 0)
+                    code_context = sink.get('code_context', '')
+
+                    if not file_path or not line_number:
+                        continue
+
+                    result = tracer.trace_controllability(file_path, line_number, code_context)
+                    result_dict = result.to_dict()
+                    # 附加污点路径信息
+                    result_dict['taint_path_info'] = {
+                        'source_type': sink.get('source_type', ''),
+                        'vulnerability_type': sink.get('vulnerability_type', ''),
+                        'sink_type': sink.get('sink_type', ''),
+                    }
+                    results.append(result_dict)
+                except Exception as e:
+                    logger.debug(f"[AuditPipeline] 可控性分析失败 (sink): {e}")
+
+            self._controllability_results = results
+
+            # 统计可控性分布
+            level_counts = {}
+            for r in results:
+                level = r.get('controllability_level', 'unknown')
+                level_counts[level] = level_counts.get(level, 0) + 1
+
+            self._record_stage(
+                "controllability_analysis",
+                success=True,
+                findings_count=len(results),
+                elapsed=time.time() - t0,
+                metadata={
+                    "taint_paths_analyzed": len(self._taint_paths),
+                    "controllability_results": len(results),
+                    "level_distribution": level_counts,
+                },
+            )
+            logger.info(f"[AuditPipeline] 输入可控性分析完成: {len(results)} 个结果, 分布: {level_counts}")
+
+        except ImportError as e:
+            logger.warning(f"[AuditPipeline] InputTracer 不可用: {e}")
+            self._record_stage("controllability_analysis", success=False, error=str(e))
+        except Exception as e:
+            logger.error(f"[AuditPipeline] 输入可控性分析异常: {e}")
+            self._record_stage("controllability_analysis", success=False, error=str(e))
+
+    def _get_controllability_context_for_file(self, file_path: str) -> Optional[str]:
+        """获取指定文件的输入可控性分析上下文
+
+        Args:
+            file_path: 文件路径
+
+        Returns:
+            格式化的可控性分析上下文字符串，或 None
+        """
+        if not self._controllability_results:
+            return None
+
+        file_path_str = str(file_path)
+        # 筛选当前文件相关的可控性结果
+        # 通过 trace_path 中的 location 匹配
+        file_results = []
+        for cr in self._controllability_results:
+            for node in cr.get('trace_path', []):
+                if node.get('location') == file_path_str:
+                    file_results.append(cr)
+                    break
+
+        if not file_results:
+            return None
+
+        lines = [f"## 输入可控性分析结果 ({len(file_results)} 个)"]
+        for i, cr in enumerate(file_results, 1):
+            level = cr.get('controllability_level', 'unknown')
+            source_type = cr.get('source_type', 'unknown')
+            is_exploitable = cr.get('is_exploitable', False)
+            confidence = cr.get('confidence', 0)
+            summary = cr.get('summary', '')
+            taint_info = cr.get('taint_path_info', {})
+
+            lines.append(f"### 可控性分析 {i}")
+            lines.append(f"- 可控性级别: {level}")
+            lines.append(f"- 输入来源类型: {source_type}")
+            lines.append(f"- 可利用: {'是' if is_exploitable else '否'}")
+            lines.append(f"- 置信度: {confidence:.2f}")
+            if taint_info.get('vulnerability_type'):
+                lines.append(f"- 漏洞类型: {taint_info['vulnerability_type']}")
+            if taint_info.get('sink_type'):
+                lines.append(f"- Sink 类型: {taint_info['sink_type']}")
+            if summary:
+                lines.append(f"- 摘要: {summary}")
+            prerequisites = cr.get('attack_prerequisites', [])
+            if prerequisites:
+                lines.append(f"- 攻击前提:")
+                for prereq in prerequisites:
+                    lines.append(f"  - {prereq}")
+            trace_path = cr.get('trace_path', [])
+            if trace_path:
+                lines.append(f"- 追踪路径:")
+                for j, node in enumerate(trace_path, 1):
+                    node_loc = node.get('location', '')
+                    node_line = node.get('line_number', '')
+                    node_value = node.get('value_name', '')
+                    node_st = node.get('source_type', '')
+                    lines.append(f"  {j}. {node.get('node_type', '?')} @ {node_loc}:{node_line} ({node_value}) [来源: {node_st}]")
+            lines.append("")
+
+        return "\n".join(lines)
+
+    # =========================================================================
+    #  Stage 1.2: 调用图构建
+    # =========================================================================
+
+    async def _stage_call_graph_building(self) -> None:
+        """Stage 1.2: 构建方法调用图（与污点分析共用AST信号）
+
+        使用已有的 CallGraphBuilder 从目标文件构建方法调用图，
+        收集调用链信息并传递给AI分析器作为上下文。
+        """
+        t0 = time.time()
+        logger.info("[AuditPipeline] Stage 1.2/8: 调用图构建")
+
+        try:
+            from src.taint.engine import CallGraphBuilder
+
+            # 复用 TaintEngine 内部的 call_graph_builder，或新建
+            if self._taint_engine is not None:
+                builder = self._taint_engine.call_graph_builder
+            else:
+                builder = CallGraphBuilder()
+
+            # 收集目标文件（排除测试文件）
+            code_extensions = {'.py', '.js', '.ts', '.java', '.go', '.rb', '.php', '.c', '.cpp', '.h'}
+            files_to_analyze = []
+
+            target_path = Path(self.target)
+            if target_path.is_file() and target_path.suffix in code_extensions:
+                files_to_analyze.append(str(target_path))
+            elif target_path.is_dir():
+                for f in target_path.rglob('*'):
+                    if f.suffix in code_extensions and f.is_file():
+                        # 排除测试文件
+                        fp_lower = str(f).lower()
+                        if any(ind in fp_lower for ind in ['test_', '_test.', '/tests/', '/test/', 'spec_']):
+                            continue
+                        files_to_analyze.append(str(f))
+
+            if not files_to_analyze:
+                logger.info("[AuditPipeline] 无可构建调用图的文件")
+                self._record_stage("call_graph_building", success=True, findings_count=0)
+                return
+
+            # 构建调用图
+            self._call_graph = builder.build(files_to_analyze)
+
+            # 统计调用链数量
+            total_calls = sum(len(calls) for calls in self._call_graph.values())
+
+            self._record_stage(
+                "call_graph_building",
+                success=True,
+                findings_count=total_calls,
+                elapsed=time.time() - t0,
+                metadata={
+                    "files_analyzed": len(files_to_analyze),
+                    "functions_mapped": len(self._call_graph),
+                    "total_call_edges": total_calls,
+                },
+            )
+            logger.info(f"[AuditPipeline] 调用图构建完成: {len(self._call_graph)} 个函数, {total_calls} 条调用边")
+
+        except ImportError as e:
+            logger.warning(f"[AuditPipeline] 调用图构建模块不可用: {e}")
+            self._record_stage("call_graph_building", success=False, error=str(e))
+        except Exception as e:
+            logger.error(f"[AuditPipeline] 调用图构建异常: {e}")
+            self._record_stage("call_graph_building", success=False, error=str(e))
+
+    # =========================================================================
+    #  Stage 1: 静态预扫描（参考信号）
+    # =========================================================================
+
+    async def _stage_static_scan(self) -> None:
+        """Stage 1: 执行静态预扫描（基线，零LLM成本，仅作为参考信号）
+
+        注意：静态扫描结果标记为 pre_scan_signal，不直接加入最终发现列表。
+        仅用于后续交叉验证和去重参考。
+        """
+        t0 = time.time()
+        logger.info("[AuditPipeline] Stage 1/6: 静态预扫描（参考信号）")
+
+        try:
+            from src.core.scanner import SecurityScanner, create_scanner
+            from src.core.config import Config
+
+            cfg = self.config or Config()
+            scanner = create_scanner(cfg)
+
+            # scanner.scan() internally may use asyncio.run(), so we need to handle nested event loops
+            try:
+                scan_result = await scanner.scan(self.target)
+            except RuntimeError as e:
+                if "asyncio.run" in str(e) or "running event loop" in str(e):
+                    # Fallback: run scanner in a new thread with its own event loop
+                    import concurrent.futures
+                    import asyncio
+                    import threading
+
+                    def _run_scanner():
+                        # Create new event loop for this thread
+                        loop = asyncio.new_event_loop()
+                        asyncio.set_event_loop(loop)
+                        try:
+                            return loop.run_until_complete(scanner.scan(self.target))
+                        finally:
+                            loop.close()
+
+                    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+                        future = executor.submit(_run_scanner)
+                        scan_result = future.result(timeout=300)
+                else:
+                    raise
+
+            # 提取发现，标记为参考信号
+            findings = []
+            raw_findings = []
+            if hasattr(scan_result, 'findings'):
+                raw_findings = scan_result.findings
+            elif isinstance(scan_result, dict) and 'findings' in scan_result:
+                raw_findings = scan_result['findings']
+
+            for f in raw_findings:
+                finding_dict = self._normalize_finding(f)
+                finding_dict['source'] = 'pre_scan_signal'
+                finding_dict['signal_type'] = 'static_rule'
+                finding_dict['confidence'] = self._calculate_confidence(finding_dict)  # 动态计算
+                findings.append(finding_dict)
+
+            self._pre_scan_signals = findings
+            self._record_stage(
+                "pre_scan",
+                success=True,
+                findings_count=len(findings),
+                elapsed=time.time() - t0,
+            )
+            logger.info(f"[AuditPipeline] 静态预扫描完成: 记录 {len(findings)} 个参考信号")
+
+        except ImportError as e:
+            logger.warning(f"[AuditPipeline] 静态扫描模块不可用: {e}")
+            self._record_stage("pre_scan", success=False, error=str(e))
+        except Exception as e:
+            logger.error(f"[AuditPipeline] 静态扫描异常: {e}")
+            self._record_stage("pre_scan", success=False, error=str(e))
+
+    # =========================================================================
+    #  Stage 2: AI深度分析
+    # =========================================================================
+
+    async def _stage_ai_analysis(self) -> None:
+        """Stage 2: AI深度语义分析（LLM驱动）
+
+        在 deep 模式下使用 PureAIAnalyzer 进行深度分析，
+        在 standard/quick 模式下使用基础 AI 分析。
+        """
+        t0 = time.time()
+        logger.info(f"[AuditPipeline] Stage 2/7: AI深度分析 (mode={self.audit_mode})")
+
+        if not self.ai_client:
+            logger.warning("[AuditPipeline] AI客户端不可用，跳过AI深度分析")
+            self._record_stage("ai_analysis", success=False, error="AI客户端不可用")
+            return
+
+        # deep 模式使用 PureAIAnalyzer 深度分析
+        if self.audit_mode == "deep" and self._pure_ai_analyzer:
+            await self._stage_ai_analysis_deep()
+            return
+
+        # standard/quick 模式使用基础 AI 分析
+        await self._stage_ai_analysis_standard()
+
+    async def _stage_ai_analysis_deep(self) -> None:
+        """Deep 模式：使用 PureAIAnalyzer 进行深度语义分析"""
+        t0 = time.time()
+        logger.info("[AuditPipeline] Deep 模式：PureAIAnalyzer 深度分析")
+
+        analyzer = self._pure_ai_analyzer
+        results = []
+
+        # 分析目标
+        if Path(self.target).is_dir():
+            results = await self._analyze_directory(analyzer)
+        elif Path(self.target).is_file():
+            results = await self._analyze_file(analyzer, self.target)
+        else:
+            logger.warning(f"[AuditPipeline] 目标不存在: {self.target}")
+            results = []
+
+        # 提取发现
+        findings = []
+        for result in results:
+            if hasattr(result, 'rule_name') or hasattr(result, 'severity'):
+                finding_dict = self._normalize_finding(result)
+                finding_dict['source'] = 'ai_deep'
+                findings.append(finding_dict)
+            elif isinstance(result, dict):
+                finding_dict = self._normalize_finding(result)
+                finding_dict['source'] = 'ai_deep'
+                findings.append(finding_dict)
+            elif isinstance(result, list):
+                for f in result:
+                    finding_dict = self._normalize_finding(f)
+                    finding_dict['source'] = 'ai_deep'
+                    findings.append(finding_dict)
+            elif hasattr(result, 'findings'):
+                for f in result.findings:
+                    finding_dict = self._normalize_finding(f)
+                    finding_dict['source'] = 'ai_deep'
+                    findings.append(finding_dict)
+
+        # 应用动态置信度评分
+        for finding in findings:
+            finding['confidence'] = self._calculate_confidence(finding)
+
+        self._ai_findings = findings
+        self._record_stage(
+            "ai_analysis",
+            success=True,
+            findings_count=len(findings),
+            elapsed=time.time() - t0,
+        )
+        logger.info(f"[AuditPipeline] Deep AI分析完成: 发现 {len(findings)} 个问题")
+
+    async def _stage_ai_analysis_standard(self) -> None:
+        """Standard/Quick 模式：基础 AI 分析"""
+        t0 = time.time()
+
+        try:
+            from src.ai.pure_ai_analyzer import PureAIAnalyzer
+            from src.core.config import Config
+
+            cfg = self.config or Config()
+            analyzer = PureAIAnalyzer(config=cfg)
+
+            # 分析目标
+            if Path(self.target).is_dir():
+                results = await self._analyze_directory(analyzer)
+            elif Path(self.target).is_file():
+                results = await self._analyze_file(analyzer, self.target)
+            else:
+                logger.warning(f"[AuditPipeline] 目标不存在: {self.target}")
+                results = []
+
+            # 提取发现
+            findings = []
+            for result in results:
+                # PureAIAnalyzer.analyze 返回 List[VulnerabilityFinding]，
+                # 每个 result 本身就是一个 VulnerabilityFinding
+                if hasattr(result, 'rule_name') or hasattr(result, 'severity'):
+                    # 单个 VulnerabilityFinding 对象
+                    finding_dict = self._normalize_finding(result)
+                    finding_dict['source'] = 'ai'
+                    findings.append(finding_dict)
+                elif isinstance(result, dict):
+                    # 字典格式发现
+                    finding_dict = self._normalize_finding(result)
+                    finding_dict['source'] = 'ai'
+                    findings.append(finding_dict)
+                elif isinstance(result, list):
+                    # 嵌套列表（兼容旧格式）
+                    for f in result:
+                        finding_dict = self._normalize_finding(f)
+                        finding_dict['source'] = 'ai'
+                        findings.append(finding_dict)
+                elif hasattr(result, 'findings'):
+                    # 容器对象（带 findings 属性）
+                    for f in result.findings:
+                        finding_dict = self._normalize_finding(f)
+                        finding_dict['source'] = 'ai'
+                        findings.append(finding_dict)
+
+            # 应用动态置信度评分
+            for finding in findings:
+                finding['confidence'] = self._calculate_confidence(finding)
+
+            self._ai_findings = findings
+            self._record_stage(
+                "ai_analysis",
+                success=True,
+                findings_count=len(findings),
+                elapsed=time.time() - t0,
+            )
+            logger.info(f"[AuditPipeline] AI深度分析完成: 发现 {len(findings)} 个问题")
+
+        except ImportError as e:
+            logger.warning(f"[AuditPipeline] AI分析模块不可用: {e}")
+            self._record_stage("ai_analysis", success=False, error=str(e))
+        except Exception as e:
+            logger.error(f"[AuditPipeline] AI深度分析异常: {e}")
+            self._record_stage("ai_analysis", success=False, error=str(e))
+
+    async def _analyze_file(self, analyzer, file_path: str) -> list:
+        """分析单个文件"""
+        try:
+            content = Path(file_path).read_text(encoding='utf-8', errors='replace')
+
+            # 提取当前文件的 AST 信号作为上下文
+            ast_context = self._get_ast_context_for_file(file_path)
+
+            # 提取当前文件的污点传播路径作为上下文
+            taint_context = self._get_taint_context_for_file(file_path)
+
+            # 提取当前文件的调用图上下文
+            call_graph_context = self._get_call_graph_context_for_file(file_path)
+
+            # 提取当前文件的输入可控性上下文
+            controllability_context = self._get_controllability_context_for_file(file_path)
+
+            # PureAIAnalyzer.analyze(file_path, file_content) returns List[VulnerabilityFinding]
+            if hasattr(analyzer, 'analyze'):
+                findings = await analyzer.analyze(
+                    file_path, content, ast_context=ast_context,
+                    taint_context=taint_context, call_graph_context=call_graph_context,
+                    controllability_context=controllability_context,
+                )
+                return findings if findings else []
+            else:
+                logger.warning("[AuditPipeline] PureAIAnalyzer 无可用分析方法")
+                return []
+        except Exception as e:
+            logger.debug(f"[AuditPipeline] 文件分析失败 {file_path}: {e}")
+            return []
+
+    def _get_ast_context_for_file(self, file_path: str) -> Optional[str]:
+        """获取指定文件的 AST 分析上下文
+
+        Args:
+            file_path: 文件路径
+
+        Returns:
+            格式化的 AST 上下文字符串，或 None
+        """
+        if not self._ast_signals:
+            return None
+
+        # 筛选当前文件相关的 AST 信号
+        file_path_str = str(file_path)
+        file_signals = [s for s in self._ast_signals if s.get('file') == file_path_str]
+
+        if not file_signals:
+            return None
+
+        lines = [f"## AST 预分析信号 ({len(file_signals)} 个)"]
+        for i, signal in enumerate(file_signals, 1):
+            lines.append(f"### 信号 {i}")
+            lines.append(f"- 类型: {signal.get('type', 'unknown')}")
+            lines.append(f"- 行号: {signal.get('line', '')}")
+            lines.append(f"- 描述: {signal.get('description', '')}")
+            lines.append(f"- 代码: {signal.get('context', '')}")
+            if signal.get('suggestion'):
+                lines.append(f"- 建议: {signal['suggestion']}")
+            if signal.get('metadata', {}).get('poc'):
+                lines.append(f"- POC: {signal['metadata']['poc']}")
+            lines.append("")
+
+        return "\n".join(lines)
+
+    def _get_taint_context_for_file(self, file_path: str) -> Optional[str]:
+        """获取指定文件的污点传播路径上下文
+
+        Args:
+            file_path: 文件路径
+
+        Returns:
+            格式化的污点传播路径字符串，或 None
+        """
+        if not self._taint_paths:
+            return None
+
+        file_path_str = str(file_path)
+        # 筛选当前文件相关的污点路径（source 或 sink 涉及此文件）
+        file_paths = [
+            tp for tp in self._taint_paths
+            if tp.get('source', {}).get('file_path') == file_path_str
+            or tp.get('sink', {}).get('file_path') == file_path_str
+        ]
+
+        if not file_paths:
+            return None
+
+        lines = [f"## 污点追踪分析结果 ({len(file_paths)} 条传播路径)"]
+        for i, tp in enumerate(file_paths, 1):
+            source = tp.get('source', {})
+            sink = tp.get('sink', {})
+            path_conf = tp.get('path_confidence', 0)
+            sanitizers = tp.get('sanitizers', [])
+            steps = tp.get('intermediate_steps', [])
+
+            lines.append(f"### 污点路径 {i}")
+            lines.append(f"- Source 类型: {source.get('source_type', 'unknown')}")
+            lines.append(f"- Source 位置: {source.get('file_path', '')}:{source.get('line', '')}")
+            lines.append(f"- Source 变量: {source.get('variable_name', '')}")
+            lines.append(f"- Source 代码: {source.get('code_context', '')}")
+            lines.append(f"- Sink 类型: {sink.get('sink_type', 'unknown')}")
+            lines.append(f"- Sink 位置: {sink.get('file_path', '')}:{sink.get('line', '')}")
+            lines.append(f"- Sink 函数: {sink.get('function_name', '')}")
+            lines.append(f"- Sink 代码: {sink.get('code_context', '')}")
+            lines.append(f"- 漏洞类型: {sink.get('vulnerability_type', '')}")
+            lines.append(f"- 路径置信度: {path_conf:.0%}")
+            if sanitizers:
+                lines.append(f"- 消毒函数: {', '.join(sanitizers)}")
+            if steps:
+                lines.append(f"- 中间步骤 ({len(steps)} 步):")
+                for j, step in enumerate(steps, 1):
+                    if isinstance(step, dict):
+                        lines.append(f"  {j}. {step.get('description', step.get('code', str(step)))}")
+            lines.append("")
+
+        return "\n".join(lines)
+
+    def _get_call_graph_context_for_file(self, file_path: str) -> Optional[str]:
+        """获取指定文件的调用图上下文
+
+        将调用图中的函数调用关系格式化为 [CALL]-> 格式的调用链。
+
+        Args:
+            file_path: 文件路径
+
+        Returns:
+            格式化的调用链字符串，或 None
+        """
+        if not self._call_graph:
+            return None
+
+        file_path_str = str(file_path)
+        # 筛选当前文件相关的调用图条目（key 包含该文件路径）
+        file_entries = {
+            func_key: callees
+            for func_key, callees in self._call_graph.items()
+            if file_path_str in func_key
+        }
+
+        if not file_entries:
+            return None
+
+        lines = [f"## 方法调用图分析 ({len(file_entries)} 个函数, {sum(len(v) for v in file_entries.values())} 条调用边)"]
+
+        for func_key, callees in sorted(file_entries.items()):
+            # 提取函数名: "file_path:func_name" -> func_name
+            func_name = func_key.split(":")[-1] if ":" in func_key else func_key
+
+            if callees:
+                # 格式化为 [CALL]-> 调用链
+                call_chains = []
+                for callee in callees:
+                    call_chains.append(f"{func_name} [CALL]-> {callee}")
+                lines.append(f"### {func_name}")
+                lines.append(f"- 调用关系:")
+                for chain in call_chains:
+                    lines.append(f"  - {chain}")
+                lines.append("")
+            else:
+                lines.append(f"### {func_name}")
+                lines.append("- 无外部调用 (叶子函数)")
+                lines.append("")
+
+        return "\n".join(lines)
+
+    async def _analyze_directory(self, analyzer) -> list:
+        """分析目录中的所有代码文件（基于优先级分层）
+
+        使用文件优先级分类，按层级差异化处理：
+        - Tier 1: 并发 3，完整分析
+        - Tier 2: 并发 5，标准分析
+        - Tier 3: 并发 10，仅 AST + 静态扫描
+        """
+        import asyncio
+
+        # 执行文件优先级分类
+        prioritized = await self._stage_file_prioritization()
+        if not prioritized:
+            return []
+
+        all_results = []
+        tier_stats = {}
+
+        # 按层级分组
+        tier_groups: Dict[int, List[str]] = {}
+        for item in prioritized:
+            tier = item['tier']
+            tier_groups.setdefault(tier, []).append(item['file_path'])
+
+        for tier, files in tier_groups.items():
+            concurrency = self._get_concurrency_for_tier(tier)
+            semaphore = asyncio.Semaphore(concurrency)
+            tier_count = len(files)
+            logger.info(f"[AuditPipeline] 处理 Tier {tier}: {tier_count} 个文件, 并发={concurrency}")
+
+            async def analyze_with_limit(f):
+                async with semaphore:
+                    return await self._analyze_file(analyzer, f)
+
+            tasks = [analyze_with_limit(f) for f in files]
+            results = await asyncio.gather(*tasks, return_exceptions=True)
+
+            tier_results = []
+            for r in results:
+                if isinstance(r, list):
+                    tier_results.extend(r)
+                elif isinstance(r, Exception):
+                    logger.debug(f"[AuditPipeline] 分析任务异常: {r}")
+
+            tier_stats[tier] = {'files': tier_count, 'findings': len(tier_results)}
+            all_results.extend(tier_results)
+
+        stats_str = " | ".join(f"T{t}={s['files']}f/{s['findings']}发现" for t, s in sorted(tier_stats.items()))
+        logger.info(f"[AuditPipeline] 目录分析完成: {stats_str}")
+        return all_results
+
+    # =========================================================================
+    #  Stage 3: 合并去重
+    # =========================================================================
+
+    def _stage_merge_dedup(self) -> None:
+        """Stage 3: 合并 AI 发现，去重（静态信号仅用于交叉验证）
+
+        Pure AI 模式：以 AI 发现为唯一来源，静态信号仅用于交叉验证提升置信度。
+        当 AI 无发现时，明确报告失败，不降级使用静态规则。
+        """
+        t0 = time.time()
+        logger.info("[AuditPipeline] Stage 4/7: 合并去重")
+
+        # 判断是否有 AI 发现
+        has_ai_findings = bool(self._ai_findings)
+
+        if has_ai_findings:
+            # 正常路径：仅使用 AI 发现作为最终发现主体
+            all_findings = []
+            seen_keys = set()
+
+            for f in self._ai_findings:
+                key = self._finding_dedup_key(f)
+                if key not in seen_keys:
+                    seen_keys.add(key)
+                    all_findings.append(f)
+                else:
+                    existing = next((x for x in all_findings if self._finding_dedup_key(x) == key), None)
+                    if existing:
+                        existing['confidence'] = max(
+                            existing.get('confidence', 0),
+                            f.get('confidence', 0),
+                        )
+                        existing['sources'] = list(set(
+                            existing.get('sources', [existing.get('source', '')]) +
+                            [f.get('source', '')]
+                        ))
+
+            # 交叉验证：如果预扫描信号与 AI 发现匹配，提升 AI 发现的置信度
+            for ai_finding in all_findings:
+                ai_key = self._finding_dedup_key(ai_finding)
+                for signal in self._pre_scan_signals:
+                    if ai_key == self._finding_dedup_key(signal) or self._findings_overlap(ai_finding, signal):
+                        ai_finding['confidence'] = min(
+                            ai_finding.get('confidence', 0.7) + 0.05,
+                            1.0
+                        )
+                        ai_finding['cross_validated'] = True
+
+            # 语义去重：消除测试文件和源文件的重复漏洞
+            all_findings = self._semantic_dedup(all_findings)
+
+            # 为每个发现添加专业级评估维度
+            for ai_finding in all_findings:
+                self._enrich_finding_with_dimensions(ai_finding)
+
+            self._all_findings = all_findings
+            self._record_stage(
+                "merge_dedup",
+                success=True,
+                findings_count=len(all_findings),
+                elapsed=time.time() - t0,
+                metadata={
+                    "ai_count": len(self._ai_findings),
+                    "pre_scan_signals": len(self._pre_scan_signals),
+                    "cross_validated": sum(1 for f in all_findings if f.get('cross_validated')),
+                    "mode": "ai_primary",
+                },
+            )
+            logger.info(f"[AuditPipeline] 合并完成: {len(all_findings)} 个唯一发现")
+        else:
+            # Pure AI 模式：AI 无发现 → 明确失败，不降级
+            logger.error("[AuditPipeline] AI分析未产生任何发现，审计失败。请检查AI服务连接和配置。")
+            self._all_findings = []
+            self._record_stage(
+                "merge_dedup",
+                success=False,
+                findings_count=0,
+                elapsed=time.time() - t0,
+                error="AI分析未产生任何发现，审计失败。请检查AI服务连接和配置。",
+                metadata={
+                    "ai_count": 0,
+                    "pre_scan_signals": len(self._pre_scan_signals),
+                    "mode": "ai_failed",
+                },
+            )
+
+    def _findings_overlap(self, f1: Dict, f2: Dict) -> bool:
+        """检查两个发现是否重叠（同文件同类型）"""
+        loc1 = f1.get('location', {})
+        loc2 = f2.get('location', {})
+        fp1 = loc1.get('file_path', '')
+        fp2 = loc2.get('file_path', '')
+        rule1 = f1.get('rule_id', f1.get('rule_name', ''))
+        rule2 = f2.get('rule_id', f2.get('rule_name', ''))
+        return (fp1 and fp1 == fp2 and rule1 and rule1 == rule2)
+
+    def _enrich_finding_with_dimensions(self, finding: Dict) -> Dict:
+        """为发现添加专业级评估维度：用户可控性、污点传播、可利用性、漏洞真实性"""
+        loc = finding.get('location', {})
+        file_path = loc.get('file_path', '')
+        line = loc.get('line', 0)
+        confidence = finding.get('confidence', 0)
+
+        # 1. 用户可控性 - 基于 InputTracer 结果
+        controllability = self._assess_user_controllability(finding, file_path, line)
+
+        # 2. 污点传播 - 基于 TaintEngine 结果
+        taint_propagation = self._assess_taint_propagation(finding, file_path, line)
+
+        # 3. 可利用性 - 基于可控性 + 污点传播
+        exploitability = self._assess_exploitability(controllability, taint_propagation, confidence)
+
+        # 4. 漏洞真实性 - 基于置信度 + 交叉验证
+        authenticity = self._assess_authenticity(finding, confidence)
+
+        finding['evaluation'] = {
+            'user_controllability': controllability,
+            'taint_propagation': taint_propagation,
+            'exploitability': exploitability,
+            'authenticity': authenticity,
+        }
+        return finding
+
+    def _assess_user_controllability(self, finding: Dict, file_path: str, line: int) -> Dict:
+        """评估用户输入可控性"""
+        confidence = finding.get('confidence', 0)
+        # 查找匹配的 InputTracer 结果
+        matching_results = [
+            cr for cr in self._controllability_results
+            if cr.get('sink_file_path') == file_path and abs(cr.get('sink_line', 0) - line) <= 5
+        ]
+
+        if matching_results:
+            best = max(matching_results, key=lambda x: x.get('confidence', 0))
+            level = best.get('controllability_level', 'unknown')
+            source_type = best.get('source_type', 'unknown')
+            is_exploitable = best.get('is_exploitable', False)
+
+            level_map = {
+                'fully_controlled': {'status': '通过', 'description': '用户输入完全可控'},
+                'partially_controlled': {'status': '部分', 'description': '用户输入部分可控'},
+                'not_controlled': {'status': '失败', 'description': '用户输入不可控'},
+            }
+            level_info = level_map.get(level, {'status': '未知', 'description': '可控性未知'})
+
+            source_map = {
+                'direct_user_input': '直接用户输入',
+                'indirect_user_input': '间接用户输入',
+                'internal_value': '内部值',
+                'config_file': '配置文件',
+                'database': '数据库',
+                'unknown': '未知来源',
+            }
+
+            return {
+                'status': level_info['status'],
+                'level': level,
+                'source_type': source_map.get(source_type, source_type),
+                'description': level_info['description'],
+                'is_exploitable': is_exploitable,
+                'confidence': best.get('confidence', 0),
+            }
+
+        # 如果没有匹配的可控性分析结果，基于置信度推断
+        if confidence >= 0.8:
+            return {
+                'status': '通过',
+                'level': 'likely_controlled',
+                'source_type': 'AI推断-可能可控',
+                'description': 'AI高置信度识别，推断用户输入可控',
+                'is_exploitable': True,
+                'confidence': confidence,
+            }
+        elif confidence >= 0.5:
+            return {
+                'status': '部分',
+                'level': 'uncertain',
+                'source_type': 'AI推断-不确定',
+                'description': 'AI中等置信度识别，可控性不确定',
+                'is_exploitable': False,
+                'confidence': confidence,
+            }
+        else:
+            return {
+                'status': '失败',
+                'level': 'unlikely',
+                'source_type': 'AI推断-不可控',
+                'description': 'AI低置信度识别，推断用户输入不可控',
+                'is_exploitable': False,
+                'confidence': confidence,
+            }
+
+    def _assess_taint_propagation(self, finding: Dict, file_path: str, line: int) -> Dict:
+        """评估污点传播路径"""
+        # 查找匹配的污点路径
+        matching_paths = [
+            tp for tp in self._taint_paths
+            if tp.get('sink', {}).get('file_path') == file_path
+            and abs(tp.get('sink', {}).get('line', 0) - line) <= 5
+        ]
+
+        if matching_paths:
+            best = max(matching_paths, key=lambda x: x.get('path_confidence', 0))
+            source = best.get('source', {})
+            sink = best.get('sink', {})
+            sanitizers = best.get('sanitizers', [])
+            steps = best.get('intermediate_steps', [])
+            path_confidence = best.get('path_confidence', 0)
+
+            has_sanitizer = len(sanitizers) > 0
+            is_connected = path_confidence >= 0.5 and not has_sanitizer
+
+            # 构建路径摘要
+            path_summary = []
+            if source.get('variable_name'):
+                path_summary.append(f"Source: {source['variable_name']} ({source.get('source_type', '')})")
+            for step in steps[:3]:
+                if isinstance(step, dict):
+                    path_summary.append(f"→ {step.get('description', step.get('code', ''))}")
+            path_summary.append(f"→ Sink: {sink.get('function_name', '')} ({sink.get('sink_type', '')})")
+
+            return {
+                'status': '连通' if is_connected else ('部分连通' if path_confidence >= 0.3 else '断开'),
+                'is_connected': is_connected,
+                'has_sanitizer': has_sanitizer,
+                'sanitizers': sanitizers,
+                'path_confidence': path_confidence,
+                'path_summary': ' | '.join(path_summary) if path_summary else '无完整路径',
+                'source_type': source.get('source_type', ''),
+                'sink_type': sink.get('sink_type', ''),
+                'step_count': len(steps),
+            }
+
+        # 没有匹配污点路径时的默认评估
+        return {
+            'status': '未追踪',
+            'is_connected': False,
+            'has_sanitizer': False,
+            'sanitizers': [],
+            'path_confidence': 0,
+            'path_summary': '污点引擎未追踪到此路径',
+            'source_type': '',
+            'sink_type': '',
+            'step_count': 0,
+        }
+
+    def _assess_exploitability(self, controllability: Dict, taint_propagation: Dict, confidence: float) -> Dict:
+        """评估漏洞可利用性"""
+        is_controllable = controllability.get('is_exploitable', False)
+        is_connected = taint_propagation.get('is_connected', False)
+        has_sanitizer = taint_propagation.get('has_sanitizer', False)
+
+        if is_controllable and is_connected and not has_sanitizer:
+            level = '高'
+            description = '用户输入完全可控且数据流连通，无消毒处理，漏洞可被直接利用'
+        elif is_controllable and is_connected and has_sanitizer:
+            level = '中'
+            description = '数据流连通但存在消毒函数，需要绕过消毒才能利用'
+        elif is_controllable or is_connected:
+            level = '中'
+            description = '可控性或数据流部分满足，存在一定利用可能'
+        else:
+            level = '低'
+            description = '用户输入不可控或数据流断开，漏洞难以被实际利用'
+
+        return {
+            'level': level,
+            'description': description,
+            'is_controllable': is_controllable,
+            'is_connected': is_connected,
+            'has_sanitizer': has_sanitizer,
+        }
+
+    def _assess_authenticity(self, finding: Dict, confidence: float) -> Dict:
+        """评估漏洞真实性"""
+        cross_validated = finding.get('cross_validated', False)
+
+        if confidence >= 0.8 and cross_validated:
+            verdict = '真实'
+            description = '高置信度且通过交叉验证，漏洞高度可信'
+        elif confidence >= 0.7 and cross_validated:
+            verdict = '真实'
+            description = '中高置信度且通过交叉验证，漏洞可信'
+        elif confidence >= 0.6:
+            verdict = '疑似'
+            description = '中等置信度，漏洞可能存在但需要人工确认'
+        elif confidence >= 0.4:
+            verdict = '疑似'
+            description = '低置信度，漏洞可能为误报'
+        else:
+            verdict = '误报'
+            description = '极低置信度，大概率为误报'
+
+        return {
+            'verdict': verdict,
+            'description': description,
+            'confidence': confidence,
+            'cross_validated': cross_validated,
+        }
+
+    # =========================================================================
+    #  Stage 4.5: 修复建议生成
+    # =========================================================================
+
+    async def _stage_fix_suggestions(self) -> None:
+        """Stage 4.5: 为高/严重发现生成AI修复建议
+
+        在AI分析之后、合并去重之前运行。
+        对 high/critical 级别的发现调用AI生成具体修复代码。
+        """
+        t0 = time.time()
+        logger.info("[AuditPipeline] Stage 3.5/8: 修复建议生成")
+
+        if not self._ai_findings:
+            self._record_stage("fix_suggestions", success=True, findings_count=0)
+            return
+
+        # 仅对 high/critical 发现生成修复建议（节省token）
+        high_severity = [f for f in self._ai_findings
+                         if str(f.get('severity', '')).upper() in ('HIGH', 'CRITICAL')]
+
+        if not high_severity:
+            logger.info("[AuditPipeline] 无 high/critical 发现，跳过修复建议生成")
+            self._record_stage("fix_suggestions", success=True, findings_count=0)
+            return
+
+        if not self.ai_client:
+            logger.warning("[AuditPipeline] AI客户端不可用，跳过修复建议生成")
+            self._record_stage("fix_suggestions", success=False, error="AI客户端不可用")
+            return
+
+        try:
+            from src.ai.pure_ai_analyzer import PureAIAnalyzer
+            from src.core.config import Config
+
+            cfg = self.config or Config()
+            analyzer = PureAIAnalyzer(config=cfg)
+
+            generated_count = 0
+            for finding in high_severity:
+                try:
+                    # 获取文件内容
+                    location = finding.get('location', {})
+                    file_path = location.get('file_path', location.get('file', ''))
+                    file_content = ""
+                    if file_path and Path(file_path).exists():
+                        try:
+                            file_content = Path(file_path).read_text(encoding='utf-8', errors='replace')
+                        except Exception:
+                            pass
+
+                    suggestion = await analyzer.generate_fix_suggestion(finding, file_content)
+                    finding['fix_suggestion'] = suggestion
+                    generated_count += 1
+                except Exception as e:
+                    logger.debug(f"[AuditPipeline] 修复建议生成失败: {e}")
+                    finding['fix_suggestion'] = f"生成失败: {str(e)}"
+
+            self._record_stage(
+                "fix_suggestions",
+                success=True,
+                findings_count=generated_count,
+                elapsed=time.time() - t0,
+                metadata={
+                    "total_high_critical": len(high_severity),
+                    "suggestions_generated": generated_count,
+                },
+            )
+            logger.info(f"[AuditPipeline] 修复建议生成完成: {generated_count}/{len(high_severity)}")
+
+        except ImportError as e:
+            logger.warning(f"[AuditPipeline] 修复建议模块不可用: {e}")
+            self._record_stage("fix_suggestions", success=False, error=str(e))
+        except Exception as e:
+            logger.error(f"[AuditPipeline] 修复建议生成异常: {e}")
+            self._record_stage("fix_suggestions", success=False, error=str(e))
+
+    # =========================================================================
+    #  跨文件数据流追踪
+    # =========================================================================
+
+    # 用户输入源点模式
+    TAINT_SOURCES = [
+        'request.args', 'request.form', 'request.POST', 'request.GET', 'request.body',
+        'request.json', 'request.data', 'request.query', 'request.params', 'request.values',
+        'input(', 'raw_input(', 'sys.argv', 'environ.get', 'os.environ',
+        'req.body', 'req.query', 'req.params', 'req.get',
+    ]
+
+    # 危险汇聚点模式
+    TAINT_SINKS = {
+        'eval(': ('代码注入', 'HIGH'),
+        'exec(': ('代码注入', 'HIGH'),
+        'os.system(': ('命令注入', 'CRITICAL'),
+        'os.popen(': ('命令注入', 'HIGH'),
+        'subprocess.call(': ('命令注入', 'HIGH'),
+        'subprocess.run(': ('命令注入', 'HIGH'),
+        'subprocess.Popen(': ('命令注入', 'HIGH'),
+        'cursor.execute(': ('SQL注入', 'CRITICAL'),
+        'cursor.executemany(': ('SQL注入', 'HIGH'),
+        'db.execute(': ('SQL注入', 'CRITICAL'),
+        'query(': ('SQL注入', 'HIGH'),
+        '__import__(': ('动态导入', 'HIGH'),
+        'compile(': ('代码注入', 'MEDIUM'),
+        'getattr(': ('动态属性', 'MEDIUM'),
+        'setattr(': ('动态属性', 'MEDIUM'),
+        'exec(' : ('代码注入', 'HIGH'),
+    }
+
+    def _calculate_cross_file_flows(
+        self,
+        file_contents: Dict[str, str],
+    ) -> List[Dict[str, Any]]:
+        """基本跨文件污点分析
+
+        分析所有文件中的 source（用户输入）和 sink（危险函数），
+        找出跨文件的潜在数据流连接。
+
+        Args:
+            file_contents: {文件路径: 文件内容} 的映射
+
+        Returns:
+            跨文件发现列表
+        """
+        cross_file_findings = []
+
+        # 收集所有 source 和 sink 点
+        source_points = []  # [(file_path, line_num, source_pattern)]
+        sink_points = []    # [(file_path, line_num, sink_pattern)]
+
+        for file_path, content in file_contents.items():
+            lines = content.split('\n')
+            for line_num, line in enumerate(lines, 1):
+                stripped = line.strip()
+                if stripped.startswith('#') or stripped.startswith('//'):
+                    continue
+
+                for src in self.TAINT_SOURCES:
+                    if src in line:
+                        source_points.append((file_path, line_num, src))
+
+                for sink_name, (sink_type, severity) in self.TAINT_SINKS.items():
+                    if sink_name in line:
+                        sink_points.append((file_path, line_num, sink_name, sink_type, severity))
+
+        # 如果 source 和 sink 在不同文件中，生成交叉文件发现
+        # 仅当同一文件中同时存在 source 和 sink 时，跳过（AI分析已覆盖）
+        files_with_sinks = {sp[0] for sp in sink_points}
+        files_with_sources = {sp[0] for sp in source_points}
+
+        # 跨文件连接: 文件A有source, 文件B有sink, 且A!=B
+        cross_pairs = files_with_sources & files_with_sinks
+        if len(cross_pairs) >= 2:
+            cross_pairs_list = list(cross_pairs)
+            for i, file_a in enumerate(cross_pairs_list):
+                for file_b in cross_pairs_list[i+1:]:
+                    # file_a 有 source, file_b 有 sink（或反过来）
+                    sources_in_a = [s for s in source_points if s[0] == file_a]
+                    sinks_in_b = [s for s in sink_points if s[0] == file_b]
+                    sources_in_b = [s for s in source_points if s[0] == file_b]
+                    sinks_in_a = [s for s in sink_points if s[0] == file_a]
+
+                    if sources_in_a and sinks_in_b:
+                        for src in sources_in_a[:3]:  # 限制每个连接最多3个
+                            for sink in sinks_in_b[:3]:
+                                cross_file_findings.append({
+                                    'rule_id': f"cross_file_taint_{len(cross_file_findings)+1}",
+                                    'rule_name': f"跨文件数据流: {sink[3]}",
+                                    'description': f"用户输入({src[2]}) 从 {file_a}:{src[1]} 可能流向危险函数({sink[2]}) 在 {file_b}:{sink[1]}",
+                                    'severity': sink[4],
+                                    'confidence': 0.5,  # 基础置信度，后续会被 _calculate_confidence 调整
+                                    'source': 'cross_file',
+                                    'location': {
+                                        'file_path': file_b,
+                                        'line': sink[1],
+                                        'source_file': file_a,
+                                        'source_line': src[1],
+                                    },
+                                    'code_snippet': sink[2],
+                                    'taint_type': 'cross_file_data_flow',
+                                })
+
+                    if sources_in_b and sinks_in_a:
+                        for src in sources_in_b[:3]:
+                            for sink in sinks_in_a[:3]:
+                                cross_file_findings.append({
+                                    'rule_id': f"cross_file_taint_{len(cross_file_findings)+1}",
+                                    'rule_name': f"跨文件数据流: {sink[3]}",
+                                    'description': f"用户输入({src[2]}) 从 {file_b}:{src[1]} 可能流向危险函数({sink[2]}) 在 {file_a}:{sink[1]}",
+                                    'severity': sink[4],
+                                    'confidence': 0.5,
+                                    'source': 'cross_file',
+                                    'location': {
+                                        'file_path': file_a,
+                                        'line': sink[1],
+                                        'source_file': file_b,
+                                        'source_line': src[1],
+                                    },
+                                    'code_snippet': sink[2],
+                                    'taint_type': 'cross_file_data_flow',
+                                })
+
+        # 去重
+        seen = set()
+        unique_findings = []
+        for f in cross_file_findings:
+            key = f"{f['location'].get('file_path')}:{f['rule_name']}:{f['location'].get('line')}"
+            if key not in seen:
+                seen.add(key)
+                unique_findings.append(f)
+
+        logger.info(f"[AuditPipeline] 跨文件污点分析: {len(source_points)} 个源点, {len(sink_points)} 个汇聚点, {len(unique_findings)} 个跨文件发现")
+        return unique_findings
+
+    async def _stage_cross_file_analysis(self) -> None:
+        """Stage 2.5: 跨文件数据流追踪
+
+        在AI分析完成后运行，收集所有文件内容并执行基本污点分析。
+        """
+        t0 = time.time()
+        logger.info("[AuditPipeline] Stage 2.5/8: 跨文件数据流追踪")
+
+        if not Path(self.target).is_dir():
+            logger.info("[AuditPipeline] 目标不是目录，跳过跨文件分析")
+            self._record_stage("cross_file", success=True, findings_count=0)
+            return
+
+        try:
+            # 收集所有文件内容
+            file_contents = {}
+            code_extensions = {'.py', '.js', '.ts', '.java', '.go', '.rb', '.php', '.c', '.cpp', '.h'}
+            target_path = Path(self.target)
+
+            for f in target_path.rglob('*'):
+                if f.suffix in code_extensions and f.is_file():
+                    try:
+                        content = f.read_text(encoding='utf-8', errors='replace')
+                        file_contents[str(f)] = content
+                    except Exception:
+                        pass
+
+            if not file_contents:
+                logger.info("[AuditPipeline] 无可分析文件")
+                self._record_stage("cross_file", success=True, findings_count=0)
+                return
+
+            # 执行跨文件分析
+            cross_findings = self._calculate_cross_file_flows(file_contents)
+
+            # 应用动态置信度
+            for f in cross_findings:
+                f['confidence'] = self._calculate_confidence(f)
+
+            # 合并到AI发现中
+            self._ai_findings.extend(cross_findings)
+
+            self._record_stage(
+                "cross_file",
+                success=True,
+                findings_count=len(cross_findings),
+                elapsed=time.time() - t0,
+                metadata={
+                    "files_analyzed": len(file_contents),
+                    "cross_file_findings": len(cross_findings),
+                },
+            )
+            logger.info(f"[AuditPipeline] 跨文件分析完成: 发现 {len(cross_findings)} 个跨文件问题")
+
+        except Exception as e:
+            logger.error(f"[AuditPipeline] 跨文件分析异常: {e}")
+            self._record_stage("cross_file", success=False, error=str(e))
+
+    # =========================================================================
+    #  Stage 4: 三重验证
+    # =========================================================================
+
+    async def _stage_verification(self) -> None:
+        """Stage 4: 对发现进行三重验证（路径+代码片段+CWE模式）"""
+        t0 = time.time()
+        logger.info("[AuditPipeline] Stage 4/7: 三重验证")
+
+        if not self._all_findings:
+            self._record_stage("verification", success=True, findings_count=0)
+            return
+
+        try:
+            from src.analyzers.finding_verifier import FindingVerifier
+
+            import os
+            from pathlib import Path
+
+            # 使用当前工作目录作为项目根目录
+            # 因为 finding 中的 file_path 是相对于 CWD 的相对路径
+            project_root = os.getcwd()
+
+            verifier = FindingVerifier(project_root=project_root)
+            verified = []
+
+            for finding in self._all_findings:
+                try:
+                    # 执行三重验证
+                    if hasattr(verifier, 'verify_and_annotate'):
+                        verification = verifier.verify_and_annotate(finding)
+                    elif hasattr(verifier, 'verify'):
+                        verification = verifier.verify(finding)
+                    else:
+                        verification = {'confidence': finding.get('confidence', 0.5), 'verified': True}
+
+                    # 合并验证结果
+                    verified_finding = dict(finding)
+                    if hasattr(verification, 'to_dict'):
+                        verification = verification.to_dict()
+                    verified_finding['verification'] = verification
+                    verified_finding['confidence'] = verification.get('confidence', finding.get('confidence', 0.5))
+                    verified_finding['is_hallucination'] = verification.get('is_hallucination', False)
+
+                    # 过滤掉明显的幻觉发现
+                    if not verified_finding.get('is_hallucination', False):
+                        verified.append(verified_finding)
+
+                except Exception as e:
+                    logger.debug(f"[AuditPipeline] 验证失败: {finding.get('rule_id', '?')}: {e}")
+                    # 验证失败时保留原始发现，但降低置信度
+                    verified_finding = dict(finding)
+                    verified_finding['confidence'] = finding.get('confidence', 0.5) * 0.5
+                    verified_finding['verification'] = {'error': str(e)}
+                    verified.append(verified_finding)
+
+            self._verified_findings = verified
+            self._record_stage(
+                "verification",
+                success=True,
+                findings_count=len(verified),
+                elapsed=time.time() - t0,
+                metadata={
+                    "total_before": len(self._all_findings),
+                    "hallucinations_filtered": len(self._all_findings) - len(verified),
+                },
+            )
+            logger.info(f"[AuditPipeline] 验证完成: {len(verified)} 个通过验证")
+
+        except ImportError:
+            logger.warning("[AuditPipeline] FindingVerifier不可用，跳过验证")
+            self._verified_findings = list(self._all_findings)
+            self._record_stage("verification", success=False, error="FindingVerifier不可用")
+        except Exception as e:
+            logger.error(f"[AuditPipeline] 验证异常: {e}")
+            self._verified_findings = list(self._all_findings)
+            self._record_stage("verification", success=False, error=str(e))
+
+    # =========================================================================
+    #  Stage 5: 攻击链分析
+    # =========================================================================
+
+    async def _stage_attack_chain_analysis(self) -> None:
+        """Stage 5: 跨文件攻击链分析
+
+        基于验证后的发现，识别攻击链：
+        - 入口点识别（HTTP handler、API endpoint、public method）
+        - 跨文件数据流追踪
+        - 攻击链可信度评分
+        """
+        t0 = time.time()
+        logger.info("[AuditPipeline] Stage 5/6: 攻击链分析")
+
+        if not self._verified_findings:
+            logger.info("[AuditPipeline] 无验证后的发现，跳过攻击链分析")
+            self._record_stage("attack_chain", success=True, findings_count=0)
+            return
+
+        try:
+            from src.core.attack_chain_analyzer import AttackChainAnalyzer
+
+            analyzer = AttackChainAnalyzer()
+            result = analyzer.analyze(self._verified_findings)
+
+            # 转换为字典列表
+            chains = []
+            for chain in result.critical_chains:
+                chain_dict = {
+                    'description': chain.description,
+                    'risk_level': chain.risk_level,
+                    'status': chain.status,
+                    'confidence': self._calculate_chain_confidence(chain),
+                    'steps': [
+                        {
+                            'description': step.description,
+                            'finding': self._normalize_finding(step.finding),
+                        }
+                        for step in chain.steps
+                    ],
+                }
+                chains.append(chain_dict)
+
+            self._attack_chains = chains
+            self._record_stage(
+                "attack_chain",
+                success=True,
+                findings_count=len(chains),
+                elapsed=time.time() - t0,
+                metadata={
+                    'total_findings_analyzed': len(self._verified_findings),
+                    'chains_found': len(chains),
+                    'summary': result.summary,
+                },
+            )
+            logger.info(f"[AuditPipeline] 攻击链分析完成: {len(chains)} 条链, {result.summary}")
+
+        except Exception as e:
+            logger.warning(f"[AuditPipeline] 攻击链分析异常: {e}")
+            self._record_stage("attack_chain", success=False, error=str(e))
+
+    def _calculate_chain_confidence(self, chain) -> float:
+        """计算攻击链可信度"""
+        if not chain.steps:
+            return 0.0
+
+        # 基于步骤数量和状态计算
+        base_confidence = 0.5
+        step_bonus = min(0.1 * len(chain.steps), 0.3)
+        status_bonus = 0.15 if chain.status == "confirmed" else 0.0
+
+        # 基于步骤中发现的置信度
+        finding_confidences = []
+        for step in chain.steps:
+            f = step.finding
+            conf = getattr(f, 'confidence', 0.5) if hasattr(f, 'confidence') else f.get('confidence', 0.5) if isinstance(f, dict) else 0.5
+            finding_confidences.append(conf)
+
+        avg_finding_conf = sum(finding_confidences) / len(finding_confidences) if finding_confidences else 0.5
+
+        return min(base_confidence + step_bonus + status_bonus + (avg_finding_conf - 0.5) * 0.3, 1.0)
+
+    # =========================================================================
+    #  Stage 6: 生成报告
+    # =========================================================================
+
+    def _generate_report(self, start_time: float) -> str:
+        """Stage 6: 生成结构化审计报告"""
+        elapsed = time.time() - start_time
+
+        # 检查 AI 审计是否失败
+        merge_stage = next((s for s in self.stage_results if s.stage == "merge_dedup"), None)
+        ai_failed = merge_stage and not merge_stage.success
+
+        lines = [
+            "# HOS-LS AI 安全审计报告",
+            "",
+            f"**目标**: `{self.target}`",
+            f"**时间**: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
+            f"**耗时**: {elapsed:.1f}s",
+            "",
+        ]
+
+        if ai_failed:
+            lines.extend([
+                "> **审计失败**: AI分析未产生任何发现，审计已终止。请检查AI服务连接和配置。",
+                "",
+                "---",
+                "",
+            ])
+
+        lines.extend([
+            "---",
+            "",
+            "## 执行摘要",
+            "",
+            "| 指标 | 值 |",
+            "|------|-----|",
+            f"| AST预分析发现 | {len(self._ast_findings)} |",
+            f"| 污点传播路径 | {len(self._taint_paths)} |",
+            f"| 输入可控性分析 | {len(self._controllability_results)} |",
+            f"| 调用图函数映射 | {len(self._call_graph)} |",
+            f"| 调用图调用边 | {sum(len(v) for v in self._call_graph.values())} |",
+            f"| 预扫描信号 | {len(self._pre_scan_signals)} |",
+            f"| AI发现 | {len(self._ai_findings)} |",
+            f"| 合并后唯一发现 | {len(self._all_findings)} |",
+            f"| 验证通过 | {len(self._verified_findings)} |",
+            f"| 攻击链 | {len(self._attack_chains)} |",
+            "",
+            "---",
+            "",
+        ])
+
+        # 攻击链分析
+        if self._attack_chains:
+            lines.extend([
+                "## 攻击链分析",
+                "",
+            ])
+            for i, chain in enumerate(self._attack_chains, 1):
+                lines.append(f"### {i}. {chain['description']}")
+                lines.append(f"- **风险级别**: {chain['risk_level']}")
+                lines.append(f"- **可信度**: {chain['confidence']:.0%}")
+                lines.append(f"- **状态**: {chain['status']}")
+                lines.append("")
+                lines.append("**攻击路径:**")
+                for j, step in enumerate(chain['steps'], 1):
+                    finding = step['finding']
+                    loc = finding.get('location', {})
+                    fp = loc.get('file_path', '')
+                    line_num = loc.get('line', '')
+                    loc_str = f"{fp}:{line_num}" if line_num else fp
+                    lines.append(f"  {j}. {step['description']}")
+                    if loc_str:
+                        lines.append(f"     - 位置: `{loc_str}`")
+                    if finding.get('rule_name'):
+                        lines.append(f"     - 漏洞: {finding['rule_name']}")
+                lines.append("")
+            lines.extend(["---", ""])
+
+        # 污点传播路径
+        if self._taint_paths:
+            lines.extend([
+                "## 污点传播路径分析",
+                "",
+                "> 以下为污点引擎检测到的 Source→Sink 传播路径，展示了用户输入从源点到危险汇聚点的数据流。",
+                "",
+                f"- 总传播路径: {len(self._taint_paths)}",
+            ])
+
+            # 按漏洞类型统计
+            vuln_type_counts = {}
+            for tp in self._taint_paths:
+                vt = tp.get('sink', {}).get('vulnerability_type', 'Unknown')
+                vuln_type_counts[vt] = vuln_type_counts.get(vt, 0) + 1
+            if vuln_type_counts:
+                lines.append("- 漏洞类型分布:")
+                for vt, count in sorted(vuln_type_counts.items(), key=lambda x: -x[1]):
+                    lines.append(f"  - {vt}: {count}")
+            lines.append("")
+
+            for i, tp in enumerate(self._taint_paths[:20], 1):
+                source = tp.get('source', {})
+                sink = tp.get('sink', {})
+                path_conf = tp.get('path_confidence', 0)
+                sanitizers = tp.get('sanitizers', [])
+                steps = tp.get('intermediate_steps', [])
+
+                src_loc = f"{source.get('file_path', '')}:{source.get('line', '')}"
+                sink_loc = f"{sink.get('file_path', '')}:{sink.get('line', '')}"
+
+                lines.append(f"### 路径 {i}: {source.get('source_type', '?')} → {sink.get('vulnerability_type', '?')}")
+                lines.append(f"- **路径置信度**: {path_conf:.0%}")
+                lines.append(f"- **Source**: `{src_loc}`")
+                lines.append(f"  - 类型: {source.get('source_type', '')}")
+                lines.append(f"  - 变量: {source.get('variable_name', '')}")
+                lines.append(f"  - 代码: `{source.get('code_context', '')}`")
+                lines.append(f"- **Sink**: `{sink_loc}`")
+                lines.append(f"  - 类型: {sink.get('sink_type', '')}")
+                lines.append(f"  - 函数: {sink.get('function_name', '')}")
+                lines.append(f"  - 代码: `{sink.get('code_context', '')}`")
+                if sanitizers:
+                    lines.append(f"- **消毒函数**: {', '.join(sanitizers)}")
+                if steps:
+                    lines.append(f"- **中间步骤** ({len(steps)} 步):")
+                    for j, step in enumerate(steps, 1):
+                        if isinstance(step, dict):
+                            lines.append(f"  {j}. {step.get('description', step.get('code', str(step)))}")
+                lines.append("")
+
+            if len(self._taint_paths) > 20:
+                lines.append(f"- ... 还有 {len(self._taint_paths) - 20} 条路径未显示")
+            lines.extend(["", "---", ""])
+
+        # 输入可控性分析结果
+        if self._controllability_results:
+            lines.extend([
+                "## 输入可控性分析",
+                "",
+                "> 以下基于 InputTracer 对污点路径的 sink 点进行可控性评估，判断用户输入是否可控。",
+                "",
+            ])
+
+            # 可控性级别统计
+            level_counts = {}
+            source_type_counts = {}
+            exploitable_count = 0
+            for cr in self._controllability_results:
+                level = cr.get('controllability_level', 'unknown')
+                level_counts[level] = level_counts.get(level, 0) + 1
+                st = cr.get('source_type', 'unknown')
+                source_type_counts[st] = source_type_counts.get(st, 0) + 1
+                if cr.get('is_exploitable'):
+                    exploitable_count += 1
+
+            lines.append(f"- 总分析点: {len(self._controllability_results)}")
+            lines.append(f"- 可利用: {exploitable_count}")
+            lines.append(f"- 不可利用: {len(self._controllability_results) - exploitable_count}")
+            lines.append("")
+
+            lines.append("- 可控性级别分布:")
+            level_labels = {
+                'fully_controlled': '完全可控',
+                'partially_controlled': '部分可控',
+                'not_controlled': '不可控',
+            }
+            for level_key in ['fully_controlled', 'partially_controlled', 'not_controlled']:
+                count = level_counts.get(level_key, 0)
+                if count > 0:
+                    label = level_labels.get(level_key, level_key)
+                    lines.append(f"  - {label}: {count}")
+            lines.append("")
+
+            if source_type_counts:
+                lines.append("- 输入来源类型分布:")
+                source_labels = {
+                    'direct_user_input': '直接用户输入',
+                    'indirect_user_input': '间接用户输入',
+                    'internal_value': '内部值',
+                    'config_file': '配置文件',
+                    'database': '数据库',
+                    'unknown': '未知',
+                }
+                for st_key, count in sorted(source_type_counts.items(), key=lambda x: -x[1]):
+                    label = source_labels.get(st_key, st_key)
+                    lines.append(f"  - {label}: {count}")
+                lines.append("")
+
+            for i, cr in enumerate(self._controllability_results[:20], 1):
+                level = cr.get('controllability_level', 'unknown')
+                source_type = cr.get('source_type', 'unknown')
+                is_exploitable = cr.get('is_exploitable', False)
+                confidence = cr.get('confidence', 0)
+                summary = cr.get('summary', '')
+                taint_info = cr.get('taint_path_info', {})
+                vuln_type = taint_info.get('vulnerability_type', '')
+                sink_type = taint_info.get('sink_type', '')
+
+                level_label = level_labels.get(level, level)
+
+                lines.append(f"### 可控性分析 {i}")
+                lines.append(f"- **可控性级别**: {level_label} (`{level}`)")
+                lines.append(f"- **输入来源类型**: {source_labels.get(source_type, source_type)} (`{source_type}`)")
+                lines.append(f"- **可利用**: {'是' if is_exploitable else '否'}")
+                lines.append(f"- **置信度**: {confidence:.2f}")
+                if vuln_type:
+                    lines.append(f"- **漏洞类型**: {vuln_type}")
+                if sink_type:
+                    lines.append(f"- **Sink 类型**: {sink_type}")
+                if summary:
+                    lines.append(f"- **摘要**: {summary}")
+                prerequisites = cr.get('attack_prerequisites', [])
+                if prerequisites:
+                    lines.append("- **攻击前提:**")
+                    for prereq in prerequisites:
+                        lines.append(f"  - {prereq}")
+                trace_path = cr.get('trace_path', [])
+                if trace_path:
+                    lines.append("- **追踪路径:**")
+                    for j, node in enumerate(trace_path, 1):
+                        node_loc = node.get('location', '')
+                        node_line = node.get('line_number', '')
+                        node_value = node.get('value_name', '')
+                        node_st = node.get('source_type', '')
+                        node_type = node.get('node_type', '?')
+                        lines.append(f"  {j}. [{node_type}] `{node_loc}:{node_line}` ({node_value}) [来源: {node_st}]")
+                lines.append("")
+
+            if len(self._controllability_results) > 20:
+                lines.append(f"- ... 还有 {len(self._controllability_results) - 20} 个分析结果未显示")
+            lines.extend(["", "---", ""])
+
+        # AI 发现详情
+        lines.extend([
+            "## AI 发现详情",
+            "",
+        ])
+
+        # 按置信度降序排列
+        sorted_findings = sorted(
+            self._verified_findings,
+            key=lambda x: x.get('confidence', 0),
+            reverse=True,
+        )
+
+        for i, f in enumerate(sorted_findings, 1):
+            severity = f.get('severity', 'info')
+            rule_name = f.get('rule_name', f.get('rule_id', 'unknown'))
+            confidence = f.get('confidence', 0)
+            location = f.get('location', {})
+            file_path = location.get('file_path', '')
+            source = f.get('source', f.get('sources', 'unknown'))
+            cross_validated = " [交叉验证]" if f.get('cross_validated') else ""
+
+            if isinstance(source, list):
+                source = ", ".join(source)
+
+            lines.append(f"### {i}. {rule_name}{cross_validated}")
+            lines.append(f"- **严重程度**: {severity}")
+            lines.append(f"- **置信度**: {confidence:.0%}")
+            lines.append(f"- **来源**: {source}")
+            if file_path:
+                lines.append(f"- **位置**: `{file_path}`")
+
+            # 专业级评估维度
+            evaluation = f.get('evaluation', {})
+            if evaluation:
+                lines.append("")
+                lines.append("| 评估维度 | 结论 | 说明 |")
+                lines.append("|---------|------|------|")
+
+                uc = evaluation.get('user_controllability', {})
+                lines.append(f"| 用户可控性 | {uc.get('status', '?')} | {uc.get('description', '')} |")
+
+                tp = evaluation.get('taint_propagation', {})
+                lines.append(f"| 污点传播追踪 | {tp.get('status', '?')} | {tp.get('path_summary', '')} |")
+
+                ex = evaluation.get('exploitability', {})
+                lines.append(f"| 可利用性 | {ex.get('level', '?')} | {ex.get('description', '')} |")
+
+                au = evaluation.get('authenticity', {})
+                lines.append(f"| 漏洞真实性 | {au.get('verdict', '?')} | {au.get('description', '')} |")
+                lines.append("")
+
+            # 显示相关调用链
+            call_chains = self._get_call_chains_for_finding(f)
+            if call_chains:
+                lines.append("**完整调用链:**")
+                for cc in call_chains[:5]:
+                    lines.append(f"- `{cc}`")
+                lines.append("")
+            desc = f.get('description', f.get('explanation', ''))
+            if desc:
+                lines.append(f"- **描述**: {desc[:300]}")
+            fix = f.get('fix_suggestion', f.get('recommendation', ''))
+            if fix:
+                lines.append(f"- **修复建议**: {fix[:200]}")
+            lines.append("")
+
+        # AST 预分析发现
+        if self._ast_findings or self._ast_signals:
+            lines.extend([
+                "---",
+                "",
+                "## AST 预分析结果",
+                "",
+                "> 以下为 AST 静态语法树分析发现的可疑信号，作为 AI 分析的参考依据。",
+                "",
+            ])
+            # 信号类型统计
+            signal_types = {}
+            for s in self._ast_signals:
+                st = s.get('type', 'unknown')
+                signal_types[st] = signal_types.get(st, 0) + 1
+            lines.append(f"- 总信号数: {len(self._ast_signals)}")
+            lines.append(f"- AST 发现数: {len(self._ast_findings)}")
+            if signal_types:
+                lines.append(f"- 信号类型分布:")
+                for st, count in sorted(signal_types.items(), key=lambda x: -x[1]):
+                    lines.append(f"  - {st}: {count}")
+            lines.append("")
+
+            for i, f in enumerate(self._ast_findings[:15], 1):
+                severity = f.get('severity', 'info')
+                rule_name = f.get('rule_name', f.get('rule_id', 'unknown'))
+                location = f.get('location', {})
+                file_path = location.get('file_path', '')
+                line_num = location.get('line', '')
+                loc_str = f"{file_path}:{line_num}" if line_num else file_path
+                lines.append(f"### {i}. {rule_name}")
+                lines.append(f"- **严重程度**: {severity}")
+                if loc_str:
+                    lines.append(f"- **位置**: `{loc_str}`")
+                desc = f.get('description', '')
+                if desc:
+                    lines.append(f"- **描述**: {desc[:200]}")
+                lines.append("")
+            if len(self._ast_findings) > 15:
+                lines.append(f"- ... 还有 {len(self._ast_findings) - 15} 个 AST 发现未显示")
+            lines.append("")
+
+        # 预扫描参考信号
+        if self._pre_scan_signals:
+            lines.extend([
+                "---",
+                "",
+                "## 预扫描参考信号",
+                "",
+                "> 以下为静态规则引擎的参考信号，不作为最终判断依据，仅用于交叉验证。",
+                "",
+            ])
+            matched_signals = sum(1 for s in self._pre_scan_signals if s.get('cross_matched'))
+            unmatched_signals = len(self._pre_scan_signals) - matched_signals
+            lines.append(f"- 总信号数: {len(self._pre_scan_signals)}")
+            lines.append(f"- 与AI发现匹配: {matched_signals}")
+            lines.append(f"- 未匹配（AI未发现）: {unmatched_signals}")
+            lines.append("")
+
+            for i, s in enumerate(self._pre_scan_signals[:10], 1):
+                rule_name = s.get('rule_name', s.get('rule_id', 'unknown'))
+                location = s.get('location', {})
+                file_path = location.get('file_path', '')
+                lines.append(f"- {i}. **{rule_name}** - `{file_path}`")
+            if len(self._pre_scan_signals) > 10:
+                lines.append(f"- ... 还有 {len(self._pre_scan_signals) - 10} 个信号未显示")
+            lines.append("")
+
+        # 阶段执行详情
+        lines.extend([
+            "---",
+            "",
+            "## 管线执行详情",
+            "",
+            "| 阶段 | 状态 | 发现数 | 耗时(s) |",
+            "|------|------|--------|---------|",
+        ])
+        for sr in self.stage_results:
+            status = "✅" if sr.success else "❌"
+            lines.append(f"| {sr.stage} | {status} | {sr.findings_count} | {sr.elapsed:.1f} |")
+
+        return "\n".join(lines)
+
+    def _generate_error_report(self, start_time: float, error: str) -> str:
+        """生成错误报告"""
+        elapsed = time.time() - start_time
+        return f"""# HOS-LS AI 安全审计报告（异常中断）
+
+**目标**: `{self.target}`
+**时间**: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+**错误**: {error}
+
+## 已完成的阶段
+
+| 阶段 | 状态 | 发现数 |
+|------|------|--------|
+""" + "\n".join(
+            f"| {sr.stage} | {'✅' if sr.success else '❌'} | {sr.findings_count} |"
+            for sr in self.stage_results
+        ) + f"""
+
+## 已收集发现
+
+共 {len(self._verified_findings)} 个发现。
+
+"""
+
+    # =========================================================================
+    #  内部辅助
+    # =========================================================================
+
+    def _get_call_chains_for_finding(self, finding: Dict[str, Any]) -> List[str]:
+        """获取与发现相关的调用链
+
+        基于发现的文件路径，从调用图中提取相关的 [CALL]-> 格式调用链。
+
+        Args:
+            finding: 标准化的发现字典
+
+        Returns:
+            [CALL]-> 格式的调用链列表
+        """
+        if not self._call_graph:
+            return []
+
+        location = finding.get('location', {})
+        file_path = location.get('file_path', '')
+        if not file_path:
+            return []
+
+        chains = []
+        for func_key, callees in self._call_graph.items():
+            if file_path not in func_key:
+                continue
+            func_name = func_key.split(":")[-1] if ":" in func_key else func_key
+            for callee in callees:
+                chains.append(f"{func_name} [CALL]-> {callee}")
+
+        return chains[:10]  # 最多返回10条
+
+    def _build_final_result(self, report: str, elapsed: float) -> AuditResult:
+        """构建最终结果对象"""
+        return AuditResult(
+            target=self.target,
+            timestamp=datetime.now().isoformat(),
+            total_findings=len(self._all_findings),
+            verified_findings=len(self._verified_findings),
+            findings=self._verified_findings,
+            stage_results=[{
+                'stage': sr.stage,
+                'success': sr.success,
+                'elapsed': sr.elapsed,
+                'findings_count': sr.findings_count,
+                'error': sr.error,
+                'metadata': sr.metadata,
+            } for sr in self.stage_results],
+            attack_chains=self._attack_chains,
+            pre_scan_signals=self._pre_scan_signals,
+            ast_findings=self._ast_findings,
+            taint_paths=self._taint_paths,
+            report=report,
+            summary=self._build_summary(elapsed),
+        )
+
+    def _build_summary(self, elapsed: float) -> str:
+        """构建执行摘要文本"""
+        # 检查 AI 审计是否失败
+        merge_stage = next((s for s in self.stage_results if s.stage == "merge_dedup"), None)
+        ai_failed = merge_stage and not merge_stage.success
+
+        if ai_failed:
+            return (
+                f"AI安全审计失败: {self.target} | "
+                f"AI分析未产生任何发现，请检查AI服务连接和配置 | "
+                f"耗时 {elapsed:.1f}s"
+            )
+
+        return (
+            f"AI安全审计完成: {self.target} | "
+            f"耗时 {elapsed:.1f}s | "
+            f"AST发现 {len(self._ast_findings)} 个 | "
+            f"污点路径 {len(self._taint_paths)} 条 | "
+            f"发现 {len(self._all_findings)} 个 ({len(self._verified_findings)} 通过验证) | "
+            f"攻击链 {len(self._attack_chains)} 条 | "
+            f"预扫描信号 {len(self._pre_scan_signals)} + AI发现 {len(self._ai_findings)}"
+        )
+
+    def _calculate_confidence(self, finding: dict) -> float:
+        """动态计算发现置信度 (0.0-1.0)
+
+        基于:
+        - 严重程度: CRITICAL=0.9, HIGH=0.8, MEDIUM=0.7, LOW=0.5
+        - 来源类型: ai=基准, cross_file=+0.1, static_fallback=基准-0.1
+        - 漏洞类型关键词: "硬编码"=+0.1, "注入"=+0.05
+        """
+        # 基准: 严重程度
+        severity = str(finding.get('severity', 'low')).upper()
+        severity_scores = {
+            'CRITICAL': 0.9,
+            'HIGH': 0.8,
+            'MEDIUM': 0.7,
+            'LOW': 0.5,
+            'INFO': 0.3,
+        }
+        confidence = severity_scores.get(severity, 0.5)
+
+        # 来源类型调整
+        source = str(finding.get('source', 'ai'))
+        if 'cross_file' in source:
+            confidence += 0.1
+        elif 'static_fallback' in source:
+            confidence -= 0.1
+
+        # 漏洞类型关键词调整
+        rule_name = str(finding.get('rule_name', ''))
+        if '硬编码' in rule_name or 'hardcod' in rule_name.lower():
+            confidence += 0.1
+        elif '注入' in rule_name or 'injection' in rule_name.lower():
+            confidence += 0.05
+        elif 'XSS' in rule_name.upper() or 'xss' in rule_name.lower():
+            confidence += 0.05
+
+        # 如果有交叉验证信号
+        if finding.get('cross_validated'):
+            confidence += 0.05
+
+        return min(round(confidence, 2), 1.0)
+
+    def _normalize_finding(self, finding: Any) -> Dict[str, Any]:
+        """标准化发现对象为字典"""
+        if isinstance(finding, dict):
+            return finding
+        elif hasattr(finding, 'to_dict'):
+            return finding.to_dict()
+        elif hasattr(finding, '__dict__'):
+            return {
+                'rule_id': getattr(finding, 'rule_id', ''),
+                'rule_name': getattr(finding, 'rule_name', ''),
+                'description': getattr(finding, 'description', ''),
+                'severity': getattr(finding, 'severity', 'info'),
+                'confidence': getattr(finding, 'confidence', 0.5),
+                'location': getattr(finding, 'location', {}),
+                'code_snippet': getattr(finding, 'code_snippet', ''),
+                'fix_suggestion': getattr(finding, 'fix_suggestion', ''),
+            }
+        return {'description': str(finding), 'severity': 'info', 'confidence': 0.3}
+
+    def _finding_dedup_key(self, finding: Dict[str, Any]) -> str:
+        """生成发现去重键"""
+        location = finding.get('location', {})
+        file_path = location.get('file_path', '')
+        rule_id = finding.get('rule_id', finding.get('rule_name', ''))
+        line = location.get('line', location.get('line_number', 0))
+        return f"{file_path}:{rule_id}:{line}"
+
+    def _is_test_file(self, file_path: str) -> bool:
+        """判断是否为测试文件"""
+        fp = file_path.lower()
+        test_indicators = ['test_', '_test.', 'tests/', 'test/', 'spec_', '_spec.']
+        return any(ind in fp for ind in test_indicators)
+
+    def _semantic_dedup(self, findings: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """语义去重 - 识别测试文件和源文件的重复漏洞
+
+        当 test_*.py 报告与 *.py 相同类型的漏洞时，
+        保留源文件的发现，移除测试文件的重复项。
+        """
+        # 按漏洞类型和函数名分组
+        vuln_groups: Dict[str, List[Dict[str, Any]]] = {}
+        for f in findings:
+            rule_id = f.get('rule_id', f.get('rule_name', ''))
+            location = f.get('location', {})
+            file_path = location.get('file_path', '')
+            code_snippet = f.get('code_snippet', '')
+
+            # 提取函数名作为分组键
+            import re
+            func_match = re.search(r'def\s+(\w+)', code_snippet)
+            func_name = func_match.group(1) if func_match else ''
+
+            # 去规范化文件路径
+            normalized_path = file_path.replace('\\', '/')
+
+            group_key = f"{rule_id}:{func_name}"
+            if group_key not in vuln_groups:
+                vuln_groups[group_key] = []
+            vuln_groups[group_key].append(f)
+
+        result = []
+        for group_key, group in vuln_groups.items():
+            if len(group) == 1:
+                result.append(group[0])
+            else:
+                # 优先保留非测试文件的发现
+                source_findings = [f for f in group if not self._is_test_file(f.get('location', {}).get('file_path', ''))]
+                test_findings = [f for f in group if self._is_test_file(f.get('location', {}).get('file_path', ''))]
+
+                if source_findings:
+                    # 有源文件发现，保留置信度最高的
+                    best = max(source_findings, key=lambda f: f.get('confidence', 0))
+                    result.append(best)
+                else:
+                    # 只有测试文件，保留
+                    best = max(test_findings, key=lambda f: f.get('confidence', 0))
+                    result.append(best)
+
+        return result
+
+    def _detect_language(self, file_path: str) -> str:
+        """根据文件扩展名检测编程语言"""
+        ext_map = {
+            '.py': 'python',
+            '.js': 'javascript',
+            '.ts': 'typescript',
+            '.java': 'java',
+            '.go': 'go',
+            '.rb': 'ruby',
+            '.php': 'php',
+            '.c': 'c',
+            '.cpp': 'cpp',
+            '.h': 'c',
+        }
+        ext = Path(file_path).suffix.lower()
+        return ext_map.get(ext, 'unknown')
+
+    def _record_stage(
+        self,
+        stage: str,
+        success: bool,
+        findings_count: int = 0,
+        elapsed: float = 0.0,
+        error: Optional[str] = None,
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> None:
+        """记录阶段执行结果"""
+        result = PipelineStageResult(
+            stage=stage,
+            success=success,
+            findings_count=findings_count,
+            elapsed=elapsed,
+            error=error,
+            metadata=metadata or {},
+        )
+        self.stage_results.append(result)
+
+    def _log_config(self) -> None:
+        """记录当前配置"""
+        logger.info(
+            f"[AuditPipeline] 配置: "
+            f"AI分析={'启用' if self.enable_ai_analysis else '禁用'} | "
+            f"最大文件数={self.max_files or '无限制'}"
+        )
+
+    # =========================================================================
+    #  文件优先级排序
+    # =========================================================================
+
+    _TIER1_KEYWORDS = {'auth', 'login', 'password', 'token', 'security', 'crypto', 'encrypt', 'decrypt', 'admin', 'permission', 'role', 'access', 'secret', 'credential', 'api', 'route', 'endpoint', 'controller', 'gateway', 'middleware', 'guard', 'filter', 'interceptor', 'handler', 'oauth', 'sso', 'jwt', 'session', 'cookie', 'cors', 'csrf', 'ssl', 'tls', 'cert', 'key', 'injection', 'xss', 'sql', 'command', 'shell', 'exec', 'eval', 'upload'}
+    _TIER3_KEYWORDS = {'util', 'helper', 'const', 'constant', 'type', 'types', 'interface', 'enum', 'model', 'schema'}
+    _TIER4_INDICATORS = {'test_', '_test.', '/tests/', '/test/', 'spec_', '_spec.', '/docs/', '/doc/', '/static/', '/assets/', '/public/', '.test.', '.spec.', '__mocks__'}
+    _CODE_EXTENSIONS = {'.py', '.js', '.ts', '.java', '.go', '.rb', '.php', '.c', '.cpp', '.h', '.jsx', '.tsx', '.vue', '.svelte'}
+
+    def _classify_file_tier(self, file_path: str) -> int:
+        """根据文件路径将其分类到优先级层级 (1-4)
+
+        Tier 1 (Critical): 认证、API路由、入口控制器、安全相关
+        Tier 2 (Important): 业务逻辑、服务、数据处理
+        Tier 3 (Auxiliary): 工具类、配置、常量
+        Tier 4 (Exclude): 测试文件、文档、静态资源
+        """
+        fp_lower = file_path.lower()
+
+        # Tier 4: 直接排除
+        if any(ind in fp_lower for ind in self._TIER4_INDICATORS):
+            return 4
+
+        path_parts = set(fp_lower.replace('\\', '/').split('/'))
+        stem_parts = set(Path(file_path).stem.lower().replace('_', ' ').replace('-', ' ').split())
+        all_tokens = path_parts | stem_parts
+
+        # Tier 1: 安全关键
+        if all_tokens & self._TIER1_KEYWORDS:
+            return 1
+
+        # Tier 3: 辅助文件
+        if all_tokens & self._TIER3_KEYWORDS:
+            return 3
+
+        # Tier 2: 其余业务代码
+        return 2
+
+    async def _stage_file_prioritization(self) -> List[Dict[str, Any]]:
+        """Stage 0: 文件优先级分类
+
+        扫描所有代码文件，使用规则+FilePrioritizer进行分层，
+        返回按优先级排序的文件列表及层级分配。
+        """
+        t0 = time.time()
+        logger.info("[AuditPipeline] Stage 0/8: 文件优先级分类")
+
+        target_path = Path(self.target)
+        all_files = []
+
+        if target_path.is_file() and target_path.suffix in self._CODE_EXTENSIONS:
+            all_files.append(str(target_path))
+        elif target_path.is_dir():
+            for f in target_path.rglob('*'):
+                if f.suffix in self._CODE_EXTENSIONS and f.is_file():
+                    all_files.append(str(f))
+
+        if not all_files:
+            logger.info("[AuditPipeline] 无可分析的文件")
+            self._record_stage("file_prioritization", success=True, findings_count=0)
+            return []
+
+        # 规则分类
+        tier_groups: Dict[int, List[str]] = {1: [], 2: [], 3: [], 4: []}
+        for fp in all_files:
+            tier = self._classify_file_tier(fp)
+            tier_groups[tier].append(fp)
+
+        # 应用 max_files 限制
+        if self.max_files:
+            total = len(tier_groups[1]) + len(tier_groups[2]) + len(tier_groups[3])
+            if total > self.max_files:
+                remaining = self.max_files
+                for tier in [1, 2, 3]:
+                    take = min(len(tier_groups[tier]), remaining)
+                    tier_groups[tier] = tier_groups[tier][:take]
+                    remaining -= take
+                    if remaining <= 0:
+                        break
+
+        # 尝试使用 FilePrioritizer 对 Tier 1+2 文件进一步排序
+        prioritized_files: List[Dict[str, Any]] = []
+
+        for tier in [1, 2, 3]:
+            files = tier_groups[tier]
+            if not files:
+                continue
+            for fp in files:
+                prioritized_files.append({
+                    'file_path': fp,
+                    'tier': tier,
+                    'priority_score': 1.0 if tier == 1 else (0.7 if tier == 2 else 0.4),
+                })
+
+        # 尝试用 FilePrioritizer 对 Tier 1+2 文件批量重排序
+        try:
+            from src.ai.pure_ai.file_prioritizer import FilePrioritizer
+            tier12_files = [f['file_path'] for f in prioritized_files if f['tier'] in (1, 2)]
+            if tier12_files:
+                prioritizer = FilePrioritizer()
+                batch_results = await prioritizer.calculate_priority_batch(tier12_files, use_ai=False)
+                score_map = {r['file_path']: r.get('priority_score', 0.5) for r in batch_results}
+                for item in prioritized_files:
+                    if item['tier'] in (1, 2):
+                        item['priority_score'] = score_map.get(item['file_path'], item['priority_score'])
+        except Exception as e:
+            logger.debug(f"[AuditPipeline] FilePrioritizer 排序失败，使用规则排序: {e}")
+
+        # 按 tier + priority_score 排序
+        prioritized_files.sort(key=lambda x: (x['tier'], -x['priority_score']))
+
+        tier_counts = {t: len(fs) for t, fs in tier_groups.items()}
+        self._record_stage(
+            "file_prioritization",
+            success=True,
+            findings_count=len(prioritized_files),
+            elapsed=time.time() - t0,
+            metadata={
+                "total_files_scanned": len(all_files),
+                "tier1_critical": tier_counts[1],
+                "tier2_important": tier_counts[2],
+                "tier3_auxiliary": tier_counts[3],
+                "tier4_excluded": tier_counts[4],
+            },
+        )
+        logger.info(
+            f"[AuditPipeline] 文件优先级分类完成: "
+            f"总 {len(all_files)} | T1={tier_counts[1]} | T2={tier_counts[2]} | "
+            f"T3={tier_counts[3]} | T4(排除)={tier_counts[4]} | "
+            f"待分析={len(prioritized_files)}"
+        )
+        return prioritized_files
+
+    def _get_concurrency_for_tier(self, tier: int) -> int:
+        """根据文件层级获取并发限制"""
+        return {1: 3, 2: 5, 3: 10}.get(tier, 5)
