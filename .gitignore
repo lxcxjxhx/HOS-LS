@@ -1,0 +1,62 @@
+# === HOS-LS .gitignore ===
+
+# Python build and cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+*.egg
+dist/
+build/
+.eggs/
+
+# Testing and coverage
+.pytest_cache/
+.benchmarks/
+.coverage
+htmlcov/
+coverage.xml
+*.cover
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.trae/
+*.sublime-project
+*.sublime-workspace
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Environment and secrets
+.env
+.env.*
+*.pem
+*.key
+
+# Logs
+*.log
+
+# Database files
+nvd_vulnerability.db
+*.db
+
+# RAG knowledge base cache
+embeddings_cache/
+rag_knowledge_base/history/
+
+# Vulnerability scan data (only first level subfolders)
+"All Vulnerabilities/*/*"
+All Vulnerabilities/
+
+# Misc cache
+.cache/
