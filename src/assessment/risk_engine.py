@@ -9,15 +9,15 @@
 score = source可信度 + sink危险等级 + 传播复杂度 + 是否新代码 + 历史相似漏洞
 """
 
+import hashlib
+import json
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set
-import hashlib
-import json
 
-from src.taint.engine import TaintPath, TaintSource, TaintSink, get_taint_engine
 from src.db.models import Finding
+from src.taint.engine import TaintPath, TaintSink, TaintSource, get_taint_engine
 
 
 class RiskLevel(Enum):
@@ -102,18 +102,45 @@ class RiskScoreResult:
 class Layer1Filter:
     def __init__(self):
         self._api_entry_patterns = [
-            "def ", "async def ", "function ", "class ",
+            "def ",
+            "async def ",
+            "function ",
+            "class ",
         ]
         self._db_operation_patterns = [
-            "execute", "query", "cursor", "select", "insert", "update", "delete",
-            "fetch", "commit", "rollback",
+            "execute",
+            "query",
+            "cursor",
+            "select",
+            "insert",
+            "update",
+            "delete",
+            "fetch",
+            "commit",
+            "rollback",
         ]
         self._io_operation_patterns = [
-            "open", "read", "write", "file", "input", "output", "load", "save",
+            "open",
+            "read",
+            "write",
+            "file",
+            "input",
+            "output",
+            "load",
+            "save",
         ]
         self._sensitive_call_patterns = [
-            "eval", "exec", "system", "popen", "spawn", "subprocess",
-            "os.", "sys.", "shutil.", "requests.", "urllib.",
+            "eval",
+            "exec",
+            "system",
+            "popen",
+            "spawn",
+            "subprocess",
+            "os.",
+            "sys.",
+            "shutil.",
+            "requests.",
+            "urllib.",
         ]
 
     def filter(self, files: List[str], language: str = "python") -> List[Dict[str, Any]]:
@@ -133,12 +160,14 @@ class Layer1Filter:
             lines = content.split("\n")
             for i, line in enumerate(lines, 1):
                 if self._is_interesting_line(line):
-                    candidates.append({
-                        "file": file_path,
-                        "line": i,
-                        "content": line.strip(),
-                        "type": self._classify_line(line),
-                    })
+                    candidates.append(
+                        {
+                            "file": file_path,
+                            "line": i,
+                            "content": line.strip(),
+                            "type": self._classify_line(line),
+                        }
+                    )
 
         return candidates
 
@@ -157,7 +186,9 @@ class Layer1Filter:
             if pattern in line_lower:
                 return True
 
-        if "def " in line and ("request" in line_lower or "user" in line_lower or "data" in line_lower):
+        if "def " in line and (
+            "request" in line_lower or "user" in line_lower or "data" in line_lower
+        ):
             return True
 
         return False
@@ -246,7 +277,9 @@ class Layer3Scorer:
             "database": 0.4,
         }
 
-    def score(self, taint_paths: List[TaintPath], max_candidates: int = 50) -> List[VulnerabilityCandidate]:
+    def score(
+        self, taint_paths: List[TaintPath], max_candidates: int = 50
+    ) -> List[VulnerabilityCandidate]:
         candidates = []
 
         for path in taint_paths:
@@ -267,11 +300,11 @@ class Layer3Scorer:
         cross_file_bonus = self._calculate_cross_file_bonus(path)
 
         overall_score = (
-            source_score * 0.2 +
-            sink_score * 0.4 +
-            propagation_score * 0.25 +
-            context_score * 0.15 +
-            cross_file_bonus
+            source_score * 0.2
+            + sink_score * 0.4
+            + propagation_score * 0.25
+            + context_score * 0.15
+            + cross_file_bonus
         )
 
         severity = self._map_score_to_severity(overall_score)
@@ -288,8 +321,8 @@ class Layer3Scorer:
 
         fix_suggestion = self._generate_fix_suggestion(sink_type)
 
-        chain_length = len(path.propagation_steps) if hasattr(path, 'propagation_steps') else 2
-        file_count = getattr(path, 'file_count', 1) if path.cross_file else 1
+        chain_length = len(path.propagation_steps) if hasattr(path, "propagation_steps") else 2
+        file_count = getattr(path, "file_count", 1) if path.cross_file else 1
 
         candidate = VulnerabilityCandidate(
             rule_id=f"VULN-{sink_type.replace(' ', '-')}",
@@ -340,8 +373,8 @@ class Layer3Scorer:
             return 0.0
 
         base_bonus = 0.15
-        file_count = getattr(path, 'file_count', 2)
-        chain_length = len(path.propagation_steps) if hasattr(path, 'propagation_steps') else 2
+        file_count = getattr(path, "file_count", 2)
+        chain_length = len(path.propagation_steps) if hasattr(path, "propagation_steps") else 2
 
         file_count_bonus = min((file_count - 1) * 0.05, 0.15)
         chain_length_bonus = min((chain_length - 2) * 0.03, 0.1)
@@ -382,7 +415,9 @@ class Layer3Scorer:
 
         return min(max(score, 0.0), 10.0)
 
-    def _calculate_confidence(self, path: TaintPath, source_score: float, sink_score: float) -> float:
+    def _calculate_confidence(
+        self, path: TaintPath, source_score: float, sink_score: float
+    ) -> float:
         confidence = (source_score / 10.0) * 0.3 + (sink_score / 10.0) * 0.4
 
         if path.cross_function:
@@ -524,7 +559,11 @@ class RiskEngine:
             likelihood = self.classify_risk_level(cvss, exploitability, reachability)
             impact = self.classify_risk_level(cvss * 0.8, exploitability * 0.9, reachability * 0.7)
 
-            likelihood_idx = likelihood_labels.index(likelihood.value) if likelihood.value in likelihood_labels else 1
+            likelihood_idx = (
+                likelihood_labels.index(likelihood.value)
+                if likelihood.value in likelihood_labels
+                else 1
+            )
             impact_idx = impact_labels.index(impact.value) if impact.value in impact_labels else 1
 
             if likelihood_idx >= 2 and impact_idx >= 2:
@@ -545,17 +584,21 @@ class RiskEngine:
 
             matrix_key = f"{likelihood_key}_{impact_key}"
 
-            finding_dict = finding.to_dict() if hasattr(finding, "to_dict") else {
-                "rule_id": finding.rule_id,
-                "rule_name": finding.rule_name,
-                "description": finding.description,
-                "severity": finding.severity,
-                "file_path": finding.file_path,
-                "line": finding.line,
-                "confidence": finding.confidence,
-                "message": finding.message,
-                "metadata": finding.metadata,
-            }
+            finding_dict = (
+                finding.to_dict()
+                if hasattr(finding, "to_dict")
+                else {
+                    "rule_id": finding.rule_id,
+                    "rule_name": finding.rule_name,
+                    "description": finding.description,
+                    "severity": finding.severity,
+                    "file_path": finding.file_path,
+                    "line": finding.line,
+                    "confidence": finding.confidence,
+                    "message": finding.message,
+                    "metadata": finding.metadata,
+                }
+            )
             matrix[matrix_key].append(finding_dict)
 
         return matrix
@@ -567,29 +610,22 @@ class RiskEngine:
         matrix = self.calculate_risk_matrix(findings)
 
         critical_count = (
-            len(matrix["critical_critical"]) +
-            len(matrix["critical_high"]) +
-            len(matrix["critical_medium"]) +
-            len(matrix["critical_low"]) +
-            len(matrix["high_critical"])
+            len(matrix["critical_critical"])
+            + len(matrix["critical_high"])
+            + len(matrix["critical_medium"])
+            + len(matrix["critical_low"])
+            + len(matrix["high_critical"])
         )
 
         high_count = (
-            len(matrix["high_medium"]) +
-            len(matrix["high_low"]) +
-            len(matrix["medium_critical"])
+            len(matrix["high_medium"]) + len(matrix["high_low"]) + len(matrix["medium_critical"])
         )
 
         medium_count = (
-            len(matrix["medium_medium"]) +
-            len(matrix["medium_low"]) +
-            len(matrix["low_critical"])
+            len(matrix["medium_medium"]) + len(matrix["medium_low"]) + len(matrix["low_critical"])
         )
 
-        low_count = (
-            len(matrix["low_medium"]) +
-            len(matrix["low_low"])
-        )
+        low_count = len(matrix["low_medium"]) + len(matrix["low_low"])
 
         return {
             "matrix": matrix,
@@ -609,18 +645,20 @@ class RiskEngine:
         output = []
 
         for candidate in candidates:
-            output.append({
-                "rule_id": candidate.rule_id,
-                "rule_name": candidate.rule_name,
-                "description": candidate.description,
-                "severity": candidate.severity.value,
-                "confidence": candidate.confidence,
-                "location": candidate.location,
-                "code_snippet": candidate.code_snippet,
-                "fix_suggestion": candidate.fix_suggestion,
-                "score_breakdown": candidate.score_breakdown,
-                "metadata": candidate.metadata,
-            })
+            output.append(
+                {
+                    "rule_id": candidate.rule_id,
+                    "rule_name": candidate.rule_name,
+                    "description": candidate.description,
+                    "severity": candidate.severity.value,
+                    "confidence": candidate.confidence,
+                    "location": candidate.location,
+                    "code_snippet": candidate.code_snippet,
+                    "fix_suggestion": candidate.fix_suggestion,
+                    "score_breakdown": candidate.score_breakdown,
+                    "metadata": candidate.metadata,
+                }
+            )
 
         return output
 

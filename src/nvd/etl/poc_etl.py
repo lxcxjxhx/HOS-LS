@@ -1,17 +1,20 @@
 import json
 import re
-from pathlib import Path
-from typing import Optional, Dict, List
 from datetime import datetime
+from pathlib import Path
+from typing import Dict, List, Optional
+
 from tqdm import tqdm
+
 from .base import BaseETL
+
 
 class PoCETL(BaseETL):
     """PoC-in-GitHub数据ETL处理器 - 适配GitHub API导出格式"""
 
     ETL_NAME = "poc"
 
-    CVE_PATTERN = re.compile(r'CVE-\d{4}-\d{4,}')
+    CVE_PATTERN = re.compile(r"CVE-\d{4}-\d{4,}")
 
     def __init__(self, connection=None):
         super().__init__(connection)
@@ -31,7 +34,7 @@ class PoCETL(BaseETL):
         """处理PoC数据"""
         data_dir = Path(data_path)
 
-        json_files = list(data_dir.glob('**/*.json'))
+        json_files = list(data_dir.glob("**/*.json"))
 
         if not json_files:
             print(f"╔══════════════════════════════════════════════════════════════╗")
@@ -72,7 +75,7 @@ class PoCETL(BaseETL):
         """处理单个PoC JSON文件 - 可能包含多个PoC仓库"""
         results = []
         try:
-            with open(json_file, 'r', encoding='utf-8', errors='ignore') as f:
+            with open(json_file, "r", encoding="utf-8", errors="ignore") as f:
                 data = json.load(f)
 
             if isinstance(data, list):
@@ -93,30 +96,30 @@ class PoCETL(BaseETL):
     def _extract_poc_data(self, item: Dict) -> Optional[Dict]:
         """从GitHub仓库信息提取PoC数据"""
         try:
-            cve_id = ''
+            cve_id = ""
 
-            name = item.get('name', '')
+            name = item.get("name", "")
             if name:
                 matches = self.CVE_PATTERN.findall(name)
                 if matches:
                     cve_id = matches[0]
 
             if not cve_id:
-                full_name = item.get('full_name', '')
+                full_name = item.get("full_name", "")
                 if full_name:
                     matches = self.CVE_PATTERN.findall(full_name)
                     if matches:
                         cve_id = matches[0]
 
             if not cve_id:
-                description = str(item.get('description', ''))
+                description = str(item.get("description", ""))
                 if description:
                     matches = self.CVE_PATTERN.findall(description)
                     if matches:
                         cve_id = matches[0]
 
             if not cve_id:
-                body = str(item.get('body', ''))
+                body = str(item.get("body", ""))
                 matches = self.CVE_PATTERN.findall(body)
                 if matches:
                     cve_id = matches[0]
@@ -124,18 +127,19 @@ class PoCETL(BaseETL):
             if not cve_id:
                 return None
 
-            if not cve_id.startswith('CVE-'):
-                cve_id = f'CVE-{cve_id}'
+            if not cve_id.startswith("CVE-"):
+                cve_id = f"CVE-{cve_id}"
 
-            stars = item.get('stargazers_count', 0) or item.get('stars', 0) or 0
+            stars = item.get("stargazers_count", 0) or item.get("stars", 0) or 0
 
             return {
-                'cve_id': cve_id,
-                'repo_url': item.get('html_url', '') or f"https://github.com/{item.get('full_name', '')}",
-                'stars': int(stars),
-                'language': item.get('language', ''),
-                'description': item.get('description', ''),
-                'last_updated': datetime.now()
+                "cve_id": cve_id,
+                "repo_url": item.get("html_url", "")
+                or f"https://github.com/{item.get('full_name', '')}",
+                "stars": int(stars),
+                "language": item.get("language", ""),
+                "description": item.get("description", ""),
+                "last_updated": datetime.now(),
             }
         except Exception:
             return None
@@ -218,14 +222,17 @@ class PoCETL(BaseETL):
                 cursor = conn.cursor()
                 for item in batch:
                     try:
-                        cursor.execute(query, (
-                            item.get('cve_id'),
-                            item.get('repo_url'),
-                            item.get('stars', 0),
-                            item.get('language', ''),
-                            item.get('description', ''),
-                            item.get('last_updated')
-                        ))
+                        cursor.execute(
+                            query,
+                            (
+                                item.get("cve_id"),
+                                item.get("repo_url"),
+                                item.get("stars", 0),
+                                item.get("language", ""),
+                                item.get("description", ""),
+                                item.get("last_updated"),
+                            ),
+                        )
                     except Exception:
                         pass
             return len(batch)

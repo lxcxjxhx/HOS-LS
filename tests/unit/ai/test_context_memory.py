@@ -1,12 +1,10 @@
 """上下文记忆管理器测试"""
 
-import pytest
 import time
-from src.ai.pure_ai.context_memory import (
-    ContextMemoryManager,
-    Entity,
-    ConversationTurn
-)
+
+import pytest
+
+from src.ai.pure_ai.context_memory import ContextMemoryManager, ConversationTurn, Entity
 
 
 class TestContextMemoryManager:
@@ -15,9 +13,7 @@ class TestContextMemoryManager:
     @pytest.fixture
     def memory_manager(self):
         """创建上下文记忆管理器实例"""
-        return ContextMemoryManager(
-            config={"max_entities": 20, "max_history": 10}
-        )
+        return ContextMemoryManager(config={"max_entities": 20, "max_history": 10})
 
     def test_extract_entities(self, memory_manager):
         """测试提取实体"""
@@ -49,9 +45,7 @@ class TestContextMemoryManager:
 
     def test_track_intent(self, memory_manager):
         """测试意图跟踪"""
-        entities = [
-            Entity("file", "test.py", "test.py", time.time(), time.time(), 1)
-        ]
+        entities = [Entity("file", "test.py", "test.py", time.time(), time.time(), 1)]
 
         scan_intent = memory_manager.track_intent("scan the codebase", entities)
         assert scan_intent == "scan"
@@ -64,15 +58,13 @@ class TestContextMemoryManager:
 
     def test_add_to_history(self, memory_manager):
         """测试添加历史记录"""
-        entities = [
-            Entity("file", "test.py", "test.py", time.time(), time.time(), 1)
-        ]
+        entities = [Entity("file", "test.py", "test.py", time.time(), time.time(), 1)]
 
         memory_manager.add_to_history(
             user_input="scan the file",
             entities=entities,
             intent="scan",
-            response_summary="Scan completed"
+            response_summary="Scan completed",
         )
 
         history = memory_manager.get_conversation_history()

@@ -3,7 +3,7 @@
 用于测试 XSS 检测规则。
 """
 
-from flask import Flask, request, render_template_string
+from flask import Flask, render_template_string, request
 
 app = Flask(__name__)
 
@@ -26,6 +26,7 @@ def vulnerable_xss_2():
 def vulnerable_xss_3():
     """mark_safe 使用"""
     from django.utils.safestring import mark_safe
+
     user_input = request.GET.get("content")
     return mark_safe(user_input)
 

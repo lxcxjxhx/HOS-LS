@@ -9,4 +9,4 @@ NVD查询引擎模块
 from .engine import NVDQueryEngine
 from .templates import QueryTemplates
 
-__all__ = ['NVDQueryEngine', 'QueryTemplates']
+__all__ = ["NVDQueryEngine", "QueryTemplates"]

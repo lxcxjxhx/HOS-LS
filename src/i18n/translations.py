@@ -409,7 +409,7 @@ TRANSLATIONS = {
         "waiting_retry": "Waiting to retry",
         "max_retries": "Max retries",
         "retry_attempt": "Retry attempt {attempt}/{max}",
-    }
+    },
 }
 
 STATE_TRANSLATIONS = {
@@ -428,7 +428,7 @@ STATE_TRANSLATIONS = {
         "REFINED": "REFINED",
         "NEW": "NEW",
         "UNCORRECTABLE": "UNCORRECTABLE",
-    }
+    },
 }
 
 SEVERITY_TRANSLATIONS = {
@@ -445,7 +445,7 @@ SEVERITY_TRANSLATIONS = {
         "MEDIUM": "MEDIUM",
         "LOW": "LOW",
         "INFO": "INFO",
-    }
+    },
 }
 
 

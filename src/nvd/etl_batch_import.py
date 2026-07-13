@@ -1,21 +1,23 @@
 import signal
 import sys
 import time
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Optional, Dict, List, Callable
-from dataclasses import dataclass
+from typing import Callable, Dict, List, Optional
+
 from tqdm import tqdm
 
 from .db.sqlite_connection import SQLiteConnection
 from .db.sqlite_schema import SQLiteSche
 from .etl.base import BaseETL
 from .etl.cve_etl import CVEETL
+from .etl.cwe_etl import CWEETL
+from .etl.exploit_etl import ExploitETL
 from .etl.kev_etl import KEVETL
 from .etl.nvd_etl import NVDETL
 from .etl.poc_etl import PoCETL
-from .etl.exploit_etl import ExploitETL
-from .etl.cwe_etl import CWEETL
+
 
 @dataclass
 class ETLProgress:
@@ -29,27 +31,28 @@ class ETLProgress:
     started_at: datetime
     updated_at: datetime
 
+
 class BatchImportManager:
     """批量入库管理器 - SQLite版本"""
 
     ETL_MODULES = {
-        'cve': CVEETL,
-        'kev': KEVETL,
-        'nvd': NVDETL,
-        'poc': PoCETL,
-        'exploit': ExploitETL,
-        'cwe': CWEETL,
+        "cve": CVEETL,
+        "kev": KEVETL,
+        "nvd": NVDETL,
+        "poc": PoCETL,
+        "exploit": ExploitETL,
+        "cwe": CWEETL,
     }
 
-    ETL_ORDER = ['cve', 'kev', 'nvd', 'cwe', 'poc', 'exploit']
+    ETL_ORDER = ["cve", "kev", "nvd", "cwe", "poc", "exploit"]
 
     DATA_PATHS = {
-        'kev': 'kev-data-develop',
-        'cve': 'cvelistV5-main',
-        'nvd': 'nvd-json-data-feeds-main',
-        'poc': 'PoC-in-GitHub-master',
-        'exploit': 'exploitdb-main',
-        'cwe': '',
+        "kev": "kev-data-develop",
+        "cve": "cvelistV5-main",
+        "nvd": "nvd-json-data-feeds-main",
+        "poc": "PoC-in-GitHub-master",
+        "exploit": "exploitdb-main",
+        "cwe": "",
     }
 
     BATCH_SIZE = 1000
@@ -111,7 +114,7 @@ class BatchImportManager:
                 skipped_count=row[5] or 0,
                 status=row[6],
                 started_at=row[7],
-                updated_at=row[8]
+                updated_at=row[8],
             )
         return None
 
@@ -131,14 +134,21 @@ class BatchImportManager:
                 skipped_count=row[6] or 0,
                 status=row[7],
                 started_at=row[8],
-                updated_at=row[9]
+                updated_at=row[9],
             )
         return progress_dict
 
-    def _save_checkpoint(self, etl_name: str, last_file: str = None,
-                       last_index: int = 0, processed: int = 0,
-                       inserted: int = 0, skipped: int = 0,
-                       status: str = 'running', error: str = None) -> None:
+    def _save_checkpoint(
+        self,
+        etl_name: str,
+        last_file: str = None,
+        last_index: int = 0,
+        processed: int = 0,
+        inserted: int = 0,
+        skipped: int = 0,
+        status: str = "running",
+        error: str = None,
+    ) -> None:
         """保存断点 - SQLite版本"""
         now = datetime.now().isoformat()
         query = """
@@ -148,8 +158,10 @@ class BatchImportManager:
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         """
         try:
-            self.conn.execute(query, (etl_name, last_file, last_index, processed,
-                                    inserted, skipped, status, now, error))
+            self.conn.execute(
+                query,
+                (etl_name, last_file, last_index, processed, inserted, skipped, status, now, error),
+            )
         except Exception:
             update_query = """
                 UPDATE etl_progress SET
@@ -163,8 +175,10 @@ class BatchImportManager:
                     error_message = ?
                 WHERE etl_name = ?
             """
-            self.conn.execute(update_query, (last_file, last_index, processed,
-                                            inserted, skipped, status, now, error, etl_name))
+            self.conn.execute(
+                update_query,
+                (last_file, last_index, processed, inserted, skipped, status, now, error, etl_name),
+            )
 
     def reset_progress(self, etl_name: str = None) -> None:
         """重置进度"""
@@ -192,7 +206,7 @@ class BatchImportManager:
 
         progress = self.get_progress(etl_name) if continue_mode else None
 
-        if progress and progress.status == 'completed':
+        if progress and progress.status == "completed":
             print(f"║  ⏩ 跳过 {etl_name} (已完成)                                   ║")
             return True
 
@@ -204,7 +218,7 @@ class BatchImportManager:
             print(f"║  📂 断点续传: {progress.last_file[:40]}...               ║")
             print(f"║  📊 已处理: {progress.processed_count} 条                                ║")
         else:
-            self._save_checkpoint(etl_name, status='running')
+            self._save_checkpoint(etl_name, status="running")
             print(f"║  📂 数据路径: {data_path[:50]}                             ║")
 
         print(f"╚══════════════════════════════════════════════════════════════╝")
@@ -214,13 +228,15 @@ class BatchImportManager:
             result = etl.process(data_path)
 
             if result and not self._shutdown_requested:
-                self._save_checkpoint(etl_name,
-                                     last_file='',
-                                     last_index=0,
-                                     processed=etl.records_processed,
-                                     inserted=etl.records_inserted,
-                                     skipped=etl.records_skipped,
-                                     status='completed')
+                self._save_checkpoint(
+                    etl_name,
+                    last_file="",
+                    last_index=0,
+                    processed=etl.records_processed,
+                    inserted=etl.records_inserted,
+                    skipped=etl.records_skipped,
+                    status="completed",
+                )
                 print(f"\n║  ✓ {etl_name} 入库完成                                        ║")
             else:
                 print(f"\n║  ⏸ {etl_name} 入库暂停                                        ║")
@@ -229,7 +245,8 @@ class BatchImportManager:
 
         except Exception as e:
             import traceback
-            self._save_checkpoint(etl_name, status='failed', error=str(e))
+
+            self._save_checkpoint(etl_name, status="failed", error=str(e))
             print(f"\n║  ✗ {etl_name} 入库失败: {str(e)[:50]}              ║")
             print(f"║  {traceback.format_exc()[:80]}              ║")
             return False
@@ -245,8 +262,8 @@ class BatchImportManager:
         results = {}
 
         for etl_name in self.ETL_ORDER:
-            if etl_name == 'cwe':
-                data_path = str(self.base_path / 'cwec_v4.19.1.xml')
+            if etl_name == "cwe":
+                data_path = str(self.base_path / "cwec_v4.19.1.xml")
             else:
                 data_path = str(self.base_path / self.DATA_PATHS[etl_name])
 
@@ -280,27 +297,38 @@ class BatchImportManager:
             for etl_name in self.ETL_ORDER:
                 if etl_name in progress_dict:
                     p = progress_dict[etl_name]
-                    status_icon = {'pending': '⏳', 'running': '🔄', 'completed': '✅', 'failed': '❌'}.get(p.status, '❓')
-                    print(f"║  {status_icon} {etl_name.upper():8} | {p.status:10} | 已处理: {p.processed_count:>6} | 插入: {p.inserted_count:>6}  ║")
+                    status_icon = {
+                        "pending": "⏳",
+                        "running": "🔄",
+                        "completed": "✅",
+                        "failed": "❌",
+                    }.get(p.status, "❓")
+                    print(
+                        f"║  {status_icon} {etl_name.upper():8} | {p.status:10} | 已处理: {p.processed_count:>6} | 插入: {p.inserted_count:>6}  ║"
+                    )
                 else:
-                    print(f"║  ⬜ {etl_name.upper():8} | 未开始                                         ║")
+                    print(
+                        f"║  ⬜ {etl_name.upper():8} | 未开始                                         ║"
+                    )
 
         print("╚══════════════════════════════════════════════════════════════╝")
+
 
 def main():
     import argparse
 
-    parser = argparse.ArgumentParser(description='漏洞数据批量入库系统 (SQLite)')
-    parser.add_argument('--base-path', default=r'c:\1AAA_PROJECT\HOS\HOS-LS\HOS-LS\All Vulnerabilities\temp_zip',
-                       help='数据根目录路径')
-    parser.add_argument('--continue', dest='continue_mode', action='store_true',
-                       help='从断点继续')
-    parser.add_argument('--reset', action='store_true',
-                       help='重置进度重新开始')
-    parser.add_argument('--etl', choices=['cve', 'kev', 'nvd', 'poc', 'exploit', 'cwe'],
-                       help='指定单个ETL模块')
-    parser.add_argument('--status', action='store_true',
-                       help='显示当前进度')
+    parser = argparse.ArgumentParser(description="漏洞数据批量入库系统 (SQLite)")
+    parser.add_argument(
+        "--base-path",
+        default=r"c:\1AAA_PROJECT\HOS\HOS-LS\HOS-LS\All Vulnerabilities\temp_zip",
+        help="数据根目录路径",
+    )
+    parser.add_argument("--continue", dest="continue_mode", action="store_true", help="从断点继续")
+    parser.add_argument("--reset", action="store_true", help="重置进度重新开始")
+    parser.add_argument(
+        "--etl", choices=["cve", "kev", "nvd", "poc", "exploit", "cwe"], help="指定单个ETL模块"
+    )
+    parser.add_argument("--status", action="store_true", help="显示当前进度")
 
     args = parser.parse_args()
 
@@ -320,13 +348,14 @@ def main():
     manager.init_database()
 
     if args.etl:
-        if args.etl == 'cwe':
-            data_path = str(Path(args.base_path) / 'cwec_v4.19.1.xml')
+        if args.etl == "cwe":
+            data_path = str(Path(args.base_path) / "cwec_v4.19.1.xml")
         else:
-            data_path = str(Path(args.base_path) / manager.DATA_PATHS.get(args.etl, ''))
+            data_path = str(Path(args.base_path) / manager.DATA_PATHS.get(args.etl, ""))
         manager.run_etl(args.etl, data_path, args.continue_mode)
     else:
         manager.run_all(args.continue_mode)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

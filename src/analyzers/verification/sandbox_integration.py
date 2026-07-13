@@ -1,7 +1,7 @@
-import os
 import logging
-from typing import Optional, List, Dict, Any
+import os
 from contextlib import contextmanager
+from typing import Any, Dict, List, Optional
 
 from .sandbox_manager import SandboxEnvironmentManager, SandboxInfo
 
@@ -10,10 +10,7 @@ logger = logging.getLogger(__name__)
 
 class SandboxIntegration:
     def __init__(
-        self,
-        sandbox_root: Optional[str] = None,
-        auto_cleanup: bool = True,
-        enabled: bool = True
+        self, sandbox_root: Optional[str] = None, auto_cleanup: bool = True, enabled: bool = True
     ):
         self._manager = SandboxEnvironmentManager(sandbox_root)
         self._auto_cleanup = auto_cleanup
@@ -133,7 +130,7 @@ class SandboxIntegration:
     def list_sandboxes(self) -> List[SandboxInfo]:
         return self._manager.list_sandboxes()
 
-    def __enter__(self) -> 'SandboxIntegration':
+    def __enter__(self) -> "SandboxIntegration":
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb) -> bool:
@@ -161,20 +158,15 @@ class SandboxIntegration:
 
 
 def create_sandbox_integration(
-    config: Optional[Dict[str, Any]] = None,
-    sandbox_root: Optional[str] = None
+    config: Optional[Dict[str, Any]] = None, sandbox_root: Optional[str] = None
 ) -> SandboxIntegration:
     if config:
-        enabled = config.get('sandbox_enabled', True)
-        auto_cleanup = config.get('auto_cleanup', True)
-        root = config.get('sandbox_root', sandbox_root)
+        enabled = config.get("sandbox_enabled", True)
+        auto_cleanup = config.get("auto_cleanup", True)
+        root = config.get("sandbox_root", sandbox_root)
     else:
         enabled = True
         auto_cleanup = True
         root = sandbox_root
 
-    return SandboxIntegration(
-        sandbox_root=root,
-        auto_cleanup=auto_cleanup,
-        enabled=enabled
-    )
+    return SandboxIntegration(sandbox_root=root, auto_cleanup=auto_cleanup, enabled=enabled)

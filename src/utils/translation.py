@@ -13,7 +13,7 @@ SEVERITY_MAP = {
     "HIGH": "高危",
     "MEDIUM": "中危",
     "LOW": "低危",
-    "INFO": "信息"
+    "INFO": "信息",
 }
 
 VERDICT_MAP = {
@@ -26,7 +26,7 @@ VERDICT_MAP = {
     "ACCEPT": "确认",
     "REFUTE": "误报",
     "ESCALATE": "需人工复核",
-    "UNCERTAIN": "不确定"
+    "UNCERTAIN": "不确定",
 }
 
 VULNERABILITY_TITLE_MAP = {
@@ -87,7 +87,7 @@ VULNERABILITY_TITLE_MAP = {
     "Code Injection": "代码注入",
     "code injection": "代码注入",
     "Expression Language Injection": "表达式语言注入",
-    "expression language injection": "表达式语言注入"
+    "expression language injection": "表达式语言注入",
 }
 
 RECOMMENDATION_MAP = {
@@ -112,14 +112,11 @@ RECOMMENDATION_MAP = {
     "Implement authentication": "实现身份验证",
     "authentication": "身份验证",
     "Implement authorization": "实现授权机制",
-    "authorization": "授权控制"
+    "authorization": "授权控制",
 }
 
-STATUS_MAP = {
-    "VALID": "有效",
-    "INVALID": "无效",
-    "UNCERTAIN": "不确定"
-}
+STATUS_MAP = {"VALID": "有效", "INVALID": "无效", "UNCERTAIN": "不确定"}
+
 
 def translate_severity(severity: str) -> str:
     """翻译严重级别
@@ -132,6 +129,7 @@ def translate_severity(severity: str) -> str:
     """
     return SEVERITY_MAP.get(severity, severity)
 
+
 def translate_verdict(verdict: str) -> str:
     """翻译判定结果
 
@@ -142,6 +140,7 @@ def translate_verdict(verdict: str) -> str:
         中文判定结果
     """
     return VERDICT_MAP.get(verdict, verdict)
+
 
 def translate_vulnerability_title(title: str) -> str:
     """翻译漏洞名称
@@ -154,6 +153,7 @@ def translate_vulnerability_title(title: str) -> str:
     """
     return VULNERABILITY_TITLE_MAP.get(title, title)
 
+
 def translate_recommendation(rec: str) -> str:
     """翻译建议
 
@@ -164,6 +164,7 @@ def translate_recommendation(rec: str) -> str:
         中文建议
     """
     return RECOMMENDATION_MAP.get(rec, rec)
+
 
 def format_finding_cn(vuln: dict, lang: str = "zh") -> dict:
     """格式化漏洞输出（中文优先）

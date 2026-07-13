@@ -1,11 +1,11 @@
 import json
 import os
+import shutil
 import uuid
+from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Optional, List, Dict, Any
-from dataclasses import dataclass, asdict, field
-import shutil
+from typing import Any, Dict, List, Optional
 
 
 @dataclass
@@ -36,27 +36,27 @@ class ScanSession:
 
     def to_dict(self) -> Dict[str, Any]:
         return {
-            'session_id': self.session_id,
-            'target': self.target,
-            'start_time': self.start_time,
-            'last_update': self.last_update,
-            'config': self.config,
-            'progress': asdict(self.progress),
-            'results': [asdict(r) if isinstance(r, ScanResult) else r for r in self.results]
+            "session_id": self.session_id,
+            "target": self.target,
+            "start_time": self.start_time,
+            "last_update": self.last_update,
+            "config": self.config,
+            "progress": asdict(self.progress),
+            "results": [asdict(r) if isinstance(r, ScanResult) else r for r in self.results],
         }
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> 'ScanSession':
-        progress = ScanProgress(**data.get('progress', {}))
-        results = [ScanResult(**r) if isinstance(r, dict) else r for r in data.get('results', [])]
+    def from_dict(cls, data: Dict[str, Any]) -> "ScanSession":
+        progress = ScanProgress(**data.get("progress", {}))
+        results = [ScanResult(**r) if isinstance(r, dict) else r for r in data.get("results", [])]
         return cls(
-            session_id=data['session_id'],
-            target=data['target'],
-            start_time=data['start_time'],
-            last_update=data['last_update'],
-            config=data.get('config', {}),
+            session_id=data["session_id"],
+            target=data["target"],
+            start_time=data["start_time"],
+            last_update=data["last_update"],
+            config=data.get("config", {}),
             progress=progress,
-            results=results
+            results=results,
         )
 
 
@@ -65,7 +65,7 @@ class ScanCacheManager:
         if cache_dir:
             self.cache_dir = Path(cache_dir)
         else:
-            self.cache_dir = Path.home() / '.hos-ls' / 'scan_cache'
+            self.cache_dir = Path.home() / ".hos-ls" / "scan_cache"
         self.cache_dir.mkdir(parents=True, exist_ok=True)
 
     def _get_cache_path(self, session_id: str) -> Path:
@@ -80,7 +80,7 @@ class ScanCacheManager:
             start_time=now,
             last_update=now,
             config=config or {},
-            progress=ScanProgress()
+            progress=ScanProgress(),
         )
         self.save_session(session)
         return session
@@ -88,7 +88,7 @@ class ScanCacheManager:
     def save_session(self, session: ScanSession) -> None:
         session.last_update = datetime.now().isoformat()
         cache_path = self._get_cache_path(session.session_id)
-        with open(cache_path, 'w', encoding='utf-8') as f:
+        with open(cache_path, "w", encoding="utf-8") as f:
             json.dump(session.to_dict(), f, ensure_ascii=False, indent=2)
 
     def load_session(self, session_id: str) -> Optional[ScanSession]:
@@ -96,7 +96,7 @@ class ScanCacheManager:
         if not cache_path.exists():
             return None
         try:
-            with open(cache_path, 'r', encoding='utf-8') as f:
+            with open(cache_path, "r", encoding="utf-8") as f:
                 data = json.load(f)
             return ScanSession.from_dict(data)
         except Exception:
@@ -110,9 +110,9 @@ class ScanCacheManager:
 
     def list_sessions(self, target: Optional[str] = None) -> List[ScanSession]:
         sessions = []
-        for cache_file in self.cache_dir.glob('*.json'):
+        for cache_file in self.cache_dir.glob("*.json"):
             try:
-                with open(cache_file, 'r', encoding='utf-8') as f:
+                with open(cache_file, "r", encoding="utf-8") as f:
                     data = json.load(f)
                 session = ScanSession.from_dict(data)
                 if target is None or session.target == str(target):
@@ -129,7 +129,13 @@ class ScanCacheManager:
             return True
         return False
 
-    def add_result(self, session_id: str, file_path: str, vulnerabilities: List[Dict[str, Any]], error: Optional[str] = None) -> bool:
+    def add_result(
+        self,
+        session_id: str,
+        file_path: str,
+        vulnerabilities: List[Dict[str, Any]],
+        error: Optional[str] = None,
+    ) -> bool:
         session = self.load_session(session_id)
         if not session:
             return False
@@ -137,7 +143,7 @@ class ScanCacheManager:
             file_path=str(file_path),
             vulnerabilities=vulnerabilities,
             scan_time=datetime.now().isoformat(),
-            error=error
+            error=error,
         )
         session.results.append(result)
         if file_path not in session.progress.completed_file_paths:
@@ -176,13 +182,13 @@ class ScanCacheManager:
         session = self.load_session(session_id)
         if not session:
             return False
-        with open(output_path, 'w', encoding='utf-8') as f:
+        with open(output_path, "w", encoding="utf-8") as f:
             json.dump(session.to_dict(), f, ensure_ascii=False, indent=2)
         return True
 
     def import_session(self, import_path: str) -> Optional[ScanSession]:
         try:
-            with open(import_path, 'r', encoding='utf-8') as f:
+            with open(import_path, "r", encoding="utf-8") as f:
                 data = json.load(f)
             session = ScanSession.from_dict(data)
             new_session_id = str(uuid.uuid4())[:8]

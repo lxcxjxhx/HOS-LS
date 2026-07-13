@@ -6,9 +6,9 @@
 import json
 import os
 import shutil
-from pathlib import Path
-from typing import Any, Optional, Dict
 from datetime import datetime, timedelta
+from pathlib import Path
+from typing import Any, Dict, Optional
 
 
 class CacheManager:
@@ -17,13 +17,13 @@ class CacheManager:
     统一管理所有临时/状态数据文件到 .cache/hos-ls/ 目录
     """
 
-    CACHE_DIR = Path(__file__).parent.parent.parent / '.cache' / 'hos-ls'
+    CACHE_DIR = Path(__file__).parent.parent.parent / ".cache" / "hos-ls"
 
     SUBDIRS = {
-        'scan_state': 'scan-state',
-        'token_usage': 'token-usage',
-        'pure_ai': 'pure-ai',
-        'temp': 'temp'
+        "scan_state": "scan-state",
+        "token_usage": "token-usage",
+        "pure_ai": "pure-ai",
+        "temp": "temp",
     }
 
     _instance = None
@@ -55,7 +55,7 @@ class CacheManager:
         Returns:
             完整的文件路径
         """
-        subdir = self.SUBDIRS.get(category, 'temp')
+        subdir = self.SUBDIRS.get(category, "temp")
         return self.CACHE_DIR / subdir / filename
 
     def _get_old_path(self, filename: str) -> Optional[Path]:
@@ -87,29 +87,32 @@ class CacheManager:
 
         if new_path.exists():
             try:
-                with open(new_path, 'r', encoding='utf-8') as f:
+                with open(new_path, "r", encoding="utf-8") as f:
                     return json.load(f)
             except Exception as e:
                 from src.utils.logger import get_logger
+
                 logger = get_logger(__name__)
                 logger.warning(f"读取缓存文件失败 {new_path}: {e}")
 
         old_path = self._get_old_path(filename)
         if old_path and old_path.exists():
             try:
-                with open(old_path, 'r', encoding='utf-8') as f:
+                with open(old_path, "r", encoding="utf-8") as f:
                     data = json.load(f)
 
                 self.write_json(category, filename, data)
                 old_path.unlink()
 
                 from src.utils.logger import get_logger
+
                 logger = get_logger(__name__)
                 logger.info(f"已迁移旧文件到新路径: {old_path} -> {new_path}")
 
                 return data
             except Exception as e:
                 from src.utils.logger import get_logger
+
                 logger = get_logger(__name__)
                 logger.warning(f"读取旧文件失败 {old_path}: {e}")
 
@@ -129,11 +132,12 @@ class CacheManager:
         path = self.get_path(category, filename)
 
         try:
-            with open(path, 'w', encoding='utf-8') as f:
+            with open(path, "w", encoding="utf-8") as f:
                 json.dump(data, f, ensure_ascii=False, indent=2)
             return True
         except Exception as e:
             from src.utils.logger import get_logger
+
             logger = get_logger(__name__)
             logger.error(f"写入缓存文件失败 {path}: {e}")
             return False
@@ -195,7 +199,7 @@ class CacheManager:
         Returns:
             删除的文件数量
         """
-        subdir = self.SUBDIRS.get(category, 'temp')
+        subdir = self.SUBDIRS.get(category, "temp")
         dir_path = self.CACHE_DIR / subdir
         deleted_count = 0
 
@@ -204,7 +208,7 @@ class CacheManager:
 
         cutoff_time = datetime.now() - timedelta(days=max_age_days)
 
-        for file_path in dir_path.glob('*.json'):
+        for file_path in dir_path.glob("*.json"):
             try:
                 mtime = datetime.fromtimestamp(file_path.stat().st_mtime)
                 if mtime < cutoff_time:
@@ -241,7 +245,7 @@ class CacheManager:
             total_size = 0
 
             if dir_path.exists():
-                for file_path in dir_path.rglob('*'):
+                for file_path in dir_path.rglob("*"):
                     if file_path.is_file():
                         total_size += file_path.stat().st_size
 
@@ -258,13 +262,13 @@ class CacheManager:
         Returns:
             文件路径列表
         """
-        subdir = self.SUBDIRS.get(category, 'temp')
+        subdir = self.SUBDIRS.get(category, "temp")
         dir_path = self.CACHE_DIR / subdir
 
         if not dir_path.exists():
             return []
 
-        return [str(f) for f in dir_path.glob('*') if f.is_file()]
+        return [str(f) for f in dir_path.glob("*") if f.is_file()]
 
 
 _global_cache_manager: Optional[CacheManager] = None

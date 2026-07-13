@@ -7,7 +7,7 @@ import importlib
 import sys
 import threading
 import time
-from concurrent.futures import ThreadPoolExecutor, Future
+from concurrent.futures import Future, ThreadPoolExecutor
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
@@ -360,21 +360,11 @@ class ModulePreloader:
         """
         with self._lock:
             total = len(self._modules)
-            loaded = sum(
-                1
-                for info in self._modules.values()
-                if info.status == ModuleStatus.LOADED
-            )
+            loaded = sum(1 for info in self._modules.values() if info.status == ModuleStatus.LOADED)
             warmed_up = sum(
-                1
-                for info in self._modules.values()
-                if info.status == ModuleStatus.WARMED_UP
+                1 for info in self._modules.values() if info.status == ModuleStatus.WARMED_UP
             )
-            errors = sum(
-                1
-                for info in self._modules.values()
-                if info.status == ModuleStatus.ERROR
-            )
+            errors = sum(1 for info in self._modules.values() if info.status == ModuleStatus.ERROR)
 
             total_load_time = sum(info.load_time for info in self._modules.values())
             total_warmup_time = sum(info.warmup_time for info in self._modules.values())
@@ -547,6 +537,7 @@ class ModulePreloader:
         Returns:
             排序后的模块名称列表
         """
+
         def get_priority(name: str) -> int:
             info = self._modules.get(name)
             return info.priority.value if info else LoadPriority.NORMAL.value

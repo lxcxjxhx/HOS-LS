@@ -8,18 +8,19 @@
 核心理念：结构化系统 → 极限缩小问题空间 → AI只做最终裁决
 """
 
-from langgraph.graph import StateGraph, END
-from typing import Dict, Any, Optional, List, Tuple
-from pathlib import Path
 from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
 
-from src.core.langgraph_state import ScanState
-from src.core.engine import ScanResult, Finding, Severity, Location
-from src.core.plan_generator import get_plan_generator, ScanPlan, ScanStrategy, ScanPriority
-from src.taint.engine import get_taint_engine, TaintPath
-from src.assessment.risk_engine import get_risk_engine, VulnerabilityCandidate, Severity as RiskSeverity
+from langgraph.graph import END, StateGraph
+
+from src.assessment.risk_engine import Severity as RiskSeverity
+from src.assessment.risk_engine import VulnerabilityCandidate, get_risk_engine
 from src.cache.manager import CacheManagerV2
-
+from src.core.engine import Finding, Location, ScanResult, Severity
+from src.core.langgraph_state import ScanState
+from src.core.plan_generator import ScanPlan, ScanPriority, ScanStrategy, get_plan_generator
+from src.taint.engine import TaintPath, get_taint_engine
 
 cache_manager_v2 = CacheManagerV2()
 
@@ -52,6 +53,7 @@ async def plan_generation_node(state: V2ScanState) -> V2ScanState:
         cached_plan = cache_manager_v2.get_cached_plan(state.target)
         if cached_plan:
             from src.core.plan_generator import ScanPlan
+
             plan = ScanPlan(
                 targets=cached_plan["targets"],
                 focus=cached_plan["focus"],
@@ -172,8 +174,7 @@ async def vulnerability_judge_node(state: V2ScanState) -> V2ScanState:
             return state
 
         high_risk_candidates = [
-            c for c in state.candidates
-            if c.severity in [RiskSeverity.CRITICAL, RiskSeverity.HIGH]
+            c for c in state.candidates if c.severity in [RiskSeverity.CRITICAL, RiskSeverity.HIGH]
         ]
 
         if not high_risk_candidates:
@@ -191,10 +192,7 @@ async def report_generation_node(state: V2ScanState) -> V2ScanState:
     将候选漏洞转换为最终报告。
     """
     try:
-        scan_result = ScanResult(
-            target=state.target,
-            status="running"
-        )
+        scan_result = ScanResult(target=state.target, status="running")
 
         for candidate in state.candidates:
             severity_map = {
@@ -207,10 +205,14 @@ async def report_generation_node(state: V2ScanState) -> V2ScanState:
 
             def _safe_get_location(loc_obj, default_file):
                 """安全获取 location 属性"""
-                if hasattr(loc_obj, 'file'):
-                    return loc_obj.file, getattr(loc_obj, 'line', 1), getattr(loc_obj, 'column', 0)
+                if hasattr(loc_obj, "file"):
+                    return loc_obj.file, getattr(loc_obj, "line", 1), getattr(loc_obj, "column", 0)
                 elif isinstance(loc_obj, dict):
-                    return loc_obj.get("file", default_file), loc_obj.get("line", 1), loc_obj.get("column", 0)
+                    return (
+                        loc_obj.get("file", default_file),
+                        loc_obj.get("line", 1),
+                        loc_obj.get("column", 0),
+                    )
                 else:
                     return default_file, 1, 0
 
@@ -252,8 +254,7 @@ def should_use_llm_judge(state: V2ScanState) -> str:
         return "skip"
 
     high_risk_count = sum(
-        1 for c in state.candidates
-        if c.severity in [RiskSeverity.CRITICAL, RiskSeverity.HIGH]
+        1 for c in state.candidates if c.severity in [RiskSeverity.CRITICAL, RiskSeverity.HIGH]
     )
 
     if high_risk_count == 0:
@@ -308,10 +309,7 @@ def create_v2_scan_graph() -> StateGraph:
     graph.add_conditional_edges(
         "layer3_risk_scoring",
         should_use_llm_judge,
-        {
-            "judge": "vulnerability_judge",
-            "skip": "report_generation"
-        }
+        {"judge": "vulnerability_judge", "skip": "report_generation"},
     )
 
     graph.add_edge("vulnerability_judge", "report_generation")

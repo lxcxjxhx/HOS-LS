@@ -4,14 +4,14 @@
 """
 
 from .manager import (
-    SerialManager,
-    SerialConfig,
-    SerialPortInfo,
     Parity,
+    SerialConfig,
+    SerialManager,
+    SerialPortInfo,
     StopBits,
-    hex_encode,
-    hex_decode,
     ascii_encode,
+    hex_decode,
+    hex_encode,
     is_hex_string,
 )
 from .panel import SerialPortPanel

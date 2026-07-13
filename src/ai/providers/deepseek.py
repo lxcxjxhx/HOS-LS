@@ -3,13 +3,13 @@
 提供与 DeepSeek API 的集成。
 """
 
+import asyncio
 import os
 from typing import Optional, Tuple
 
-from openai import AsyncOpenAI
-from openai import APIStatusError as OpenAIAPIStatusError
-import asyncio
 from aiohttp import ClientError as AiohttpClientError
+from openai import APIStatusError as OpenAIAPIStatusError
+from openai import AsyncOpenAI
 
 from src.ai.client import AIClient
 from src.ai.models import AIProvider, AIRequest, AIResponse
@@ -29,10 +29,10 @@ class APIError(Exception):
         super().__init__(f"[{code}] {message}")
 
     @classmethod
-    def from_exception(cls, error: Exception) -> 'APIError':
+    def from_exception(cls, error: Exception) -> "APIError":
         """从异常创建APIError"""
         if isinstance(error, OpenAIAPIStatusError):
-            code = error.status_code if hasattr(error, 'status_code') else 0
+            code = error.status_code if hasattr(error, "status_code") else 0
             message = str(error)
             if code == 402:
                 return cls(code, "API余额不足 (Insufficient Balance)", should_truncate=True)
@@ -70,11 +70,11 @@ class DeepSeekClient(AIClient):
 
         # 优先使用配置中的 API 密钥
         api_key = self.config.ai.api_key
-        
+
         # 其次尝试从环境变量获取（与正式模式一致）
         if not api_key:
             api_key = os.getenv("HOS_LS_AI_API_KEY")
-        
+
         # 最后尝试 DEEPSEEK_API_KEY 作为兼容
         if not api_key:
             api_key = os.getenv("DEEPSEEK_API_KEY")
@@ -85,10 +85,7 @@ class DeepSeekClient(AIClient):
         base_url = self.config.ai.base_url or self.DEFAULT_BASE_URL
 
         # 使用 OpenAI SDK 创建客户端
-        self._client = AsyncOpenAI(
-            api_key=api_key,
-            base_url=base_url
-        )
+        self._client = AsyncOpenAI(api_key=api_key, base_url=base_url)
         self._initialized = True
 
     async def close(self) -> None:
@@ -140,7 +137,7 @@ class DeepSeekClient(AIClient):
                 messages=messages,
                 max_tokens=request.max_tokens,
                 temperature=request.temperature,
-                stream=False
+                stream=False,
             )
 
             # 处理响应
@@ -153,9 +150,9 @@ class DeepSeekClient(AIClient):
                 usage={
                     "prompt_tokens": response.usage.prompt_tokens,
                     "completion_tokens": response.usage.completion_tokens,
-                    "total_tokens": response.usage.total_tokens
+                    "total_tokens": response.usage.total_tokens,
                 },
-                raw_response=response
+                raw_response=response,
             )
         except OpenAIAPIStatusError as e:
             api_error = APIError.from_exception(e)
@@ -189,7 +186,7 @@ class DeepSeekClient(AIClient):
                 model="deepseek-v4-flash",
                 messages=[{"role": "user", "content": "Hello"}],
                 max_tokens=10,
-                stream=False
+                stream=False,
             )
 
             logger.info("DeepSeek API access validated successfully")

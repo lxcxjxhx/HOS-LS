@@ -29,6 +29,7 @@ class AnalysisLevel(Enum):
 @dataclass
 class AIContent:
     """AI 内容"""
+
     type: str  # text 或 image
     content: str  # 文本内容或图像 base64 编码
 

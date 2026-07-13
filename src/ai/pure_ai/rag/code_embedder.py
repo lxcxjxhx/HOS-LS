@@ -8,9 +8,9 @@ import json
 import os
 from dataclasses import dataclass, field
 from datetime import datetime
+from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
-from enum import Enum
 
 # 全局极致内存优化
 os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True,max_split_size_mb:256"
@@ -68,42 +68,46 @@ class EmbedConfig:
 
 def _lazy_imports():
     """延迟导入必要的模块
-    
+
     Returns:
         tuple: (SENTENCE_TRANSFORMERS_AVAILABLE, NUMPY_AVAILABLE, TORCH_AVAILABLE)
     """
     # 检查是否为纯AI模式
     if os.getenv("HOS_LS_MODE") == "PURE_AI":
         raise RuntimeError("PURE_AI mode should not load embedding components")
-    
+
     global SentenceTransformer, np, torch, SENTENCE_TRANSFORMERS_AVAILABLE, NUMPY_AVAILABLE, TORCH_AVAILABLE
-    
+
     if not SENTENCE_TRANSFORMERS_AVAILABLE:
         try:
             print("🔍 尝试导入 sentence_transformers...")
             from sentence_transformers import SentenceTransformer
+
             print("✅ sentence_transformers 导入成功")
             SENTENCE_TRANSFORMERS_AVAILABLE = True
         except ImportError as e:
             print(f"❌ sentence_transformers 导入失败: {e}")
             import traceback
+
             traceback.print_exc()
             SENTENCE_TRANSFORMERS_AVAILABLE = False
-    
+
     if not NUMPY_AVAILABLE:
         try:
             import numpy as np
+
             NUMPY_AVAILABLE = True
         except ImportError:
             NUMPY_AVAILABLE = False
-    
+
     if not TORCH_AVAILABLE:
         try:
             import torch
+
             TORCH_AVAILABLE = True
         except ImportError:
             TORCH_AVAILABLE = False
-    
+
     return SENTENCE_TRANSFORMERS_AVAILABLE, NUMPY_AVAILABLE, TORCH_AVAILABLE
 
 
@@ -126,7 +130,7 @@ class CodeEmbedder:
         self._initialized = False
 
         # 检查是否为纯AI模式，如果是则跳过模型初始化
-        if hasattr(self.config, 'pure_ai') and self.config.pure_ai:
+        if hasattr(self.config, "pure_ai") and self.config.pure_ai:
             print("⚠️  纯AI模式下跳过模型初始化")
             return
 
@@ -150,16 +154,17 @@ class CodeEmbedder:
         try:
             print(f"🔧 开始初始化模型: {self.config.model_name}")
             print(f"⏱️ 开始时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-            
+
             model_kwargs = {}
             tokenizer_kwargs = {}
-            
+
             # 检查是否使用自定义模型路径
             model_name_or_path = self.config.model_name
-            
+
             # 优先使用自定义模型路径
             if self.config.custom_model_path:
                 from pathlib import Path
+
                 custom_path = Path(self.config.custom_model_path)
                 if custom_path.exists():
                     model_name_or_path = str(custom_path)
@@ -170,15 +175,18 @@ class CodeEmbedder:
                 # 检查模型路径
                 import os
                 from pathlib import Path
-                cache_dir = self.config.cache_dir or str(Path.home() / ".cache" / "huggingface" / "hub")
+
+                cache_dir = self.config.cache_dir or str(
+                    Path.home() / ".cache" / "huggingface" / "hub"
+                )
                 print(f"🔍 检查模型缓存目录: {cache_dir}")
-                
+
                 # 检查具体模型目录
                 model_dir_name = f"models--{self.config.model_name.replace('/', '--')}"
                 model_path = Path(cache_dir) / model_dir_name
                 print(f"🔍 检查模型目录: {model_path}")
                 print(f"📁 目录是否存在: {model_path.exists()}")
-                
+
                 # 检查模型目录是否包含必要的配置文件
                 config_file = None
                 if model_path.exists() and list(model_path.glob("snapshots/*")):
@@ -186,19 +194,20 @@ class CodeEmbedder:
                     snapshot_subdirs = list(snapshots_dir.iterdir())
                     if snapshot_subdirs:
                         config_file = snapshot_subdirs[0] / "config.json"
-                
+
                 if model_path.exists():
                     files = list(model_path.iterdir())[:10]  # 只显示前10个文件
                     print(f"📄 目录中的文件: {[f.name for f in files]}")
-                    
+
                     # 优先使用本地模型路径
                     if config_file and config_file.exists():
                         # 检查config.json是否包含model_type键
                         try:
                             import json
-                            with open(config_file, 'r', encoding='utf-8') as f:
+
+                            with open(config_file, "r", encoding="utf-8") as f:
                                 config_data = json.load(f)
-                            if 'model_type' in config_data:
+                            if "model_type" in config_data:
                                 # 如果本地模型目录存在且配置文件完整，直接使用本地路径
                                 model_name_or_path = str(model_path)
                                 print(f"✅ 使用本地模型路径: {model_name_or_path}")
@@ -216,13 +225,14 @@ class CodeEmbedder:
                 else:
                     # 否则使用模型名称从 Hugging Face 下载
                     print(f"ℹ️ 使用模型名称: {model_name_or_path}")
-            
+
             if self.config.cache_dir:
                 model_kwargs["cache_folder"] = self.config.cache_dir
                 print(f"📁 使用缓存目录: {self.config.cache_dir}")
-            
+
             # 添加 Hugging Face token 认证
             import os
+
             hf_token = os.environ.get("HUGGING_FACE_HUB_TOKEN")
             if hf_token:
                 model_kwargs["token"] = hf_token
@@ -232,7 +242,7 @@ class CodeEmbedder:
                 token_file = Path.home() / "HUGGINGFACE"
                 if token_file.exists():
                     try:
-                        with open(token_file, 'r', encoding='utf-8') as f:
+                        with open(token_file, "r", encoding="utf-8") as f:
                             hf_token = f.read().strip()
                         model_kwargs["token"] = hf_token
                         print("✅ 从文件读取 Hugging Face token")
@@ -246,7 +256,9 @@ class CodeEmbedder:
                 if TORCH_AVAILABLE and torch.cuda.is_available():
                     device = "cuda"
                     print(f"✅ Using GPU: {torch.cuda.get_device_name(0)}")
-                    print(f"🔍 GPU 内存: {torch.cuda.get_device_properties(0).total_memory / 1024**3:.2f} GB")
+                    print(
+                        f"🔍 GPU 内存: {torch.cuda.get_device_properties(0).total_memory / 1024**3:.2f} GB"
+                    )
                 else:
                     device = "cpu"
                     print("ℹ️ Using CPU (GPU not available)")
@@ -266,7 +278,7 @@ class CodeEmbedder:
                 model_kwargs["torch_dtype"] = torch.float16  # fp16 省内存
                 model_kwargs["device_map"] = "auto"
                 # Matryoshka 压缩维度将在 encode 方法中设置
-            
+
             # 为 google/embeddinggemma-300M 添加特殊配置
             elif "embeddinggemma-300M" in self.config.model_name:
                 print("🔧 Configuring google/embeddinggemma-300M（保守稳定版）...")
@@ -283,7 +295,7 @@ class CodeEmbedder:
                 # 禁用 Matryoshka 压缩维度
                 self.config.matryoshka_dim = None
                 print("✅ 模型加载完成（使用 float32 精度 + 禁用 Matryoshka 压缩）")
-            
+
             # 为 BAAI bge 系列模型添加特殊配置
             elif "bge-" in self.config.model_name:
                 print("🔧 Configuring BAAI bge model...")
@@ -302,14 +314,14 @@ class CodeEmbedder:
             if self.config.use_onnx and "Qwen3-Embedding" not in self.config.model_name:
                 model_kwargs["backend"] = "onnx"
                 model_kwargs["model_kwargs"] = {
-                    "provider": "CUDAExecutionProvider" if device == "cuda" else "CPUExecutionProvider"
+                    "provider": (
+                        "CUDAExecutionProvider" if device == "cuda" else "CPUExecutionProvider"
+                    )
                 }
                 print("✅ 启用 ONNX 后端加速")
 
             self._model = SentenceTransformer(
-                model_name_or_path,
-                model_kwargs=model_kwargs,
-                tokenizer_kwargs=tokenizer_kwargs
+                model_name_or_path, model_kwargs=model_kwargs, tokenizer_kwargs=tokenizer_kwargs
             )
 
             # 确保模型移动到正确的设备
@@ -369,30 +381,31 @@ class CodeEmbedder:
         """
         if not codes:
             return []
-        
+
         # 计算文本长度统计
         lengths = [len(code) for code in codes]
         avg_length = sum(lengths) / len(lengths) if lengths else 0
         max_length = max(lengths) if lengths else 0
         min_length = min(lengths) if lengths else 0
-        
+
         print(f"\n🚀 开始生成嵌入... 批次大小: {len(codes)} 条（外层{batch_size}）")
         print(f"📊 文本长度统计: 平均={avg_length:.1f}, 最大={max_length}, 最小={min_length}")
-        
+
         # 3次强力清理
         import gc
+
         for _ in range(3):
             gc.collect()
             if TORCH_AVAILABLE and torch.cuda.is_available():
                 torch.cuda.empty_cache()
                 torch.cuda.reset_peak_memory_stats()
-        
+
         # 极致 GPU 加速设置
         if TORCH_AVAILABLE:
             torch.backends.cudnn.benchmark = True
-            torch.set_float32_matmul_precision('high')
+            torch.set_float32_matmul_precision("high")
             torch.backends.cuda.matmul.allow_tf32 = True
-        
+
         embeddings: List[List[float]] = []
 
         # 按外层 batch_size 分批处理
@@ -400,9 +413,9 @@ class CodeEmbedder:
         for start_idx in range(0, total_codes, batch_size):
             end_idx = min(start_idx + batch_size, total_codes)
             batch_codes = codes[start_idx:end_idx]
-            
+
             print(f"\n🔄 处理外层批次: {start_idx}-{end_idx}/{total_codes}")
-            
+
             batch_embeddings = []
             uncached_codes: List[str] = []
             uncached_indices: List[int] = []
@@ -422,7 +435,7 @@ class CodeEmbedder:
                 # 处理文本切分和聚合
                 processed_codes = []
                 code_mapping = []  # 记录原始代码与切分后代码的映射
-                
+
                 for code in uncached_codes:
                     token_length = self._get_token_length(code)
                     if token_length > 512:  # 超过token长度限制，进行切分
@@ -432,30 +445,30 @@ class CodeEmbedder:
                     else:
                         processed_codes.append(code)
                         code_mapping.append(1)
-                
+
                 print(f"📊 文本切分完成，原始文本数: {len(uncached_codes)}, 切分后文本数: {len(processed_codes)}")
-                
+
                 # 对处理后的代码进行批量处理
                 sub_batch_size = self.config.embedding_batch_size  # 使用配置中的子批次大小
                 print(f"🔧 使用子批次大小: {sub_batch_size}")
-                
+
                 total_processed = len(processed_codes)
                 processed = 0
                 sub_batch_embeddings = []
-                
+
                 while processed < total_processed:
                     sub_end_idx = min(processed + sub_batch_size, total_processed)
                     sub_batch = processed_codes[processed:sub_end_idx]
-                    
+
                     print(f"🔄 处理子批次: {processed}-{sub_end_idx}/{total_processed}")
-                    
+
                     # 阻止梯度缓存，进一步省内存
                     with torch.no_grad():
                         sub_embeddings = self._generate_embeddings_batch(sub_batch)
-                    
+
                     sub_batch_embeddings.extend(sub_embeddings)
                     processed = sub_end_idx
-                    
+
                     # 每处理一个子批次后清理内存
                     del sub_embeddings
                     gc.collect()
@@ -473,11 +486,11 @@ class CodeEmbedder:
                         current_idx += 1
                     else:
                         # 需要聚合多个嵌入
-                        chunk_embeddings = sub_batch_embeddings[current_idx:current_idx + count]
+                        chunk_embeddings = sub_batch_embeddings[current_idx : current_idx + count]
                         aggregated = self._aggregate_embeddings(chunk_embeddings)
                         aggregated_embeddings.append(aggregated)
                         current_idx += count
-                
+
                 # 将生成的嵌入插入到正确的位置
                 for i, (idx, embedding) in enumerate(zip(uncached_indices, aggregated_embeddings)):
                     batch_embeddings.insert(idx, embedding)
@@ -520,9 +533,7 @@ class CodeEmbedder:
         try:
             # 使用实际模型检测嵌入维度
             sample_embedding = self._model.encode(
-                "test",
-                convert_to_numpy=True,
-                show_progress_bar=False
+                "test", convert_to_numpy=True, show_progress_bar=False
             )
             if NUMPY_AVAILABLE and isinstance(sample_embedding, np.ndarray):
                 return sample_embedding.shape[-1]
@@ -609,9 +620,10 @@ class CodeEmbedder:
 
         try:
             from pathlib import Path
+
             output_dir = Path(output_path)
             output_dir.mkdir(parents=True, exist_ok=True)
-            
+
             print(f"🔧 开始导出模型为 ONNX 格式到: {output_path}")
             self._model.export_onnx(str(output_dir / "model.onnx"))
             print("✅ 模型已成功导出为 ONNX 格式")
@@ -633,25 +645,25 @@ class CodeEmbedder:
         try:
             # 使用Blockify压缩
             compressed_code = self._blockify(code)
-            
+
             # 为 embeddinggemma-300M 设置特殊参数
             encode_kwargs = {}
             if self.config.matryoshka_dim:
                 encode_kwargs["truncate_dim"] = self.config.matryoshka_dim
-            
+
             if "embeddinggemma-300M" in self.config.model_name:
                 # 使用 numpy 格式，减少 GPU 内存占用
                 convert_to_tensor = False
             else:
                 convert_to_tensor = TORCH_AVAILABLE
-            
+
             embedding = self._model.encode(
                 compressed_code,
                 batch_size=self.config.batch_size,
                 show_progress_bar=False,
                 convert_to_tensor=convert_to_tensor,
                 normalize_embeddings=True,
-                **encode_kwargs
+                **encode_kwargs,
             )
 
             if NUMPY_AVAILABLE and isinstance(embedding, np.ndarray):
@@ -679,32 +691,32 @@ class CodeEmbedder:
         try:
             print(f"📊 开始批量生成嵌入，总条数: {len(codes)}")
             print(f"⏱️ 开始时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-            
+
             # 使用配置中的批处理大小
             batch_size = self.config.embedding_batch_size  # 统一使用配置中的批处理大小
             print(f"🔧 使用批处理大小: {batch_size}")
-            
+
             # 可选 Matryoshka 压缩维度（省注入内存）
             encode_kwargs = {}
             if self.config.matryoshka_dim:
                 encode_kwargs["truncate_dim"] = self.config.matryoshka_dim
                 print(f"📏 使用 Matryoshka 压缩维度: {self.config.matryoshka_dim}")
-            
+
             # 强制使用 numpy 格式输出，避免 tensor 留在 GPU
             convert_to_tensor = False
             print("📊 强制使用 numpy 格式输出")
-            
+
             print("🚀 开始生成嵌入...")
             batch_start_time = datetime.now()
             # 自动检测设备
             device = "cuda" if TORCH_AVAILABLE and torch.cuda.is_available() else "cpu"
             print(f"📱 使用设备: {device}")
-            
+
             # 监控内存使用
             if TORCH_AVAILABLE and torch.cuda.is_available():
-                before_memory = torch.cuda.memory_allocated() / (1024 ** 2)  # MB
+                before_memory = torch.cuda.memory_allocated() / (1024**2)  # MB
                 print(f"📊 生成嵌入前 GPU 内存使用: {before_memory:.2f} MB")
-            
+
             # 使用 torch.no_grad() 和半精度加速，进一步省内存
             with torch.no_grad():
                 # 使用半精度加速
@@ -719,7 +731,7 @@ class CodeEmbedder:
                             convert_to_tensor=False,
                             convert_to_numpy=True,  # 强制 numpy 输出
                             normalize_embeddings=True,
-                            **encode_kwargs
+                            **encode_kwargs,
                         )
                     except Exception as e:
                         print(f"❌ 半精度嵌入失败: {e}")
@@ -732,7 +744,7 @@ class CodeEmbedder:
                             convert_to_tensor=False,
                             convert_to_numpy=True,  # 强制 numpy 输出
                             normalize_embeddings=True,
-                            **encode_kwargs
+                            **encode_kwargs,
                         )
                 else:
                     batch_embeddings = self._model.encode(
@@ -743,15 +755,15 @@ class CodeEmbedder:
                         convert_to_tensor=False,
                         convert_to_numpy=True,  # 强制 numpy 输出
                         normalize_embeddings=True,
-                        **encode_kwargs
+                        **encode_kwargs,
                     )
-            
+
             # 监控内存使用
             if TORCH_AVAILABLE and torch.cuda.is_available():
-                after_memory = torch.cuda.memory_allocated() / (1024 ** 2)  # MB
+                after_memory = torch.cuda.memory_allocated() / (1024**2)  # MB
                 print(f"📊 生成嵌入后 GPU 内存使用: {after_memory:.2f} MB")
                 print(f"📊 内存变化: {after_memory - before_memory:.2f} MB")
-            
+
             batch_end_time = datetime.now()
             batch_time = (batch_end_time - batch_start_time).total_seconds()
             print(f"✅ 嵌入完成，耗时: {batch_time:.2f} 秒")
@@ -767,14 +779,14 @@ class CodeEmbedder:
                 # 检查并处理 NaN 和 inf 值
                 has_nan = np.isnan(batch_embeddings).any()
                 has_inf = np.isinf(batch_embeddings).any()
-                
+
                 if has_nan or has_inf:
                     print("⚠️  检测到 NaN 或 inf 值，使用 fallback 嵌入...")
                     return [self._fallback_embedding(code) for code in codes]
-                
+
                 # 标准化嵌入值，确保范围合理
                 batch_embeddings = np.clip(batch_embeddings, -1.0, 1.0)
-                
+
                 result = batch_embeddings.tolist()
                 # 释放 numpy 数组内存
                 del batch_embeddings
@@ -783,6 +795,7 @@ class CodeEmbedder:
                 print(f"📥 处理列表嵌入，长度: {len(batch_embeddings)}")
                 # 检查并处理 NaN 和 inf 值
                 import math
+
                 has_nan = False
                 has_inf = False
                 for embedding in batch_embeddings:
@@ -808,12 +821,13 @@ class CodeEmbedder:
             print(f"❌ Batch embedding failed: {e}")
             # 清理内存
             import gc
+
             gc.collect()
             if TORCH_AVAILABLE and torch.cuda.is_available():
                 torch.cuda.empty_cache()
                 torch.cuda.synchronize()
                 torch.cuda.reset_peak_memory_stats()
-            
+
             # 单条 fallback 机制
             print("🔄 启用单条 fallback 机制...")
             results = []
@@ -867,7 +881,7 @@ class CodeEmbedder:
             return self._block_cache[block_key]
 
         # 去重和压缩逻辑
-        lines = text.strip().split('\n')
+        lines = text.strip().split("\n")
         seen_lines = set()
         unique_lines = []
 
@@ -885,10 +899,10 @@ class CodeEmbedder:
                 compressed_lines.append(line)
                 prev_empty = False
             elif not prev_empty:
-                compressed_lines.append('')
+                compressed_lines.append("")
                 prev_empty = True
 
-        compressed_text = '\n'.join(compressed_lines)
+        compressed_text = "\n".join(compressed_lines)
         self._block_cache[block_key] = compressed_text
         return compressed_text
 
@@ -909,7 +923,7 @@ class CodeEmbedder:
         stride = self.config.stride
 
         for i in range(0, len(text), chunk_size - stride):
-            chunk = text[i:i + chunk_size]
+            chunk = text[i : i + chunk_size]
             chunks.append(chunk)
 
         return chunks
@@ -928,6 +942,7 @@ class CodeEmbedder:
 
         if NUMPY_AVAILABLE:
             import numpy as np
+
             embeddings_np = np.array(embeddings)
             aggregated = np.mean(embeddings_np, axis=0)
             return aggregated.tolist()
@@ -957,9 +972,9 @@ class CodeEmbedder:
 
         try:
             # 使用模型的tokenizer计算真实token长度
-            if hasattr(self._model, 'tokenizer'):
-                tokens = self._model.tokenizer(text, truncation=False, return_tensors='pt')
-                return len(tokens['input_ids'][0])
+            if hasattr(self._model, "tokenizer"):
+                tokens = self._model.tokenizer(text, truncation=False, return_tensors="pt")
+                return len(tokens["input_ids"][0])
             else:
                 # 降级方案：按字符长度估算
                 return len(text) // 4
@@ -1062,14 +1077,18 @@ class InMemoryEmbedder:
         features = {
             "length": len(code) / 1000.0,
             "lines": code.count("\n") / 100.0,
-            "keywords": sum(1 for kw in ["def", "class", "import", "from", "if", "else", "for", "while"] if kw in code_lower),
+            "keywords": sum(
+                1
+                for kw in ["def", "class", "import", "from", "if", "else", "for", "while"]
+                if kw in code_lower
+            ),
             "functions": code_lower.count("def ") / 10.0,
             "classes": code_lower.count("class ") / 5.0,
             "imports": code_lower.count("import ") / 5.0,
             "comments": code_lower.count("#") / 10.0,
             "strings": code_lower.count('"') / 20.0,
             "numbers": len([c for c in code if c.isdigit()]) / 50.0,
-            "symbols": len([c for c in code if not c.isalnum() and c not in ' \t\n\r']) / 100.0,
+            "symbols": len([c for c in code if not c.isalnum() and c not in " \t\n\r"]) / 100.0,
         }
 
         embedding = []
@@ -1119,10 +1138,12 @@ def create_embedder(
                 config = EmbedConfig()
             config.custom_model_path = custom_model_path
             config.model_name = ModelType.SECURITY_FINETUNED.value
-        
+
         # 检查是否为纯AI模式（从环境变量和配置中检查）
-        pure_ai = os.getenv("HOS_LS_MODE") == "PURE_AI" or (hasattr(config, 'pure_ai') and config.pure_ai)
-        
+        pure_ai = os.getenv("HOS_LS_MODE") == "PURE_AI" or (
+            hasattr(config, "pure_ai") and config.pure_ai
+        )
+
         if pure_ai:
             # 纯AI模式下使用内存嵌入器
             _global_embedder = InMemoryEmbedder(config)

@@ -10,6 +10,7 @@ from typing import Optional
 @dataclass
 class RemoteScanConfig:
     """远程扫描配置"""
+
     enabled: bool = False
     connection_timeout: int = 30
     read_timeout: int = 60

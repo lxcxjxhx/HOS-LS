@@ -10,6 +10,7 @@ from typing import Any, Dict, List
 
 class VulnerabilityCategory(Enum):
     """漏洞分类枚举"""
+
     PORT_RELATED = "port_related"
     GENERAL_STATIC = "general_static"
     SPECIAL_SCAN = "special_scan"
@@ -83,6 +84,7 @@ def is_api_related(rule_id: str) -> bool:
 @dataclass
 class VulnerabilityMetadata:
     """漏洞元数据"""
+
     category: VulnerabilityCategory = VulnerabilityCategory.GENERAL_STATIC
     sub_category: str = ""
     scan_type: str = ""
@@ -106,6 +108,7 @@ class VulnerabilityMetadata:
 @dataclass
 class CategorizedReportData:
     """分类后的报告数据"""
+
     summary: Dict[str, Any] = field(default_factory=dict)
     port_related_findings: List[Any] = field(default_factory=list)
     general_static_findings: List[Any] = field(default_factory=list)

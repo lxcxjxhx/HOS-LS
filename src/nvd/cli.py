@@ -1,14 +1,17 @@
 import click
+
 from .db.connection import NVDConnection
 from .db.schema import NVDSche
 from .downloader import DownloadManager
-from .sync import NVDDataSync
 from .query.engine import NVDQueryEngine
+from .sync import NVDDataSync
+
 
 @click.group()
 def cli():
     """NVD漏洞数据库管理系统"""
     pass
+
 
 @cli.command()
 def init_db():
@@ -33,16 +36,21 @@ def init_db():
         click.echo(f"错误: {e}", err=True)
         raise
 
+
 @cli.command()
-@click.option('--source', type=click.Choice(['all', 'cvelistV5', 'nvd', 'cwe', 'kev', 'exploitdb', 'poc']), default='all')
-@click.option('--year', type=int, help='指定年份 (用于cvelistV5)')
+@click.option(
+    "--source",
+    type=click.Choice(["all", "cvelistV5", "nvd", "cwe", "kev", "exploitdb", "poc"]),
+    default="all",
+)
+@click.option("--year", type=int, help="指定年份 (用于cvelistV5)")
 def download(source, year):
     """下载漏洞数据"""
     click.echo(f"下载数据源: {source}")
 
     manager = DownloadManager()
 
-    if source == 'all':
+    if source == "all":
         results = manager.download_all()
         for src, success in results.items():
             status = "成功" if success else "失败"
@@ -52,15 +60,20 @@ def download(source, year):
         status = "成功" if success else "失败"
         click.echo(f"  {source}: {status}")
 
+
 @cli.command()
-@click.option('--source', type=click.Choice(['all', 'cvelistV5', 'nvd', 'cwe', 'kev', 'exploitdb', 'poc']), default='all')
+@click.option(
+    "--source",
+    type=click.Choice(["all", "cvelistV5", "nvd", "cwe", "kev", "exploitdb", "poc"]),
+    default="all",
+)
 def etl(source):
     """运行ETL处理"""
     click.echo(f"运行ETL: {source}")
 
     sync = NVDDataSync()
 
-    if source == 'all':
+    if source == "all":
         results = sync.sync_all()
     else:
         results = sync.sync_source(source)
@@ -70,12 +83,13 @@ def etl(source):
     else:
         click.echo("ETL处理失败!", err=True)
 
+
 @cli.command()
-@click.option('--vendor', help='厂商名称')
-@click.option('--product', required=True, help='产品名称')
-@click.option('--version', help='产品版本')
-@click.option('--min-score', type=float, default=0.0, help='最低CVSS评分')
-@click.option('--limit', type=int, default=100, help='返回结果数量')
+@click.option("--vendor", help="厂商名称")
+@click.option("--product", required=True, help="产品名称")
+@click.option("--version", help="产品版本")
+@click.option("--min-score", type=float, default=0.0, help="最低CVSS评分")
+@click.option("--limit", type=int, default=100, help="返回结果数量")
 def query(vendor, product, version, min_score, limit):
     """查询漏洞"""
     click.echo(f"查询漏洞: {product}")
@@ -87,11 +101,7 @@ def query(vendor, product, version, min_score, limit):
             click.echo(f"  精确版本: {version}")
 
         results = engine.scan_product(
-            vendor=vendor or '',
-            product=product,
-            version=version,
-            min_score=min_score,
-            limit=limit
+            vendor=vendor or "", product=product, version=version, min_score=min_score, limit=limit
         )
 
         if not results:
@@ -102,8 +112,8 @@ def query(vendor, product, version, min_score, limit):
         click.echo("-" * 80)
 
         for hit in results:
-            severity = hit.cvss_severity or 'N/A'
-            score = f"{hit.cvss_score:.1f}" if hit.cvss_score else 'N/A'
+            severity = hit.cvss_severity or "N/A"
+            score = f"{hit.cvss_score:.1f}" if hit.cvss_score else "N/A"
             exploited = "[KEV]" if hit.kev_exploited else ""
 
             click.echo(f"{hit.cve_id} | CVSS: {score} ({severity}) {exploited}")
@@ -114,23 +124,29 @@ def query(vendor, product, version, min_score, limit):
     except Exception as e:
         click.echo(f"查询错误: {e}", err=True)
 
+
 @cli.command()
-@click.option('--source', type=click.Choice(['all', 'cvelistV5', 'nvd', 'cwe', 'kev', 'exploitdb', 'poc']), default='all')
+@click.option(
+    "--source",
+    type=click.Choice(["all", "cvelistV5", "nvd", "cwe", "kev", "exploitdb", "poc"]),
+    default="all",
+)
 def sync(source):
     """同步数据（下载+ETL）"""
     click.echo(f"同步数据源: {source}")
 
     sync_manager = NVDDataSync()
 
-    if source == 'all':
+    if source == "all":
         sync_manager.sync_all()
     else:
         sync_manager.sync_source(source)
 
     click.echo("同步完成!")
 
+
 @cli.command()
-@click.option('--cve-id', required=True, help='CVE ID')
+@click.option("--cve-id", required=True, help="CVE ID")
 def detail(cve_id):
     """获取CVE详细信息"""
     click.echo(f"获取CVE详情: {cve_id}")
@@ -174,5 +190,6 @@ def detail(cve_id):
     except Exception as e:
         click.echo(f"错误: {e}", err=True)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     cli()

@@ -1,5 +1,11 @@
 from typing import List
-from src.analyzers.verification.interfaces import Validator, ValidationResult, VulnContext, create_uncertain_result
+
+from src.analyzers.verification.interfaces import (
+    ValidationResult,
+    Validator,
+    VulnContext,
+    create_uncertain_result,
+)
 
 
 class URLControllableValidator(Validator):
@@ -29,15 +35,19 @@ class URLControllableValidator(Validator):
         return "high"
 
     def check_applicability(self, context: VulnContext) -> bool:
-        url_patterns = ["URL(", "new URL(", "HttpClient", "WebClient", "getForObject", "postForObject"]
+        url_patterns = [
+            "URL(",
+            "new URL(",
+            "HttpClient",
+            "WebClient",
+            "getForObject",
+            "postForObject",
+        ]
         return any(pattern in context.code_snippet for pattern in url_patterns)
 
     def validate(self, context: VulnContext) -> ValidationResult:
         if not self.check_applicability(context):
-            return create_uncertain_result(
-                "此验证器不适用于当前代码上下文",
-                confidence=0.3
-            )
+            return create_uncertain_result("此验证器不适用于当前代码上下文", confidence=0.3)
 
         if self._has_url_validation(context.code_snippet):
             return ValidationResult(
@@ -45,7 +55,7 @@ class URLControllableValidator(Validator):
                 is_false_positive=True,
                 confidence=0.8,
                 reason="检测到 URL 验证机制",
-                evidence={"validation_found": True}
+                evidence={"validation_found": True},
             )
 
         if self._is_param_from_user(context.code_snippet):
@@ -54,13 +64,10 @@ class URLControllableValidator(Validator):
                 is_false_positive=False,
                 confidence=0.85,
                 reason="URL 参数来自用户输入，存在 SSRF 风险",
-                evidence={"user_controlled": True}
+                evidence={"user_controlled": True},
             )
 
-        return create_uncertain_result(
-            "无法确定参数来源，需人工复核",
-            confidence=0.5
-        )
+        return create_uncertain_result("无法确定参数来源，需人工复核", confidence=0.5)
 
     def _has_url_validation(self, code_snippet: str) -> bool:
         validation_patterns = [
@@ -71,7 +78,7 @@ class URLControllableValidator(Validator):
             "ALLOW_LIST",
             "allowedHosts",
             "InetAddress.isReachable",
-            "!url.startsWith(\"http",
+            '!url.startsWith("http',
         ]
         return any(pattern in code_snippet for pattern in validation_patterns)
 

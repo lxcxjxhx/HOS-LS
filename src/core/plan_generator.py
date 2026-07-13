@@ -4,12 +4,12 @@
 核心理念：结构化系统 → 极限缩小问题空间 → AI只做最终裁决
 """
 
+import hashlib
+import json
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set
-import hashlib
-import json
 
 from tree_sitter import Language, Parser
 
@@ -95,12 +95,14 @@ class PlanGenerator:
     def _initialize_languages(self) -> None:
         try:
             from tree_sitter_python import language as python_language
+
             self._languages["python"] = Language(python_language())
         except ImportError:
             pass
 
         try:
             from tree_sitter_javascript import language as js_language
+
             self._languages["javascript"] = Language(js_language())
             self._languages["typescript"] = Language(js_language())
         except ImportError:
@@ -311,35 +313,35 @@ class PlanGenerator:
         }
 
         dangerous_patterns = [
-            (r'\beval\s*\(', 'eval'),
-            (r'\bexec\s*\(', 'exec'),
-            (r'\bos\.system\s*\(', 'os.system'),
-            (r'\bsubprocess\s*\.', 'subprocess'),
-            (r'\bexecute\s*\(', 'execute'),
-            (r'\bcursor\s*\(', 'cursor'),
+            (r"\beval\s*\(", "eval"),
+            (r"\bexec\s*\(", "exec"),
+            (r"\bos\.system\s*\(", "os.system"),
+            (r"\bsubprocess\s*\.", "subprocess"),
+            (r"\bexecute\s*\(", "execute"),
+            (r"\bcursor\s*\(", "cursor"),
         ]
 
         source_patterns = [
-            (r'\binput\s*\(', 'input'),
-            (r'\braw_input\s*\(', 'raw_input'),
+            (r"\binput\s*\(", "input"),
+            (r"\braw_input\s*\(", "raw_input"),
         ]
 
         db_patterns = [
-            (r'\.execute\s*\(', 'execute'),
-            (r'\.executemany\s*\(', 'executemany'),
-            (r'\.cursor\s*\(', 'cursor'),
+            (r"\.execute\s*\(", "execute"),
+            (r"\.executemany\s*\(", "executemany"),
+            (r"\.cursor\s*\(", "cursor"),
         ]
 
         io_patterns = [
-            (r'\bopen\s*\(', 'open'),
-            (r'\bread\s*\(', 'read'),
+            (r"\bopen\s*\(", "open"),
+            (r"\bread\s*\(", "read"),
         ]
 
         for pattern, name in dangerous_patterns:
             if re.search(pattern, content):
                 info["dangerous_functions"].append(name)
                 info["sink_count"] += 1
-                if name in ['eval', 'exec']:
+                if name in ["eval", "exec"]:
                     info["has_eval"] = True
 
         for pattern, name in source_patterns:
@@ -358,7 +360,7 @@ class PlanGenerator:
         if "socket" in content or "requests" in content or "urllib" in content:
             info["has_network"] = True
 
-        import_pattern = r'^import\s+(\w+)|^from\s+(\w+)\s+import'
+        import_pattern = r"^import\s+(\w+)|^from\s+(\w+)\s+import"
         for match in re.finditer(import_pattern, content, re.MULTILINE):
             info["imports"].append(match.group(1) or match.group(2))
 
@@ -448,10 +450,14 @@ class PlanGenerator:
         if code_info.get("has_eval") or "eval" in code_info.get("dangerous_functions", []):
             focus.append(VulnerabilityFocus.CODE_INJECTION.value)
 
-        if "os.system" in code_info.get("dangerous_functions", []) or "subprocess" in code_info.get("imports", []):
+        if "os.system" in code_info.get("dangerous_functions", []) or "subprocess" in code_info.get(
+            "imports", []
+        ):
             focus.append(VulnerabilityFocus.COMMAND_INJECTION.value)
 
-        if "open" in code_info.get("io_operations", []) or "file" in code_info.get("io_operations", []):
+        if "open" in code_info.get("io_operations", []) or "file" in code_info.get(
+            "io_operations", []
+        ):
             focus.append(VulnerabilityFocus.PATH_TRAVERSAL.value)
 
         if code_info.get("has_network"):

@@ -3,6 +3,7 @@
 用于测试 SQL 注入检测规则。
 """
 
+
 def vulnerable_query_1(user_id):
     """字符串拼接 SQL"""
     query = "SELECT * FROM users WHERE id = " + user_id
@@ -30,7 +31,7 @@ def vulnerable_query_4(user_input):
 
 def vulnerable_query_5():
     """Django raw SQL"""
-    User.objects.raw("SELECT * FROM users WHERE id = " + request.GET.get('id'))
+    User.objects.raw("SELECT * FROM users WHERE id = " + request.GET.get("id"))
 
 
 def safe_query_1(user_id):

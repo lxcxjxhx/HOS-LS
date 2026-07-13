@@ -1,5 +1,6 @@
 from typing import List
-from src.analyzers.verification.interfaces import Validator, VulnContext, ValidationResult
+
+from src.analyzers.verification.interfaces import ValidationResult, Validator, VulnContext
 
 
 class CsrfDisabledValidator(Validator):
@@ -38,7 +39,7 @@ class CsrfDisabledValidator(Validator):
                 is_false_positive=True,
                 confidence=0.95,
                 reason="CSRF 配置存在但未调用 .disable()，未被禁用",
-                evidence={"code_snippet": code}
+                evidence={"code_snippet": code},
             )
 
         csrf_disable_patterns = [
@@ -56,7 +57,7 @@ class CsrfDisabledValidator(Validator):
                 is_false_positive=True,
                 confidence=0.9,
                 reason="检测到 csrf 相关配置但未实际禁用",
-                evidence={"code_snippet": code}
+                evidence={"code_snippet": code},
             )
 
         other_csrf_protection_patterns = [
@@ -81,7 +82,7 @@ class CsrfDisabledValidator(Validator):
                 is_false_positive=True,
                 confidence=0.85,
                 reason="检测到其他 CSRF 防护措施（如 CSRF Token），禁用可能是有意为之",
-                evidence={"code_snippet": code}
+                evidence={"code_snippet": code},
             )
 
         file_path_lower = context.file_path.lower()
@@ -99,8 +100,8 @@ class CsrfDisabledValidator(Validator):
                     evidence={
                         "code_snippet": code,
                         "file_path": context.file_path,
-                        "line_number": context.line_number
-                    }
+                        "line_number": context.line_number,
+                    },
                 )
 
         return ValidationResult(
@@ -111,12 +112,12 @@ class CsrfDisabledValidator(Validator):
             evidence={
                 "code_snippet": code,
                 "file_path": context.file_path,
-                "line_number": context.line_number
+                "line_number": context.line_number,
             },
             verification_steps=[
                 "1. 确认应用是否处理敏感操作（表单提交、API调用等）",
                 "2. 检查是否实现了 CSRF Token 机制",
                 "3. 验证 SameSite Cookie 配置",
-                "4. 确认自定义 CSRF 防护的存在"
-            ]
+                "4. 确认自定义 CSRF 防护的存在",
+            ],
         )

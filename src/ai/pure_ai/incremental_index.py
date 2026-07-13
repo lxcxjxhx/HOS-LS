@@ -1,11 +1,11 @@
 import hashlib
+import json
 import os
 import time
-import json
-from pathlib import Path
-from typing import Dict, List, Any, Optional, Set
-from dataclasses import dataclass, field, asdict
+from dataclasses import asdict, dataclass, field
 from datetime import datetime
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Set
 
 
 @dataclass
@@ -21,7 +21,7 @@ class FileIndexEntry:
         return asdict(self)
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> 'FileIndexEntry':
+    def from_dict(cls, data: Dict[str, Any]) -> "FileIndexEntry":
         return cls(**data)
 
 
@@ -42,11 +42,11 @@ class IncrementalIndexManager:
         self.config = config or {}
         self._index: Dict[str, FileIndexEntry] = {}
 
-        self.index_dir = Path(self.config.get('index_dir', '.hos-ls/indexes'))
+        self.index_dir = Path(self.config.get("index_dir", ".hos-ls/indexes"))
         self.index_dir.mkdir(parents=True, exist_ok=True)
         self._index_path = self.index_dir / f"{self._get_project_hash()}.json"
 
-        self._hash_cache_size = self.config.get('hash_cache_size', 65536)
+        self._hash_cache_size = self.config.get("hash_cache_size", 65536)
         self._mtime_cache: Dict[str, float] = {}
 
     def _get_project_hash(self) -> str:
@@ -55,7 +55,7 @@ class IncrementalIndexManager:
         Returns:
             项目路径的哈希值
         """
-        return hashlib.sha256(self.project_path.encode('utf-8')).hexdigest()[:16]
+        return hashlib.sha256(self.project_path.encode("utf-8")).hexdigest()[:16]
 
     def _compute_file_hash(self, file_path: str) -> Optional[str]:
         """计算文件SHA256哈希值
@@ -68,8 +68,8 @@ class IncrementalIndexManager:
         """
         try:
             sha256_hash = hashlib.sha256()
-            with open(file_path, 'rb') as f:
-                for chunk in iter(lambda: f.read(self._hash_cache_size), b''):
+            with open(file_path, "rb") as f:
+                for chunk in iter(lambda: f.read(self._hash_cache_size), b""):
                     sha256_hash.update(chunk)
             return sha256_hash.hexdigest()
         except Exception:
@@ -84,9 +84,9 @@ class IncrementalIndexManager:
         if not self._index_path.exists():
             return False
         try:
-            with open(self._index_path, 'r', encoding='utf-8') as f:
+            with open(self._index_path, "r", encoding="utf-8") as f:
                 data = json.load(f)
-            if not isinstance(data, dict) or 'entries' not in data:
+            if not isinstance(data, dict) or "entries" not in data:
                 return False
             return True
         except Exception:
@@ -101,12 +101,11 @@ class IncrementalIndexManager:
         if not self.is_index_valid():
             return False
         try:
-            with open(self._index_path, 'r', encoding='utf-8') as f:
+            with open(self._index_path, "r", encoding="utf-8") as f:
                 data = json.load(f)
-            entries = data.get('entries', {})
+            entries = data.get("entries", {})
             self._index = {
-                path: FileIndexEntry.from_dict(entry_data)
-                for path, entry_data in entries.items()
+                path: FileIndexEntry.from_dict(entry_data) for path, entry_data in entries.items()
             }
             return True
         except Exception:
@@ -120,16 +119,13 @@ class IncrementalIndexManager:
         """
         try:
             data = {
-                'version': '1.0',
-                'project_path': self.project_path,
-                'created_at': time.time(),
-                'updated_at': time.time(),
-                'entries': {
-                    path: entry.to_dict()
-                    for path, entry in self._index.items()
-                }
+                "version": "1.0",
+                "project_path": self.project_path,
+                "created_at": time.time(),
+                "updated_at": time.time(),
+                "entries": {path: entry.to_dict() for path, entry in self._index.items()},
             }
-            with open(self._index_path, 'w', encoding='utf-8') as f:
+            with open(self._index_path, "w", encoding="utf-8") as f:
                 json.dump(data, f, ensure_ascii=False, indent=2)
             return True
         except Exception:
@@ -160,7 +156,7 @@ class IncrementalIndexManager:
                     file_hash=file_hash,
                     mtime=stat.st_mtime,
                     size=stat.st_size,
-                    indexed_at=current_time
+                    indexed_at=current_time,
                 )
                 indexed_count += 1
             except Exception:
@@ -205,11 +201,7 @@ class IncrementalIndexManager:
         if elapsed > 0.1 and len(current_files) >= 1000:
             print(f"[IncrementalIndex] 变更检测耗时: {elapsed*1000:.2f}ms (文件数: {len(current_files)})")
 
-        return {
-            "changed": changed,
-            "added": added,
-            "removed": removed
-        }
+        return {"changed": changed, "added": added, "removed": removed}
 
     def get_unchanged_files(self, changed_files: Set[str], all_files: List[str]) -> List[str]:
         """获取未变更文件列表
@@ -234,11 +226,7 @@ class IncrementalIndexManager:
             size: 文件大小
         """
         self._index[file_path] = FileIndexEntry(
-            file_path=file_path,
-            file_hash=file_hash,
-            mtime=mtime,
-            size=size,
-            indexed_at=time.time()
+            file_path=file_path, file_hash=file_hash, mtime=mtime, size=size, indexed_at=time.time()
         )
 
     def get_indexed_files(self) -> List[str]:
@@ -290,10 +278,10 @@ class IncrementalIndexManager:
         """
         total_size = sum(entry.size for entry in self._index.values())
         return {
-            'indexed_files': len(self._index),
-            'total_size': total_size,
-            'index_path': str(self._index_path),
-            'project_path': self.project_path
+            "indexed_files": len(self._index),
+            "total_size": total_size,
+            "index_path": str(self._index_path),
+            "project_path": self.project_path,
         }
 
     def clear_index(self) -> bool:

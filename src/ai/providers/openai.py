@@ -66,7 +66,7 @@ class OpenAIClient(AIClient):
         messages = []
         if request.system_prompt:
             messages.append({"role": "system", "content": request.system_prompt})
-        
+
         # 处理多模态内容
         if request.multimodal_content:
             content = []
@@ -75,7 +75,12 @@ class OpenAIClient(AIClient):
             # 添加图像内容
             for item in request.multimodal_content:
                 if item.type == "image":
-                    content.append({"type": "image_url", "image_url": {"url": f"data:image/png;base64,{item.content}"}})
+                    content.append(
+                        {
+                            "type": "image_url",
+                            "image_url": {"url": f"data:image/png;base64,{item.content}"},
+                        }
+                    )
             messages.append({"role": "user", "content": content})
         else:
             # 普通文本提示
@@ -119,7 +124,7 @@ class OpenAIClient(AIClient):
                 model="gpt-3.5-turbo",
                 messages=[{"role": "user", "content": "Hello"}],
                 max_tokens=10,
-                timeout=10
+                timeout=10,
             )
 
             logger.info("OpenAI API access validated successfully")

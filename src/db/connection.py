@@ -67,7 +67,8 @@ class DatabaseManager:
             raise RuntimeError("数据库未初始化")
 
         # 扫描表
-        await self._connection.execute("""
+        await self._connection.execute(
+            """
             CREATE TABLE IF NOT EXISTS scans (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 target TEXT NOT NULL,
@@ -79,10 +80,12 @@ class DatabaseManager:
                 metadata TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
-        """)
+        """
+        )
 
         # 发现表
-        await self._connection.execute("""
+        await self._connection.execute(
+            """
             CREATE TABLE IF NOT EXISTS findings (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 scan_id INTEGER NOT NULL,
@@ -101,18 +104,25 @@ class DatabaseManager:
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (scan_id) REFERENCES scans (id)
             )
-        """)
+        """
+        )
 
         # 创建索引
-        await self._connection.execute("""
+        await self._connection.execute(
+            """
             CREATE INDEX IF NOT EXISTS idx_findings_scan_id ON findings (scan_id)
-        """)
-        await self._connection.execute("""
+        """
+        )
+        await self._connection.execute(
+            """
             CREATE INDEX IF NOT EXISTS idx_findings_severity ON findings (severity)
-        """)
-        await self._connection.execute("""
+        """
+        )
+        await self._connection.execute(
+            """
             CREATE INDEX IF NOT EXISTS idx_findings_rule_id ON findings (rule_id)
-        """)
+        """
+        )
 
         await self._connection.commit()
 

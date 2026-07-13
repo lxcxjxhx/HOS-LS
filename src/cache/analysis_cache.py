@@ -5,13 +5,13 @@
 
 import hashlib
 import json
+import logging
 import pickle
 import time
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -19,6 +19,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class CacheEntry:
     """缓存条目"""
+
     key: str
     value: Any
     created_at: float
@@ -212,12 +213,12 @@ class AnalysisCache:
         hit_rate = self._hits / total_requests if total_requests > 0 else 0.0
 
         return {
-            'size': len(self._memory_cache),
-            'max_size': self.max_size,
-            'hits': self._hits,
-            'misses': self._misses,
-            'hit_rate': hit_rate,
-            'total_requests': total_requests,
+            "size": len(self._memory_cache),
+            "max_size": self.max_size,
+            "hits": self._hits,
+            "misses": self._misses,
+            "hit_rate": hit_rate,
+            "total_requests": total_requests,
         }
 
     def save_to_disk(self, filename: str) -> bool:
@@ -235,23 +236,23 @@ class AnalysisCache:
         try:
             filepath = self.cache_dir / filename
             data = {
-                'cache': {
+                "cache": {
                     key: {
-                        'key': entry.key,
-                        'value': entry.value,
-                        'created_at': entry.created_at,
-                        'last_accessed': entry.last_accessed,
-                        'access_count': entry.access_count,
-                        'ttl': entry.ttl,
-                        'metadata': entry.metadata,
+                        "key": entry.key,
+                        "value": entry.value,
+                        "created_at": entry.created_at,
+                        "last_accessed": entry.last_accessed,
+                        "access_count": entry.access_count,
+                        "ttl": entry.ttl,
+                        "metadata": entry.metadata,
                     }
                     for key, entry in self._memory_cache.items()
                     if not self._is_expired(entry)
                 },
-                'saved_at': datetime.now().isoformat(),
+                "saved_at": datetime.now().isoformat(),
             }
 
-            with open(filepath, 'wb') as f:
+            with open(filepath, "wb") as f:
                 pickle.dump(data, f)
 
             logger.info(f"Cache saved to {filepath}")
@@ -277,10 +278,10 @@ class AnalysisCache:
             if not filepath.exists():
                 return False
 
-            with open(filepath, 'rb') as f:
+            with open(filepath, "rb") as f:
                 data = pickle.load(f)
 
-            cache_data = data.get('cache', {})
+            cache_data = data.get("cache", {})
             for key, entry_data in cache_data.items():
                 entry = CacheEntry(**entry_data)
                 if not self._is_expired(entry):
@@ -377,11 +378,11 @@ class MultiLevelCache:
     def get_stats(self) -> Dict[str, Any]:
         """获取统计信息"""
         stats = {
-            'memory': self.memory_cache.get_stats(),
+            "memory": self.memory_cache.get_stats(),
         }
 
         if self.disk_cache:
-            stats['disk'] = self.disk_cache.get_stats()
+            stats["disk"] = self.disk_cache.get_stats()
 
         return stats
 

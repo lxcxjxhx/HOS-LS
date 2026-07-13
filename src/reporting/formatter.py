@@ -9,16 +9,18 @@ APTS合规增强:
 - APTS-RP-004: 发现溯源 (规则来源、分析器来源)
 """
 
-from typing import Dict, Any, List, Optional
+from typing import Any, Dict, List, Optional
+
 from src.utils.translation import (
+    SEVERITY_MAP,
+    STATUS_MAP,
+    VERDICT_MAP,
+    translate_recommendation,
     translate_severity,
     translate_verdict,
     translate_vulnerability_title,
-    translate_recommendation,
-    SEVERITY_MAP,
-    VERDICT_MAP,
-    STATUS_MAP
 )
+
 
 class OutputFormatter:
     """输出格式化器
@@ -182,43 +184,51 @@ class OutputFormatter:
         chain_links = []
         for i, ev in enumerate(evidence):
             if isinstance(ev, dict):
-                chain_links.append({
-                    "index": i + 1,
-                    "file_path": ev.get("file_path", ""),
-                    "line_number": ev.get("line", ev.get("line_number", 0)),
-                    "code_snippet": ev.get("code_snippet", ev.get("snippet", "")),
-                    "description": ev.get("description", ""),
-                    "type": ev.get("type", "evidence"),
-                })
+                chain_links.append(
+                    {
+                        "index": i + 1,
+                        "file_path": ev.get("file_path", ""),
+                        "line_number": ev.get("line", ev.get("line_number", 0)),
+                        "code_snippet": ev.get("code_snippet", ev.get("snippet", "")),
+                        "description": ev.get("description", ""),
+                        "type": ev.get("type", "evidence"),
+                    }
+                )
             elif isinstance(ev, str):
-                chain_links.append({
-                    "index": i + 1,
-                    "file_path": metadata.get("file_path", ""),
-                    "line_number": metadata.get("line", 0),
-                    "code_snippet": ev,
-                    "description": "",
-                    "type": "evidence",
-                })
+                chain_links.append(
+                    {
+                        "index": i + 1,
+                        "file_path": metadata.get("file_path", ""),
+                        "line_number": metadata.get("line", 0),
+                        "code_snippet": ev,
+                        "description": "",
+                        "type": "evidence",
+                    }
+                )
 
         call_chain = []
         chain_data = vuln.get("chain", []) or metadata.get("call_chain", [])
         for i, step in enumerate(chain_data):
             if isinstance(step, dict):
-                call_chain.append({
-                    "index": i + 1,
-                    "file_path": step.get("file_path", ""),
-                    "line_number": step.get("line", 0),
-                    "code_snippet": step.get("code_snippet", ""),
-                    "description": step.get("description", ""),
-                })
+                call_chain.append(
+                    {
+                        "index": i + 1,
+                        "file_path": step.get("file_path", ""),
+                        "line_number": step.get("line", 0),
+                        "code_snippet": step.get("code_snippet", ""),
+                        "description": step.get("description", ""),
+                    }
+                )
             elif hasattr(step, "file_path"):
-                call_chain.append({
-                    "index": i + 1,
-                    "file_path": step.file_path,
-                    "line_number": step.line if hasattr(step, "line") else 0,
-                    "code_snippet": step.code_snippet if hasattr(step, "code_snippet") else "",
-                    "description": step.description if hasattr(step, "description") else "",
-                })
+                call_chain.append(
+                    {
+                        "index": i + 1,
+                        "file_path": step.file_path,
+                        "line_number": step.line if hasattr(step, "line") else 0,
+                        "code_snippet": step.code_snippet if hasattr(step, "code_snippet") else "",
+                        "description": step.description if hasattr(step, "description") else "",
+                    }
+                )
 
         location = vuln.get("location", {})
         if isinstance(location, str):
@@ -323,7 +333,9 @@ class OutputFormatter:
             "methodology": "evidence_based_estimation",
         }
 
-    def format_findings(self, findings: List[Dict[str, Any]], include_raw: bool = False) -> List[Dict[str, Any]]:
+    def format_findings(
+        self, findings: List[Dict[str, Any]], include_raw: bool = False
+    ) -> List[Dict[str, Any]]:
         """格式化多个漏洞输出
 
         Args:
@@ -422,6 +434,7 @@ class OutputFormatter:
 
         return "\n".join(lines)
 
+
 def format_finding_cn(vuln: Dict[str, Any], include_raw: bool = False) -> Dict[str, Any]:
     """便捷函数：格式化漏洞输出（中文优先）
 
@@ -435,7 +448,10 @@ def format_finding_cn(vuln: Dict[str, Any], include_raw: bool = False) -> Dict[s
     formatter = OutputFormatter(lang="zh")
     return formatter.format_finding(vuln, include_raw)
 
-def format_findings_cn(findings: List[Dict[str, Any]], include_raw: bool = False) -> List[Dict[str, Any]]:
+
+def format_findings_cn(
+    findings: List[Dict[str, Any]], include_raw: bool = False
+) -> List[Dict[str, Any]]:
     """便捷函数：格式化多个漏洞输出
 
     Args:

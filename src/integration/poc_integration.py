@@ -3,8 +3,8 @@
 将 POC 生成和执行集成到 HOS-LS 扫描流程中。
 """
 
-from typing import Dict, List, Any, Optional
 from pathlib import Path
+from typing import Any, Dict, List, Optional
 
 
 class POCIntegration:
@@ -36,6 +36,7 @@ class POCIntegration:
 
         try:
             from src.execution.poc_runner import POCRunner
+
             self.poc_runner = POCRunner()
         except Exception:
             self.poc_runner = None
@@ -50,12 +51,7 @@ class POCIntegration:
         Returns:
             POC 生成结果
         """
-        results = {
-            "total": len(findings),
-            "generated": 0,
-            "failed": 0,
-            "pocs": []
-        }
+        results = {"total": len(findings), "generated": 0, "failed": 0, "pocs": []}
 
         if not self.poc_generator:
             results["error"] = "POC Generator not initialized"
@@ -64,26 +60,29 @@ class POCIntegration:
         for finding in findings:
             try:
                 context = {
-                    "file_path": getattr(finding, 'file_path', ''),
-                    "line_number": getattr(finding, 'line_number', 0),
-                    "vuln_type": getattr(finding, 'vuln_type', getattr(finding, 'rule_name', 'unknown')),
-                    "message": getattr(finding, 'message', ''),
-                    "severity": str(getattr(finding, 'severity', 'unknown')),
-                    "confidence": getattr(finding, 'confidence', 0.0),
+                    "file_path": getattr(finding, "file_path", ""),
+                    "line_number": getattr(finding, "line_number", 0),
+                    "vuln_type": getattr(
+                        finding, "vuln_type", getattr(finding, "rule_name", "unknown")
+                    ),
+                    "message": getattr(finding, "message", ""),
+                    "severity": str(getattr(finding, "severity", "unknown")),
+                    "confidence": getattr(finding, "confidence", 0.0),
                 }
 
                 method_id = self.poc_generator.generate_poc(
-                    context=context,
-                    validator_name=getattr(finding, 'validator_name', None)
+                    context=context, validator_name=getattr(finding, "validator_name", None)
                 )
 
                 results["generated"] += 1
-                results["pocs"].append({
-                    "method_id": method_id,
-                    "vuln_type": context["vuln_type"],
-                    "file_path": context["file_path"],
-                    "line_number": context["line_number"]
-                })
+                results["pocs"].append(
+                    {
+                        "method_id": method_id,
+                        "vuln_type": context["vuln_type"],
+                        "file_path": context["file_path"],
+                        "line_number": context["line_number"],
+                    }
+                )
             except Exception as e:
                 results["failed"] += 1
 
@@ -104,7 +103,7 @@ class POCIntegration:
             "executed": 0,
             "vulnerable": 0,
             "errors": 0,
-            "details": []
+            "details": [],
         }
 
         if not self.poc_runner:
@@ -125,10 +124,7 @@ class POCIntegration:
                     continue
 
                 result = self.poc_runner.run_poc(
-                    poc_script=script,
-                    target=target,
-                    vuln_type=vuln_type,
-                    poc_id=method_id
+                    poc_script=script, target=target, vuln_type=vuln_type, poc_id=method_id
                 )
 
                 results["executed"] += 1

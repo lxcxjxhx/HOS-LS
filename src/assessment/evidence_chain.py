@@ -3,9 +3,9 @@
 提供证据链的构建、验证和绑定功能。
 """
 
-from typing import List, Optional, Dict, Any, Tuple
 from dataclasses import dataclass, field
 from datetime import datetime
+from typing import Any, Dict, List, Optional, Tuple
 
 from src.core.engine import Evidence, Finding
 
@@ -20,15 +20,15 @@ class EvidenceChainBuilder:
         raw_output: str,
         confidence: float,
         command: Optional[str] = None,
-        tool: Optional[str] = None
-    ) -> 'EvidenceChainBuilder':
+        tool: Optional[str] = None,
+    ) -> "EvidenceChainBuilder":
         evidence = Evidence(
             source=source,
             raw_output=raw_output,
             confidence=confidence,
             command=command,
             tool=tool,
-            timestamp=datetime.now()
+            timestamp=datetime.now(),
         )
         self._evidence.append(evidence)
         return self

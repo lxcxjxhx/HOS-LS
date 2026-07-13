@@ -190,7 +190,9 @@ class FunctionCache:
         key = self.get_cache_key(function_code)
         return self._cache_manager.get(key)
 
-    def set(self, function_code: str, result: Dict[str, Any], expire: Optional[int] = 86400) -> None:
+    def set(
+        self, function_code: str, result: Dict[str, Any], expire: Optional[int] = 86400
+    ) -> None:
         key = self.get_cache_key(function_code)
         self._cache_manager.set(key, result, expire=expire)
 

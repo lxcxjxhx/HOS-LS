@@ -1,11 +1,11 @@
-import json
-import time
 import hashlib
+import json
 import shutil
-from pathlib import Path
-from typing import Dict, List, Any, Optional
-from dataclasses import dataclass, asdict, field
+import time
+from dataclasses import asdict, dataclass, field
 from datetime import datetime
+from pathlib import Path
+from typing import Any, Dict, List, Optional
 
 
 @dataclass
@@ -118,9 +118,7 @@ class CheckpointManager:
         try:
             for checkpoint_file in self.checkpoint_dir.glob("*.json"):
                 try:
-                    with open(
-                        checkpoint_file, "r", encoding="utf-8", errors="replace"
-                    ) as f:
+                    with open(checkpoint_file, "r", encoding="utf-8", errors="replace") as f:
                         data = json.load(f)
                     checkpoints.append(CheckpointData.from_dict(data))
                 except Exception:

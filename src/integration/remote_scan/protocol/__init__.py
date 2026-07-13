@@ -3,9 +3,9 @@
 远程扫描协议实现。
 """
 
-from .ssh_protocol import SSHProtocol
 from .http_protocol import HTTPProtocol
 from .serial_protocol import SerialProtocol
+from .ssh_protocol import SSHProtocol
 
 __all__ = [
     "SSHProtocol",

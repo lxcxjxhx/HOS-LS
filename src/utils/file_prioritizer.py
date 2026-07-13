@@ -22,45 +22,161 @@ class FilePrioritizer:
         """初始化文件优先级评估器"""
         # 安全敏感关键词
         self.security_keywords = {
-            'auth', 'login', 'password', 'credential', 'token', 'secret', 'key',
-            'secure', 'encrypt', 'decrypt', 'crypto', 'hash', 'session', 'cookie',
-            'admin', 'user', 'permission', 'role', 'access', 'authorization',
-            'api', 'endpoint', 'route', 'controller',
-            'rest', 'graphql', 'grpc', 'soap',
-            'websocket', 'socket',
-            'middleware', 'filter', 'interceptor',
-            'cors', 'csrf', 'xss',
-            'api_key', 'jwt', 'oauth',
-            'port', 'listen', 'bind', 'server',
-            'database', 'db', 'sql', 'query', 'connection', 'config', 'setting',
-            'network', 'http', 'https', 'request', 'response', 'header', 'payload',
-            'input', 'validation', 'sanitize', 'escape', 'inject',
-            'clickjack', 'redirect', 'oauth2', 'openid'
+            "auth",
+            "login",
+            "password",
+            "credential",
+            "token",
+            "secret",
+            "key",
+            "secure",
+            "encrypt",
+            "decrypt",
+            "crypto",
+            "hash",
+            "session",
+            "cookie",
+            "admin",
+            "user",
+            "permission",
+            "role",
+            "access",
+            "authorization",
+            "api",
+            "endpoint",
+            "route",
+            "controller",
+            "rest",
+            "graphql",
+            "grpc",
+            "soap",
+            "websocket",
+            "socket",
+            "middleware",
+            "filter",
+            "interceptor",
+            "cors",
+            "csrf",
+            "xss",
+            "api_key",
+            "jwt",
+            "oauth",
+            "port",
+            "listen",
+            "bind",
+            "server",
+            "database",
+            "db",
+            "sql",
+            "query",
+            "connection",
+            "config",
+            "setting",
+            "network",
+            "http",
+            "https",
+            "request",
+            "response",
+            "header",
+            "payload",
+            "input",
+            "validation",
+            "sanitize",
+            "escape",
+            "inject",
+            "clickjack",
+            "redirect",
+            "oauth2",
+            "openid",
         }
 
         # 高优先级文件扩展名
         self.high_priority_extensions = {
-            '.py', '.js', '.ts', '.java', '.c', '.cpp', '.cs', '.go', '.rb',
-            '.php', '.scala', '.swift', '.kt', '.rs', '.html', '.css', '.json',
-            '.yml', '.yaml', '.xml', '.ini', '.conf', '.cfg'
+            ".py",
+            ".js",
+            ".ts",
+            ".java",
+            ".c",
+            ".cpp",
+            ".cs",
+            ".go",
+            ".rb",
+            ".php",
+            ".scala",
+            ".swift",
+            ".kt",
+            ".rs",
+            ".html",
+            ".css",
+            ".json",
+            ".yml",
+            ".yaml",
+            ".xml",
+            ".ini",
+            ".conf",
+            ".cfg",
         }
 
         # 低优先级文件扩展名
         self.low_priority_extensions = {
-            '.txt', '.md', '.rst', '.log', '.tmp', '.temp', '.bak', '.backup',
-            '.zip', '.tar', '.gz', '.rar', '.7z', '.exe', '.dll', '.so', '.dylib',
-            '.jpg', '.jpeg', '.png', '.gif', '.bmp', '.svg', '.mp3', '.mp4', '.avi',
-            '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx'
+            ".txt",
+            ".md",
+            ".rst",
+            ".log",
+            ".tmp",
+            ".temp",
+            ".bak",
+            ".backup",
+            ".zip",
+            ".tar",
+            ".gz",
+            ".rar",
+            ".7z",
+            ".exe",
+            ".dll",
+            ".so",
+            ".dylib",
+            ".jpg",
+            ".jpeg",
+            ".png",
+            ".gif",
+            ".bmp",
+            ".svg",
+            ".mp3",
+            ".mp4",
+            ".avi",
+            ".pdf",
+            ".doc",
+            ".docx",
+            ".xls",
+            ".xlsx",
+            ".ppt",
+            ".pptx",
         }
 
         # 目录重要性权重
         self.directory_weights = {
-            'auth': 0.9, 'security': 0.9, 'api': 0.85, 'routes': 0.85,
-            'endpoints': 0.85, 'controllers': 0.8,
-            'middleware': 0.8, 'filters': 0.8, 'interceptors': 0.8,
-            'config': 0.7, 'settings': 0.7, 'database': 0.7, 'db': 0.7,
-            'models': 0.6, 'views': 0.5, 'templates': 0.5, 'static': 0.3, 'public': 0.3,
-            'tests': 0.2, 'docs': 0.1, 'examples': 0.1
+            "auth": 0.9,
+            "security": 0.9,
+            "api": 0.85,
+            "routes": 0.85,
+            "endpoints": 0.85,
+            "controllers": 0.8,
+            "middleware": 0.8,
+            "filters": 0.8,
+            "interceptors": 0.8,
+            "config": 0.7,
+            "settings": 0.7,
+            "database": 0.7,
+            "db": 0.7,
+            "models": 0.6,
+            "views": 0.5,
+            "templates": 0.5,
+            "static": 0.3,
+            "public": 0.3,
+            "tests": 0.2,
+            "docs": 0.1,
+            "examples": 0.1,
         }
 
     def evaluate_file_priority(self, file_path: Path) -> Tuple[float, str]:
@@ -73,20 +189,20 @@ class FilePrioritizer:
             (优先级分数, 优先级级别)
         """
         score = 0.0
-        
+
         # 首先检查是否是测试文件，如果是则强制降低优先级
         filename_lower = file_path.name.lower()
         is_test_file = (
-            filename_lower.startswith('test_') or
-            filename_lower.endswith('_test.py') or
-            filename_lower.endswith('_test.js') or
-            filename_lower.endswith('_test.ts') or
-            filename_lower.startswith('spec_') or
-            filename_lower.endswith('_spec.py') or
-            filename_lower.endswith('_spec.js') or
-            filename_lower.endswith('_spec.ts') or
-            'tests' in str(file_path.parent).lower() or
-            '__tests__' in str(file_path.parent).lower()
+            filename_lower.startswith("test_")
+            or filename_lower.endswith("_test.py")
+            or filename_lower.endswith("_test.js")
+            or filename_lower.endswith("_test.ts")
+            or filename_lower.startswith("spec_")
+            or filename_lower.endswith("_spec.py")
+            or filename_lower.endswith("_spec.js")
+            or filename_lower.endswith("_spec.ts")
+            or "tests" in str(file_path.parent).lower()
+            or "__tests__" in str(file_path.parent).lower()
         )
 
         # 评估文件名
@@ -100,18 +216,18 @@ class FilePrioritizer:
         # 评估目录路径
         directory_score = self._evaluate_directory(file_path.parent)
         score += directory_score * 0.3
-        
+
         # 如果是测试文件，强制降低分数
         if is_test_file:
             score = min(score * 0.3, 0.3)
 
         # 确定优先级级别
         if score >= 0.7:
-            priority = 'high'
+            priority = "high"
         elif score >= 0.4:
-            priority = 'medium'
+            priority = "medium"
         else:
-            priority = 'low'
+            priority = "low"
 
         logger.debug(f"文件 {file_path} 优先级评估: 分数={score:.2f}, 级别={priority}, 测试文件={is_test_file}")
         return score, priority
@@ -137,21 +253,21 @@ class FilePrioritizer:
                 score = min(score + 0.1, 0.5)
 
         # 检查常见配置文件名
-        config_patterns = ['config', 'setting', 'env', 'environment', 'secret', 'key']
+        config_patterns = ["config", "setting", "env", "environment", "secret", "key"]
         for pattern in config_patterns:
             if pattern in filename_lower:
                 score = min(score + 0.3, 0.8)
                 break
 
         # 检查API相关文件名
-        api_patterns = ['api', 'endpoint', 'route', 'controller']
+        api_patterns = ["api", "endpoint", "route", "controller"]
         for pattern in api_patterns:
             if pattern in filename_lower:
                 score = min(score + 0.2, 0.7)
                 break
 
         # 检查认证相关文件名
-        auth_patterns = ['auth', 'login', 'user', 'permission']
+        auth_patterns = ["auth", "login", "user", "permission"]
         for pattern in auth_patterns:
             if pattern in filename_lower:
                 score = min(score + 0.2, 0.7)
@@ -206,7 +322,7 @@ class FilePrioritizer:
             是否应该执行AI分析
         """
         _, priority = self.evaluate_file_priority(file_path)
-        return priority in ['high', 'medium']
+        return priority in ["high", "medium"]
 
     def prioritize_files(self, files: List[Path]) -> List[Tuple[Path, float, str]]:
         """对文件列表进行优先级排序
@@ -238,7 +354,7 @@ class FilePrioritizer:
         high_priority = []
         for file_path in files:
             _, priority = self.evaluate_file_priority(file_path)
-            if priority == 'high':
+            if priority == "high":
                 high_priority.append(file_path)
         return high_priority
 
@@ -254,7 +370,7 @@ class FilePrioritizer:
         medium_priority = []
         for file_path in files:
             _, priority = self.evaluate_file_priority(file_path)
-            if priority == 'medium':
+            if priority == "medium":
                 medium_priority.append(file_path)
         return medium_priority
 
@@ -270,7 +386,7 @@ class FilePrioritizer:
         low_priority = []
         for file_path in files:
             _, priority = self.evaluate_file_priority(file_path)
-            if priority == 'low':
+            if priority == "low":
                 low_priority.append(file_path)
         return low_priority
 
@@ -288,9 +404,26 @@ class FilePrioritizer:
         path_lower = str(file_path).lower()
 
         api_filename_keywords = [
-            'api', 'endpoint', 'route', 'controller', 'rest', 'graphql', 'grpc',
-            'soap', 'websocket', 'socket', 'middleware', 'filter', 'interceptor',
-            'cors', 'csrf', 'xss', 'api_key', 'token', 'jwt', 'oauth'
+            "api",
+            "endpoint",
+            "route",
+            "controller",
+            "rest",
+            "graphql",
+            "grpc",
+            "soap",
+            "websocket",
+            "socket",
+            "middleware",
+            "filter",
+            "interceptor",
+            "cors",
+            "csrf",
+            "xss",
+            "api_key",
+            "token",
+            "jwt",
+            "oauth",
         ]
 
         for keyword in api_filename_keywords:
@@ -299,10 +432,17 @@ class FilePrioritizer:
                 break
 
         api_path_patterns = [
-            r'[/\\]api[/\\]', r'[/\\]endpoints?[/\\]', r'[/\\]routes?[/\\]',
-            r'[/\\]middleware[/\\]', r'[/\\]filters?[/\\]', r'[/\\]interceptors?[/\\]',
-            r'[/\\]rest[/\\]', r'[/\\]graphql[/\\]', r'[/\\]grpc[/\\]',
-            r'[/\\]websocket[/\\]', r'[/\\]socket[/\\]'
+            r"[/\\]api[/\\]",
+            r"[/\\]endpoints?[/\\]",
+            r"[/\\]routes?[/\\]",
+            r"[/\\]middleware[/\\]",
+            r"[/\\]filters?[/\\]",
+            r"[/\\]interceptors?[/\\]",
+            r"[/\\]rest[/\\]",
+            r"[/\\]graphql[/\\]",
+            r"[/\\]grpc[/\\]",
+            r"[/\\]websocket[/\\]",
+            r"[/\\]socket[/\\]",
         ]
 
         for pattern in api_path_patterns:
@@ -311,11 +451,11 @@ class FilePrioritizer:
                 break
 
         if score >= 0.8:
-            priority = 'high'
+            priority = "high"
         elif score >= 0.5:
-            priority = 'medium'
+            priority = "medium"
         else:
-            priority = 'low'
+            priority = "low"
 
         logger.debug(f"文件 {file_path} API优先级评估: 分数={score:.2f}, 级别={priority}")
         return score, priority

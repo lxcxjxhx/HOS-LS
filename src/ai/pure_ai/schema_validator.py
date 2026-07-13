@@ -3,45 +3,52 @@
 提供Schema验证、自动修复和重试机制。
 """
 
-import json
-import re
 import hashlib
-from typing import Dict, Any, Optional, Callable, List, Tuple
-from src.ai.pure_ai.schema import (
-    FINAL_DECISION_SCHEMA,
-    VULNERABILITY_SCHEMA,
-    ADVERSARIAL_SCHEMA,
-    RISK_ENUMERATION_SCHEMA,
-    SignalState,
-    LineMatchStatus
-)
-from src.ai.pure_ai.line_number_mapper import LineNumberMapper
-import yaml
+import json
 import os
+import re
+from typing import Any, Callable, Dict, List, Optional, Tuple
+
+import yaml
+
+from src.ai.pure_ai.line_number_mapper import LineNumberMapper
+from src.ai.pure_ai.schema import (
+    ADVERSARIAL_SCHEMA,
+    FINAL_DECISION_SCHEMA,
+    RISK_ENUMERATION_SCHEMA,
+    VULNERABILITY_SCHEMA,
+    LineMatchStatus,
+    SignalState,
+)
 
 FORBIDDEN_PATTERNS = [
-    r'^Unknown$',
-    r'^未知$',
-    r'^Unknown\s+risk',
-    r'^未知\s+风险',
-    r'Unable to determine',
-    r'无法确定',
+    r"^Unknown$",
+    r"^未知$",
+    r"^Unknown\s+risk",
+    r"^未知\s+风险",
+    r"Unable to determine",
+    r"无法确定",
 ]
 
 STRUCTURED_TAGS = [
     "SUSPICIOUS_PATTERN",
     "WEAK_SECURITY_SIGNAL",
     "NEEDS_VERIFICATION",
-    "ARCHITECTURAL_RISK"
+    "ARCHITECTURAL_RISK",
 ]
+
 
 class SchemaValidationError(Exception):
     """Schema验证异常"""
+
     pass
+
 
 class ForbiddenOutputError(Exception):
     """禁止的输出异常"""
+
     pass
+
 
 class SchemaValidator:
     """Schema验证器
@@ -54,7 +61,7 @@ class SchemaValidator:
             "final_decision": FINAL_DECISION_SCHEMA,
             "vulnerability": VULNERABILITY_SCHEMA,
             "adversarial": ADVERSARIAL_SCHEMA,
-            "risk_enumeration": RISK_ENUMERATION_SCHEMA
+            "risk_enumeration": RISK_ENUMERATION_SCHEMA,
         }
 
     def validate(self, data: Any, schema_name: str) -> tuple[bool, Optional[str]]:
@@ -79,7 +86,9 @@ class SchemaValidator:
             return False, "; ".join(errors)
         return True, None
 
-    def validate_strict_output_contract(self, data: Dict[str, Any], schema_name: str) -> tuple[bool, List[str]]:
+    def validate_strict_output_contract(
+        self, data: Dict[str, Any], schema_name: str
+    ) -> tuple[bool, List[str]]:
         """严格验证输出契约
 
         检查是否有禁止的Unknown输出，确保evidence结构完整。
@@ -127,8 +136,10 @@ class SchemaValidator:
                         if re.search(pattern, value, re.IGNORECASE):
                             if value.strip() in STRUCTURED_TAGS:
                                 continue
-                            if value.count('Unknown') == 1 and len(value.split()) <= 2:
-                                errors.append(f"Forbidden pattern at {current_path}: '{value}' - use STRUCTURED_TAGS instead")
+                            if value.count("Unknown") == 1 and len(value.split()) <= 2:
+                                errors.append(
+                                    f"Forbidden pattern at {current_path}: '{value}' - use STRUCTURED_TAGS instead"
+                                )
                 elif isinstance(value, (dict, list)):
                     errors.extend(self._check_forbidden_patterns(value, current_path))
         elif isinstance(data, list):
@@ -156,7 +167,7 @@ class SchemaValidator:
             "vulnerability": ["vulnerabilities"],
             "adversarial": ["adversarial_analysis"],
             "risk_enumeration": ["risks"],
-            "attack_chain": ["attack_chains"]
+            "attack_chain": ["attack_chains"],
         }
 
         if schema_name not in evidence_required_schemas:
@@ -170,8 +181,13 @@ class SchemaValidator:
                     if isinstance(item, dict) and "evidence" in item:
                         evidence = item["evidence"]
                         if not isinstance(evidence, list):
-                            errors.append(f"Evidence at {field}[{i}] must be array, got {type(evidence).__name__}")
-                        elif len(evidence) == 0 and item.get("signal_state") not in ["REFINED", "NEW"]:
+                            errors.append(
+                                f"Evidence at {field}[{i}] must be array, got {type(evidence).__name__}"
+                            )
+                        elif len(evidence) == 0 and item.get("signal_state") not in [
+                            "REFINED",
+                            "NEW",
+                        ]:
                             pass
 
         return errors
@@ -191,7 +207,7 @@ class SchemaValidator:
         signal_tracking_schemas = {
             "vulnerability": ["vulnerabilities"],
             "risk_enumeration": ["risks"],
-            "attack_chain": ["attack_chains"]
+            "attack_chain": ["attack_chains"],
         }
 
         if schema_name not in signal_tracking_schemas:
@@ -249,12 +265,21 @@ class SchemaValidator:
                     fixed[key] = value
             return fixed
         elif isinstance(data, list):
-            return [self.fix_unknown_outputs(item) if isinstance(item, (dict, list)) else
-                    self.sanitize_forbidden_output(item) if isinstance(item, str) else item
-                    for item in data]
+            return [
+                (
+                    self.fix_unknown_outputs(item)
+                    if isinstance(item, (dict, list))
+                    else self.sanitize_forbidden_output(item)
+                    if isinstance(item, str)
+                    else item
+                )
+                for item in data
+            ]
         return data
 
-    def fix_invalid_locations(self, data: Dict[str, Any], schema_name: str = None) -> Dict[str, Any]:
+    def fix_invalid_locations(
+        self, data: Dict[str, Any], schema_name: str = None
+    ) -> Dict[str, Any]:
         """修复无效的位置信息
 
         将包含 :line、:行号未知 等无效行号的位置尝试修复。
@@ -270,14 +295,14 @@ class SchemaValidator:
             return data
 
         invalid_patterns = [
-            (r':line$', ':1'),
-            (r':Line$', ':1'),
-            (r':LINE$', ':1'),
-            (r':行号未知$', ':1'),
-            (r':行号$', ':1'),
-            (r':未知$', ':1'),
-            (r':unknown$', ':1'),
-            (r':Unknown$', ':1'),
+            (r":line$", ":1"),
+            (r":Line$", ":1"),
+            (r":LINE$", ":1"),
+            (r":行号未知$", ":1"),
+            (r":行号$", ":1"),
+            (r":未知$", ":1"),
+            (r":unknown$", ":1"),
+            (r":Unknown$", ":1"),
         ]
 
         def fix_location(location_str: str) -> str:
@@ -294,7 +319,7 @@ class SchemaValidator:
             if isinstance(item, dict):
                 fixed = {}
                 for key, value in item.items():
-                    if key == 'location' and isinstance(value, str):
+                    if key == "location" and isinstance(value, str):
                         fixed[key] = fix_location(value)
                     elif isinstance(value, (dict, list)):
                         fixed[key] = fix_item(value)
@@ -302,9 +327,16 @@ class SchemaValidator:
                         fixed[key] = value
                 return fixed
             elif isinstance(item, list):
-                return [fix_item(i) if isinstance(i, (dict, list)) else
-                        fix_location(i) if isinstance(i, str) else i
-                        for i in item]
+                return [
+                    (
+                        fix_item(i)
+                        if isinstance(i, (dict, list))
+                        else fix_location(i)
+                        if isinstance(i, str)
+                        else i
+                    )
+                    for i in item
+                ]
             return item
 
         return fix_item(data)
@@ -335,23 +367,37 @@ class SchemaValidator:
 
                 if field_type == "object":
                     if not isinstance(field_value, dict):
-                        errors.append(f"Expected dict for {path}.{field}, got {type(field_value).__name__}")
+                        errors.append(
+                            f"Expected dict for {path}.{field}, got {type(field_value).__name__}"
+                        )
                     elif "properties" in field_schema:
-                        errors.extend(self._validate_object(field_value, field_schema, f"{path}.{field}"))
+                        errors.extend(
+                            self._validate_object(field_value, field_schema, f"{path}.{field}")
+                        )
                 elif field_type == "array":
                     if not isinstance(field_value, list):
-                        errors.append(f"Expected array for {path}.{field}, got {type(field_value).__name__}")
+                        errors.append(
+                            f"Expected array for {path}.{field}, got {type(field_value).__name__}"
+                        )
                     elif len(field_value) == 0:
                         pass
                     elif "items" in field_schema:
                         item_schema = field_schema["items"]
                         for i, item in enumerate(field_value):
                             if isinstance(item, dict) and "properties" in item_schema:
-                                errors.extend(self._validate_object(item, item_schema, f"{path}.{field}[{i}]"))
+                                errors.extend(
+                                    self._validate_object(item, item_schema, f"{path}.{field}[{i}]")
+                                )
                             if isinstance(item, dict) and "required" in item_schema:
                                 for req_field in item_schema["required"]:
-                                    if req_field not in item or item[req_field] is None or item[req_field] == "":
-                                        errors.append(f"Missing required field: {path}.{field}[{i}].{req_field}")
+                                    if (
+                                        req_field not in item
+                                        or item[req_field] is None
+                                        or item[req_field] == ""
+                                    ):
+                                        errors.append(
+                                            f"Missing required field: {path}.{field}[{i}].{req_field}"
+                                        )
 
         return errors
 
@@ -372,9 +418,13 @@ class SchemaValidator:
         for attempt in range(max_retries + 1):
             is_valid, error = self.validate(current_data, schema_name)
             if is_valid:
-                strict_valid, strict_errors = self.validate_strict_output_contract(current_data, schema_name)
+                strict_valid, strict_errors = self.validate_strict_output_contract(
+                    current_data, schema_name
+                )
                 if not strict_valid:
-                    print(f"[WARN] Strict output contract violations for {schema_name}: {strict_errors}")
+                    print(
+                        f"[WARN] Strict output contract violations for {schema_name}: {strict_errors}"
+                    )
                     current_data = self.fix_unknown_outputs(current_data)
                 current_data = self.fix_invalid_locations(current_data, schema_name)
                 validation_passed = True
@@ -382,7 +432,9 @@ class SchemaValidator:
 
             if attempt < max_retries:
                 print(f"[DEBUG] Schema validation failed for {schema_name}: {error}")
-                print(f"[DEBUG] Attempting to fix structure (attempt {attempt + 1}/{max_retries})...")
+                print(
+                    f"[DEBUG] Attempting to fix structure (attempt {attempt + 1}/{max_retries})..."
+                )
                 current_data = self._fix_structure(current_data, schema_name)
                 current_data = self.fix_unknown_outputs(current_data)
                 current_data = self.fix_invalid_locations(current_data, schema_name)
@@ -414,7 +466,7 @@ class SchemaValidator:
                     "signals_new": 0,
                     "signals_confirmed": 0,
                     "signals_rejected": 0,
-                    "signals_refined": 0
+                    "signals_refined": 0,
                 }
 
         if schema_name == "vulnerability":
@@ -440,14 +492,11 @@ class SchemaValidator:
                     "signals_confirmed": 0,
                     "signals_rejected": 0,
                     "signals_refined": 0,
-                    "signals_new": 0
-                }
+                    "signals_new": 0,
+                },
             }
         elif schema_name == "adversarial":
-            return {
-                "adversarial_analysis": [],
-                "cross_agent_agreement": []
-            }
+            return {"adversarial_analysis": [], "cross_agent_agreement": []}
         elif schema_name == "risk_enumeration":
             return {
                 "risks": [],
@@ -455,8 +504,8 @@ class SchemaValidator:
                     "signals_confirmed": 0,
                     "signals_rejected": 0,
                     "signals_refined": 0,
-                    "signals_new": 0
-                }
+                    "signals_new": 0,
+                },
             }
         elif schema_name == "attack_chain":
             return {
@@ -464,8 +513,8 @@ class SchemaValidator:
                 "signal_tracking": {
                     "signals_confirmed": 0,
                     "signals_rejected": 0,
-                    "signals_new": 0
-                }
+                    "signals_new": 0,
+                },
             }
         elif schema_name == "final_decision":
             return {
@@ -477,13 +526,15 @@ class SchemaValidator:
                     "invalid_vulnerabilities": 0,
                     "high_severity_count": 0,
                     "medium_severity_count": 0,
-                    "low_severity_count": 0
-                }
+                    "low_severity_count": 0,
+                },
             }
         else:
-            return {"unknown_schema": schema_name, "data": data if 'data' in dir() else {}}
+            return {"unknown_schema": schema_name, "data": data if "data" in dir() else {}}
 
-    def validate_with_retry(self, data: Any, schema_name: str, max_retries: int = 3) -> Dict[str, Any]:
+    def validate_with_retry(
+        self, data: Any, schema_name: str, max_retries: int = 3
+    ) -> Dict[str, Any]:
         """验证数据，如果不符合Schema则修复并重试验证
 
         Args:
@@ -498,13 +549,17 @@ class SchemaValidator:
         for attempt in range(max_retries):
             is_valid, error = self.validate(current_data, schema_name)
             if is_valid:
-                strict_valid, strict_errors = self.validate_strict_output_contract(current_data, schema_name)
+                strict_valid, strict_errors = self.validate_strict_output_contract(
+                    current_data, schema_name
+                )
                 if strict_valid:
                     print(f"[DEBUG] Schema validation passed on attempt {attempt + 1}")
                     current_data = self.fix_invalid_locations(current_data, schema_name)
                     current_data = self._ensure_required_fields(current_data, schema_name)
                     return current_data
-                print(f"[WARN] Strict contract violations on attempt {attempt + 1}: {strict_errors}")
+                print(
+                    f"[WARN] Strict contract violations on attempt {attempt + 1}: {strict_errors}"
+                )
 
             if attempt < max_retries - 1:
                 print(f"[DEBUG] Fixing structure (attempt {attempt + 1}/{max_retries})...")
@@ -555,41 +610,79 @@ class SchemaValidator:
                     if "properties" in item_schema:
                         for i, item in enumerate(fixed[field]):
                             if isinstance(item, dict):
-                                fixed[field][i] = self._fix_item_structure(item, item_schema, schema_name)
+                                fixed[field][i] = self._fix_item_structure(
+                                    item, item_schema, schema_name
+                                )
             elif is_required:
                 if field == "signal_tracking":
                     if schema_name == "attack_chain":
                         items = data.get("attack_chains", [])
-                        confirmed = sum(1 for v in items if isinstance(v, dict) and v.get("signal_state") == "CONFIRMED")
-                        rejected = sum(1 for v in items if isinstance(v, dict) and v.get("signal_state") == "REJECTED")
+                        confirmed = sum(
+                            1
+                            for v in items
+                            if isinstance(v, dict) and v.get("signal_state") == "CONFIRMED"
+                        )
+                        rejected = sum(
+                            1
+                            for v in items
+                            if isinstance(v, dict) and v.get("signal_state") == "REJECTED"
+                        )
                         refined = 0
-                        new_count = sum(1 for v in items if isinstance(v, dict) and v.get("signal_state") == "NEW")
-                        fixed[field] = {
-                            "total_signals": len(items),
-                            "signals_new": new_count,
-                            "signals_confirmed": confirmed,
-                            "signals_rejected": rejected
-                        }
-                    else:
-                        items = data.get("vulnerabilities", data.get("risks", []))
-                        confirmed = sum(1 for v in items if isinstance(v, dict) and v.get("signal_state") == "CONFIRMED")
-                        rejected = sum(1 for v in items if isinstance(v, dict) and v.get("signal_state") == "REJECTED")
-                        refined = sum(1 for v in items if isinstance(v, dict) and v.get("signal_state") == "REFINED")
-                        new_count = sum(1 for v in items if isinstance(v, dict) and v.get("signal_state") == "NEW")
+                        new_count = sum(
+                            1
+                            for v in items
+                            if isinstance(v, dict) and v.get("signal_state") == "NEW"
+                        )
                         fixed[field] = {
                             "total_signals": len(items),
                             "signals_new": new_count,
                             "signals_confirmed": confirmed,
                             "signals_rejected": rejected,
-                            "signals_refined": refined
+                        }
+                    else:
+                        items = data.get("vulnerabilities", data.get("risks", []))
+                        confirmed = sum(
+                            1
+                            for v in items
+                            if isinstance(v, dict) and v.get("signal_state") == "CONFIRMED"
+                        )
+                        rejected = sum(
+                            1
+                            for v in items
+                            if isinstance(v, dict) and v.get("signal_state") == "REJECTED"
+                        )
+                        refined = sum(
+                            1
+                            for v in items
+                            if isinstance(v, dict) and v.get("signal_state") == "REFINED"
+                        )
+                        new_count = sum(
+                            1
+                            for v in items
+                            if isinstance(v, dict) and v.get("signal_state") == "NEW"
+                        )
+                        fixed[field] = {
+                            "total_signals": len(items),
+                            "signals_new": new_count,
+                            "signals_confirmed": confirmed,
+                            "signals_rejected": rejected,
+                            "signals_refined": refined,
                         }
                 elif field == "risks" and "potential_vulnerabilities" in data:
-                    converted_risks = self._convert_potential_to_risks(data.get("potential_vulnerabilities", []))
-                    print(f"[DEBUG] [Schema Fix] 将 {len(converted_risks)} 个 potential_vulnerabilities 转换为 risks")
+                    converted_risks = self._convert_potential_to_risks(
+                        data.get("potential_vulnerabilities", [])
+                    )
+                    print(
+                        f"[DEBUG] [Schema Fix] 将 {len(converted_risks)} 个 potential_vulnerabilities 转换为 risks"
+                    )
                     fixed[field] = converted_risks
                 elif field == "vulnerabilities" and "potential_vulnerabilities" in data:
-                    converted_vulns = self._convert_potential_to_risks(data.get("potential_vulnerabilities", []))
-                    print(f"[DEBUG] [Schema Fix] 将 {len(converted_vulns)} 个 potential_vulnerabilities 转换为 vulnerabilities")
+                    converted_vulns = self._convert_potential_to_risks(
+                        data.get("potential_vulnerabilities", [])
+                    )
+                    print(
+                        f"[DEBUG] [Schema Fix] 将 {len(converted_vulns)} 个 potential_vulnerabilities 转换为 vulnerabilities"
+                    )
                     fixed[field] = converted_vulns
                 else:
                     fixed[field] = self._get_default_value(field_schema)
@@ -598,51 +691,84 @@ class SchemaValidator:
                 fixed[key] = data[key]
 
         if "signal_tracking" in fixed and isinstance(fixed["signal_tracking"], dict):
-            if not any(k in fixed["signal_tracking"] for k in ["signals_confirmed", "signals_rejected", "signals_refined", "signals_new"]):
+            if not any(
+                k in fixed["signal_tracking"]
+                for k in ["signals_confirmed", "signals_rejected", "signals_refined", "signals_new"]
+            ):
                 if schema_name == "attack_chain":
                     items = data.get("attack_chains", [])
-                    confirmed = sum(1 for v in items if isinstance(v, dict) and v.get("signal_state") == "CONFIRMED")
-                    rejected = sum(1 for v in items if isinstance(v, dict) and v.get("signal_state") == "REJECTED")
-                    new_count = sum(1 for v in items if isinstance(v, dict) and v.get("signal_state") == "NEW")
-                    fixed["signal_tracking"] = {
-                        "total_signals": len(items),
-                        "signals_new": new_count,
-                        "signals_confirmed": confirmed,
-                        "signals_rejected": rejected
-                    }
-                else:
-                    items = data.get("vulnerabilities", data.get("risks", []))
-                    confirmed = sum(1 for v in items if isinstance(v, dict) and v.get("signal_state") == "CONFIRMED")
-                    rejected = sum(1 for v in items if isinstance(v, dict) and v.get("signal_state") == "REJECTED")
-                    refined = sum(1 for v in items if isinstance(v, dict) and v.get("signal_state") == "REFINED")
-                    new_count = sum(1 for v in items if isinstance(v, dict) and v.get("signal_state") == "NEW")
+                    confirmed = sum(
+                        1
+                        for v in items
+                        if isinstance(v, dict) and v.get("signal_state") == "CONFIRMED"
+                    )
+                    rejected = sum(
+                        1
+                        for v in items
+                        if isinstance(v, dict) and v.get("signal_state") == "REJECTED"
+                    )
+                    new_count = sum(
+                        1 for v in items if isinstance(v, dict) and v.get("signal_state") == "NEW"
+                    )
                     fixed["signal_tracking"] = {
                         "total_signals": len(items),
                         "signals_new": new_count,
                         "signals_confirmed": confirmed,
                         "signals_rejected": rejected,
-                        "signals_refined": refined
+                    }
+                else:
+                    items = data.get("vulnerabilities", data.get("risks", []))
+                    confirmed = sum(
+                        1
+                        for v in items
+                        if isinstance(v, dict) and v.get("signal_state") == "CONFIRMED"
+                    )
+                    rejected = sum(
+                        1
+                        for v in items
+                        if isinstance(v, dict) and v.get("signal_state") == "REJECTED"
+                    )
+                    refined = sum(
+                        1
+                        for v in items
+                        if isinstance(v, dict) and v.get("signal_state") == "REFINED"
+                    )
+                    new_count = sum(
+                        1 for v in items if isinstance(v, dict) and v.get("signal_state") == "NEW"
+                    )
+                    fixed["signal_tracking"] = {
+                        "total_signals": len(items),
+                        "signals_new": new_count,
+                        "signals_confirmed": confirmed,
+                        "signals_rejected": rejected,
+                        "signals_refined": refined,
                     }
 
         return fixed
 
-    def _convert_potential_to_risks(self, potential_vulnerabilities: List[Dict]) -> List[Dict[str, Any]]:
+    def _convert_potential_to_risks(
+        self, potential_vulnerabilities: List[Dict]
+    ) -> List[Dict[str, Any]]:
         """将 potential_vulnerabilities 转换为 risks 格式"""
         risks = []
         for i, pv in enumerate(potential_vulnerabilities):
             if isinstance(pv, dict):
-                risks.append({
-                    "risk_type": pv.get("type", "Unknown Risk"),
-                    "severity": self._infer_severity(pv),
-                    "location": pv.get("location", "Unknown"),
-                    "signal_id": pv.get("signal_id", f"RISK-POTENTIAL-{i}"),
-                    "signal_state": "NEW",
-                    "description": pv.get("description", ""),
-                    "evidence": pv.get("evidence", [])
-                })
+                risks.append(
+                    {
+                        "risk_type": pv.get("type", "Unknown Risk"),
+                        "severity": self._infer_severity(pv),
+                        "location": pv.get("location", "Unknown"),
+                        "signal_id": pv.get("signal_id", f"RISK-POTENTIAL-{i}"),
+                        "signal_state": "NEW",
+                        "description": pv.get("description", ""),
+                        "evidence": pv.get("evidence", []),
+                    }
+                )
         return risks
 
-    def _fix_item_structure(self, item: Dict[str, Any], item_schema: Dict[str, Any], schema_name: str = None) -> Dict[str, Any]:
+    def _fix_item_structure(
+        self, item: Dict[str, Any], item_schema: Dict[str, Any], schema_name: str = None
+    ) -> Dict[str, Any]:
         """修复数组项的结构
 
         Args:
@@ -671,7 +797,7 @@ class SchemaValidator:
                     fixed[prop] = {
                         "signal_id": item.get("risk_id", "unknown"),
                         "state": "NEW",
-                        "created_at": datetime.now().isoformat()
+                        "created_at": datetime.now().isoformat(),
                     }
                 elif prop == "attack_chain_name" and schema_name == "adversarial":
                     chain_name = item.get("chain_name", "")
@@ -685,19 +811,21 @@ class SchemaValidator:
                             chain_name = "CHAIN"
                     fixed[prop] = chain_name
                 elif prop == "evidence" and isinstance(fixed.get("reason"), str):
-                    fixed[prop] = [{
-                        "type": "code_line",
-                        "location": item.get("location", "unknown"),
-                        "reason": fixed["reason"],
-                        "confidence": 0.5
-                    }]
+                    fixed[prop] = [
+                        {
+                            "type": "code_line",
+                            "location": item.get("location", "unknown"),
+                            "reason": fixed["reason"],
+                            "confidence": 0.5,
+                        }
+                    ]
                 elif prop == "signal_id" and schema_name == "risk_enumeration":
                     risk_id = item.get("risk_id")
                     if risk_id and risk_id != "unknown":
                         fixed[prop] = risk_id
                     else:
-                        risk_type = item.get('risk_type', 'unknown')
-                        location = item.get('location', '')
+                        risk_type = item.get("risk_type", "unknown")
+                        location = item.get("location", "")
                         unique_str = f"{risk_type}:{location}"
                         short_hash = hashlib.md5(unique_str.encode()).hexdigest()[:6]
                         fixed[prop] = f"RISK-{risk_type}-{short_hash}"
@@ -732,7 +860,11 @@ class SchemaValidator:
                         fixed_items = []
                         for inner_item in fixed[prop]:
                             if isinstance(inner_item, dict):
-                                fixed_items.append(self._fix_item_structure(inner_item, item_schema_inner, schema_name))
+                                fixed_items.append(
+                                    self._fix_item_structure(
+                                        inner_item, item_schema_inner, schema_name
+                                    )
+                                )
                             else:
                                 fixed_items.append(inner_item)
                         fixed[prop] = fixed_items
@@ -754,16 +886,40 @@ class SchemaValidator:
 
         combined_text = f"{risk_type} {description} {title}"
 
-        high_keywords = ["SQL", "INJECT", "XSS", "CSRF", "COMMAND", "RCE", "PRIVILEGE",
-                         "AUTHENTICATION", "CREDENTIAL", "SECRET", "KEY", "PASSWORD",
-                         "UNSAFE", "DESERIALIZ"]
+        high_keywords = [
+            "SQL",
+            "INJECT",
+            "XSS",
+            "CSRF",
+            "COMMAND",
+            "RCE",
+            "PRIVILEGE",
+            "AUTHENTICATION",
+            "CREDENTIAL",
+            "SECRET",
+            "KEY",
+            "PASSWORD",
+            "UNSAFE",
+            "DESERIALIZ",
+        ]
         for kw in high_keywords:
             if kw in combined_text:
                 return "HIGH"
 
-        medium_keywords = ["WEAK", "DEFAULT", "SUSPICIOUS", "PATTERN", "MISSING",
-                          "INSUFFICIENT", "HARDCODED", "CONFIGURATION", "BROKEN",
-                          "INSECURE", "PATH", "TRAVERSAL"]
+        medium_keywords = [
+            "WEAK",
+            "DEFAULT",
+            "SUSPICIOUS",
+            "PATTERN",
+            "MISSING",
+            "INSUFFICIENT",
+            "HARDCODED",
+            "CONFIGURATION",
+            "BROKEN",
+            "INSECURE",
+            "PATH",
+            "TRAVERSAL",
+        ]
         for kw in medium_keywords:
             if kw in combined_text:
                 return "MEDIUM"
@@ -827,7 +983,9 @@ class SchemaValidator:
             validated_data, is_valid = self.validate_with_fallback(data, schema_name)
 
             if self._is_result_empty(validated_data, schema_name):
-                print(f"[WARN] [Fallback] Validated data is empty for {schema_name}, trying text extraction")
+                print(
+                    f"[WARN] [Fallback] Validated data is empty for {schema_name}, trying text extraction"
+                )
                 emergency_result = self._emergency_fix(response_text, schema_name)
                 if emergency_result:
                     print(f"[DEBUG] [Fallback] Using text extraction result for {schema_name}")
@@ -839,7 +997,9 @@ class SchemaValidator:
             print(f"[ERROR] JSON parse error for {schema_name}: {e}")
             emergency_result = self._emergency_fix(response_text, schema_name)
             if emergency_result:
-                print(f"[DEBUG] [Fallback] Using text extraction after JSON error for {schema_name}")
+                print(
+                    f"[DEBUG] [Fallback] Using text extraction after JSON error for {schema_name}"
+                )
                 return emergency_result
             return None
         except Exception as e:
@@ -864,19 +1024,19 @@ class SchemaValidator:
             return True
 
         if schema_name == "risk_enumeration":
-            risks = data.get('risks', [])
+            risks = data.get("risks", [])
             return len(risks) == 0
 
         elif schema_name == "vulnerability":
-            vulns = data.get('vulnerabilities', [])
+            vulns = data.get("vulnerabilities", [])
             return len(vulns) == 0
 
         elif schema_name == "adversarial":
-            chains = data.get('adversarial_analysis', [])
+            chains = data.get("adversarial_analysis", [])
             return len(chains) == 0
 
         elif schema_name == "final_decision":
-            findings = data.get('final_findings', [])
+            findings = data.get("final_findings", [])
             return len(findings) == 0
 
         return False
@@ -891,10 +1051,10 @@ class SchemaValidator:
             JSON字符串或None
         """
         patterns = [
-            r'\{[^{}]*\}',
+            r"\{[^{}]*\}",
             r'\{[\s\S]*"final_findings"[\s\S]*\}',
             r'\{[\s\S]*"vulnerabilities"[\s\S]*\}',
-            r'\{[\s\S]*"adversarial_analysis"[\s\S]*\}'
+            r'\{[\s\S]*"adversarial_analysis"[\s\S]*\}',
         ]
 
         for pattern in patterns:
@@ -932,15 +1092,23 @@ class SchemaValidator:
                         "valid_vulnerabilities": len(vulnerabilities),
                         "uncertain_vulnerabilities": 0,
                         "invalid_vulnerabilities": 0,
-                        "high_severity_count": sum(1 for v in vulnerabilities if v.get("severity") == "HIGH"),
-                        "medium_severity_count": sum(1 for v in vulnerabilities if v.get("severity") == "MEDIUM"),
-                        "low_severity_count": sum(1 for v in vulnerabilities if v.get("severity") == "LOW")
-                    }
+                        "high_severity_count": sum(
+                            1 for v in vulnerabilities if v.get("severity") == "HIGH"
+                        ),
+                        "medium_severity_count": sum(
+                            1 for v in vulnerabilities if v.get("severity") == "MEDIUM"
+                        ),
+                        "low_severity_count": sum(
+                            1 for v in vulnerabilities if v.get("severity") == "LOW"
+                        ),
+                    },
                 }
 
         elif schema_name == "risk_enumeration":
             risks = self._extract_risks_from_text(response_text)
-            print(f"[DEBUG] [Emergency Fix] Extracted {len(risks)} risks from raw text for {schema_name}")
+            print(
+                f"[DEBUG] [Emergency Fix] Extracted {len(risks)} risks from raw text for {schema_name}"
+            )
             if risks:
                 return {
                     "risks": risks,
@@ -949,8 +1117,8 @@ class SchemaValidator:
                         "signals_new": len(risks),
                         "signals_confirmed": 0,
                         "signals_rejected": 0,
-                        "signals_refined": 0
-                    }
+                        "signals_refined": 0,
+                    },
                 }
 
         elif schema_name == "adversarial":
@@ -962,8 +1130,8 @@ class SchemaValidator:
                         "total_signals": len(chains),
                         "signals_new": len(chains),
                         "signals_confirmed": 0,
-                        "signals_rejected": 0
-                    }
+                        "signals_rejected": 0,
+                    },
                 }
 
         elif schema_name == "vulnerability":
@@ -976,8 +1144,8 @@ class SchemaValidator:
                         "signals_new": len(vulnerabilities),
                         "signals_confirmed": 0,
                         "signals_rejected": 0,
-                        "signals_refined": 0
-                    }
+                        "signals_refined": 0,
+                    },
                 }
 
         return None
@@ -997,35 +1165,48 @@ class SchemaValidator:
             "CRITICAL": ["critical", "严重", "高危"],
             "HIGH": ["high", "高风险", "高"],
             "MEDIUM": ["medium", "中风险", "中"],
-            "LOW": ["low", "低风险", "低"]
+            "LOW": ["low", "低风险", "低"],
         }
 
         vulnerability_keywords = [
-            "sql injection", "sql注入",
-            "xss", "cross-site", "跨站",
-            "command injection", "命令注入",
-            "path traversal", "路径遍历",
-            "ssrf", "服务器端请求伪造",
-            "csrf", "跨站请求伪造",
-            "authentication", "认证",
-            "authorization", "授权",
-            "sensitive data", "敏感数据",
-            "hardcoded", "硬编码"
+            "sql injection",
+            "sql注入",
+            "xss",
+            "cross-site",
+            "跨站",
+            "command injection",
+            "命令注入",
+            "path traversal",
+            "路径遍历",
+            "ssrf",
+            "服务器端请求伪造",
+            "csrf",
+            "跨站请求伪造",
+            "authentication",
+            "认证",
+            "authorization",
+            "授权",
+            "sensitive data",
+            "敏感数据",
+            "hardcoded",
+            "硬编码",
         ]
 
         for severity, keywords in severity_keywords.items():
             for keyword in keywords:
                 if keyword.lower() in text.lower():
-                    vulnerabilities.append({
-                        "vulnerability": f"Detected {severity} issue",
-                        "location": "Unknown (extracted from text)",
-                        "severity": severity,
-                        "status": "UNCERTAIN",
-                        "confidence": "MEDIUM",
-                        "evidence": text[:500],
-                        "recommendation": "Manual review required",
-                        "requires_human_review": True
-                    })
+                    vulnerabilities.append(
+                        {
+                            "vulnerability": f"Detected {severity} issue",
+                            "location": "Unknown (extracted from text)",
+                            "severity": severity,
+                            "status": "UNCERTAIN",
+                            "confidence": "MEDIUM",
+                            "evidence": text[:500],
+                            "recommendation": "Manual review required",
+                            "requires_human_review": True,
+                        }
+                    )
                     break
 
         return vulnerabilities[:5]
@@ -1049,34 +1230,72 @@ class SchemaValidator:
             "HIGH": ["high", "高风险", "高", "高危"],
             "MEDIUM": ["medium", "中风险", "中", "中危"],
             "LOW": ["low", "低风险", "低", "低危"],
-            "INFO": ["info", "信息", "信息性"]
+            "INFO": ["info", "信息", "信息性"],
         }
 
         vuln_keywords = [
-            "SQL注入", "SQL injection", "sql注入",
-            "XSS", "跨站脚本", "cross-site scripting",
-            "命令注入", "command injection", "命令执行",
-            "路径遍历", "path traversal", "目录遍历",
-            "SSRF", "服务器端请求伪造",
-            "CSRF", "跨站请求伪造",
-            "认证绕过", "authentication bypass",
-            "授权绕过", "authorization bypass",
-            "敏感信息泄露", "sensitive information leak",
-            "硬编码", "hardcoded", "硬编码凭证",
-            "反序列化", "deserialization", "反序列化漏洞",
-            "越权", "privilege", "权限提升",
-            "会话管理", "session management",
-            "中间人攻击", "MITM", "man in the middle",
-            "XML外部实体", "XXE", "xml external entity",
-            "模板注入", "SSTI", "template injection",
-            "代码注入", "code injection",
-            "文件上传", "file upload", "任意文件上传",
-            "未授权访问", "unauthorized access",
-            "密码策略", "password policy", "弱密码",
-            "JWT", "token泄露", "token leak",
-            "CORS", "跨域", "cross-origin",
-            "API安全", "api security",
-            "注入", "injection"
+            "SQL注入",
+            "SQL injection",
+            "sql注入",
+            "XSS",
+            "跨站脚本",
+            "cross-site scripting",
+            "命令注入",
+            "command injection",
+            "命令执行",
+            "路径遍历",
+            "path traversal",
+            "目录遍历",
+            "SSRF",
+            "服务器端请求伪造",
+            "CSRF",
+            "跨站请求伪造",
+            "认证绕过",
+            "authentication bypass",
+            "授权绕过",
+            "authorization bypass",
+            "敏感信息泄露",
+            "sensitive information leak",
+            "硬编码",
+            "hardcoded",
+            "硬编码凭证",
+            "反序列化",
+            "deserialization",
+            "反序列化漏洞",
+            "越权",
+            "privilege",
+            "权限提升",
+            "会话管理",
+            "session management",
+            "中间人攻击",
+            "MITM",
+            "man in the middle",
+            "XML外部实体",
+            "XXE",
+            "xml external entity",
+            "模板注入",
+            "SSTI",
+            "template injection",
+            "代码注入",
+            "code injection",
+            "文件上传",
+            "file upload",
+            "任意文件上传",
+            "未授权访问",
+            "unauthorized access",
+            "密码策略",
+            "password policy",
+            "弱密码",
+            "JWT",
+            "token泄露",
+            "token leak",
+            "CORS",
+            "跨域",
+            "cross-origin",
+            "API安全",
+            "api security",
+            "注入",
+            "injection",
         ]
 
         text_lower = text.lower()
@@ -1087,32 +1306,38 @@ class SchemaValidator:
                     for vuln_kw in vuln_keywords:
                         if vuln_kw.lower() in text_lower:
                             counter += 1
-                            location_match = re.search(r'([A-Za-z]:\\[^:\s]+|/[^\s:]+):(\d+)', text)
-                            location = location_match.group(0) if location_match else "Unknown location"
+                            location_match = re.search(r"([A-Za-z]:\\[^:\s]+|/[^\s:]+):(\d+)", text)
+                            location = (
+                                location_match.group(0) if location_match else "Unknown location"
+                            )
 
                             code_snippet_match = re.search(r'[`"\']([^`"\']{{3,100}})[`"\']', text)
                             code_snippet = code_snippet_match.group(1) if code_snippet_match else ""
 
-                            risks.append({
-                                "risk_type": f"{severity} - {vuln_kw}",
-                                "vuln_type": "security_vuln",
-                                "severity": severity,
-                                "confidence": 0.5,
-                                "location": location,
-                                "description": f"检测到{severity}级别安全问题: {vuln_kw}",
-                                "potential_impact": f"可能导致{severity}级别的安全风险",
-                                "cvss_score": "N/A",
-                                "signal_id": f"RISK-TEXT-{counter:03d}",
-                                "signal_state": "NEW",
-                                "evidence": [{
-                                    "type": "code_line",
-                                    "location": location,
-                                    "reason": f"文本分析发现: {vuln_kw}",
+                            risks.append(
+                                {
+                                    "risk_type": f"{severity} - {vuln_kw}",
+                                    "vuln_type": "security_vuln",
+                                    "severity": severity,
                                     "confidence": 0.5,
-                                    "code_snippet": code_snippet
-                                }],
-                                "requires_human_review": True
-                            })
+                                    "location": location,
+                                    "description": f"检测到{severity}级别安全问题: {vuln_kw}",
+                                    "potential_impact": f"可能导致{severity}级别的安全风险",
+                                    "cvss_score": "N/A",
+                                    "signal_id": f"RISK-TEXT-{counter:03d}",
+                                    "signal_state": "NEW",
+                                    "evidence": [
+                                        {
+                                            "type": "code_line",
+                                            "location": location,
+                                            "reason": f"文本分析发现: {vuln_kw}",
+                                            "confidence": 0.5,
+                                            "code_snippet": code_snippet,
+                                        }
+                                    ],
+                                    "requires_human_review": True,
+                                }
+                            )
                             break
                     break
 
@@ -1131,30 +1356,39 @@ class SchemaValidator:
         chains = []
 
         chain_keywords = [
-            "攻击链", "attack chain", "攻击路径",
-            "利用链", "exploitation chain", "利用路径",
-            "漏洞组合", "vulnerability combination",
-            "链式攻击", "chained attack"
+            "攻击链",
+            "attack chain",
+            "攻击路径",
+            "利用链",
+            "exploitation chain",
+            "利用路径",
+            "漏洞组合",
+            "vulnerability combination",
+            "链式攻击",
+            "chained attack",
         ]
 
         text_lower = text.lower()
         for kw in chain_keywords:
             if kw.lower() in text_lower:
-                chains.append({
-                    "chain_name": "Extracted Attack Chain",
-                    "attack_chain_description": text[:500],
-                    "signal_id": "CHAIN-TEXT-001",
-                    "signal_state": "UNCERTAIN",
-                    "confidence": 0.5,
-                    "attack_prerequisites": "需要进一步分析",
-                    "attack_steps": ["从文本提取的攻击链信息，需要人工复核"],
-                    "potential_impact": "可能导致多层次安全风险",
-                    "estimated_cvss": "N/A",
-                    "requires_human_review": True
-                })
+                chains.append(
+                    {
+                        "chain_name": "Extracted Attack Chain",
+                        "attack_chain_description": text[:500],
+                        "signal_id": "CHAIN-TEXT-001",
+                        "signal_state": "UNCERTAIN",
+                        "confidence": 0.5,
+                        "attack_prerequisites": "需要进一步分析",
+                        "attack_steps": ["从文本提取的攻击链信息，需要人工复核"],
+                        "potential_impact": "可能导致多层次安全风险",
+                        "estimated_cvss": "N/A",
+                        "requires_human_review": True,
+                    }
+                )
                 break
 
         return chains[:3]
+
 
 def retry_with_validation(max_retries: int = 3):
     """重试装饰器
@@ -1165,6 +1399,7 @@ def retry_with_validation(max_retries: int = 3):
     Returns:
         装饰器函数
     """
+
     def decorator(func: Callable):
         async def wrapper(*args, **kwargs):
             last_error = None
@@ -1185,6 +1420,7 @@ def retry_with_validation(max_retries: int = 3):
             raise SchemaValidationError(f"Failed after {max_retries} attempts: {last_error}")
 
         return wrapper
+
     return decorator
 
 
@@ -1215,11 +1451,13 @@ class LineNumberValidator:
         try:
             config_path = self.DEFAULT_CONFIG_PATH
             if not os.path.exists(config_path):
-                project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+                project_root = os.path.dirname(
+                    os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+                )
                 config_path = os.path.join(project_root, "hos-ls.yaml")
 
             if os.path.exists(config_path):
-                with open(config_path, 'r', encoding='utf-8') as f:
+                with open(config_path, "r", encoding="utf-8") as f:
                     config = yaml.safe_load(f)
                     validation_config = config.get("validation", {})
                     tolerance_value = validation_config.get("line_number_tolerance", None)
@@ -1311,11 +1549,13 @@ class LineNumberValidator:
         print(f"[DEBUG] Rule: {rule_name}")
 
         if file_content:
-            original_line_count = len(file_content.split('\n'))
+            original_line_count = len(file_content.split("\n"))
             file_content = self._normalize_line_endings(file_content)
-            normalized_line_count = len(file_content.split('\n'))
+            normalized_line_count = len(file_content.split("\n"))
             if original_line_count != normalized_line_count:
-                print(f"[DEBUG] Line ending normalization: {original_line_count} -> {normalized_line_count} lines")
+                print(
+                    f"[DEBUG] Line ending normalization: {original_line_count} -> {normalized_line_count} lines"
+                )
 
         evidence = vulnerability.get("evidence", [])
         code_snippet = ""
@@ -1335,7 +1575,9 @@ class LineNumberValidator:
                 try:
                     if "-" in raw_line_str:
                         ai_reported_line = int(raw_line_str.split("-")[0])
-                        print(f"[DEBUG] Range line number detected: {raw_line_str} -> using start: {ai_reported_line}")
+                        print(
+                            f"[DEBUG] Range line number detected: {raw_line_str} -> using start: {ai_reported_line}"
+                        )
                     else:
                         ai_reported_line = int(raw_line_str)
                 except ValueError:
@@ -1345,47 +1587,71 @@ class LineNumberValidator:
         print(f"[DEBUG] code_snippet length: {len(code_snippet) if code_snippet else 0}")
 
         if ai_reported_line and file_content:
-            lines = file_content.split('\n')
+            lines = file_content.split("\n")
             if 1 <= ai_reported_line <= len(lines):
                 reported_content = lines[ai_reported_line - 1]
                 description = vulnerability.get("description", "")
                 extracted_identifiers = self._extract_identifiers_from_description(description)
 
                 if code_snippet:
-                    ai_line_has_snippet = self._code_snippet_matches_line(code_snippet, reported_content)
-                    is_valid_ai_line, reason = self._is_valid_ai_reported_line(reported_content, ai_reported_line, file_content)
+                    ai_line_has_snippet = self._code_snippet_matches_line(
+                        code_snippet, reported_content
+                    )
+                    is_valid_ai_line, reason = self._is_valid_ai_reported_line(
+                        reported_content, ai_reported_line, file_content
+                    )
                     if ai_line_has_snippet and is_valid_ai_line:
-                        print(f"[DEBUG] AI reported line {ai_reported_line} contains code snippet and is valid, using it directly")
+                        print(
+                            f"[DEBUG] AI reported line {ai_reported_line} contains code snippet and is valid, using it directly"
+                        )
                         return ai_reported_line, "REPORTED", []
                     elif is_valid_ai_line:
-                        print(f"[DEBUG] AI reported line {ai_reported_line} is valid code (line content verified)")
+                        print(
+                            f"[DEBUG] AI reported line {ai_reported_line} is valid code (line content verified)"
+                        )
                         if extracted_identifiers:
-                            print(f"[DEBUG] Extracted identifiers from description: {extracted_identifiers}")
+                            print(
+                                f"[DEBUG] Extracted identifiers from description: {extracted_identifiers}"
+                            )
                             line_lower = reported_content.lower()
                             matched = any(ident in line_lower for ident in extracted_identifiers)
                             if matched:
-                                print(f"[DEBUG] Semantic validation passed: line contains identifier from description")
+                                print(
+                                    f"[DEBUG] Semantic validation passed: line contains identifier from description"
+                                )
                                 return ai_reported_line, "REPORTED", []
                         print(f"[DEBUG] Using AI reported line directly: {ai_reported_line}")
                         return ai_reported_line, "REPORTED", []
                     else:
                         print(f"[DEBUG] AI reported line rejected: {reason}, trying fuzzy match...")
 
-                is_valid, reason = self._is_valid_ai_reported_line(reported_content, ai_reported_line, file_content)
+                is_valid, reason = self._is_valid_ai_reported_line(
+                    reported_content, ai_reported_line, file_content
+                )
                 if is_valid:
-                    print(f"[DEBUG] Using AI reported line directly (has valid code): {ai_reported_line}")
+                    print(
+                        f"[DEBUG] Using AI reported line directly (has valid code): {ai_reported_line}"
+                    )
                     print(f"[DEBUG] Content: {reported_content[:60]}...")
 
                     if extracted_identifiers:
-                        print(f"[DEBUG] Extracted identifiers from description: {extracted_identifiers}")
+                        print(
+                            f"[DEBUG] Extracted identifiers from description: {extracted_identifiers}"
+                        )
                         line_lower = reported_content.lower()
                         matched = any(ident in line_lower for ident in extracted_identifiers)
                         if matched:
-                            print(f"[DEBUG] Semantic validation passed: line contains identifier from description")
+                            print(
+                                f"[DEBUG] Semantic validation passed: line contains identifier from description"
+                            )
                             return ai_reported_line, "REPORTED", []
                         else:
-                            print(f"[DEBUG] Semantic validation FAILED: line does not contain identifier from description")
-                            print(f"[DEBUG] Triggering keyword-based fuzzy match to find actual line...")
+                            print(
+                                f"[DEBUG] Semantic validation FAILED: line does not contain identifier from description"
+                            )
+                            print(
+                                f"[DEBUG] Triggering keyword-based fuzzy match to find actual line..."
+                            )
                             candidates = self._find_lines_by_keywords(
                                 [], file_content, ai_reported_line, extracted_identifiers
                             )
@@ -1397,7 +1663,9 @@ class LineNumberValidator:
                     else:
                         return ai_reported_line, "REPORTED", []
                 else:
-                    print(f"[DEBUG] AI reported line rejected: {reason}, line {ai_reported_line}: {reported_content[:40]}...")
+                    print(
+                        f"[DEBUG] AI reported line rejected: {reason}, line {ai_reported_line}: {reported_content[:40]}..."
+                    )
                     fallback_matched = False
                     if extracted_identifiers and file_content:
                         print(f"[DEBUG] Trying identifier-based matching after rejection...")
@@ -1405,22 +1673,30 @@ class LineNumberValidator:
                             [], file_content, ai_reported_line, extracted_identifiers
                         )
                         if candidates:
-                            print(f"[DEBUG] Fallback identifier matched: line {candidates[0]}, candidates {candidates}")
+                            print(
+                                f"[DEBUG] Fallback identifier matched: line {candidates[0]}, candidates {candidates}"
+                            )
                             return candidates[0], "FUZZY", candidates
                         else:
                             fallback_matched = True
                             print(f"[DEBUG] Fallback identifier matching returned no candidates")
 
                     if fallback_matched or not extracted_identifiers:
-                        print(f"[DEBUG] No valid match found after AI line rejected, continuing to keyword search...")
+                        print(
+                            f"[DEBUG] No valid match found after AI line rejected, continuing to keyword search..."
+                        )
 
         if self._is_configuration_vulnerability(vulnerability):
-            print(f"[DEBUG] Configuration vulnerability detected, trying joint keyword verification...")
+            print(
+                f"[DEBUG] Configuration vulnerability detected, trying joint keyword verification..."
+            )
             joint_candidates = self._find_lines_by_joint_keywords(
                 vulnerability, file_content, ai_reported_line
             )
             if joint_candidates:
-                print(f"[DEBUG] Joint verification matched: line {joint_candidates[0]}, candidates {joint_candidates}")
+                print(
+                    f"[DEBUG] Joint verification matched: line {joint_candidates[0]}, candidates {joint_candidates}"
+                )
                 print(f"[DEBUG] ====== find_actual_line END ======\n")
                 return joint_candidates[0], "FUZZY", joint_candidates
 
@@ -1453,7 +1729,9 @@ class LineNumberValidator:
                 [], file_content, ai_reported_line, extracted_identifiers
             )
             if candidates:
-                print(f"[DEBUG] Identifier-only matched: line {candidates[0]}, candidates {candidates}")
+                print(
+                    f"[DEBUG] Identifier-only matched: line {candidates[0]}, candidates {candidates}"
+                )
                 print(f"[DEBUG] ====== find_actual_line END ======\n")
                 return candidates[0], "FUZZY", candidates
 
@@ -1474,7 +1752,17 @@ class LineNumberValidator:
             words = rule_name.split()
             for w in words:
                 w_lower = w.lower()
-                if w_lower in ['jsoup', 'shiro', 'struts', 'spring', 'log4j', 'jackson', 'fastjson', 'commons', 'hibernate']:
+                if w_lower in [
+                    "jsoup",
+                    "shiro",
+                    "struts",
+                    "spring",
+                    "log4j",
+                    "jackson",
+                    "fastjson",
+                    "commons",
+                    "hibernate",
+                ]:
                     keywords.append(w_lower)
                 elif len(w) > 3 and not self._contains_chinese(w):
                     keywords.append(w_lower)
@@ -1483,14 +1771,14 @@ class LineNumberValidator:
 
         description = vulnerability.get("description", "")
         if description:
-            version_pattern = r'(\d+\.\d+\.\d+[a-zA-Z]*)'
+            version_pattern = r"(\d+\.\d+\.\d+[a-zA-Z]*)"
             versions = re.findall(version_pattern, description)
             keywords.extend([v.lower() for v in versions])
 
             important_patterns = [
-                r'([a-zA-Z]+(?:[-_]?[a-zA-Z]+){1,3})\s*version\s*(\d+\.\d+\.\d+)',
-                r'version\s*(\d+\.\d+\.\d+)',
-                r'@(\w+)',
+                r"([a-zA-Z]+(?:[-_]?[a-zA-Z]+){1,3})\s*version\s*(\d+\.\d+\.\d+)",
+                r"version\s*(\d+\.\d+\.\d+)",
+                r"@(\w+)",
             ]
             for pattern in important_patterns:
                 matches = re.findall(pattern, description.lower())
@@ -1501,7 +1789,7 @@ class LineNumberValidator:
                         if not self._contains_chinese(m):
                             keywords.append(m)
 
-            annotation_pattern = r'@(\w+)'
+            annotation_pattern = r"@(\w+)"
             annotations = re.findall(annotation_pattern, description)
             for ann in annotations:
                 if not self._contains_chinese(ann):
@@ -1516,22 +1804,68 @@ class LineNumberValidator:
 
         location = vulnerability.get("location", "")
         if location and not self._contains_chinese(location):
-            location_keywords = re.findall(r'([a-zA-Z_][a-zA-Z0-9_]{2,})', location)
+            location_keywords = re.findall(r"([a-zA-Z_][a-zA-Z0-9_]{2,})", location)
             common_path_components = {
-                'main', 'src', 'java', 'cloud', 'bizspring', 'project', 'component',
-                'open', 'real', 'base', 'security', 'hos', 'common', 'config',
-                'module', 'business', 'gateway', 'auth', 'aaa_project',
-                'configuration', 'properties', 'application', 'resources',
-                'static', 'test', 'target', 'build', 'lib', 'webapp',
-                'file', 'path', 'location', 'line', 'root', 'home',
-                'users', 'home', 'documents', 'desktop', 'downloads',
-                'windows', 'system32', 'program', 'files', 'appdata',
-                'github', 'gitlab', 'gitee', 'repository', 'repo',
-                'node_modules', 'package', 'modules', 'dist', 'coverage',
+                "main",
+                "src",
+                "java",
+                "cloud",
+                "bizspring",
+                "project",
+                "component",
+                "open",
+                "real",
+                "base",
+                "security",
+                "hos",
+                "common",
+                "config",
+                "module",
+                "business",
+                "gateway",
+                "auth",
+                "aaa_project",
+                "configuration",
+                "properties",
+                "application",
+                "resources",
+                "static",
+                "test",
+                "target",
+                "build",
+                "lib",
+                "webapp",
+                "file",
+                "path",
+                "location",
+                "line",
+                "root",
+                "home",
+                "users",
+                "home",
+                "documents",
+                "desktop",
+                "downloads",
+                "windows",
+                "system32",
+                "program",
+                "files",
+                "appdata",
+                "github",
+                "gitlab",
+                "gitee",
+                "repository",
+                "repo",
+                "node_modules",
+                "package",
+                "modules",
+                "dist",
+                "coverage",
             }
             filtered_keywords = [
-                k.lower() for k in location_keywords
-                if k.lower() not in ['null', 'none', 'undefined']
+                k.lower()
+                for k in location_keywords
+                if k.lower() not in ["null", "none", "undefined"]
                 and k.lower() not in common_path_components
                 and len(k) > 3
             ]
@@ -1541,8 +1875,12 @@ class LineNumberValidator:
         keywords = [k for k in keywords if k and len(k) > 1 and not self._contains_chinese(k)]
 
         if not keywords:
-            print(f"[DEBUG] Keywords still empty after extraction, using identifiers as fallback keywords")
-            identifiers = self._extract_identifiers_from_description(vulnerability.get("description", ""))
+            print(
+                f"[DEBUG] Keywords still empty after extraction, using identifiers as fallback keywords"
+            )
+            identifiers = self._extract_identifiers_from_description(
+                vulnerability.get("description", "")
+            )
             keywords = [i.lower() for i in identifiers if i and len(i) > 2][:30]
             keywords = list(set(keywords))
 
@@ -1550,7 +1888,7 @@ class LineNumberValidator:
 
     def _extract_security_api_keywords(self, vulnerability: dict, description: str) -> list:
         """从漏洞描述和类型中提取安全API关键词
-        
+
         针对常见的Java安全配置漏洞，提取对应的API方法名作为关键词，
         帮助精确匹配到实际的漏洞代码行。
         """
@@ -1559,41 +1897,76 @@ class LineNumberValidator:
         vuln_type = vulnerability.get("vulnerability_type", vulnerability.get("type", "")).lower()
         rule_name = vulnerability.get("rule_name", "").lower()
 
-        csrf_patterns = ['csrf', 'cross-site request forgery', '跨站请求伪造']
+        csrf_patterns = ["csrf", "cross-site request forgery", "跨站请求伪造"]
         if any(p in desc_lower or p in vuln_type or p in rule_name for p in csrf_patterns):
-            keywords.extend(['csrf', 'disable', 'csrfdisable', 'csrf().disable', 'httpsecurity'])
+            keywords.extend(["csrf", "disable", "csrfdisable", "csrf().disable", "httpsecurity"])
 
-        clickjack_patterns = ['clickjack', 'x-frame', 'frameoption', 'frame.options', '点击劫持', 'frame-options']
+        clickjack_patterns = [
+            "clickjack",
+            "x-frame",
+            "frameoption",
+            "frame.options",
+            "点击劫持",
+            "frame-options",
+        ]
         if any(p in desc_lower or p in vuln_type or p in rule_name for p in clickjack_patterns):
-            keywords.extend(['frameoptions', 'frame.options', 'disable', 'headers', 'httpsecurity', 'x-frame'])
+            keywords.extend(
+                ["frameoptions", "frame.options", "disable", "headers", "httpsecurity", "x-frame"]
+            )
 
-        cors_patterns = ['cors', 'cross-origin', '跨域']
+        cors_patterns = ["cors", "cross-origin", "跨域"]
         if any(p in desc_lower or p in vuln_type or p in rule_name for p in cors_patterns):
-            keywords.extend(['cors', 'corsconfiguration', 'allowedorigins', 'addcorsmapping'])
+            keywords.extend(["cors", "corsconfiguration", "allowedorigins", "addcorsmapping"])
 
-        token_patterns = ['token', 'jwt', 'access.token', 'refresh.token', '令牌']
+        token_patterns = ["token", "jwt", "access.token", "refresh.token", "令牌"]
         if any(p in desc_lower or p in vuln_type or p in rule_name for p in token_patterns):
-            keywords.extend(['token', 'jwt', 'accesstoken', 'refreshtoken', 'tokenstore', 'authorization'])
+            keywords.extend(
+                ["token", "jwt", "accesstoken", "refreshtoken", "tokenstore", "authorization"]
+            )
 
-        auth_patterns = ['authentication', 'authorization', '认证', '授权', 'permitall', 'permit.all']
+        auth_patterns = [
+            "authentication",
+            "authorization",
+            "认证",
+            "授权",
+            "permitall",
+            "permit.all",
+        ]
         if any(p in desc_lower or p in vuln_type or p in rule_name for p in auth_patterns):
-            keywords.extend(['permitall', 'authenticated', 'authorizeexchange', 'authentication', 'authorization', 'security'])
+            keywords.extend(
+                [
+                    "permitall",
+                    "authenticated",
+                    "authorizeexchange",
+                    "authentication",
+                    "authorization",
+                    "security",
+                ]
+            )
 
-        ssrf_patterns = ['ssrf', 'server-side request forgery', '服务端请求伪造']
+        ssrf_patterns = ["ssrf", "server-side request forgery", "服务端请求伪造"]
         if any(p in desc_lower or p in vuln_type or p in rule_name for p in ssrf_patterns):
-            keywords.extend(['resttemplate', 'httpclient', 'urlconnection', 'fetch', 'request'])
+            keywords.extend(["resttemplate", "httpclient", "urlconnection", "fetch", "request"])
 
-        leak_patterns = ['leak', 'disclosure', '暴露', '泄露', 'sensitive', '敏感']
+        leak_patterns = ["leak", "disclosure", "暴露", "泄露", "sensitive", "敏感"]
         if any(p in desc_lower or p in vuln_type or p in rule_name for p in leak_patterns):
-            keywords.extend(['tostring', 'response', 'body', 'sensitive', 'expose', 'serialize'])
+            keywords.extend(["tostring", "response", "body", "sensitive", "expose", "serialize"])
 
-        exception_patterns = ['exception', 'error.handler', '错误处理', '异常']
+        exception_patterns = ["exception", "error.handler", "错误处理", "异常"]
         if any(p in desc_lower or p in vuln_type or p in rule_name for p in exception_patterns):
-            keywords.extend(['errorhandler', 'handleerror', 'exceptionhandler', 'responsestatus', 'restcontrolleradvice'])
+            keywords.extend(
+                [
+                    "errorhandler",
+                    "handleerror",
+                    "exceptionhandler",
+                    "responsestatus",
+                    "restcontrolleradvice",
+                ]
+            )
 
-        swagger_patterns = ['swagger', 'api.doc', 'springfox', '文档']
+        swagger_patterns = ["swagger", "api.doc", "springfox", "文档"]
         if any(p in desc_lower or p in vuln_type or p in rule_name for p in swagger_patterns):
-            keywords.extend(['swagger', 'enableswagger', 'swaggerui', 'api-docs', 'springfox'])
+            keywords.extend(["swagger", "enableswagger", "swaggerui", "api-docs", "springfox"])
 
         keywords = list(set(k.lower() for k in keywords if k and len(k) > 1))
         return keywords
@@ -1631,7 +2004,7 @@ class LineNumberValidator:
         """
         if not content:
             return content
-        return re.sub(r'\r\n|\r', '\n', content)
+        return re.sub(r"\r\n|\r", "\n", content)
 
     def _is_inside_multiline_comment(self, file_content: str, target_line: int) -> tuple[bool, str]:
         """检测目标行是否在多行注释块内部
@@ -1646,7 +2019,7 @@ class LineNumberValidator:
         if not file_content or target_line <= 0:
             return False, ""
 
-        lines = file_content.split('\n')
+        lines = file_content.split("\n")
         if target_line > len(lines):
             return False, ""
 
@@ -1661,14 +2034,16 @@ class LineNumberValidator:
                     return True, "在多行注释块内"
                 return False, ""
 
-            if '/*' in stripped and '*/' not in stripped:
+            if "/*" in stripped and "*/" not in stripped:
                 in_block_comment = True
-            elif '*/' in stripped and in_block_comment:
+            elif "*/" in stripped and in_block_comment:
                 in_block_comment = False
 
         return False, ""
 
-    def _is_valid_ai_reported_line(self, line_content: str, line_number: int = None, file_content: str = None) -> tuple[bool, str]:
+    def _is_valid_ai_reported_line(
+        self, line_content: str, line_number: int = None, file_content: str = None
+    ) -> tuple[bool, str]:
         """检查AI报告的行是否为有效的漏洞位置
 
         Args:
@@ -1714,7 +2089,7 @@ class LineNumberValidator:
                 return True, "VALID"
 
         if "@" in stripped and not stripped.startswith("*"):
-            annotation_pattern = r'^\s*@(RefreshScope|ConfigurationProperties|Data|Validated|NotNull|NotBlank|Pattern|Value|Component|Controller|RestController|Service|Repository|Bean)'
+            annotation_pattern = r"^\s*@(RefreshScope|ConfigurationProperties|Data|Validated|NotNull|NotBlank|Pattern|Value|Component|Controller|RestController|Service|Repository|Bean)"
             if re.search(annotation_pattern, stripped):
                 return True, "注解"
             if stripped.startswith("import ") and "@" in stripped:
@@ -1758,28 +2133,63 @@ class LineNumberValidator:
             if len(m) > 1 and not self._contains_chinese(m):
                 identifiers.append(m.lower())
 
-        var_pattern = r'变量\s+([a-zA-Z_][a-zA-Z0-9_]*)'
+        var_pattern = r"变量\s+([a-zA-Z_][a-zA-Z0-9_]*)"
         matches = re.findall(var_pattern, description)
         for m in matches:
             if not self._contains_chinese(m):
                 identifiers.append(m.lower())
 
-        field_pattern = r'字段\s+([a-zA-Z_][a-zA-Z0-9_]*)'
+        field_pattern = r"字段\s+([a-zA-Z_][a-zA-Z0-9_]*)"
         matches = re.findall(field_pattern, description)
         for m in matches:
             if not self._contains_chinese(m):
                 identifiers.append(m.lower())
 
         common_field_names = [
-            'windows', 'linux', 'mac', 'os', 'platform',
-            'username', 'user', 'password', 'pass', 'secret', 'key',
-            'token', 'api', 'apikey', 'api_key', 'access',
-            'host', 'server', 'url', 'endpoint', 'uri',
-            'database', 'db', 'sql', 'query',
-            'email', 'phone', 'mobile', 'tel',
-            'address', 'ip', 'port', 'path', 'file',
-            'timeout', 'retry', 'max', 'min', 'limit',
-            'enabled', 'disabled', 'active', 'status', 'state',
+            "windows",
+            "linux",
+            "mac",
+            "os",
+            "platform",
+            "username",
+            "user",
+            "password",
+            "pass",
+            "secret",
+            "key",
+            "token",
+            "api",
+            "apikey",
+            "api_key",
+            "access",
+            "host",
+            "server",
+            "url",
+            "endpoint",
+            "uri",
+            "database",
+            "db",
+            "sql",
+            "query",
+            "email",
+            "phone",
+            "mobile",
+            "tel",
+            "address",
+            "ip",
+            "port",
+            "path",
+            "file",
+            "timeout",
+            "retry",
+            "max",
+            "min",
+            "limit",
+            "enabled",
+            "disabled",
+            "active",
+            "status",
+            "state",
         ]
 
         desc_lower = description.lower()
@@ -1787,15 +2197,23 @@ class LineNumberValidator:
             if field_name in desc_lower and len(field_name) > 2:
                 identifiers.append(field_name)
 
-        annotation_pattern = r'@(RefreshScope|ConfigurationProperties|Data|Validated|NotNull|NotBlank|Pattern|Value)'
+        annotation_pattern = (
+            r"@(RefreshScope|ConfigurationProperties|Data|Validated|NotNull|NotBlank|Pattern|Value)"
+        )
         matches = re.findall(annotation_pattern, description, re.IGNORECASE)
         for m in matches:
             identifiers.append(f"@{m.lower()}")
 
         words = description.split()
         for word in words:
-            word_clean = word.strip('.,;:!?()[]{}').lower()
-            if word_clean in ['refreshscope', 'configurationproperties', 'lombok', 'spring', 'java']:
+            word_clean = word.strip(".,;:!?()[]{}").lower()
+            if word_clean in [
+                "refreshscope",
+                "configurationproperties",
+                "lombok",
+                "spring",
+                "java",
+            ]:
                 identifiers.append(word_clean)
 
         identifiers = list(set(identifiers))
@@ -1817,14 +2235,14 @@ class LineNumberValidator:
         if not code_snippet or not line_content:
             return False
 
-        snippet_normalized = ' '.join(code_snippet.lower().split())
-        line_normalized = ' '.join(line_content.lower().split())
+        snippet_normalized = " ".join(code_snippet.lower().split())
+        line_normalized = " ".join(line_content.lower().split())
 
         if snippet_normalized in line_normalized:
             return True
 
-        snippet_keywords = set(re.findall(r'[a-zA-Z_][a-zA-Z0-9_]+', code_snippet.lower()))
-        line_keywords = set(re.findall(r'[a-zA-Z_][a-zA-Z0-9_]+', line_content.lower()))
+        snippet_keywords = set(re.findall(r"[a-zA-Z_][a-zA-Z0-9_]+", code_snippet.lower()))
+        line_keywords = set(re.findall(r"[a-zA-Z_][a-zA-Z0-9_]+", line_content.lower()))
 
         snippet_keywords = {k for k in snippet_keywords if len(k) > 2}
         if not snippet_keywords:
@@ -1836,7 +2254,7 @@ class LineNumberValidator:
     def _contains_chinese(self, text: str) -> bool:
         """检查文本是否包含中文"""
         for char in text:
-            if '\u4e00' <= char <= '\u9fff':
+            if "\u4e00" <= char <= "\u9fff":
                 return True
         return False
 
@@ -1850,7 +2268,7 @@ class LineNumberValidator:
                 if len(current) >= 2:
                     parts.append(current.lower())
                 current = char
-            elif char == '_' or char == '-':
+            elif char == "_" or char == "-":
                 if len(current) >= 2:
                     parts.append(current.lower())
                 current = ""
@@ -1862,7 +2280,13 @@ class LineNumberValidator:
 
         return parts
 
-    def _find_lines_by_keywords(self, keywords: list, file_content: str, preferred_line: int = None, extracted_identifiers: list = None) -> list:
+    def _find_lines_by_keywords(
+        self,
+        keywords: list,
+        file_content: str,
+        preferred_line: int = None,
+        extracted_identifiers: list = None,
+    ) -> list:
         """根据关键词查找可能的匹配行
 
         Args:
@@ -1881,7 +2305,7 @@ class LineNumberValidator:
         if not keywords and identifiers:
             print(f"[DEBUG] Keyword-only mode: using identifiers only (no keywords provided)")
 
-        lines = file_content.split('\n')
+        lines = file_content.split("\n")
         scored_lines = []
 
         for i, line in enumerate(lines):
@@ -1913,15 +2337,23 @@ class LineNumberValidator:
                 proximity = abs(i + 1 - preferred_line) if preferred_line else 0
                 scored_lines.append((i + 1, total_score, matched_kws, identifier_bonus, proximity))
 
-        scored_lines.sort(key=lambda x: (x[4] if preferred_line else 0, -(x[1] + x[3] * 0.5)), reverse=False)
+        scored_lines.sort(
+            key=lambda x: (x[4] if preferred_line else 0, -(x[1] + x[3] * 0.5)), reverse=False
+        )
 
-        print(f"[DEBUG] Keyword match: {len(keywords)} keywords, {len(identifiers)} identifiers, {len(scored_lines)} candidates")
+        print(
+            f"[DEBUG] Keyword match: {len(keywords)} keywords, {len(identifiers)} identifiers, {len(scored_lines)} candidates"
+        )
         print(f"[DEBUG] Keywords: {keywords[:10]}...")
         print(f"[DEBUG] Identifiers: {identifiers[:10]}...")
         if scored_lines:
-            print(f"[DEBUG] Best candidate: line {scored_lines[0][0]}, score {scored_lines[0][1]}, identifier_bonus {scored_lines[0][3]}, matched {scored_lines[0][2][:5]}")
+            print(
+                f"[DEBUG] Best candidate: line {scored_lines[0][0]}, score {scored_lines[0][1]}, identifier_bonus {scored_lines[0][3]}, matched {scored_lines[0][2][:5]}"
+            )
             if preferred_line:
-                print(f"[DEBUG] AI reported: {preferred_line}, offset: {abs(scored_lines[0][0] - preferred_line)} lines")
+                print(
+                    f"[DEBUG] AI reported: {preferred_line}, offset: {abs(scored_lines[0][0] - preferred_line)} lines"
+                )
 
         if scored_lines:
             best_match = scored_lines[0][0]
@@ -1936,9 +2368,14 @@ class LineNumberValidator:
                     print(f"[DEBUG] Tolerance check passed: offset {offset} <= {tolerance}")
                     return [best_match]
                 else:
-                    print(f"[DEBUG] Best match exceeds tolerance: offset {offset} > {tolerance}, looking for closer candidates...")
-                    closer_candidates = [(ln, score, kws, ib, prox) for ln, score, kws, ib, prox in scored_lines
-                                       if abs(ln - preferred_line) <= tolerance]
+                    print(
+                        f"[DEBUG] Best match exceeds tolerance: offset {offset} > {tolerance}, looking for closer candidates..."
+                    )
+                    closer_candidates = [
+                        (ln, score, kws, ib, prox)
+                        for ln, score, kws, ib, prox in scored_lines
+                        if abs(ln - preferred_line) <= tolerance
+                    ]
                     if closer_candidates:
                         closer_candidates.sort(key=lambda x: (x[4], -(x[1] + x[3] * 0.5)))
                         best_match = closer_candidates[0][0]
@@ -1947,10 +2384,14 @@ class LineNumberValidator:
                     else:
                         high_score_threshold = 3
                         if best_identifier_bonus >= high_score_threshold:
-                            print(f"[DEBUG] Best match has high identifier score ({best_identifier_bonus} >= {high_score_threshold}), accepting despite offset {offset}")
+                            print(
+                                f"[DEBUG] Best match has high identifier score ({best_identifier_bonus} >= {high_score_threshold}), accepting despite offset {offset}"
+                            )
                             return [best_match]
                         elif best_score >= high_score_threshold * 2:
-                            print(f"[DEBUG] Best match has very high keyword score ({best_score} >= {high_score_threshold * 2}), accepting despite offset {offset}")
+                            print(
+                                f"[DEBUG] Best match has very high keyword score ({best_score} >= {high_score_threshold * 2}), accepting despite offset {offset}"
+                            )
                             return [best_match]
                         print(f"[DEBUG] No candidates within tolerance, returning best available")
                         top_candidates = [ln for ln, _, _, _, _ in scored_lines[:5]]
@@ -1961,12 +2402,17 @@ class LineNumberValidator:
                 return [best_match]
 
             if identifiers:
-                target_candidates = [(ln, score, kws, ib, prox) for ln, score, kws, ib, prox in scored_lines
-                                   if any(ident in kws for ident in identifiers)]
+                target_candidates = [
+                    (ln, score, kws, ib, prox)
+                    for ln, score, kws, ib, prox in scored_lines
+                    if any(ident in kws for ident in identifiers)
+                ]
                 if target_candidates:
                     target_candidates.sort(key=lambda x: (x[4], -(x[1] + x[3] * 0.5)))
                     best_target = target_candidates[0]
-                    print(f"[DEBUG] Found target identifier match: line {best_target[0]}, score {best_target[1]}")
+                    print(
+                        f"[DEBUG] Found target identifier match: line {best_target[0]}, score {best_target[1]}"
+                    )
                     return [best_target[0]]
                 else:
                     print(f"[DEBUG] No target identifier found in candidates")
@@ -1989,11 +2435,25 @@ class LineNumberValidator:
         vulnerability_type = vulnerability.get("vulnerability_type", "").lower()
 
         config_keywords = [
-            "configuration", "config", "routerfunction", "router",
-            "endpoint", "handler", "mapping", "requestmapping",
-            "getmapping", "postmapping", "putmapping", "deletemapping",
-            "bean", "refreshscope", "configurationproperties",
-            "resttemplate", "webclient", "feign", "loadbalancer"
+            "configuration",
+            "config",
+            "routerfunction",
+            "router",
+            "endpoint",
+            "handler",
+            "mapping",
+            "requestmapping",
+            "getmapping",
+            "postmapping",
+            "putmapping",
+            "deletemapping",
+            "bean",
+            "refreshscope",
+            "configurationproperties",
+            "resttemplate",
+            "webclient",
+            "feign",
+            "loadbalancer",
         ]
 
         combined = f"{rule_name} {description} {vulnerability_type}"
@@ -2019,19 +2479,19 @@ class LineNumberValidator:
 
         if "routerfunction" in rule_name.lower() or "routerfunction" in description.lower():
             router_patterns = [
-                r'router\s*\(',
-                r'functions?\.router',
-                r'route\s*\(',
-                r'path\s*=',
-                r'method\s*=',
+                r"router\s*\(",
+                r"functions?\.router",
+                r"route\s*\(",
+                r"path\s*=",
+                r"method\s*=",
             ]
             for pattern in router_patterns:
                 matches = re.findall(pattern, description, re.IGNORECASE)
                 required_keywords.extend([m.lower() for m in matches if m])
 
             handler_patterns = [
-                r'(?:handler|bean|method)\s+([a-zA-Z_][a-zA-Z0-9_]*)',
-                r'::\s*([a-zA-Z_][a-zA-Z0-9_]*)',
+                r"(?:handler|bean|method)\s+([a-zA-Z_][a-zA-Z0-9_]*)",
+                r"::\s*([a-zA-Z_][a-zA-Z0-9_]*)",
             ]
             for pattern in handler_patterns:
                 matches = re.findall(pattern, description, re.IGNORECASE)
@@ -2039,22 +2499,25 @@ class LineNumberValidator:
 
         if "resttemplate" in rule_name.lower() or "resttemplate" in description.lower():
             resttemplate_patterns = [
-                r'RestTemplate',
-                r'@LoadBalanced',
-                r'URL\s*\(',
-                r'getForObject',
-                r'getForEntity',
-                r'postForObject',
+                r"RestTemplate",
+                r"@LoadBalanced",
+                r"URL\s*\(",
+                r"getForObject",
+                r"getForEntity",
+                r"postForObject",
             ]
             for pattern in resttemplate_patterns:
                 if re.search(pattern, description, re.IGNORECASE):
                     required_keywords.append(pattern.lower())
 
-        if "configurationproperties" in rule_name.lower() or "configurationproperties" in description.lower():
+        if (
+            "configurationproperties" in rule_name.lower()
+            or "configurationproperties" in description.lower()
+        ):
             configprops_patterns = [
-                r'@ConfigurationProperties',
-                r'prefix\s*=',
-                r'@RefreshScope',
+                r"@ConfigurationProperties",
+                r"prefix\s*=",
+                r"@RefreshScope",
             ]
             for pattern in configprops_patterns:
                 if re.search(pattern, description, re.IGNORECASE):
@@ -2070,10 +2533,7 @@ class LineNumberValidator:
         return required_keywords, optional_keywords
 
     def _find_lines_by_joint_keywords(
-        self,
-        vulnerability: dict,
-        file_content: str,
-        preferred_line: int = None
+        self, vulnerability: dict, file_content: str, preferred_line: int = None
     ) -> list:
         """根据联合关键词查找匹配行（所有必需关键词必须同时出现）
 
@@ -2092,17 +2552,16 @@ class LineNumberValidator:
 
         if not required_kws:
             return self._find_lines_by_keywords(
-                self._extract_keywords(vulnerability),
-                file_content,
-                preferred_line,
-                None
+                self._extract_keywords(vulnerability), file_content, preferred_line, None
             )
 
-        print(f"[DEBUG] Joint verification: {len(required_kws)} required keywords, {len(optional_kws)} optional keywords")
+        print(
+            f"[DEBUG] Joint verification: {len(required_kws)} required keywords, {len(optional_kws)} optional keywords"
+        )
         print(f"[DEBUG] Required keywords: {required_kws}")
         print(f"[DEBUG] Optional keywords: {optional_kws}")
 
-        lines = file_content.split('\n')
+        lines = file_content.split("\n")
         joint_candidates = []
 
         for i, line in enumerate(lines):
@@ -2129,22 +2588,21 @@ class LineNumberValidator:
             key=lambda x: (
                 len(x[3]),
                 x[1],
-                -abs(x[0] - (preferred_line or 0)) if preferred_line else 0
+                -abs(x[0] - (preferred_line or 0)) if preferred_line else 0,
             ),
-            reverse=True
+            reverse=True,
         )
 
         if joint_candidates:
             print(f"[DEBUG] Joint verification found {len(joint_candidates)} candidates")
-            print(f"[DEBUG] Best joint match: line {joint_candidates[0][0]}, required matched: {joint_candidates[0][3]}")
+            print(
+                f"[DEBUG] Best joint match: line {joint_candidates[0][0]}, required matched: {joint_candidates[0][3]}"
+            )
             return [ln for ln, _, _, _ in joint_candidates]
 
         print(f"[DEBUG] Joint verification failed, falling back to standard keyword search")
         return self._find_lines_by_keywords(
-            required_kws + optional_kws,
-            file_content,
-            preferred_line,
-            None
+            required_kws + optional_kws, file_content, preferred_line, None
         )
 
     def _is_field_declaration(self, line: str) -> bool:
@@ -2153,12 +2611,13 @@ class LineNumberValidator:
         if not line_stripped:
             return False
         field_patterns = [
-            r'private\s+\w+',
-            r'public\s+\w+',
-            r'protected\s+\w+',
-            r'\w+\s+\w+\s*=',
+            r"private\s+\w+",
+            r"public\s+\w+",
+            r"protected\s+\w+",
+            r"\w+\s+\w+\s*=",
         ]
         import re
+
         for pattern in field_patterns:
             if re.search(pattern, line):
                 return True
@@ -2175,7 +2634,8 @@ class LineNumberValidator:
             是否作为独立单词出现
         """
         import re
-        pattern = r'\b' + re.escape(word) + r'\b'
+
+        pattern = r"\b" + re.escape(word) + r"\b"
         return bool(re.search(pattern, text))
 
     def _is_field_identifier_match(self, word: str, line: str, line_lower: str = None) -> bool:
@@ -2197,10 +2657,11 @@ class LineNumberValidator:
             line_lower = line.lower()
 
         import re
+
         field_assignment_patterns = [
-            r'private\s+\w+\s+\w+\s*=',
-            r'public\s+\w+\s+\w+\s*=',
-            r'protected\s+\w+\s+\w+\s*=',
+            r"private\s+\w+\s+\w+\s*=",
+            r"public\s+\w+\s+\w+\s*=",
+            r"protected\s+\w+\s+\w+\s*=",
             r'\w+\s+\w+\s*=\s*"?\w+"?\s*;',
         ]
 
@@ -2252,8 +2713,7 @@ class LineNumberValidator:
             result["signal_state"] = SignalState.UNCERTAIN.value
             result["verification_decision"] = "UNCERTAIN"
             result["verification_reason"] = (
-                f"行号无法验证，候选行: {candidates[:5]}" if candidates
-                else "行号无法验证，未找到匹配代码"
+                f"行号无法验证，候选行: {candidates[:5]}" if candidates else "行号无法验证，未找到匹配代码"
             )
 
         return result

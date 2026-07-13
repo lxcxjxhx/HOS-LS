@@ -4,14 +4,17 @@ SSH协议实现，支持远程命令执行和文件读取。
 """
 
 import logging
-from typing import Optional, Dict, Any, List
-from dataclasses import dataclass
 import time
+from dataclasses import dataclass
+from typing import Any, Dict, List, Optional
 
 import paramiko
-from paramiko import SSHClient, SFTPClient, AutoAddPolicy
+from paramiko import AutoAddPolicy, SFTPClient, SSHClient
 
-from ..exceptions import ConnectionError as RemoteConnectionError, AuthenticationError as RemoteAuthenticationError, TimeoutError as RemoteTimeoutError, FileNotFoundError as RemoteFileNotFoundError
+from ..exceptions import AuthenticationError as RemoteAuthenticationError
+from ..exceptions import ConnectionError as RemoteConnectionError
+from ..exceptions import FileNotFoundError as RemoteFileNotFoundError
+from ..exceptions import TimeoutError as RemoteTimeoutError
 
 logger = logging.getLogger(__name__)
 
@@ -19,6 +22,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class SSHFileInfo:
     """SSH文件信息"""
+
     filename: str
     path: str
     size: int
@@ -81,15 +85,21 @@ class SSHProtocol:
                             connect_kwargs["pkey"] = private_key
                         except paramiko.SSHException:
                             logger.error(f"Failed to load private key from {self.key_path}: {e}")
-                            raise RemoteAuthenticationError(f"Failed to load private key: {e}") from e
+                            raise RemoteAuthenticationError(
+                                f"Failed to load private key: {e}"
+                            ) from e
                 except FileNotFoundError:
                     logger.error(f"Private key file not found: {self.key_path}")
-                    raise RemoteConnectionError(f"Private key file not found: {self.key_path}") from FileNotFoundError
+                    raise RemoteConnectionError(
+                        f"Private key file not found: {self.key_path}"
+                    ) from FileNotFoundError
             elif self.password:
                 connect_kwargs["password"] = self.password
             else:
                 logger.error("No authentication method provided (password or key_path required)")
-                raise RemoteAuthenticationError("No authentication method provided (password or key_path required)")
+                raise RemoteAuthenticationError(
+                    "No authentication method provided (password or key_path required)"
+                )
 
             self._client.connect(**connect_kwargs)
             self._transport = self._client.get_transport()
@@ -233,7 +243,9 @@ class SSHProtocol:
             return data
         except FileNotFoundError:
             logger.error(f"Remote file not found: {remote_path}")
-            raise RemoteFileNotFoundError(f"Remote file not found: {remote_path}") from FileNotFoundError
+            raise RemoteFileNotFoundError(
+                f"Remote file not found: {remote_path}"
+            ) from FileNotFoundError
         except PermissionError as e:
             logger.error(f"Permission denied reading {remote_path}: {e}")
             raise RemoteFileNotFoundError(f"Permission denied: {remote_path}") from e
@@ -253,20 +265,28 @@ class SSHProtocol:
             result = []
             for attr in file_list:
                 filename = attr.filename
-                path = remote_path.rstrip("/") + "/" + filename if remote_path != "/" else "/" + filename
-                result.append(SSHFileInfo(
-                    filename=filename,
-                    path=path,
-                    size=attr.st_size,
-                    mode=attr.st_mode,
-                    mtime=attr.st_mtime,
-                ))
+                path = (
+                    remote_path.rstrip("/") + "/" + filename
+                    if remote_path != "/"
+                    else "/" + filename
+                )
+                result.append(
+                    SSHFileInfo(
+                        filename=filename,
+                        path=path,
+                        size=attr.st_size,
+                        mode=attr.st_mode,
+                        mtime=attr.st_mtime,
+                    )
+                )
 
             return result
 
         except FileNotFoundError:
             logger.error(f"Remote directory not found: {remote_path}")
-            raise RemoteFileNotFoundError(f"Remote directory not found: {remote_path}") from FileNotFoundError
+            raise RemoteFileNotFoundError(
+                f"Remote directory not found: {remote_path}"
+            ) from FileNotFoundError
         except PermissionError as e:
             logger.error(f"Permission denied listing {remote_path}: {e}")
             raise RemoteFileNotFoundError(f"Permission denied: {remote_path}") from e

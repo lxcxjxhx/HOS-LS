@@ -92,7 +92,9 @@ class PRCommenter:
         comment += "### 📋 Summary\n\n"
         if total == 0:
             comment += "✅ **No security issues found!**\n"
-            comment += "\nThe code has been scanned and no security vulnerabilities were detected.\n"
+            comment += (
+                "\nThe code has been scanned and no security vulnerabilities were detected.\n"
+            )
             return self.truncate_comment(comment)
 
         comment += f"**Total Findings:** {total}\n"
@@ -103,7 +105,7 @@ class PRCommenter:
             comment += "### 🎯 Severity Breakdown\n\n"
             comment += "| Severity | Count | Status |\n"
             comment += "|----------|-------|--------|\n"
-            
+
             severities = [
                 ("critical", "🔴 Critical", blocking_findings > 0),
                 ("high", "🟠 High", blocking_findings > 0),
@@ -144,7 +146,9 @@ class PRCommenter:
             for i, finding in enumerate(critical_high[:15], 1):
                 severity = finding.get("severity", "unknown").upper()
                 message = finding.get("message", finding.get("description", "No description"))
-                file_path = finding.get("file_path", finding.get("location", {}).get("file", "Unknown"))
+                file_path = finding.get(
+                    "file_path", finding.get("location", {}).get("file", "Unknown")
+                )
                 line = finding.get("line", finding.get("location", {}).get("line", 0))
                 rule_id = finding.get("rule_id", "unknown")
                 cwe_id = finding.get("cwe_id", "N/A")
@@ -194,9 +198,7 @@ class PRCommenter:
 
         return self.truncate_comment(comment)
 
-    def generate_inline_comments(
-        self, findings: List[Dict[str, Any]]
-    ) -> List[PRComment]:
+    def generate_inline_comments(self, findings: List[Dict[str, Any]]) -> List[PRComment]:
         """生成内联评论"""
         comments = []
 
@@ -204,14 +206,19 @@ class PRCommenter:
         sorted_findings = sorted(
             findings,
             key=lambda x: (
-                0 if x.get("severity", "medium").lower() == "critical" else
-                1 if x.get("severity", "medium").lower() == "high" else
-                2 if x.get("severity", "medium").lower() == "medium" else
-                3
-            )
+                0
+                if x.get("severity", "medium").lower() == "critical"
+                else (
+                    1
+                    if x.get("severity", "medium").lower() == "high"
+                    else 2
+                    if x.get("severity", "medium").lower() == "medium"
+                    else 3
+                )
+            ),
         )
 
-        for finding in sorted_findings[:self.config.max_inline_comments]:
+        for finding in sorted_findings[: self.config.max_inline_comments]:
             severity = finding.get("severity", "medium").lower()
             if severity not in ["critical", "high", "medium"]:
                 continue
@@ -256,10 +263,7 @@ class PRCommenter:
 
         return comments
 
-    def generate_label_comments(
-        self,
-        findings: List[Dict[str, Any]]
-    ) -> List[str]:
+    def generate_label_comments(self, findings: List[Dict[str, Any]]) -> List[str]:
         """生成标签评论"""
         labels = []
 

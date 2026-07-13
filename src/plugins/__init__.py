@@ -4,16 +4,16 @@
 """
 
 from src.plugins.base import (
+    MCPToolPlugin,
     Plugin,
     PluginManager,
-    ScanPlugin,
-    MCPToolPlugin,
-    SkillPlugin,
-    ToolResult,
-    SkillResult,
-    SkillPrompt,
-    PluginPriority,
     PluginMetadata,
+    PluginPriority,
+    ScanPlugin,
+    SkillPlugin,
+    SkillPrompt,
+    SkillResult,
+    ToolResult,
 )
 from src.plugins.manager import get_plugin_manager
 

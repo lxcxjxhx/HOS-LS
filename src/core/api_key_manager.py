@@ -80,7 +80,9 @@ class APIKey:
             status=KeyStatus(data["status"]),
             created_at=datetime.fromisoformat(data["created_at"]),
             expires_at=datetime.fromisoformat(data["expires_at"]) if data["expires_at"] else None,
-            last_used_at=datetime.fromisoformat(data["last_used_at"]) if data["last_used_at"] else None,
+            last_used_at=(
+                datetime.fromisoformat(data["last_used_at"]) if data["last_used_at"] else None
+            ),
             usage_count=data.get("usage_count", 0),
             metadata=data.get("metadata", {}),
         )
@@ -140,9 +142,10 @@ class APIKeyManager:
         keys = self._keys.get(provider_key, [])
 
         valid_keys = [
-            key for key in keys
-            if key.status == KeyStatus.ACTIVE and 
-            (key.expires_at is None or key.expires_at > datetime.now())
+            key
+            for key in keys
+            if key.status == KeyStatus.ACTIVE
+            and (key.expires_at is None or key.expires_at > datetime.now())
         ]
 
         if not valid_keys:
@@ -202,7 +205,9 @@ class APIKeyManager:
         if len(self._keys[provider_key]) >= self.config.max_keys_per_provider:
             # 删除最旧的密钥
             self._keys[provider_key].sort(key=lambda k: k.created_at)
-            self._keys[provider_key] = self._keys[provider_key][-self.config.max_keys_per_provider + 1:]
+            self._keys[provider_key] = self._keys[provider_key][
+                -self.config.max_keys_per_provider + 1 :
+            ]
 
         self._keys[provider_key].append(api_key_obj)
         self._save_keys()
@@ -372,10 +377,13 @@ class APIKeyManager:
         count = 0
         for provider, keys in self._keys.items():
             valid_keys = [
-                key for key in keys
-                if not (key.status == KeyStatus.ACTIVE and 
-                        key.expires_at and 
-                        key.expires_at < datetime.now())
+                key
+                for key in keys
+                if not (
+                    key.status == KeyStatus.ACTIVE
+                    and key.expires_at
+                    and key.expires_at < datetime.now()
+                )
             ]
             count += len(keys) - len(valid_keys)
             self._keys[provider] = valid_keys

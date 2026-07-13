@@ -69,8 +69,15 @@ class HomoglyphAttackRule(BaseRule):
         self._compiled_patterns = [re.compile(p) for p in self._confusable_patterns]
 
         self._dangerous_strings = [
-            "admin", "login", "password", "signin", "account",
-            "user", "root", "administrator", "system",
+            "admin",
+            "login",
+            "password",
+            "signin",
+            "account",
+            "user",
+            "root",
+            "administrator",
+            "system",
         ]
 
     def check(self, target: Union[str, Path, Dict[str, Any]]) -> List[RuleResult]:
@@ -83,6 +90,7 @@ class HomoglyphAttackRule(BaseRule):
             规则执行结果列表
         """
         from pathlib import Path
+
         results = []
 
         if isinstance(target, Path):
@@ -206,7 +214,9 @@ class UnicodeNormalizationRule(BaseRule):
                 + "|".join(self._string_operations)
                 + r")\s*(?:f?[\"'][^\"']*[\"']|input\(|sys\.argv|\w+\[)"
             ),
-            re.compile(r"(?:password|passwd|pwd|secret|token|auth)\s*(?:==|!=|\b(?:in|not in)\b)\s*"),
+            re.compile(
+                r"(?:password|passwd|pwd|secret|token|auth)\s*(?:==|!=|\b(?:in|not in)\b)\s*"
+            ),
         ]
 
         self._compiled_safe_patterns = [re.compile(p) for p in self._safe_normalization_patterns]
@@ -221,6 +231,7 @@ class UnicodeNormalizationRule(BaseRule):
             规则执行结果列表
         """
         from pathlib import Path
+
         results = []
 
         if isinstance(target, Path):
@@ -240,9 +251,7 @@ class UnicodeNormalizationRule(BaseRule):
 
         lines = content.split("\n")
 
-        has_normalization = any(
-            pattern.search(content) for pattern in self._compiled_safe_patterns
-        )
+        has_normalization = any(pattern.search(content) for pattern in self._compiled_safe_patterns)
 
         if has_normalization:
             return results
@@ -353,6 +362,7 @@ class BidirectionalTextInjectionRule(BaseRule):
             规则执行结果列表
         """
         from pathlib import Path
+
         results = []
 
         if isinstance(target, Path):

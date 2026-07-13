@@ -7,9 +7,9 @@
 - tolerance 仅用于决定是否显示警告，不用于排除
 """
 
-import re
 import difflib
-from typing import Optional, Tuple, List, Dict, Any
+import re
+from typing import Any, Dict, List, Optional, Tuple
 
 
 class LineNumberMapper:
@@ -31,7 +31,8 @@ class LineNumberMapper:
         if file_content is None:
             try:
                 from pathlib import Path
-                file_content = Path(file_path).read_text(encoding='utf-8')
+
+                file_content = Path(file_path).read_text(encoding="utf-8")
             except Exception:
                 file_content = ""
         self._snapshots[file_path] = file_content
@@ -60,9 +61,9 @@ class LineNumberMapper:
             return None, None
 
         patterns = [
-            r'^([A-Za-z]:.+?):(\d+)$',
-            r'^(.+?):(\d+)$',
-            r'^(.+?):(\d+)-(\d+)$',
+            r"^([A-Za-z]:.+?):(\d+)$",
+            r"^(.+?):(\d+)$",
+            r"^(.+?):(\d+)-(\d+)$",
         ]
 
         for pattern in patterns:
@@ -92,14 +93,14 @@ class LineNumberMapper:
             return True
 
         invalid_patterns = [
-            r':line$',
-            r':Line$',
-            r':LINE$',
-            r':行号未知$',
-            r':行号$',
-            r':未知$',
-            r':unknown$',
-            r':Unknown$',
+            r":line$",
+            r":Line$",
+            r":LINE$",
+            r":行号未知$",
+            r":行号$",
+            r":未知$",
+            r":unknown$",
+            r":Unknown$",
         ]
 
         for pattern in invalid_patterns:
@@ -113,7 +114,7 @@ class LineNumberMapper:
         code_snippet: str,
         file_content: str,
         ai_reported_line: int = None,
-        search_range: int = 200
+        search_range: int = 200,
     ) -> Tuple[int, str, List[int]]:
         """在文件内容中查找与代码片段匹配的行
 
@@ -133,7 +134,7 @@ class LineNumberMapper:
         if not code_snippet or not file_content:
             return -1, "NOT_FOUND", []
 
-        lines = file_content.split('\n')
+        lines = file_content.split("\n")
         snippet_stripped = code_snippet.strip()
 
         if not snippet_stripped:
@@ -167,9 +168,10 @@ class LineNumberMapper:
             return stripped_candidates[0], "ADJUSTED", stripped_candidates
 
         fuzzy_candidates = self._fuzzy_search(
-            snippet_stripped, lines,
+            snippet_stripped,
+            lines,
             ai_reported_line if ai_reported_line else len(lines) // 2,
-            search_range
+            search_range,
         )
 
         if fuzzy_candidates:
@@ -189,7 +191,7 @@ class LineNumberMapper:
         Returns:
             规范化后的文本
         """
-        return ' '.join(text.split())
+        return " ".join(text.split())
 
     def _extract_keywords(self, snippet: str) -> List[str]:
         """从代码片段中提取关键词/标识符
@@ -202,20 +204,20 @@ class LineNumberMapper:
         """
         keywords = []
         patterns = [
-            r'@\w+',
-            r'def\s+(\w+)',
-            r'class\s+(\w+)',
-            r'interface\s+(\w+)',
-            r'var\s+(\w+)',
-            r'val\s+(\w+)',
-            r'let\s+(\w+)',
-            r'\b(\w+)\s*\(',
-            r'\bif\s*\(',
-            r'\bfor\s*\(',
-            r'\bwhile\s*\(',
-            r'\breturn\s+',
-            r'\bthrow\s+',
-            r'\bnew\s+(\w+)',
+            r"@\w+",
+            r"def\s+(\w+)",
+            r"class\s+(\w+)",
+            r"interface\s+(\w+)",
+            r"var\s+(\w+)",
+            r"val\s+(\w+)",
+            r"let\s+(\w+)",
+            r"\b(\w+)\s*\(",
+            r"\bif\s*\(",
+            r"\bfor\s*\(",
+            r"\bwhile\s*\(",
+            r"\breturn\s+",
+            r"\bthrow\s+",
+            r"\bnew\s+(\w+)",
         ]
 
         snippet_lower = snippet.lower()
@@ -226,10 +228,34 @@ class LineNumberMapper:
                 if isinstance(match, str) and len(match) > 2:
                     keywords.append(match.lower())
 
-        identifier_pattern = r'\b[a-z][a-z0-9_]{2,}\b'
+        identifier_pattern = r"\b[a-z][a-z0-9_]{2,}\b"
         words = re.findall(identifier_pattern, snippet_lower)
         for word in words:
-            if word not in ['null', 'true', 'false', 'this', 'super', 'self', 'let', 'var', 'val', 'def', 'class', 'return', 'throw', 'new', 'if', 'for', 'while', 'else', 'elif', 'switch', 'case', 'break', 'continue']:
+            if word not in [
+                "null",
+                "true",
+                "false",
+                "this",
+                "super",
+                "self",
+                "let",
+                "var",
+                "val",
+                "def",
+                "class",
+                "return",
+                "throw",
+                "new",
+                "if",
+                "for",
+                "while",
+                "else",
+                "elif",
+                "switch",
+                "case",
+                "break",
+                "continue",
+            ]:
                 if word not in keywords:
                     keywords.append(word)
 
@@ -263,22 +289,16 @@ class LineNumberMapper:
 
         for i in range(1, len1 + 1):
             for j in range(1, len2 + 1):
-                cost = 0 if s1[i-1] == s2[j-1] else 1
+                cost = 0 if s1[i - 1] == s2[j - 1] else 1
                 distances[i][j] = min(
-                    distances[i-1][j] + 1,
-                    distances[i][j-1] + 1,
-                    distances[i-1][j-1] + cost
+                    distances[i - 1][j] + 1, distances[i][j - 1] + 1, distances[i - 1][j - 1] + cost
                 )
 
         edit_distance = distances[len1][len2]
         return 1.0 - (edit_distance / max_len)
 
     def _fuzzy_search(
-        self,
-        snippet: str,
-        lines: List[str],
-        center_line: int,
-        search_range: int
+        self, snippet: str, lines: List[str], center_line: int, search_range: int
     ) -> List[Tuple[int, float]]:
         """在指定范围内进行模糊搜索
 
@@ -351,16 +371,14 @@ class LineNumberMapper:
 
         results.sort(key=lambda x: (-x[1], x[0]))
         if results:
-            print(f"[DEBUG] 匹配完成，找到 {len(results)} 个候选，最佳匹配: 行{results[0][0]}, 相似度: {results[0][1]:.2f}")
+            print(
+                f"[DEBUG] 匹配完成，找到 {len(results)} 个候选，最佳匹配: 行{results[0][0]}, 相似度: {results[0][1]:.2f}"
+            )
         else:
             print(f"[DEBUG] 匹配完成，未找到任何匹配")
         return results
 
-    def calculate_line_deviation(
-        self,
-        ai_reported_line: int,
-        actual_line: int
-    ) -> int:
+    def calculate_line_deviation(self, ai_reported_line: int, actual_line: int) -> int:
         """计算AI报告行号与实际行号的偏差
 
         Args:
@@ -374,11 +392,7 @@ class LineNumberMapper:
             return -1
         return abs(ai_reported_line - actual_line)
 
-    def is_within_tolerance(
-        self,
-        deviation: int,
-        tolerance: int
-    ) -> bool:
+    def is_within_tolerance(self, deviation: int, tolerance: int) -> bool:
         """检查偏差是否在容忍范围内
 
         Args:
@@ -392,7 +406,9 @@ class LineNumberMapper:
             return deviation == 0
         return deviation <= tolerance
 
-    def _is_valid_vulnerability_line(self, line_content: str, line_number: int, total_lines: int = None) -> tuple[bool, str]:
+    def _is_valid_vulnerability_line(
+        self, line_content: str, line_number: int, total_lines: int = None
+    ) -> tuple[bool, str]:
         """检查行内容是否为有效的漏洞位置
 
         强制规则：
@@ -430,11 +446,21 @@ class LineNumberMapper:
                 if stripped.startswith(ann):
                     return False, f"行{line_number}是类级别注解@{ann}，通常不在前10行"
 
-            config_annotations = ["@Configuration", "@Service", "@Component",
-                                 "@Controller", "@RestController", "@Repository", "@Bean"]
+            config_annotations = [
+                "@Configuration",
+                "@Service",
+                "@Component",
+                "@Controller",
+                "@RestController",
+                "@Repository",
+                "@Bean",
+            ]
             for ann in config_annotations:
                 if stripped.startswith(ann):
-                    if any(kw in vulnerability_type.lower() for kw in ["config", "configuration", "security", "auth"]):
+                    if any(
+                        kw in vulnerability_type.lower()
+                        for kw in ["config", "configuration", "security", "auth"]
+                    ):
                         return True, "VALID"
                     return False, f"行{line_number}是类级别注解@{ann}，需确认是否与漏洞相关"
 
@@ -465,8 +491,9 @@ class LineNumberMapper:
 
         return False
 
-    def validate_vulnerability_location(self, line_number: int, line_content: str,
-                                        vulnerability_type: str = "") -> tuple[bool, str]:
+    def validate_vulnerability_location(
+        self, line_number: int, line_content: str, vulnerability_type: str = ""
+    ) -> tuple[bool, str]:
         """验证漏洞位置是否与漏洞类型匹配
 
         Args:
@@ -492,7 +519,9 @@ class LineNumberMapper:
             return True, "VALID"
 
         if "configuration" in type_lower or "config" in type_lower:
-            if not any(kw in line_content.lower() for kw in ["config", "properties", "@", "configuration"]):
+            if not any(
+                kw in line_content.lower() for kw in ["config", "properties", "@", "configuration"]
+            ):
                 return False, "该行不包含配置相关代码，与漏洞类型不匹配"
             return True, "VALID"
 
@@ -544,7 +573,8 @@ class LineNumberValidator:
         if file_content is None:
             try:
                 from pathlib import Path
-                file_content = Path(file_path).read_text(encoding='utf-8')
+
+                file_content = Path(file_path).read_text(encoding="utf-8")
             except Exception:
                 file_content = ""
         self._snapshots[file_path] = file_content
@@ -561,10 +591,7 @@ class LineNumberValidator:
         return self._snapshots.get(file_path, "")
 
     def verify_and_correct(
-        self,
-        location: str,
-        code_snippet: str = None,
-        tolerance: int = None
+        self, location: str, code_snippet: str = None, tolerance: int = None
     ) -> Dict[str, Any]:
         """验证并校正行号（校正优先模式）
 
@@ -594,65 +621,67 @@ class LineNumberValidator:
         file_path, ai_line = self.mapper.parse_location(location)
 
         result = {
-            'ai_reported_line': ai_line,
-            'verified_line': ai_line,
-            'line_match_status': 'NOT_FOUND',
-            'code_snippet': code_snippet or '',
-            'deviation': 0,
-            'is_valid': True,
-            'warning_message': None,
-            'ai_hallucination_warning': False,
-            'candidate_lines': []
+            "ai_reported_line": ai_line,
+            "verified_line": ai_line,
+            "line_match_status": "NOT_FOUND",
+            "code_snippet": code_snippet or "",
+            "deviation": 0,
+            "is_valid": True,
+            "warning_message": None,
+            "ai_hallucination_warning": False,
+            "candidate_lines": [],
         }
 
         if ai_line is None:
-            result['line_match_status'] = 'INVALID_LOCATION'
-            result['is_valid'] = False
-            result['warning_message'] = '无效的位置格式，请人工复核'
+            result["line_match_status"] = "INVALID_LOCATION"
+            result["is_valid"] = False
+            result["warning_message"] = "无效的位置格式，请人工复核"
             return result
 
         file_content = self.get_file_content(file_path)
         if not file_content:
-            result['line_match_status'] = 'NO_SNAPSHOT'
-            result['warning_message'] = '文件快照不存在，请人工复核'
+            result["line_match_status"] = "NO_SNAPSHOT"
+            result["warning_message"] = "文件快照不存在，请人工复核"
             return result
 
         if code_snippet:
             matched_line, match_status, candidates = self.mapper.find_matching_line(
                 code_snippet, file_content, ai_line
             )
-            result['line_match_status'] = match_status
-            result['code_snippet'] = code_snippet
-            result['candidate_lines'] = candidates
+            result["line_match_status"] = match_status
+            result["code_snippet"] = code_snippet
+            result["candidate_lines"] = candidates
 
             if matched_line > 0:
-                result['verified_line'] = matched_line
+                result["verified_line"] = matched_line
                 deviation = self.mapper.calculate_line_deviation(ai_line, matched_line)
-                result['deviation'] = deviation
+                result["deviation"] = deviation
 
                 if match_status == "EXACT":
-                    result['is_valid'] = True
-                    result['warning_message'] = None
+                    result["is_valid"] = True
+                    result["warning_message"] = None
                 else:
                     if deviation > effective_tolerance:
-                        result['line_match_status'] = 'UNVERIFIED'
-                        result['is_valid'] = True
-                        result['warning_message'] = f'🚨 行号偏差过大（偏差{deviation}行，超过容忍范围{effective_tolerance}行），已自动标记为需人工复核'
+                        result["line_match_status"] = "UNVERIFIED"
+                        result["is_valid"] = True
+                        result[
+                            "warning_message"
+                        ] = f"🚨 行号偏差过大（偏差{deviation}行，超过容忍范围{effective_tolerance}行），已自动标记为需人工复核"
                     else:
-                        result['is_valid'] = True
-                        result['warning_message'] = f'行号已自动校正（偏差{deviation}行）'
+                        result["is_valid"] = True
+                        result["warning_message"] = f"行号已自动校正（偏差{deviation}行）"
             else:
-                result['verified_line'] = ai_line
-                result['deviation'] = 0
-                result['is_valid'] = True
-                result['ai_hallucination_warning'] = True
-                result['warning_message'] = '🚨 AI幻觉警告：代码片段在文件中不存在，请人工复核'
+                result["verified_line"] = ai_line
+                result["deviation"] = 0
+                result["is_valid"] = True
+                result["ai_hallucination_warning"] = True
+                result["warning_message"] = "🚨 AI幻觉警告：代码片段在文件中不存在，请人工复核"
         else:
-            result['line_match_status'] = 'UNVERIFIED'
-            result['verified_line'] = ai_line
-            result['is_valid'] = False
-            result['ai_hallucination_warning'] = True
-            result['warning_message'] = '🚨 AI幻觉警告：未提供代码片段，无法验证行号准确性，已拒绝该发现'
+            result["line_match_status"] = "UNVERIFIED"
+            result["verified_line"] = ai_line
+            result["is_valid"] = False
+            result["ai_hallucination_warning"] = True
+            result["warning_message"] = "🚨 AI幻觉警告：未提供代码片段，无法验证行号准确性，已拒绝该发现"
 
         return result
 

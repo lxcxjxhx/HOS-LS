@@ -1,6 +1,7 @@
 """行号验证器单元测试"""
 
 import pytest
+
 from src.ai.pure_ai.line_number_mapper import LineNumberMapper, LineNumberValidator
 
 
@@ -102,9 +103,7 @@ public class Test {
 }"""
         validator.record_file_snapshot("Test.java", content)
 
-        result = validator.verify_and_correct(
-            "Test.java:1", "package com.example;", tolerance=0
-        )
+        result = validator.verify_and_correct("Test.java:1", "package com.example;", tolerance=0)
 
         assert result["line_match_status"] == "EXACT"
         assert result["is_valid"] is True
@@ -122,9 +121,7 @@ public class Test {
 }"""
         validator.record_file_snapshot("Test.java", content)
 
-        result = validator.verify_and_correct(
-            "Test.java:10", "public class Test {", tolerance=5
-        )
+        result = validator.verify_and_correct("Test.java:10", "public class Test {", tolerance=5)
 
         assert result["line_match_status"] == "ADJUSTED"
         assert result["is_valid"] is True
@@ -143,9 +140,7 @@ public class Test {
 }"""
         validator.record_file_snapshot("Test.java", content)
 
-        result = validator.verify_and_correct(
-            "Test.java:20", "private String value;", tolerance=3
-        )
+        result = validator.verify_and_correct("Test.java:20", "private String value;", tolerance=3)
 
         assert result["line_match_status"] == "ADJUSTED"
         assert result["is_valid"] is True
@@ -163,9 +158,7 @@ public class Test {
 """
         validator.record_file_snapshot("Test.java", content)
 
-        result = validator.verify_and_correct(
-            "Test.java:5", "non-existent-code", tolerance=0
-        )
+        result = validator.verify_and_correct("Test.java:5", "non-existent-code", tolerance=0)
 
         assert result["line_match_status"] == "NOT_FOUND"
         assert result["is_valid"] is True
@@ -180,9 +173,7 @@ public class Test {
 """
         validator.record_file_snapshot("Test.java", content)
 
-        result = validator.verify_and_correct(
-            "Test.java:1", None, tolerance=0
-        )
+        result = validator.verify_and_correct("Test.java:1", None, tolerance=0)
 
         assert result["line_match_status"] == "NO_SNIPPET"
         assert result["is_valid"] is True
@@ -192,9 +183,7 @@ public class Test {
         mapper = LineNumberMapper()
         validator = LineNumberValidator(mapper)
 
-        result = validator.verify_and_correct(
-            "", "some code", tolerance=0
-        )
+        result = validator.verify_and_correct("", "some code", tolerance=0)
 
         assert result["line_match_status"] == "INVALID_LOCATION"
         assert result["is_valid"] is False
@@ -211,9 +200,7 @@ public class Test {
 }"""
         validator.record_file_snapshot("Test.java", content)
 
-        result = validator.verify_and_correct(
-            "Test.java:20", "public class Test {", tolerance=5
-        )
+        result = validator.verify_and_correct("Test.java:20", "public class Test {", tolerance=5)
 
         assert result["candidate_lines"] is not None
         assert len(result["candidate_lines"]) > 0

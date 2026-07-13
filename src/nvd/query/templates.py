@@ -1,8 +1,9 @@
 from typing import Dict, List
 
+
 class QueryTemplates:
     """NVD查询SQL模板"""
-    
+
     SCAN_PRODUCT = """
         SELECT
             cs.cve_id,
@@ -25,7 +26,7 @@ class QueryTemplates:
             cs.cvss_score DESC
         LIMIT %(limit)s
     """
-    
+
     SCAN_PRODUCT_VERSION = """
         SELECT DISTINCT
             cs.cve_id,
@@ -46,7 +47,7 @@ class QueryTemplates:
           AND cs.cvss_score >= %(min_score)s
           AND (
               (cp.version = %(version)s)
-              OR (cp.version_start IS NOT NULL AND cp.version_start <= %(version)s 
+              OR (cp.version_start IS NOT NULL AND cp.version_start <= %(version)s
                   AND (cp.version_end IS NULL OR cp.version_end > %(version)s))
               OR (cp.version_start IS NULL AND cp.version_end IS NOT NULL AND cp.version_end > %(version)s)
               OR (cp.version_start IS NOT NULL AND cp.version_start_type = 'including' AND cp.version_start <= %(version)s
@@ -58,7 +59,7 @@ class QueryTemplates:
             cs.cvss_score DESC
         LIMIT %(limit)s
     """
-    
+
     FIND_EXPLOITABLE = """
         SELECT
             cs.cve_id,
@@ -80,7 +81,7 @@ class QueryTemplates:
             cs.cvss_score DESC
         LIMIT %(limit)s
     """
-    
+
     FIND_POC = """
         SELECT
             cs.cve_id,
@@ -100,7 +101,7 @@ class QueryTemplates:
         ORDER BY p.stars DESC
         LIMIT %(limit)s
     """
-    
+
     GET_CVE_DETAIL = """
         SELECT
             c.cve_id,
@@ -125,7 +126,7 @@ class QueryTemplates:
         GROUP BY c.cve_id, c.description, c.published_date, c.last_modified,
                  cvss.score, cvss.severity, cvss.vector, kev.exploited, kev.short_description
     """
-    
+
     GET_EXPLOITS = """
         SELECT
             id,
@@ -140,7 +141,7 @@ class QueryTemplates:
         WHERE cve_id = %(cve_id)s
         ORDER BY verified DESC, id ASC
     """
-    
+
     GET_POCS = """
         SELECT
             id,

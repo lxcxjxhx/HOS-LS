@@ -5,13 +5,14 @@
 
 import threading
 import time
-from typing import Optional, Callable, List, Tuple
 from dataclasses import dataclass
 from enum import Enum
+from typing import Callable, List, Optional, Tuple
 
 try:
     import serial
     import serial.tools.list_ports
+
     PYSERIAL_AVAILABLE = True
 except ImportError:
     PYSERIAL_AVAILABLE = False
@@ -20,6 +21,7 @@ except ImportError:
 
 class Parity(Enum):
     """校验位"""
+
     NONE = "N"
     ODD = "O"
     EVEN = "E"
@@ -29,6 +31,7 @@ class Parity(Enum):
 
 class StopBits(Enum):
     """停止位"""
+
     ONE = 1
     ONE_POINT_FIVE = 1.5
     TWO = 2
@@ -37,6 +40,7 @@ class StopBits(Enum):
 @dataclass
 class SerialPortInfo:
     """串口信息"""
+
     device: str
     description: str
     hwid: str
@@ -45,6 +49,7 @@ class SerialPortInfo:
 @dataclass
 class SerialConfig:
     """串口配置"""
+
     port: str = "COM1"
     baudrate: int = 115200
     bytesize: int = 8
@@ -87,9 +92,7 @@ class SerialManager:
         ports = serial.tools.list_ports.comports()
         return [
             SerialPortInfo(
-                device=p.device,
-                description=p.description or "未知设备",
-                hwid=p.hwid or "未知"
+                device=p.device, description=p.description or "未知设备", hwid=p.hwid or "未知"
             )
             for p in ports
         ]

@@ -5,47 +5,60 @@
 
 from enum import Enum
 
+
 class EvidenceType(str, Enum):
     """证据类型枚举"""
+
     CODE_LINE = "code_line"
     CONFIG = "config"
     FLOW = "flow"
     DEPENDENCY = "dependency"
 
+
 class SignalState(str, Enum):
     """信号状态枚举 - 用于Agent之间语义一致性追踪"""
+
     NEW = "NEW"
     CONFIRMED = "CONFIRMED"
     REJECTED = "REJECTED"
     REFINED = "REFINED"
     UNCERTAIN = "UNCERTAIN"
 
+
 class Verdict(str, Enum):
     """对抗验证裁决枚举"""
+
     REFUTE = "REFUTE"
     ACCEPT = "ACCEPT"
     ESCALATE = "ESCALATE"
     UNCERTAIN = "UNCERTAIN"
 
+
 class Severity(str, Enum):
     """严重程度枚举"""
+
     CRITICAL = "CRITICAL"
     HIGH = "HIGH"
     MEDIUM = "MEDIUM"
     LOW = "LOW"
     INFO = "INFO"
 
+
 class LineMatchStatus(str, Enum):
     """行号匹配状态枚举"""
+
     EXACT = "EXACT"
     ADJUSTED = "ADJUSTED"
     UNVERIFIED = "UNVERIFIED"
 
+
 class AISVSLevel(str, Enum):
     """AISVS 等级枚举"""
+
     LEVEL_1 = "1"
     LEVEL_2 = "2"
     LEVEL_3 = "3"
+
 
 EVIDENCE_SCHEMA = {
     "type": "object",
@@ -59,8 +72,8 @@ EVIDENCE_SCHEMA = {
         "source_agent": {"type": "string"},
         "aisvs_level": {"type": "string", "enum": [e.value for e in AISVSLevel]},
         "aisvs_requirement_id": {"type": "string"},
-        "owasp_category": {"type": "string"}
-    }
+        "owasp_category": {"type": "string"},
+    },
 }
 
 CROSS_AGENT_AGREEMENT_SCHEMA = {
@@ -71,14 +84,11 @@ CROSS_AGENT_AGREEMENT_SCHEMA = {
         "signal_type": {"type": "string"},
         "original_agent": {"type": "string"},
         "current_state": {"type": "string", "enum": [s.value for s in SignalState]},
-        "evidence_chain": {
-            "type": "array",
-            "items": EVIDENCE_SCHEMA
-        },
+        "evidence_chain": {"type": "array", "items": EVIDENCE_SCHEMA},
         "confirmed_by": {"type": "array", "items": {"type": "string"}},
         "rejected_by": {"type": "array", "items": {"type": "string"}},
-        "refined_by": {"type": "array", "items": {"type": "string"}}
-    }
+        "refined_by": {"type": "array", "items": {"type": "string"}},
+    },
 }
 
 FINAL_DECISION_SCHEMA = {
@@ -89,38 +99,49 @@ FINAL_DECISION_SCHEMA = {
             "type": "array",
             "items": {
                 "type": "object",
-                "required": ["vulnerability", "location", "severity", "status", "confidence", "evidence", "recommendation"],
+                "required": [
+                    "vulnerability",
+                    "location",
+                    "severity",
+                    "status",
+                    "confidence",
+                    "evidence",
+                    "recommendation",
+                ],
                 "properties": {
                     "vulnerability": {"type": "string"},
                     "location": {"type": "string"},
-                    "severity": {"type": "string", "enum": ["CRITICAL", "HIGH", "MEDIUM", "LOW", "INFO"]},
+                    "severity": {
+                        "type": "string",
+                        "enum": ["CRITICAL", "HIGH", "MEDIUM", "LOW", "INFO"],
+                    },
                     "status": {"type": "string", "enum": ["CONFIRMED", "WEAK", "REJECTED"]},
                     "confidence": {"type": "string"},
                     "cvss_score": {"type": "string"},
                     "recommendation": {"type": "string"},
-                    "evidence": {
-                        "type": "array",
-                        "items": EVIDENCE_SCHEMA
-                    },
+                    "evidence": {"type": "array", "items": EVIDENCE_SCHEMA},
                     "evidence_chain_summary": {"type": "string"},
                     "requires_human_review": {"type": "boolean"},
                     "signal_state": {"type": "string", "enum": [s.value for s in SignalState]},
                     "ai_reported_line": {"type": "integer"},
                     "verified_line": {"type": "integer"},
-                    "line_match_status": {"type": "string", "enum": [s.value for s in LineMatchStatus]},
+                    "line_match_status": {
+                        "type": "string",
+                        "enum": [s.value for s in LineMatchStatus],
+                    },
                     "candidate_lines": {"type": "array", "items": {"type": "integer"}},
-                    "source": {"type": "string", "enum": ["rule_match", "ai_analysis", "hybrid_verified"]},
+                    "source": {
+                        "type": "string",
+                        "enum": ["rule_match", "ai_analysis", "hybrid_verified"],
+                    },
                     "rule_id": {"type": "string"},
                     "aisvs_level": {"type": "string", "enum": [e.value for e in AISVSLevel]},
                     "aisvs_requirement_id": {"type": "string"},
                     "confidence_score": {"type": "number", "minimum": 0.0, "maximum": 1.0},
                     "owasp_category": {"type": "string"},
-                    "evidence_chain": {
-                        "type": "array",
-                        "items": EVIDENCE_SCHEMA
-                    }
-                }
-            }
+                    "evidence_chain": {"type": "array", "items": EVIDENCE_SCHEMA},
+                },
+            },
         },
         "summary": {
             "type": "object",
@@ -135,10 +156,10 @@ FINAL_DECISION_SCHEMA = {
                 "low_severity_count": {"type": "integer"},
                 "signals_confirmed": {"type": "integer"},
                 "signals_rejected": {"type": "integer"},
-                "signals_refined": {"type": "integer"}
-            }
-        }
-    }
+                "signals_refined": {"type": "integer"},
+            },
+        },
+    },
 }
 
 VULNERABILITY_SCHEMA = {
@@ -152,33 +173,39 @@ VULNERABILITY_SCHEMA = {
                 "required": ["title", "severity", "location", "evidence", "signal_state"],
                 "properties": {
                     "title": {"type": "string"},
-                    "severity": {"type": "string", "enum": ["CRITICAL", "HIGH", "MEDIUM", "LOW", "INFO"]},
-                    "location": {"type": "string"},
-                    "evidence": {
-                        "type": "array",
-                        "items": EVIDENCE_SCHEMA
+                    "severity": {
+                        "type": "string",
+                        "enum": ["CRITICAL", "HIGH", "MEDIUM", "LOW", "INFO"],
                     },
+                    "location": {"type": "string"},
+                    "evidence": {"type": "array", "items": EVIDENCE_SCHEMA},
                     "cwe_id": {"type": "string"},
                     "cvss_score": {"type": "string"},
                     "signal_state": {"type": "string", "enum": [s.value for s in SignalState]},
-                    "verification_decision": {"type": "string", "enum": ["CONFIRMED", "REJECTED", "REFINED"]},
+                    "verification_decision": {
+                        "type": "string",
+                        "enum": ["CONFIRMED", "REJECTED", "REFINED"],
+                    },
                     "verification_reason": {"type": "string"},
                     "ai_reported_line": {"type": "integer"},
                     "verified_line": {"type": "integer"},
-                    "line_match_status": {"type": "string", "enum": [s.value for s in LineMatchStatus]},
+                    "line_match_status": {
+                        "type": "string",
+                        "enum": [s.value for s in LineMatchStatus],
+                    },
                     "candidate_lines": {"type": "array", "items": {"type": "integer"}},
-                    "source": {"type": "string", "enum": ["rule_match", "ai_analysis", "hybrid_verified"]},
+                    "source": {
+                        "type": "string",
+                        "enum": ["rule_match", "ai_analysis", "hybrid_verified"],
+                    },
                     "rule_id": {"type": "string"},
                     "aisvs_level": {"type": "string", "enum": [e.value for e in AISVSLevel]},
                     "aisvs_requirement_id": {"type": "string"},
                     "confidence_score": {"type": "number", "minimum": 0.0, "maximum": 1.0},
                     "owasp_category": {"type": "string"},
-                    "evidence_chain": {
-                        "type": "array",
-                        "items": EVIDENCE_SCHEMA
-                    }
-                }
-            }
+                    "evidence_chain": {"type": "array", "items": EVIDENCE_SCHEMA},
+                },
+            },
         },
         "signal_tracking": {
             "type": "object",
@@ -186,10 +213,10 @@ VULNERABILITY_SCHEMA = {
                 "signals_confirmed": {"type": "integer"},
                 "signals_rejected": {"type": "integer"},
                 "signals_refined": {"type": "integer"},
-                "signals_new": {"type": "integer"}
-            }
-        }
-    }
+                "signals_new": {"type": "integer"},
+            },
+        },
+    },
 }
 
 ADVERSARIAL_SCHEMA = {
@@ -203,24 +230,21 @@ ADVERSARIAL_SCHEMA = {
                 "required": ["attack_chain_name", "verdict", "confidence", "evidence"],
                 "properties": {
                     "attack_chain_name": {"type": "string"},
-                    "verdict": {"type": "string", "enum": ["REFUTE", "ACCEPT", "ESCALATE", "UNCERTAIN"]},
+                    "verdict": {
+                        "type": "string",
+                        "enum": ["REFUTE", "ACCEPT", "ESCALATE", "UNCERTAIN"],
+                    },
                     "confidence": {"type": "number", "minimum": 0.0, "maximum": 1.0},
                     "reason": {"type": "string"},
                     "counter_arguments": {"type": "array", "items": {"type": "string"}},
-                    "evidence": {
-                        "type": "array",
-                        "items": EVIDENCE_SCHEMA
-                    },
+                    "evidence": {"type": "array", "items": EVIDENCE_SCHEMA},
                     "requires_human_review": {"type": "boolean"},
-                    "challenged_signal_id": {"type": "string"}
-                }
-            }
+                    "challenged_signal_id": {"type": "string"},
+                },
+            },
         },
-        "cross_agent_agreement": {
-            "type": "array",
-            "items": CROSS_AGENT_AGREEMENT_SCHEMA
-        }
-    }
+        "cross_agent_agreement": {"type": "array", "items": CROSS_AGENT_AGREEMENT_SCHEMA},
+    },
 }
 
 RISK_ENUMERATION_SCHEMA = {
@@ -239,12 +263,9 @@ RISK_ENUMERATION_SCHEMA = {
                     "description": {"type": "string"},
                     "signal_id": {"type": "string"},
                     "signal_state": {"type": "string", "enum": [s.value for s in SignalState]},
-                    "evidence": {
-                        "type": "array",
-                        "items": EVIDENCE_SCHEMA
-                    }
-                }
-            }
+                    "evidence": {"type": "array", "items": EVIDENCE_SCHEMA},
+                },
+            },
         },
         "potential_vulnerabilities": {
             "type": "array",
@@ -253,13 +274,10 @@ RISK_ENUMERATION_SCHEMA = {
                 "required": ["type", "evidence", "signal_id"],
                 "properties": {
                     "type": {"type": "string"},
-                    "evidence": {
-                        "type": "array",
-                        "items": EVIDENCE_SCHEMA
-                    },
-                    "signal_id": {"type": "string"}
-                }
-            }
+                    "evidence": {"type": "array", "items": EVIDENCE_SCHEMA},
+                    "signal_id": {"type": "string"},
+                },
+            },
         },
         "signal_tracking": {
             "type": "object",
@@ -268,10 +286,10 @@ RISK_ENUMERATION_SCHEMA = {
                 "signals_new": {"type": "integer"},
                 "signals_confirmed": {"type": "integer"},
                 "signals_rejected": {"type": "integer"},
-                "signals_refined": {"type": "integer"}
-            }
-        }
-    }
+                "signals_refined": {"type": "integer"},
+            },
+        },
+    },
 }
 
 ATTACK_CHAIN_SCHEMA = {
@@ -289,12 +307,9 @@ ATTACK_CHAIN_SCHEMA = {
                     "risk_level": {"type": "string"},
                     "signal_id": {"type": "string"},
                     "signal_state": {"type": "string", "enum": [s.value for s in SignalState]},
-                    "evidence": {
-                        "type": "array",
-                        "items": EVIDENCE_SCHEMA
-                    }
-                }
-            }
+                    "evidence": {"type": "array", "items": EVIDENCE_SCHEMA},
+                },
+            },
         },
         "signal_tracking": {
             "type": "object",
@@ -302,10 +317,10 @@ ATTACK_CHAIN_SCHEMA = {
                 "total_signals": {"type": "integer"},
                 "signals_new": {"type": "integer"},
                 "signals_confirmed": {"type": "integer"},
-                "signals_rejected": {"type": "integer"}
-            }
-        }
-    }
+                "signals_rejected": {"type": "integer"},
+            },
+        },
+    },
 }
 
 CONTEXT_ANALYSIS_SCHEMA = {
@@ -314,8 +329,8 @@ CONTEXT_ANALYSIS_SCHEMA = {
     "properties": {
         "file_type": {"type": "string"},
         "frameworks": {"type": "array", "items": {"type": "string"}},
-        "security_relevant": {"type": "boolean"}
-    }
+        "security_relevant": {"type": "boolean"},
+    },
 }
 
 CODE_UNDERSTANDING_SCHEMA = {
@@ -324,6 +339,6 @@ CODE_UNDERSTANDING_SCHEMA = {
     "properties": {
         "purpose": {"type": "string"},
         "security_controls": {"type": "array", "items": {"type": "string"}},
-        "data_flows": {"type": "array"}
-    }
+        "data_flows": {"type": "array"},
+    },
 }

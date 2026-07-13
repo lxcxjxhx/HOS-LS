@@ -8,7 +8,7 @@ import zipfile
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional, Any, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from src.utils.logger import get_logger
 
@@ -18,6 +18,7 @@ logger = get_logger(__name__)
 @dataclass
 class CVEChunk:
     """CVE数据块"""
+
     cve_id: str
     chunk_id: str  # 唯一标识，格式：CVE-XXXX#field#index
     chunk_type: str  # description, impact, solution, references, configurations
@@ -28,6 +29,7 @@ class CVEChunk:
 @dataclass
 class CVEStructuredData:
     """CVE结构化数据"""
+
     cve_id: str
     description: str
     cwe: Optional[str] = None
@@ -70,8 +72,8 @@ class NVDProcessor:
         """
         if not text:
             return ""
-        text = text.replace('\x00', '')
-        text = ' '.join(text.split())
+        text = text.replace("\x00", "")
+        text = " ".join(text.split())
         return text.strip()
 
     def truncate_field(self, text: str, max_length: int) -> str:
@@ -99,7 +101,7 @@ class NVDProcessor:
         """
         if text and len(text) > self.max_text_length:
             logger.warning(f"文本长度超过限制，截断到 {self.max_text_length} 字符")
-            return text[:self.max_text_length] + "..."
+            return text[: self.max_text_length] + "..."
         return text
 
     def split_long_description(self, description: str, cve_id: str) -> List[CVEChunk]:
@@ -119,28 +121,24 @@ class NVDProcessor:
             return chunks
 
         # 按句子分割描述
-        sentences = description.split('. ')
+        sentences = description.split(". ")
         current_chunk = []
         current_length = 0
         chunk_index = 1
 
         for sentence in sentences:
-            sentence += '. '
+            sentence += ". "
             sentence_length = len(sentence)
 
             if current_length + sentence_length > self.max_chunk_content_length:
                 # 生成当前数据块
                 if current_chunk:
-                    chunk_content = ''.join(current_chunk)
+                    chunk_content = "".join(current_chunk)
                     chunk = CVEChunk(
                         cve_id=cve_id,
-                        chunk_type='description',
+                        chunk_type="description",
                         content=f"CVE ID: {cve_id}\nDescription (part {chunk_index}): {chunk_content}",
-                        metadata={
-                            'type': 'description',
-                            'cve_id': cve_id,
-                            'part': chunk_index
-                        }
+                        metadata={"type": "description", "cve_id": cve_id, "part": chunk_index},
                     )
                     chunks.append(chunk)
                     current_chunk = [sentence]
@@ -152,16 +150,12 @@ class NVDProcessor:
 
         # 处理最后一个数据块
         if current_chunk:
-            chunk_content = ''.join(current_chunk)
+            chunk_content = "".join(current_chunk)
             chunk = CVEChunk(
                 cve_id=cve_id,
-                chunk_type='description',
+                chunk_type="description",
                 content=f"CVE ID: {cve_id}\nDescription (part {chunk_index}): {chunk_content}",
-                metadata={
-                    'type': 'description',
-                    'cve_id': cve_id,
-                    'part': chunk_index
-                }
+                metadata={"type": "description", "cve_id": cve_id, "part": chunk_index},
             )
             chunks.append(chunk)
 
@@ -186,28 +180,24 @@ class NVDProcessor:
             return chunks
 
         # 按句子分割文本
-        sentences = text.split('. ')
+        sentences = text.split(". ")
         current_chunk = []
         current_length = 0
         chunk_index = 1
 
         for sentence in sentences:
-            sentence += '. '
+            sentence += ". "
             sentence_length = len(sentence)
 
             if current_length + sentence_length > self.max_chunk_content_length:
                 # 生成当前数据块
                 if current_chunk:
-                    chunk_content = ''.join(current_chunk)
+                    chunk_content = "".join(current_chunk)
                     chunk = CVEChunk(
                         cve_id=cve_id,
                         chunk_type=chunk_type,
                         content=f"CVE ID: {cve_id}\n{chunk_type.capitalize()} (part {chunk_index}): {chunk_content}",
-                        metadata={
-                            'type': chunk_type,
-                            'cve_id': cve_id,
-                            'part': chunk_index
-                        }
+                        metadata={"type": chunk_type, "cve_id": cve_id, "part": chunk_index},
                     )
                     chunks.append(chunk)
                     current_chunk = [sentence]
@@ -219,23 +209,21 @@ class NVDProcessor:
 
         # 处理最后一个数据块
         if current_chunk:
-            chunk_content = ''.join(current_chunk)
+            chunk_content = "".join(current_chunk)
             chunk = CVEChunk(
                 cve_id=cve_id,
                 chunk_type=chunk_type,
                 content=f"CVE ID: {cve_id}\n{chunk_type.capitalize()} (part {chunk_index}): {chunk_content}",
-                metadata={
-                    'type': chunk_type,
-                    'cve_id': cve_id,
-                    'part': chunk_index
-                }
+                metadata={"type": chunk_type, "cve_id": cve_id, "part": chunk_index},
             )
             chunks.append(chunk)
 
         logger.info(f"长文本分段完成，生成 {len(chunks)} 个数据块")
         return chunks
 
-    def split_text_for_embedding(self, text: str, chunk_size: int = None, chunk_overlap: int = None) -> List[str]:
+    def split_text_for_embedding(
+        self, text: str, chunk_size: int = None, chunk_overlap: int = None
+    ) -> List[str]:
         """将长文本切分为指定大小的片段，用于embedding
 
         Args:
@@ -257,29 +245,29 @@ class NVDProcessor:
 
         # 首先清洗文本
         text = self.clean_text(text)
-        
+
         # 如果文本长度小于等于chunk_size，直接返回
         if len(text) <= chunk_size:
             return [text]
 
         # 按语义切分（优先按句子）
-        sentences = text.split('. ')
+        sentences = text.split(". ")
         chunks = []
         current_chunk = []
         current_length = 0
 
         for sentence in sentences:
-            sentence += '. '
+            sentence += ". "
             sentence_length = len(sentence)
 
             if current_length + sentence_length > chunk_size:
                 # 生成当前数据块
                 if current_chunk:
-                    chunk_content = ''.join(current_chunk).strip()
+                    chunk_content = "".join(current_chunk).strip()
                     if chunk_content:
                         chunks.append(chunk_content)
                     # 计算重叠部分
-                    overlap_text = ''.join(current_chunk[-2:]) if len(current_chunk) >= 2 else ''
+                    overlap_text = "".join(current_chunk[-2:]) if len(current_chunk) >= 2 else ""
                     current_chunk = [overlap_text + sentence]
                     current_length = len(overlap_text + sentence)
             else:
@@ -288,7 +276,7 @@ class NVDProcessor:
 
         # 处理最后一个数据块
         if current_chunk:
-            chunk_content = ''.join(current_chunk).strip()
+            chunk_content = "".join(current_chunk).strip()
             if chunk_content:
                 chunks.append(chunk_content)
 
@@ -316,30 +304,32 @@ class NVDProcessor:
             格式类型: v1.1, v2.0, unknown
         """
         # 检测 v1.1 格式
-        if 'cve' in data:
-            cve_data = data.get('cve', {})
-            if 'CVE_data_meta' in cve_data:
-                return 'v1.1'
-        
-        # 检测 v2.0 格式
-        if 'id' in data and 'descriptions' in data:
-            return 'v2.0'
-        
-        # 检测 CVE_Items 格式（包含多个CVE的集合）
-        if 'CVE_Items' in data:
-            return 'v1.1_collection'
-        
-        # 检测其他可能的NVD格式
-        if 'CVE_data_type' in data or 'CVE_data_format' in data:
-            return 'v1.1'
-        
-        # 检测单个CVE的其他格式
-        if any(key in data for key in ['cveMetadata', 'containers', 'references']):
-            return 'v2.0'
-        
-        return 'unknown'
+        if "cve" in data:
+            cve_data = data.get("cve", {})
+            if "CVE_data_meta" in cve_data:
+                return "v1.1"
 
-    def parse_nvd_v2(self, data: Dict[str, Any]) -> Optional[Tuple[CVEStructuredData, List[CVEChunk]]]:
+        # 检测 v2.0 格式
+        if "id" in data and "descriptions" in data:
+            return "v2.0"
+
+        # 检测 CVE_Items 格式（包含多个CVE的集合）
+        if "CVE_Items" in data:
+            return "v1.1_collection"
+
+        # 检测其他可能的NVD格式
+        if "CVE_data_type" in data or "CVE_data_format" in data:
+            return "v1.1"
+
+        # 检测单个CVE的其他格式
+        if any(key in data for key in ["cveMetadata", "containers", "references"]):
+            return "v2.0"
+
+        return "unknown"
+
+    def parse_nvd_v2(
+        self, data: Dict[str, Any]
+    ) -> Optional[Tuple[CVEStructuredData, List[CVEChunk]]]:
         """解析NVD v2.0数据
 
         Args:
@@ -349,104 +339,108 @@ class NVDProcessor:
             (结构化数据, 数据块列表) 或 None
         """
         try:
-            cve_id = data.get('id', '')
+            cve_id = data.get("id", "")
             if not cve_id:
                 return None
-            
+
             # 解析描述
-            description = ''
-            for desc in data.get('descriptions', []):
-                if desc.get('lang') == 'en':
-                    description = desc.get('value', '')
+            description = ""
+            for desc in data.get("descriptions", []):
+                if desc.get("lang") == "en":
+                    description = desc.get("value", "")
                     description = self.truncate_field(description, self.max_description_length)
                     description = self.limit_text_length(description)
                     break
-            
+
             # 解析CVSS
             cvss_v3_score = None
             cvss_v3_vector = None
             cvss_v2_score = None
             cvss_v2_vector = None
             attack_vector = None
-            
-            metrics = data.get('metrics', {})
-            
-            cvss_v3_metrics = metrics.get('cvssMetricV31', []) or metrics.get('cvssMetricV30', [])
+
+            metrics = data.get("metrics", {})
+
+            cvss_v3_metrics = metrics.get("cvssMetricV31", []) or metrics.get("cvssMetricV30", [])
             if cvss_v3_metrics:
-                cvss_data = cvss_v3_metrics[0].get('cvssData', {})
-                cvss_v3_score = cvss_data.get('baseScore')
-                cvss_v3_vector = cvss_data.get('vectorString')
-                attack_vector = cvss_data.get('attackVector')
-            
-            cvss_v2_metrics = metrics.get('cvssMetricV2', [])
+                cvss_data = cvss_v3_metrics[0].get("cvssData", {})
+                cvss_v3_score = cvss_data.get("baseScore")
+                cvss_v3_vector = cvss_data.get("vectorString")
+                attack_vector = cvss_data.get("attackVector")
+
+            cvss_v2_metrics = metrics.get("cvssMetricV2", [])
             if cvss_v2_metrics:
-                cvss_data = cvss_v2_metrics[0].get('cvssData', {})
-                cvss_v2_score = cvss_data.get('baseScore')
-                cvss_v2_vector = cvss_data.get('vectorString')
+                cvss_data = cvss_v2_metrics[0].get("cvssData", {})
+                cvss_v2_score = cvss_data.get("baseScore")
+                cvss_v2_vector = cvss_data.get("vectorString")
                 if not attack_vector:
-                    attack_vector = cvss_data.get('accessVector')
-            
+                    attack_vector = cvss_data.get("accessVector")
+
             # 解析CWE
             cwe = None
-            weaknesses = data.get('weaknesses', [])
+            weaknesses = data.get("weaknesses", [])
             for weakness in weaknesses:
-                if weakness.get('type') == 'Primary':
-                    for desc in weakness.get('description', []):
-                        if desc.get('lang') == 'en':
-                            cwe_val = desc.get('value', '')
-                            if cwe_val.startswith('CWE-'):
+                if weakness.get("type") == "Primary":
+                    for desc in weakness.get("description", []):
+                        if desc.get("lang") == "en":
+                            cwe_val = desc.get("value", "")
+                            if cwe_val.startswith("CWE-"):
                                 cwe = cwe_val
                             break
                     break
-            
+
             # 解析CPE
             cpe_list = []
-            configurations = data.get('configurations', [])
+            configurations = data.get("configurations", [])
             for config in configurations:
-                nodes = config.get('nodes', [])
+                nodes = config.get("nodes", [])
                 for node in nodes:
-                    cpe_matches = node.get('cpeMatch', [])
+                    cpe_matches = node.get("cpeMatch", [])
                     for cpe_match in cpe_matches:
-                        criteria = cpe_match.get('criteria', '')
+                        criteria = cpe_match.get("criteria", "")
                         if criteria:
                             cpe_list.append(criteria)
-            
+
             # 解析引用
             references = []
-            for ref in data.get('references', []):
-                references.append({
-                    'url': self.truncate_field(ref.get('url', ''), self.max_reference_length),
-                    'name': self.truncate_field(ref.get('source', ''), self.max_reference_length),
-                })
-            
+            for ref in data.get("references", []):
+                references.append(
+                    {
+                        "url": self.truncate_field(ref.get("url", ""), self.max_reference_length),
+                        "name": self.truncate_field(
+                            ref.get("source", ""), self.max_reference_length
+                        ),
+                    }
+                )
+
             # 解析日期
             published_date = None
             last_modified_date = None
             try:
-                published_str = data.get('published')
+                published_str = data.get("published")
                 if published_str:
-                    published_date = datetime.fromisoformat(published_str.replace('Z', '+00:00'))
+                    published_date = datetime.fromisoformat(published_str.replace("Z", "+00:00"))
             except Exception as e:
                 logger.warning(f"解析发布日期失败: {e}")
-            
+
             try:
-                modified_str = data.get('lastModified')
+                modified_str = data.get("lastModified")
                 if modified_str:
-                    last_modified_date = datetime.fromisoformat(modified_str.replace('Z', '+00:00'))
+                    last_modified_date = datetime.fromisoformat(modified_str.replace("Z", "+00:00"))
             except Exception as e:
                 logger.warning(f"解析修改日期失败: {e}")
-            
+
             # 生成标签
             tags = []
             if cwe:
                 tags.append(cwe)
             if attack_vector:
                 tags.append(attack_vector.lower())
-            
-            vuln_status = data.get('vulnStatus', '')
+
+            vuln_status = data.get("vulnStatus", "")
             if vuln_status:
-                tags.append(f'status:{vuln_status.lower()}')
-            
+                tags.append(f"status:{vuln_status.lower()}")
+
             # 构建结构化数据
             structured_data = CVEStructuredData(
                 cve_id=cve_id,
@@ -461,19 +455,21 @@ class NVDProcessor:
                 published_date=published_date,
                 last_modified_date=last_modified_date,
                 cpe_list=cpe_list,
-                references=references
+                references=references,
             )
-            
+
             # 生成数据块
             chunks = []
-            
+
             # 字段级语义切块
             fields_to_chunk = {
-                'description': description,
-                'references': '\n'.join([f"{ref.get('url', '')} ({ref.get('name', '')})" for ref in references[:10]]),
-                'configurations': '\n'.join(cpe_list[:10])
+                "description": description,
+                "references": "\n".join(
+                    [f"{ref.get('url', '')} ({ref.get('name', '')})" for ref in references[:10]]
+                ),
+                "configurations": "\n".join(cpe_list[:10]),
             }
-            
+
             for field_name, field_content in fields_to_chunk.items():
                 if field_content:
                     # 清洗文本
@@ -488,20 +484,22 @@ class NVDProcessor:
                             chunk_type=field_name,
                             content=chunk_content,
                             metadata={
-                                'type': field_name,
-                                'cve_id': cve_id,
-                                'part': i,
-                                'total_parts': len(field_chunks)
-                            }
+                                "type": field_name,
+                                "cve_id": cve_id,
+                                "part": i,
+                                "total_parts": len(field_chunks),
+                            },
                         )
                         chunks.append(chunk)
-            
+
             return structured_data, chunks
         except Exception as e:
             logger.error(f"解析NVD v2.0数据失败: {e}")
             return None
 
-    def parse_nvd_v1(self, data: Dict[str, Any]) -> Optional[Tuple[CVEStructuredData, List[CVEChunk]]]:
+    def parse_nvd_v1(
+        self, data: Dict[str, Any]
+    ) -> Optional[Tuple[CVEStructuredData, List[CVEChunk]]]:
         """解析NVD v1.1数据
 
         Args:
@@ -511,103 +509,105 @@ class NVDProcessor:
             (结构化数据, 数据块列表) 或 None
         """
         try:
-            cve_data = data.get('cve', {})
-            cve_id = cve_data.get('CVE_data_meta', {}).get('ID', '')
-            
+            cve_data = data.get("cve", {})
+            cve_id = cve_data.get("CVE_data_meta", {}).get("ID", "")
+
             if not cve_id:
                 return None
-            
+
             # 解析描述
-            description = ''
-            desc_data = cve_data.get('description', {}).get('description_data', [])
+            description = ""
+            desc_data = cve_data.get("description", {}).get("description_data", [])
             if desc_data:
-                description = desc_data[0].get('value', '')
+                description = desc_data[0].get("value", "")
                 description = self.truncate_field(description, self.max_description_length)
                 description = self.limit_text_length(description)
-            
+
             # 解析CVSS
             cvss_v3_score = None
             cvss_v3_vector = None
             cvss_v2_score = None
             cvss_v2_vector = None
-            
-            impact = data.get('impact', {})
-            base_metric_v3 = impact.get('baseMetricV3', {})
+
+            impact = data.get("impact", {})
+            base_metric_v3 = impact.get("baseMetricV3", {})
             if base_metric_v3:
-                cvss_v3 = base_metric_v3.get('cvssV3', {})
-                cvss_v3_score = cvss_v3.get('baseScore')
-                cvss_v3_vector = cvss_v3.get('vectorString')
-            
-            base_metric_v2 = impact.get('baseMetricV2', {})
+                cvss_v3 = base_metric_v3.get("cvssV3", {})
+                cvss_v3_score = cvss_v3.get("baseScore")
+                cvss_v3_vector = cvss_v3.get("vectorString")
+
+            base_metric_v2 = impact.get("baseMetricV2", {})
             if base_metric_v2:
-                cvss_v2 = base_metric_v2.get('cvssV2', {})
-                cvss_v2_score = cvss_v2.get('baseScore')
-                cvss_v2_vector = cvss_v2.get('vectorString')
-            
+                cvss_v2 = base_metric_v2.get("cvssV2", {})
+                cvss_v2_score = cvss_v2.get("baseScore")
+                cvss_v2_vector = cvss_v2.get("vectorString")
+
             # 解析CWE
             cwe = None
-            problem_type = cve_data.get('problemtype', {}).get('problemtype_data', [])
+            problem_type = cve_data.get("problemtype", {}).get("problemtype_data", [])
             if problem_type:
-                descriptions = problem_type[0].get('description', [])
+                descriptions = problem_type[0].get("description", [])
                 if descriptions:
-                    cwe = descriptions[0].get('value')
-            
+                    cwe = descriptions[0].get("value")
+
             # 解析CPE
             cpe_list = []
-            configurations = data.get('configurations', {})
-            nodes = configurations.get('nodes', [])
+            configurations = data.get("configurations", {})
+            nodes = configurations.get("nodes", [])
             for node in nodes:
-                cpe_match = node.get('cpe_match', [])
+                cpe_match = node.get("cpe_match", [])
                 for cpe in cpe_match:
-                    cpe_uri = cpe.get('cpe23Uri', '')
+                    cpe_uri = cpe.get("cpe23Uri", "")
                     if cpe_uri:
                         cpe_list.append(cpe_uri)
-            
+
             # 解析引用
             references = []
-            ref_data = cve_data.get('references', {}).get('reference_data', [])
+            ref_data = cve_data.get("references", {}).get("reference_data", [])
             for ref in ref_data:
-                references.append({
-                    'url': self.truncate_field(ref.get('url', ''), self.max_reference_length),
-                    'name': self.truncate_field(ref.get('name', ''), self.max_reference_length),
-                })
-            
+                references.append(
+                    {
+                        "url": self.truncate_field(ref.get("url", ""), self.max_reference_length),
+                        "name": self.truncate_field(ref.get("name", ""), self.max_reference_length),
+                    }
+                )
+
             # 解析攻击向量
             attack_vector = None
             if cvss_v3_vector:
-                if 'AV:N' in cvss_v3_vector:
-                    attack_vector = 'NETWORK'
-                elif 'AV:A' in cvss_v3_vector:
-                    attack_vector = 'ADJACENT_NETWORK'
-                elif 'AV:L' in cvss_v3_vector:
-                    attack_vector = 'LOCAL'
-                elif 'AV:P' in cvss_v3_vector:
-                    attack_vector = 'PHYSICAL'
-            
+                if "AV:N" in cvss_v3_vector:
+                    attack_vector = "NETWORK"
+                elif "AV:A" in cvss_v3_vector:
+                    attack_vector = "ADJACENT_NETWORK"
+                elif "AV:L" in cvss_v3_vector:
+                    attack_vector = "LOCAL"
+                elif "AV:P" in cvss_v3_vector:
+                    attack_vector = "PHYSICAL"
+
             # 生成标签
             tags = []
             if cwe:
                 tags.append(cwe)
             if attack_vector:
                 tags.append(attack_vector.lower())
-            
+
             # 解析日期
             published_date = None
             last_modified_date = None
             try:
-                published_str = data.get('publishedDate')
+                published_str = data.get("publishedDate")
                 if published_str:
                     published_date = datetime.strptime(published_str, "%Y-%m-%dT%H:%MZ")
             except Exception as e:
                 logger.warning(f"解析发布日期失败: {e}")
-            
+
             try:
-                modified_str = data.get('lastModifiedDate')
+                modified_str = data.get("lastModifiedDate")
                 if modified_str:
                     last_modified_date = datetime.strptime(modified_str, "%Y-%m-%dT%H:%MZ")
             except Exception as e:
                 logger.warning(f"解析修改日期失败: {e}")
-            
+
             # 构建结构化数据
             structured_data = CVEStructuredData(
                 cve_id=cve_id,
@@ -622,19 +622,21 @@ class NVDProcessor:
                 published_date=published_date,
                 last_modified_date=last_modified_date,
                 cpe_list=cpe_list,
-                references=references
+                references=references,
             )
-            
+
             # 生成数据块
             chunks = []
-            
+
             # 字段级语义切块
             fields_to_chunk = {
-                'description': description,
-                'references': '\n'.join([f"{ref.get('url', '')} ({ref.get('name', '')})" for ref in references[:10]]),
-                'configurations': '\n'.join(cpe_list[:10])
+                "description": description,
+                "references": "\n".join(
+                    [f"{ref.get('url', '')} ({ref.get('name', '')})" for ref in references[:10]]
+                ),
+                "configurations": "\n".join(cpe_list[:10]),
             }
-            
+
             for field_name, field_content in fields_to_chunk.items():
                 if field_content:
                     # 清洗文本
@@ -649,20 +651,22 @@ class NVDProcessor:
                             chunk_type=field_name,
                             content=chunk_content,
                             metadata={
-                                'type': field_name,
-                                'cve_id': cve_id,
-                                'part': i,
-                                'total_parts': len(field_chunks)
-                            }
+                                "type": field_name,
+                                "cve_id": cve_id,
+                                "part": i,
+                                "total_parts": len(field_chunks),
+                            },
                         )
                         chunks.append(chunk)
-            
+
             return structured_data, chunks
         except Exception as e:
             logger.error(f"解析NVD v1.1数据失败: {e}")
             return None
 
-    def parse_nvd(self, data: Dict[str, Any], file_path: Optional[str] = None) -> Optional[Tuple[CVEStructuredData, List[CVEChunk]]]:
+    def parse_nvd(
+        self, data: Dict[str, Any], file_path: Optional[str] = None
+    ) -> Optional[Tuple[CVEStructuredData, List[CVEChunk]]]:
         """解析NVD数据
 
         Args:
@@ -674,38 +678,38 @@ class NVDProcessor:
         """
         format_type = self.detect_format(data)
         file_info = f" (文件: {file_path})" if file_path else ""
-        
-        if format_type == 'v2.0':
+
+        if format_type == "v2.0":
             logger.debug(f"检测到v2.0格式{file_info}")
             return self.parse_nvd_v2(data)
-        elif format_type == 'v1.1':
+        elif format_type == "v1.1":
             logger.debug(f"检测到v1.1格式{file_info}")
             return self.parse_nvd_v1(data)
-        elif format_type == 'v1.1_collection':
+        elif format_type == "v1.1_collection":
             # 对于CVE_Items集合，我们不在这里处理，而是在process_zip_file和process_directory中处理
             logger.debug(f"检测到CVE_Items集合格式{file_info}，将在外部处理")
             return None
         else:
             # 尝试所有可能的格式解析
             logger.warning(f"未知的NVD数据格式{file_info}，尝试所有可能的解析方法")
-            
+
             # 记录数据的前几个键，便于分析格式
             if data:
                 first_keys = list(data.keys())[:5]  # 只取前5个键
                 logger.warning(f"数据前几个键: {first_keys}{file_info}")
-            
+
             # 尝试v2.0解析
             result = self.parse_nvd_v2(data)
             if result:
                 logger.info(f"使用v2.0解析成功{file_info}")
                 return result
-            
+
             # 尝试v1.1解析
             result = self.parse_nvd_v1(data)
             if result:
                 logger.info(f"使用v1.1解析成功{file_info}")
                 return result
-            
+
             logger.error(f"所有解析方法都失败{file_info}")
             return None
 
@@ -719,25 +723,28 @@ class NVDProcessor:
             处理结果列表
         """
         results = []
-        
+
         try:
-            with zipfile.ZipFile(zip_path, 'r') as zf:
+            with zipfile.ZipFile(zip_path, "r") as zf:
                 # 过滤出JSON文件
-                json_files = [member for member in zf.infolist() 
-                            if member.filename.endswith('.json') and not member.is_dir()]
-                
+                json_files = [
+                    member
+                    for member in zf.infolist()
+                    if member.filename.endswith(".json") and not member.is_dir()
+                ]
+
                 logger.info(f"发现 {len(json_files)} 个JSON文件")
-                
+
                 for member in json_files:
                     try:
                         with zf.open(member) as f:
                             data = json.load(f)
-                            
+
                             # 检查是否是CVE集合
-                            if 'CVE_Items' in data:
-                                cve_items = data.get('CVE_Items', [])
+                            if "CVE_Items" in data:
+                                cve_items = data.get("CVE_Items", [])
                                 logger.info(f"处理文件 {member.filename}，包含 {len(cve_items)} 个CVE")
-                                
+
                                 for item in cve_items:
                                     result = self.parse_nvd(item, str(member.filename))
                                     if result:
@@ -752,7 +759,7 @@ class NVDProcessor:
                         continue
         except Exception as e:
             logger.error(f"处理ZIP文件失败: {e}")
-        
+
         logger.info(f"处理完成，成功解析 {len(results)} 个CVE")
         return results
 
@@ -766,21 +773,21 @@ class NVDProcessor:
             处理结果列表
         """
         results = []
-        
+
         try:
-            json_files = list(directory.rglob('*.json'))
+            json_files = list(directory.rglob("*.json"))
             logger.info(f"发现 {len(json_files)} 个JSON文件")
-            
+
             for json_file in json_files:
                 try:
-                    with open(json_file, 'r', encoding='utf-8') as f:
+                    with open(json_file, "r", encoding="utf-8") as f:
                         data = json.load(f)
-                        
+
                         # 检查是否是CVE集合
-                        if 'CVE_Items' in data:
-                            cve_items = data.get('CVE_Items', [])
+                        if "CVE_Items" in data:
+                            cve_items = data.get("CVE_Items", [])
                             logger.info(f"处理文件 {json_file.name}，包含 {len(cve_items)} 个CVE")
-                            
+
                             for item in cve_items:
                                 result = self.parse_nvd(item, str(json_file))
                                 if result:
@@ -795,6 +802,6 @@ class NVDProcessor:
                     continue
         except Exception as e:
             logger.error(f"处理目录失败: {e}")
-        
+
         logger.info(f"处理完成，成功解析 {len(results)} 个CVE")
         return results

@@ -1,13 +1,18 @@
 import io
 import sys
+import threading
 import time
 import traceback
-import threading
-from typing import Dict, Any, Optional, List, Callable
 from types import ModuleType
+from typing import Any, Callable, Dict, List, Optional
 
+from .transpiler_quality_verifier import (
+    QualityReport,
+    TestCase,
+    TranspilerQualityVerifier,
+    VerificationResult,
+)
 from .virtual_runtime import VirtualRuntimeEnvironment, setup_java_runtime, teardown_java_runtime
-from .transpiler_quality_verifier import TranspilerQualityVerifier, TestCase, VerificationResult, QualityReport
 
 
 class PythonTestExecutor:
@@ -65,7 +70,9 @@ class PythonTestExecutor:
 
             success = self._execution_result["success"]
             if not success and not self._execution_result["error"]:
-                self._execution_result["error"] = stderr_capture.getvalue() or "Unknown error occurred"
+                self._execution_result["error"] = (
+                    stderr_capture.getvalue() or "Unknown error occurred"
+                )
 
         except SyntaxError as e:
             error = f"Syntax Error: {e}"
@@ -90,7 +97,7 @@ class PythonTestExecutor:
             "success": success,
             "output": output,
             "error": error,
-            "execution_time": execution_time
+            "execution_time": execution_time,
         }
 
     def execute_file(self, file_path: str, timeout: int = 30) -> Dict[str, Any]:
@@ -103,33 +110,24 @@ class PythonTestExecutor:
                 "success": False,
                 "output": "",
                 "error": f"File not found: {file_path}",
-                "execution_time": 0
+                "execution_time": 0,
             }
         except Exception as e:
             return {
                 "success": False,
                 "output": "",
                 "error": f"Error reading file: {str(e)}",
-                "execution_time": 0
+                "execution_time": 0,
             }
 
     def validate_syntax(self, code: str) -> Dict[str, Any]:
         try:
             compile(code, "<string>", "exec")
-            return {
-                "valid": True,
-                "error": None
-            }
+            return {"valid": True, "error": None}
         except SyntaxError as e:
-            return {
-                "valid": False,
-                "error": f"Syntax Error at line {e.lineno}: {e.msg}"
-            }
+            return {"valid": False, "error": f"Syntax Error at line {e.lineno}: {e.msg}"}
         except Exception as e:
-            return {
-                "valid": False,
-                "error": f"Error: {str(e)}"
-            }
+            return {"valid": False, "error": f"Error: {str(e)}"}
 
     def _setup_environment(self):
         self._mock_modules = {}
@@ -164,10 +162,7 @@ class PythonTestExecutor:
             self._virtual_runtime = None
 
     def execute_with_mocks(
-        self,
-        python_code: str,
-        timeout: int = 30,
-        custom_mocks: Optional[Dict[str, Any]] = None
+        self, python_code: str, timeout: int = 30, custom_mocks: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
         original_use_vruntime = self._use_virtual_runtime
         self._use_virtual_runtime = True
@@ -190,10 +185,7 @@ class PythonTestExecutor:
         return result
 
     def verify_equivalence(
-        self,
-        original_code: str,
-        transpiled_code: str,
-        test_cases: Optional[List[TestCase]] = None
+        self, original_code: str, transpiled_code: str, test_cases: Optional[List[TestCase]] = None
     ) -> QualityReport:
         results: List[VerificationResult] = []
         passed = 0
@@ -210,8 +202,8 @@ class PythonTestExecutor:
             transpiled_output = transpiled_result.get("output", "")
 
             is_equivalent = (
-                original_result["success"] == transpiled_result["success"] and
-                original_output == transpiled_output
+                original_result["success"] == transpiled_result["success"]
+                and original_output == transpiled_output
             )
 
             if is_equivalent:
@@ -225,11 +217,15 @@ class PythonTestExecutor:
                 transpiled_output=transpiled_output,
                 is_equivalent=is_equivalent,
                 error_message=(
-                    f"Original error: {original_result.get('error', '')}; "
-                    f"Transpiled error: {transpiled_result.get('error', '')}"
-                ) if not is_equivalent else "",
+                    (
+                        f"Original error: {original_result.get('error', '')}; "
+                        f"Transpiled error: {transpiled_result.get('error', '')}"
+                    )
+                    if not is_equivalent
+                    else ""
+                ),
                 execution_time_original=original_result.get("execution_time", 0.0),
-                execution_time_transpiled=transpiled_result.get("execution_time", 0.0)
+                execution_time_transpiled=transpiled_result.get("execution_time", 0.0),
             )
             results.append(verification_result)
 
@@ -242,7 +238,7 @@ class PythonTestExecutor:
             failed=failed,
             equivalence_rate=equivalence_rate,
             failed_cases=[r for r in results if not r.is_equivalent],
-            suggestions=[]
+            suggestions=[],
         )
 
     def _create_mock_requests(self) -> ModuleType:
@@ -292,18 +288,22 @@ class PythonTestExecutor:
 
         def mock_loads(s, **kwargs):
             import json
+
             return json.loads(s, **kwargs)
 
         def mock_dumps(obj, **kwargs):
             import json
+
             return json.dumps(obj, **kwargs)
 
         def mock_load(fp, **kwargs):
             import json
+
             return json.load(fp, **kwargs)
 
         def mock_dump(obj, fp, **kwargs):
             import json
+
             json.dump(obj, fp, **kwargs)
 
         mock_json_instance.loads = mock_loads
@@ -317,6 +317,7 @@ class PythonTestExecutor:
 
     def _create_mock_re(self) -> ModuleType:
         import re
+
         mock = ModuleType("re")
 
         mock.__dict__.update(vars(re))

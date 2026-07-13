@@ -29,7 +29,17 @@ class ASTAnalyzer(BaseAnalyzer):
 
     name = "ast_analyzer"
     version = "1.1.0"
-    supported_languages = ["python", "javascript", "typescript", "java", "cpp", "c", "go", "rust", "php"]
+    supported_languages = [
+        "python",
+        "javascript",
+        "typescript",
+        "java",
+        "cpp",
+        "c",
+        "go",
+        "rust",
+        "php",
+    ]
     supported_analysis_types = [AnalysisType.AST, AnalysisType.SECURITY, AnalysisType.CODE_QUALITY]
 
     def __init__(self, config: Optional[Dict[str, Any]] = None) -> None:
@@ -114,7 +124,7 @@ class ASTAnalyzer(BaseAnalyzer):
     def _load_languages(self) -> None:
         """加载 tree-sitter 语言库"""
         languages_loaded = 0
-        
+
         try:
             # Python
             from tree_sitter_python import language as python_language
@@ -188,7 +198,7 @@ class ASTAnalyzer(BaseAnalyzer):
             languages_loaded += 1
         except ImportError:
             pass
-        
+
         # 如果没有加载任何语言，添加一个警告
         if languages_loaded == 0:
             print("警告: 未加载任何 tree-sitter 语言库，静态分析将被跳过")
@@ -224,10 +234,12 @@ class ASTAnalyzer(BaseAnalyzer):
             parser = self._parsers.get(context.language)
             if parser is None:
                 result.status = AnalysisStatus.FAILED
-                result.add_error(self.create_error(
-                    error_type="language_not_supported",
-                    message=f"不支持的语言: {context.language}"
-                ))
+                result.add_error(
+                    self.create_error(
+                        error_type="language_not_supported",
+                        message=f"不支持的语言: {context.language}",
+                    )
+                )
                 return result
 
             # 解析代码
@@ -240,16 +252,11 @@ class ASTAnalyzer(BaseAnalyzer):
 
         except Exception as e:
             result.status = AnalysisStatus.FAILED
-            result.add_error(self.create_error(
-                error_type="analysis_failed",
-                message=str(e)
-            ))
+            result.add_error(self.create_error(error_type="analysis_failed", message=str(e)))
 
         return result
 
-    def _analyze_tree(
-        self, tree: Tree, context: AnalysisContext, result: AnalysisResult
-    ) -> None:
+    def _analyze_tree(self, tree: Tree, context: AnalysisContext, result: AnalysisResult) -> None:
         """分析 AST 树
 
         Args:
@@ -262,9 +269,7 @@ class ASTAnalyzer(BaseAnalyzer):
         # 遍历所有节点
         self._traverse_node(root_node, context, result)
 
-    def _traverse_node(
-        self, node, context: AnalysisContext, result: AnalysisResult
-    ) -> None:
+    def _traverse_node(self, node, context: AnalysisContext, result: AnalysisResult) -> None:
         """遍历节点
 
         Args:
@@ -311,9 +316,7 @@ class ASTAnalyzer(BaseAnalyzer):
         if check_method:
             check_method(node, context, result)
 
-    def _check_function_call(
-        self, node, context: AnalysisContext, result: AnalysisResult
-    ) -> None:
+    def _check_function_call(self, node, context: AnalysisContext, result: AnalysisResult) -> None:
         """检查函数调用
 
         Args:
@@ -344,7 +347,7 @@ class ASTAnalyzer(BaseAnalyzer):
                 fix_suggestion=self._get_fix_suggestion(func_name, context.language),
                 cwe_id="CWE-94",  # 代码注入
                 owasp_category="注入",
-                metadata={"poc": poc}
+                metadata={"poc": poc},
             )
             result.add_issue(issue)
 
@@ -353,7 +356,13 @@ class ASTAnalyzer(BaseAnalyzer):
             self._check_sql_injection(node, context, result)
 
         # 检查 XSS 风险
-        if func_name in ["innerHTML", "outerHTML", "insertAdjacentHTML", "document.write", "document.writeln"]:
+        if func_name in [
+            "innerHTML",
+            "outerHTML",
+            "insertAdjacentHTML",
+            "document.write",
+            "document.writeln",
+        ]:
             self._check_xss(node, context, result)
 
         # 检查命令注入风险
@@ -443,9 +452,7 @@ class ASTAnalyzer(BaseAnalyzer):
         sensitive_attrs = ["password", "secret", "token", "key", "api_key"]
         self._check_sensitive_attributes(node, sensitive_attrs, context, result)
 
-    def _check_import(
-        self, node, context: AnalysisContext, result: AnalysisResult
-    ) -> None:
+    def _check_import(self, node, context: AnalysisContext, result: AnalysisResult) -> None:
         """检查导入语句
 
         Args:
@@ -520,9 +527,7 @@ class ASTAnalyzer(BaseAnalyzer):
                 )
                 result.add_issue(issue)
 
-    def _check_assignment(
-        self, node, context: AnalysisContext, result: AnalysisResult
-    ) -> None:
+    def _check_assignment(self, node, context: AnalysisContext, result: AnalysisResult) -> None:
         """检查赋值语句
 
         Args:
@@ -546,6 +551,7 @@ class ASTAnalyzer(BaseAnalyzer):
         ]
 
         import re
+
         for pattern in sensitive_patterns:
             if re.search(pattern, assignment_text, re.IGNORECASE):
                 issue = self.create_issue(
@@ -563,9 +569,7 @@ class ASTAnalyzer(BaseAnalyzer):
                 )
                 result.add_issue(issue)
 
-    def _check_if_statement(
-        self, node, context: AnalysisContext, result: AnalysisResult
-    ) -> None:
+    def _check_if_statement(self, node, context: AnalysisContext, result: AnalysisResult) -> None:
         """检查条件语句
 
         Args:
@@ -597,9 +601,7 @@ class ASTAnalyzer(BaseAnalyzer):
                 )
                 result.add_issue(issue)
 
-    def _check_loop_statement(
-        self, node, context: AnalysisContext, result: AnalysisResult
-    ) -> None:
+    def _check_loop_statement(self, node, context: AnalysisContext, result: AnalysisResult) -> None:
         """检查循环语句
 
         Args:
@@ -631,9 +633,7 @@ class ASTAnalyzer(BaseAnalyzer):
                 )
                 result.add_issue(issue)
 
-    def _check_try_statement(
-        self, node, context: AnalysisContext, result: AnalysisResult
-    ) -> None:
+    def _check_try_statement(self, node, context: AnalysisContext, result: AnalysisResult) -> None:
         """检查异常处理语句
 
         Args:
@@ -726,9 +726,7 @@ class ASTAnalyzer(BaseAnalyzer):
                 )
                 result.add_issue(issue)
 
-    def _check_sql_injection(
-        self, node, context: AnalysisContext, result: AnalysisResult
-    ) -> None:
+    def _check_sql_injection(self, node, context: AnalysisContext, result: AnalysisResult) -> None:
         """检查 SQL 注入风险
 
         Args:
@@ -741,7 +739,7 @@ class ASTAnalyzer(BaseAnalyzer):
             if child.type == "arguments":
                 for arg in child.children:
                     arg_text = self._get_node_text(arg)
-                    if "+" in arg_text or "f\"" in arg_text or ".format" in arg_text:
+                    if "+" in arg_text or 'f"' in arg_text or ".format" in arg_text:
                         poc = "攻击者可以通过输入包含 SQL 语句的参数来执行恶意 SQL 查询，例如：' OR 1=1 --"
                         fix = "使用参数化查询或预处理语句，避免直接拼接 SQL 语句"
                         issue = self.create_issue(
@@ -757,13 +755,11 @@ class ASTAnalyzer(BaseAnalyzer):
                             fix_suggestion=fix,
                             cwe_id="CWE-89",  # SQL 注入
                             owasp_category="注入",
-                            metadata={"poc": poc}
+                            metadata={"poc": poc},
                         )
                         result.add_issue(issue)
 
-    def _check_xss(
-        self, node, context: AnalysisContext, result: AnalysisResult
-    ) -> None:
+    def _check_xss(self, node, context: AnalysisContext, result: AnalysisResult) -> None:
         """检查 XSS 风险
 
         Args:
@@ -791,7 +787,7 @@ class ASTAnalyzer(BaseAnalyzer):
                             fix_suggestion=fix,
                             cwe_id="CWE-79",  # XSS
                             owasp_category="注入",
-                            metadata={"poc": poc}
+                            metadata={"poc": poc},
                         )
                         result.add_issue(issue)
 
@@ -825,7 +821,7 @@ class ASTAnalyzer(BaseAnalyzer):
                             fix_suggestion=fix,
                             cwe_id="CWE-78",  # 命令注入
                             owasp_category="注入",
-                            metadata={"poc": poc}
+                            metadata={"poc": poc},
                         )
                         result.add_issue(issue)
 
@@ -841,26 +837,23 @@ class ASTAnalyzer(BaseAnalyzer):
         """
         poc_map = {
             "python": {
-                "eval": "eval('__import__(\"os\").system(\"ls\")')",
+                "eval": 'eval(\'__import__("os").system("ls")\')',
                 "exec": "exec('import os; os.system(\"ls\")')",
                 "subprocess.Popen": "subprocess.Popen('ls -la', shell=True)",
                 "os.system": "os.system('ls -la')",
-                "open": "open('../../../etc/passwd', 'r')"
+                "open": "open('../../../etc/passwd', 'r')",
             },
             "javascript": {
                 "eval": "eval('alert(\"XSS\")')",
                 "new Function": "new Function('alert(\"XSS\")')()",
                 "innerHTML": "element.innerHTML = '<script>alert(\"XSS\")</script>'",
-                "document.write": "document.write('<script>alert(\"XSS\")</script>')"
+                "document.write": "document.write('<script>alert(\"XSS\")</script>')",
             },
             "java": {
                 "Runtime.exec": "Runtime.getRuntime().exec('ls -la')",
-                "ProcessBuilder.start": "new ProcessBuilder('ls', '-la').start()"
+                "ProcessBuilder.start": "new ProcessBuilder('ls', '-la').start()",
             },
-            "cpp": {
-                "system": "system('ls -la')",
-                "popen": "popen('ls -la', 'r')"
-            }
+            "cpp": {"system": "system('ls -la')", "popen": "popen('ls -la', 'r')"},
         }
         lang_poc = poc_map.get(language, {})
         return lang_poc.get(func_name, "")
@@ -881,22 +874,22 @@ class ASTAnalyzer(BaseAnalyzer):
                 "exec": "避免使用 exec()，使用更安全的替代方案",
                 "subprocess.Popen": "使用参数数组形式，设置 shell=False",
                 "os.system": "使用 subprocess 模块并设置 shell=False",
-                "open": "使用 os.path.realpath() 验证路径，避免路径遍历"
+                "open": "使用 os.path.realpath() 验证路径，避免路径遍历",
             },
             "javascript": {
                 "eval": "避免使用 eval()，使用更安全的替代方案",
                 "new Function": "避免使用 new Function()，使用更安全的替代方案",
                 "innerHTML": "使用 textContent 或 createElement() 替代",
-                "document.write": "使用 DOM 操作方法替代"
+                "document.write": "使用 DOM 操作方法替代",
             },
             "java": {
                 "Runtime.exec": "使用 ProcessBuilder 并使用参数数组",
-                "ProcessBuilder.start": "使用参数数组形式，避免命令拼接"
+                "ProcessBuilder.start": "使用参数数组形式，避免命令拼接",
             },
             "cpp": {
                 "system": "避免使用 system()，使用更安全的替代方案",
-                "popen": "避免使用 popen()，使用更安全的替代方案"
-            }
+                "popen": "避免使用 popen()，使用更安全的替代方案",
+            },
         }
         lang_fix = fix_map.get(language, {})
         return lang_fix.get(func_name, "")
@@ -991,7 +984,7 @@ class ASTAnalyzer(BaseAnalyzer):
                 for body_child in child.children:
                     if body_child.type in ["string_literal", "expression_statement"]:
                         text = self._get_node_text(body_child)
-                        if text.startswith(("\"\"\"", "''", '"', "'")):
+                        if text.startswith(('"""', "''", '"', "'")):
                             return True
                 break
         return False
@@ -1020,8 +1013,7 @@ class ASTAnalyzer(BaseAnalyzer):
         """
         info = super().get_info()
         info["dangerous_functions"] = {
-            lang: list(funcs.keys())
-            for lang, funcs in self._dangerous_functions.items()
+            lang: list(funcs.keys()) for lang, funcs in self._dangerous_functions.items()
         }
         return info
 
@@ -1035,27 +1027,29 @@ class ASTAnalyzer(BaseAnalyzer):
             标准化的输出列表
         """
         output = []
-        
+
         for issue in result.issues:
-            output.append({
-                "type": "finding",
-                "rule_id": issue.rule_id,
-                "message": issue.message,
-                "severity": issue.severity,
-                "confidence": issue.confidence,
-                "location": {
-                    "file": result.context.file_path,
-                    "line": issue.line,
-                    "column": issue.column
-                },
-                "evidence": [f"AST: {issue.message}"],
-                "source_agent": "AST-Agent",
-                "metadata": {
-                    "cwe_id": issue.cwe_id,
-                    "owasp_category": issue.owasp_category,
-                    "code_snippet": issue.code_snippet,
-                    "fix_suggestion": issue.fix_suggestion
+            output.append(
+                {
+                    "type": "finding",
+                    "rule_id": issue.rule_id,
+                    "message": issue.message,
+                    "severity": issue.severity,
+                    "confidence": issue.confidence,
+                    "location": {
+                        "file": result.context.file_path,
+                        "line": issue.line,
+                        "column": issue.column,
+                    },
+                    "evidence": [f"AST: {issue.message}"],
+                    "source_agent": "AST-Agent",
+                    "metadata": {
+                        "cwe_id": issue.cwe_id,
+                        "owasp_category": issue.owasp_category,
+                        "code_snippet": issue.code_snippet,
+                        "fix_suggestion": issue.fix_suggestion,
+                    },
                 }
-            })
-        
+            )
+
         return output

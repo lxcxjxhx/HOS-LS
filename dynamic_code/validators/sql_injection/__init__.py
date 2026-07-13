@@ -8,8 +8,8 @@
 
 from src.analyzers.verification.interfaces import Validator
 
-from .mybatis_dollar_brace import MybatisDollarBraceValidator
 from .entity_wrapper import EntityWrapperSafeValidator
+from .mybatis_dollar_brace import MybatisDollarBraceValidator
 from .string_concat import StringConcatSqlValidator
 
 __all__ = [

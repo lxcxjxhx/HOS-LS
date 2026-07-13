@@ -5,13 +5,13 @@
 
 import asyncio
 from dataclasses import asdict
-from typing import Dict, List, Optional, Any
+from typing import Any, Dict, List, Optional
 
 import psycopg2
 from psycopg2.extras import DictCursor
 
-from src.utils.logger import get_logger
 from src.integration.nvd_processor import CVEStructuredData
+from src.utils.logger import get_logger
 
 logger = get_logger(__name__)
 
@@ -38,12 +38,12 @@ class PostgresStorage:
         """连接PostgreSQL数据库"""
         try:
             self.connection = psycopg2.connect(
-                host=self.config.get('host', 'localhost'),
-                port=self.config.get('port', 5432),
-                user=self.config.get('user', 'postgres'),
-                password=self.config.get('password', ''),
-                database=self.config.get('database', 'hos_ls'),
-                cursor_factory=DictCursor
+                host=self.config.get("host", "localhost"),
+                port=self.config.get("port", 5432),
+                user=self.config.get("user", "postgres"),
+                password=self.config.get("password", ""),
+                database=self.config.get("database", "hos_ls"),
+                cursor_factory=DictCursor,
             )
             self.cursor = self.connection.cursor()
             logger.info("成功连接到PostgreSQL数据库")
@@ -64,7 +64,8 @@ class PostgresStorage:
         """创建数据库表"""
         try:
             # CVE表
-            self.cursor.execute("""
+            self.cursor.execute(
+                """
                 CREATE TABLE IF NOT EXISTS cves (
                     id SERIAL PRIMARY KEY,
                     cve_id VARCHAR(20) UNIQUE NOT NULL,
@@ -80,10 +81,12 @@ class PostgresStorage:
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
-            """)
+            """
+            )
 
             # CVE标签表
-            self.cursor.execute("""
+            self.cursor.execute(
+                """
                 CREATE TABLE IF NOT EXISTS cve_tags (
                     id SERIAL PRIMARY KEY,
                     cve_id VARCHAR(20) NOT NULL,
@@ -91,20 +94,24 @@ class PostgresStorage:
                     FOREIGN KEY (cve_id) REFERENCES cves(cve_id),
                     UNIQUE(cve_id, tag)
                 )
-            """)
+            """
+            )
 
             # CPE表
-            self.cursor.execute("""
+            self.cursor.execute(
+                """
                 CREATE TABLE IF NOT EXISTS cpe_info (
                     id SERIAL PRIMARY KEY,
                     cve_id VARCHAR(20) NOT NULL,
                     cpe_uri VARCHAR(255) NOT NULL,
                     FOREIGN KEY (cve_id) REFERENCES cves(cve_id)
                 )
-            """)
+            """
+            )
 
             # 引用表
-            self.cursor.execute("""
+            self.cursor.execute(
+                """
                 CREATE TABLE IF NOT EXISTS cve_references (
                     id SERIAL PRIMARY KEY,
                     cve_id VARCHAR(20) NOT NULL,
@@ -112,16 +119,27 @@ class PostgresStorage:
                     name VARCHAR(255),
                     FOREIGN KEY (cve_id) REFERENCES cves(cve_id)
                 )
-            """)
+            """
+            )
 
             # 创建索引
             self.cursor.execute("CREATE INDEX IF NOT EXISTS idx_cves_cve_id ON cves(cve_id)")
-            self.cursor.execute("CREATE INDEX IF NOT EXISTS idx_cves_cvss_v3_score ON cves(cvss_v3_score)")
-            self.cursor.execute("CREATE INDEX IF NOT EXISTS idx_cves_published_date ON cves(published_date)")
-            self.cursor.execute("CREATE INDEX IF NOT EXISTS idx_cve_tags_cve_id ON cve_tags(cve_id)")
+            self.cursor.execute(
+                "CREATE INDEX IF NOT EXISTS idx_cves_cvss_v3_score ON cves(cvss_v3_score)"
+            )
+            self.cursor.execute(
+                "CREATE INDEX IF NOT EXISTS idx_cves_published_date ON cves(published_date)"
+            )
+            self.cursor.execute(
+                "CREATE INDEX IF NOT EXISTS idx_cve_tags_cve_id ON cve_tags(cve_id)"
+            )
             self.cursor.execute("CREATE INDEX IF NOT EXISTS idx_cve_tags_tag ON cve_tags(tag)")
-            self.cursor.execute("CREATE INDEX IF NOT EXISTS idx_cpe_info_cve_id ON cpe_info(cve_id)")
-            self.cursor.execute("CREATE INDEX IF NOT EXISTS idx_cve_references_cve_id ON cve_references(cve_id)")
+            self.cursor.execute(
+                "CREATE INDEX IF NOT EXISTS idx_cpe_info_cve_id ON cpe_info(cve_id)"
+            )
+            self.cursor.execute(
+                "CREATE INDEX IF NOT EXISTS idx_cve_references_cve_id ON cve_references(cve_id)"
+            )
 
             self.connection.commit()
             logger.info("数据库表创建成功")
@@ -144,13 +162,16 @@ class PostgresStorage:
             self.connection.autocommit = False
 
             # 检查CVE是否已存在
-            self.cursor.execute("SELECT cve_id FROM cves WHERE cve_id = %s", (structured_data.cve_id,))
+            self.cursor.execute(
+                "SELECT cve_id FROM cves WHERE cve_id = %s", (structured_data.cve_id,)
+            )
             existing = self.cursor.fetchone()
 
             if existing:
                 # 更新现有CVE
-                self.cursor.execute("""
-                    UPDATE cves SET 
+                self.cursor.execute(
+                    """
+                    UPDATE cves SET
                         description = %s,
                         cwe = %s,
                         cvss_v3_score = %s,
@@ -162,64 +183,75 @@ class PostgresStorage:
                         last_modified_date = %s,
                         updated_at = CURRENT_TIMESTAMP
                     WHERE cve_id = %s
-                """, (
-                    structured_data.description,
-                    structured_data.cwe,
-                    structured_data.cvss_v3_score,
-                    structured_data.cvss_v3_vector,
-                    structured_data.cvss_v2_score,
-                    structured_data.cvss_v2_vector,
-                    structured_data.attack_vector,
-                    structured_data.published_date,
-                    structured_data.last_modified_date,
-                    structured_data.cve_id
-                ))
+                """,
+                    (
+                        structured_data.description,
+                        structured_data.cwe,
+                        structured_data.cvss_v3_score,
+                        structured_data.cvss_v3_vector,
+                        structured_data.cvss_v2_score,
+                        structured_data.cvss_v2_vector,
+                        structured_data.attack_vector,
+                        structured_data.published_date,
+                        structured_data.last_modified_date,
+                        structured_data.cve_id,
+                    ),
+                )
 
                 # 删除旧标签
-                self.cursor.execute("DELETE FROM cve_tags WHERE cve_id = %s", (structured_data.cve_id,))
+                self.cursor.execute(
+                    "DELETE FROM cve_tags WHERE cve_id = %s", (structured_data.cve_id,)
+                )
                 # 删除旧CPE
-                self.cursor.execute("DELETE FROM cpe_info WHERE cve_id = %s", (structured_data.cve_id,))
+                self.cursor.execute(
+                    "DELETE FROM cpe_info WHERE cve_id = %s", (structured_data.cve_id,)
+                )
                 # 删除旧引用
-                self.cursor.execute("DELETE FROM cve_references WHERE cve_id = %s", (structured_data.cve_id,))
+                self.cursor.execute(
+                    "DELETE FROM cve_references WHERE cve_id = %s", (structured_data.cve_id,)
+                )
             else:
                 # 插入新CVE
-                self.cursor.execute("""
+                self.cursor.execute(
+                    """
                     INSERT INTO cves (
                         cve_id, description, cwe, cvss_v3_score, cvss_v3_vector,
                         cvss_v2_score, cvss_v2_vector, attack_vector, published_date, last_modified_date
                     ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                """, (
-                    structured_data.cve_id,
-                    structured_data.description,
-                    structured_data.cwe,
-                    structured_data.cvss_v3_score,
-                    structured_data.cvss_v3_vector,
-                    structured_data.cvss_v2_score,
-                    structured_data.cvss_v2_vector,
-                    structured_data.attack_vector,
-                    structured_data.published_date,
-                    structured_data.last_modified_date
-                ))
+                """,
+                    (
+                        structured_data.cve_id,
+                        structured_data.description,
+                        structured_data.cwe,
+                        structured_data.cvss_v3_score,
+                        structured_data.cvss_v3_vector,
+                        structured_data.cvss_v2_score,
+                        structured_data.cvss_v2_vector,
+                        structured_data.attack_vector,
+                        structured_data.published_date,
+                        structured_data.last_modified_date,
+                    ),
+                )
 
             # 插入标签
             for tag in structured_data.tags:
                 self.cursor.execute(
                     "INSERT INTO cve_tags (cve_id, tag) VALUES (%s, %s) ON CONFLICT (cve_id, tag) DO NOTHING",
-                    (structured_data.cve_id, tag)
+                    (structured_data.cve_id, tag),
                 )
 
             # 插入CPE
             for cpe in structured_data.cpe_list:
                 self.cursor.execute(
                     "INSERT INTO cpe_info (cve_id, cpe_uri) VALUES (%s, %s)",
-                    (structured_data.cve_id, cpe)
+                    (structured_data.cve_id, cpe),
                 )
 
             # 插入引用
             for ref in structured_data.references:
                 self.cursor.execute(
                     "INSERT INTO cve_references (cve_id, url, name) VALUES (%s, %s, %s)",
-                    (structured_data.cve_id, ref.get('url', ''), ref.get('name', ''))
+                    (structured_data.cve_id, ref.get("url", ""), ref.get("name", "")),
                 )
 
             # 提交事务
@@ -273,13 +305,16 @@ class PostgresStorage:
         """
         try:
             # 获取CVE基本信息
-            self.cursor.execute("""
-                SELECT 
+            self.cursor.execute(
+                """
+                SELECT
                     cve_id, description, cwe, cvss_v3_score, cvss_v3_vector,
                     cvss_v2_score, cvss_v2_vector, attack_vector, published_date, last_modified_date
-                FROM cves 
+                FROM cves
                 WHERE cve_id = %s
-            """, (cve_id,))
+            """,
+                (cve_id,),
+            )
             cve_data = self.cursor.fetchone()
 
             if not cve_data:
@@ -295,23 +330,23 @@ class PostgresStorage:
 
             # 获取引用
             self.cursor.execute("SELECT url, name FROM cve_references WHERE cve_id = %s", (cve_id,))
-            references = [{'url': row[0], 'name': row[1]} for row in self.cursor.fetchall()]
+            references = [{"url": row[0], "name": row[1]} for row in self.cursor.fetchall()]
 
             # 构建结构化数据
             structured_data = CVEStructuredData(
-                cve_id=cve_data['cve_id'],
-                description=cve_data['description'],
-                cwe=cve_data['cwe'],
-                cvss_v3_score=cve_data['cvss_v3_score'],
-                cvss_v3_vector=cve_data['cvss_v3_vector'],
-                cvss_v2_score=cve_data['cvss_v2_score'],
-                cvss_v2_vector=cve_data['cvss_v2_vector'],
-                attack_vector=cve_data['attack_vector'],
+                cve_id=cve_data["cve_id"],
+                description=cve_data["description"],
+                cwe=cve_data["cwe"],
+                cvss_v3_score=cve_data["cvss_v3_score"],
+                cvss_v3_vector=cve_data["cvss_v3_vector"],
+                cvss_v2_score=cve_data["cvss_v2_score"],
+                cvss_v2_vector=cve_data["cvss_v2_vector"],
+                attack_vector=cve_data["attack_vector"],
                 tags=tags,
-                published_date=cve_data['published_date'],
-                last_modified_date=cve_data['last_modified_date'],
+                published_date=cve_data["published_date"],
+                last_modified_date=cve_data["last_modified_date"],
                 cpe_list=cpe_list,
-                references=references
+                references=references,
             )
 
             return structured_data
@@ -341,29 +376,29 @@ class PostgresStorage:
             where_clauses = []
             params = []
 
-            if filters.get('cve_id'):
+            if filters.get("cve_id"):
                 where_clauses.append("c.cve_id LIKE %s")
                 params.append(f"{filters['cve_id']}%")
 
-            if filters.get('cwe'):
+            if filters.get("cwe"):
                 where_clauses.append("c.cwe = %s")
-                params.append(filters['cwe'])
+                params.append(filters["cwe"])
 
-            if filters.get('min_score'):
+            if filters.get("min_score"):
                 where_clauses.append("c.cvss_v3_score >= %s")
-                params.append(filters['min_score'])
+                params.append(filters["min_score"])
 
-            if filters.get('max_score'):
+            if filters.get("max_score"):
                 where_clauses.append("c.cvss_v3_score <= %s")
-                params.append(filters['max_score'])
+                params.append(filters["max_score"])
 
-            if filters.get('start_date'):
+            if filters.get("start_date"):
                 where_clauses.append("c.published_date >= %s")
-                params.append(filters['start_date'])
+                params.append(filters["start_date"])
 
-            if filters.get('end_date'):
+            if filters.get("end_date"):
                 where_clauses.append("c.published_date <= %s")
-                params.append(filters['end_date'])
+                params.append(filters["end_date"])
 
             # 构建完整查询
             query = """
@@ -372,10 +407,10 @@ class PostgresStorage:
             """
 
             # 添加标签过滤
-            if filters.get('tags'):
+            if filters.get("tags"):
                 query += " JOIN cve_tags ct ON c.cve_id = ct.cve_id"
                 tag_conditions = []
-                for tag in filters['tags']:
+                for tag in filters["tags"]:
                     tag_conditions.append("ct.tag = %s")
                     params.append(tag)
                 where_clauses.append(f"({' OR '.join(tag_conditions)})")

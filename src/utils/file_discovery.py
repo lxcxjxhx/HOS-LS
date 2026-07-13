@@ -262,9 +262,7 @@ class FileDiscoveryEngine:
         files: List[FileInfo] = []
         visited: Set[str] = set()
 
-        for current_root, dirs, filenames in os.walk(
-            root, followlinks=self.config.follow_symlinks
-        ):
+        for current_root, dirs, filenames in os.walk(root, followlinks=self.config.follow_symlinks):
             current_path = Path(current_root)
 
             if self._should_skip_directory(current_path, exclude, visited):

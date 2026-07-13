@@ -1,7 +1,9 @@
 from abc import ABC, abstractmethod
 from datetime import datetime
-from typing import Optional, Dict, Any
+from typing import Any, Dict, Optional
+
 from ..db.sqlite_connection import SQLiteConnection
+
 
 class BaseETL(ABC):
     """ETL处理器基类"""
@@ -32,7 +34,9 @@ class BaseETL(ABC):
         result = self.conn.fetch_one(query, (self.ETL_NAME, datetime.now()))
         return result[0] if result else 0
 
-    def _complete_etl(self, etl_id: int, status: str = 'completed', error_message: str = None) -> None:
+    def _complete_etl(
+        self, etl_id: int, status: str = "completed", error_message: str = None
+    ) -> None:
         """完成ETL记录"""
         query = """
             UPDATE etl_records
@@ -45,16 +49,19 @@ class BaseETL(ABC):
                 error_message = %s
             WHERE id = %s
         """
-        self.conn.execute(query, (
-            datetime.now(),
-            status,
-            self.records_processed,
-            self.records_inserted,
-            self.records_updated,
-            self.records_skipped,
-            error_message,
-            etl_id
-        ))
+        self.conn.execute(
+            query,
+            (
+                datetime.now(),
+                status,
+                self.records_processed,
+                self.records_inserted,
+                self.records_updated,
+                self.records_skipped,
+                error_message,
+                etl_id,
+            ),
+        )
 
     def execute_batch(self, query: str, batch: list, fetch: bool = False) -> Optional[list]:
         """执行批量操作，支持事务"""
@@ -77,9 +84,9 @@ class BaseETL(ABC):
         etl_id = self._start_etl()
         try:
             result = self.process(data_path)
-            status = 'completed' if result else 'failed'
+            status = "completed" if result else "failed"
             self._complete_etl(etl_id, status)
             return result
         except Exception as e:
-            self._complete_etl(etl_id, 'failed', str(e))
+            self._complete_etl(etl_id, "failed", str(e))
             raise

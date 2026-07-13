@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Optional, Dict, Any, List
+from typing import Any, Dict, List, Optional
 
 
 @dataclass
@@ -52,34 +52,21 @@ class DynamicAgent:
         self.llm_client = llm_client
 
     def generate_test_case(
-        self,
-        code: str,
-        language: str,
-        vuln_type: str,
-        context: str
+        self, code: str, language: str, vuln_type: str, context: str
     ) -> Dict[str, Any]:
         prompt = self.DYNAMIC_ANALYSIS_PROMPT.format(
-            vuln_type=vuln_type,
-            code=code,
-            language=language,
-            context=context
+            vuln_type=vuln_type, code=code, language=language, context=context
         )
         response = self.llm_client.complete(prompt)
         import json
+
         try:
             result = json.loads(response)
             return result
         except json.JSONDecodeError:
-            return {
-                "test_cases": [],
-                "analysis": f"Failed to parse LLM response: {response}"
-            }
+            return {"test_cases": [], "analysis": f"Failed to parse LLM response: {response}"}
 
-    def analyze_result(
-        self,
-        execution_result: str,
-        expected_result: str
-    ) -> str:
+    def analyze_result(self, execution_result: str, expected_result: str) -> str:
         analysis_prompt = f"""分析以下动态验证执行结果：
 
 执行结果:
@@ -99,9 +86,7 @@ class DynamicAgent:
         return response
 
     def calculate_confidence(
-        self,
-        static_confidence: float,
-        dynamic_result: Dict[str, Any]
+        self, static_confidence: float, dynamic_result: Dict[str, Any]
     ) -> float:
         base_weight = 0.4
         dynamic_weight = 0.6
@@ -114,10 +99,7 @@ class DynamicAgent:
         else:
             exploitability_score = 0.2
 
-        combined = (
-            static_confidence * base_weight +
-            exploitability_score * dynamic_weight
-        )
+        combined = static_confidence * base_weight + exploitability_score * dynamic_weight
 
         return min(1.0, max(0.0, combined))
 
@@ -127,18 +109,9 @@ class DynamicVerificationPipeline:
         self.dynamic_agent = DynamicAgent(llm_client)
         self.dynamic_analyzer = dynamic_analyzer
 
-    def verify(
-        self,
-        code: str,
-        language: str,
-        vuln_type: str,
-        context: str
-    ) -> VerificationResult:
+    def verify(self, code: str, language: str, vuln_type: str, context: str) -> VerificationResult:
         test_case_result = self.dynamic_agent.generate_test_case(
-            code=code,
-            language=language,
-            vuln_type=vuln_type,
-            context=context
+            code=code, language=language, vuln_type=vuln_type, context=context
         )
 
         test_cases = test_case_result.get("test_cases", [])
@@ -147,22 +120,19 @@ class DynamicVerificationPipeline:
                 is_exploitable=False,
                 confidence=0.0,
                 test_case=None,
-                analysis="No test cases generated"
+                analysis="No test cases generated",
             )
 
         primary_test = test_cases[0]
         test_case_str = primary_test.get("payload", "")
 
         execution_result = self.dynamic_analyzer.analyze(
-            code=code,
-            language=language,
-            test_case=test_case_str
+            code=code, language=language, test_case=test_case_str
         )
 
         expected = primary_test.get("expected_behavior", "")
         analysis = self.dynamic_agent.analyze_result(
-            execution_result=str(execution_result),
-            expected_result=expected
+            execution_result=str(execution_result), expected_result=expected
         )
 
         is_exploitable = "triggered" in analysis.lower() or "exploited" in analysis.lower()
@@ -170,13 +140,12 @@ class DynamicVerificationPipeline:
             is_exploitable = False
 
         confidence = self.dynamic_agent.calculate_confidence(
-            static_confidence=0.5,
-            dynamic_result={"exploited": is_exploitable}
+            static_confidence=0.5, dynamic_result={"exploited": is_exploitable}
         )
 
         return VerificationResult(
             is_exploitable=is_exploitable,
             confidence=confidence,
             test_case=test_case_str,
-            analysis=analysis
+            analysis=analysis,
         )

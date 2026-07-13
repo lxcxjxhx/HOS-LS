@@ -3,10 +3,10 @@
 提供性能监控和分析功能，用于跟踪 AI 分析的性能指标。
 """
 
-import time
 import statistics
+import time
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Any
+from typing import Any, Dict, List, Optional
 
 from src.utils.logger import get_logger
 
@@ -16,6 +16,7 @@ logger = get_logger(__name__)
 @dataclass
 class PerformanceMetric:
     """性能指标"""
+
     name: str
     value: float
     unit: str
@@ -25,6 +26,7 @@ class PerformanceMetric:
 @dataclass
 class PerformanceRecord:
     """性能记录"""
+
     operation: str
     duration: float
     metrics: List[PerformanceMetric] = field(default_factory=list)
@@ -52,7 +54,9 @@ class PerformanceMonitor:
             # 可以在这里存储元数据，以便在结束时使用
             pass
 
-    def stop(self, operation: str, metadata: Optional[Dict[str, Any]] = None) -> Optional[PerformanceRecord]:
+    def stop(
+        self, operation: str, metadata: Optional[Dict[str, Any]] = None
+    ) -> Optional[PerformanceRecord]:
         """停止监控操作
 
         Args:
@@ -88,7 +92,7 @@ class PerformanceMonitor:
             unit: 指标单位
         """
         metric = PerformanceMetric(name=name, value=value, unit=unit)
-        
+
         # 查找最近的操作记录
         for record in reversed(self.records):
             if record.operation == operation:
@@ -201,6 +205,7 @@ def measure_performance(operation: str, metadata: Optional[Dict[str, Any]] = Non
     Returns:
         装饰器
     """
+
     def decorator(func):
         async def async_wrapper(*args, **kwargs):
             monitor = get_performance_monitor()

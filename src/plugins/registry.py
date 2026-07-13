@@ -24,9 +24,7 @@ class PluginRegistry:
             plugin_dirs: 插件搜索目录列表
         """
         self._plugins: Dict[str, Plugin] = {}
-        self._plugin_dirs: List[Path] = [
-            Path(d) for d in (plugin_dirs or [])
-        ]
+        self._plugin_dirs: List[Path] = [Path(d) for d in (plugin_dirs or [])]
 
     def register(self, plugin: Plugin) -> None:
         """注册插件
@@ -64,10 +62,7 @@ class PluginRegistry:
         Returns:
             符合类型的插件列表
         """
-        return [
-            plugin for plugin in self._plugins.values()
-            if isinstance(plugin, plugin_type)
-        ]
+        return [plugin for plugin in self._plugins.values() if isinstance(plugin, plugin_type)]
 
     def load_from_directory(self, directory: str) -> List[str]:
         """从目录动态加载插件
@@ -90,9 +85,7 @@ class PluginRegistry:
 
             try:
                 module_name = py_file.stem
-                spec = importlib.util.spec_from_file_location(
-                    module_name, py_file
-                )
+                spec = importlib.util.spec_from_file_location(module_name, py_file)
                 if spec is None or spec.loader is None:
                     continue
 
@@ -124,15 +117,15 @@ class PluginRegistry:
             configs: 插件配置列表
         """
         for config in configs:
-            plugin_name = config.name if hasattr(config, 'name') else config.get('name')
-            enabled = config.enabled if hasattr(config, 'enabled') else config.get('enabled', True)
+            plugin_name = config.name if hasattr(config, "name") else config.get("name")
+            enabled = config.enabled if hasattr(config, "enabled") else config.get("enabled", True)
 
             if plugin_name in self._plugins:
                 plugin = self._plugins[plugin_name]
-                if hasattr(plugin.metadata, 'enabled'):
+                if hasattr(plugin.metadata, "enabled"):
                     plugin.metadata.enabled = enabled
 
-                if hasattr(config, 'config'):
+                if hasattr(config, "config"):
                     plugin.config.update(config.config)
-                elif hasattr(config, 'get'):
-                    plugin.config.update(config.get('config', {}))
+                elif hasattr(config, "get"):
+                    plugin.config.update(config.get("config", {}))

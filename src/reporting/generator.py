@@ -16,20 +16,21 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from src.core.engine import ScanResult
 from src.core.config import Config, get_config
+from src.core.engine import ScanResult
 from src.reporting.category import (
-    VulnerabilityCategory,
     SPECIAL_SCAN_AREAS,
+    CategorizedReportData,
+    VulnerabilityCategory,
+    VulnerabilityMetadata,
     classify_rule,
     get_special_scan_area,
-    CategorizedReportData,
-    VulnerabilityMetadata,
 )
 
 try:
-    from src.ai.pure_ai.schema_validator import LineNumberValidator
     from src.ai.pure_ai.schema import LineMatchStatus
+    from src.ai.pure_ai.schema_validator import LineNumberValidator
+
     LINENUMBER_VALIDATOR_AVAILABLE = True
 except ImportError:
     LINENUMBER_VALIDATOR_AVAILABLE = False
@@ -38,6 +39,7 @@ except ImportError:
 # 尝试导入 Jinja2，如果没有安装则使用简单的字符串替换
 try:
     from jinja2 import Template
+
     JINJA_AVAILABLE = True
 except ImportError:
     JINJA_AVAILABLE = False
@@ -63,7 +65,7 @@ def _classify_findings(findings: List[Any]) -> Dict[str, Any]:
     special_scan_findings: Dict[str, List] = {area: [] for area in SPECIAL_SCAN_AREAS}
 
     for finding in findings:
-        rule_id = getattr(finding, 'rule_id', '') or ''
+        rule_id = getattr(finding, "rule_id", "") or ""
         category = classify_rule(rule_id)
 
         if category == VulnerabilityCategory.PORT_RELATED:
@@ -95,7 +97,9 @@ def _generate_category_statistics(classified: Dict[str, Any]) -> Dict[str, Any]:
     """
     port_count = len(classified["port_related_findings"])
     general_count = len(classified["general_static_findings"])
-    special_counts = {area: len(findings) for area, findings in classified["special_scan_findings"].items()}
+    special_counts = {
+        area: len(findings) for area, findings in classified["special_scan_findings"].items()
+    }
 
     return {
         "by_category": {
@@ -125,34 +129,34 @@ def _calculate_apts_coverage_statistics(all_findings: List[Any]) -> Dict[str, An
     severity_breakdown = {"critical": 0, "high": 0, "medium": 0, "low": 0, "info": 0}
 
     for finding in all_findings:
-        rule_id = getattr(finding, 'rule_id', '') or ''
+        rule_id = getattr(finding, "rule_id", "") or ""
         total_rules.add(rule_id)
 
-        metadata = getattr(finding, 'metadata', {}) or {}
+        metadata = getattr(finding, "metadata", {}) or {}
         if isinstance(metadata, dict):
-            source = metadata.get('source', 'ai')
+            source = metadata.get("source", "ai")
         else:
-            source = 'ai'
+            source = "ai"
 
-        vulnerability = getattr(finding, 'vulnerability', '') or metadata.get('vulnerability', '')
+        vulnerability = getattr(finding, "vulnerability", "") or metadata.get("vulnerability", "")
         if vulnerability:
             vulnerability_types_covered.add(vulnerability)
 
-        severity = getattr(finding, 'severity', None)
-        if severity and hasattr(severity, 'value'):
+        severity = getattr(finding, "severity", None)
+        if severity and hasattr(severity, "value"):
             severity_str = severity.value
         else:
-            severity_str = str(severity).lower().split('.')[-1] if severity else 'info'
+            severity_str = str(severity).lower().split(".")[-1] if severity else "info"
         severity_breakdown[severity_str] = severity_breakdown.get(severity_str, 0) + 1
 
-        status = metadata.get('status', 'UNCERTAIN')
-        if status == 'CONFIRMED' or status == 'REFINED':
+        status = metadata.get("status", "UNCERTAIN")
+        if status == "CONFIRMED" or status == "REFINED":
             rules_with_findings.add(rule_id)
-            if status == 'REFINED':
+            if status == "REFINED":
                 false_positive_count += 1
-        elif status == 'UNCERTAIN':
-            confidence = getattr(finding, 'confidence', 0) or metadata.get('confidence', 0)
-            evidence_count = len(metadata.get('evidence', []) or [])
+        elif status == "UNCERTAIN":
+            confidence = getattr(finding, "confidence", 0) or metadata.get("confidence", 0)
+            evidence_count = len(metadata.get("evidence", []) or [])
             if confidence < 0.7 and evidence_count < 2:
                 unverified_count += 1
             else:
@@ -161,14 +165,16 @@ def _calculate_apts_coverage_statistics(all_findings: List[Any]) -> Dict[str, An
         else:
             rules_with_findings.add(rule_id)
 
-        line_match_status = metadata.get('line_match_status', '')
-        if line_match_status == 'EXACT':
+        line_match_status = metadata.get("line_match_status", "")
+        if line_match_status == "EXACT":
             verified_count += 1
-        elif line_match_status == 'UNVERIFIED':
+        elif line_match_status == "UNVERIFIED":
             unverified_count += 1
 
     total_rules_count = len(total_rules) if total_rules else 1
-    coverage_percentage = (len(rules_with_findings) / total_rules_count * 100) if total_rules_count > 0 else 0
+    coverage_percentage = (
+        (len(rules_with_findings) / total_rules_count * 100) if total_rules_count > 0 else 0
+    )
 
     false_positive_rate = (false_positive_count / len(all_findings)) if all_findings else 0.0
 
@@ -220,22 +226,29 @@ def _calculate_apts_false_positive_rate(all_findings: List[Any]) -> Dict[str, An
     }
 
     severity_fpr = {}
-    placeholder_titles = ['UNVERIFIED_RISK', 'UNKNOWN', 'GENERIC', 'PLACEHOLDER', 'UNVERIFIED', 'SUSPICIOUS_PATTERN']
+    placeholder_titles = [
+        "UNVERIFIED_RISK",
+        "UNKNOWN",
+        "GENERIC",
+        "PLACEHOLDER",
+        "UNVERIFIED",
+        "SUSPICIOUS_PATTERN",
+    ]
 
     for finding in all_findings:
-        metadata = getattr(finding, 'metadata', {}) or {}
-        status = metadata.get('status', 'UNCERTAIN')
+        metadata = getattr(finding, "metadata", {}) or {}
+        status = metadata.get("status", "UNCERTAIN")
         status_upper = status.upper()
         if status_upper in status_counts:
             status_counts[status_upper] += 1
         else:
             status_counts["UNCERTAIN"] += 1
 
-        severity = getattr(finding, 'severity', None)
-        if severity and hasattr(severity, 'value'):
+        severity = getattr(finding, "severity", None)
+        if severity and hasattr(severity, "value"):
             severity_str = severity.value
         else:
-            severity_str = 'info'
+            severity_str = "info"
 
         if severity_str not in severity_fpr:
             severity_fpr[severity_str] = {"total": 0, "false_positive": 0, "weighted_fp": 0.0}
@@ -246,7 +259,7 @@ def _calculate_apts_false_positive_rate(all_findings: List[Any]) -> Dict[str, An
         fp_probability = 0.15  # AI分析基准误报率15%
 
         # 低置信度增加10%
-        confidence = getattr(finding, 'confidence', 0.5) or metadata.get('confidence', 0.5)
+        confidence = getattr(finding, "confidence", 0.5) or metadata.get("confidence", 0.5)
         if confidence < 0.6:
             fp_probability += 0.10
 
@@ -259,7 +272,7 @@ def _calculate_apts_false_positive_rate(all_findings: List[Any]) -> Dict[str, An
             severity_fpr[severity_str]["false_positive"] += 1
 
         # 占位符标题增加20%
-        title = getattr(finding, 'title', '') or getattr(finding, 'vulnerability', '') or ''
+        title = getattr(finding, "title", "") or getattr(finding, "vulnerability", "") or ""
         if any(ph in title.upper() for ph in placeholder_titles):
             fp_probability += 0.20
 
@@ -297,7 +310,7 @@ def _calculate_apts_false_positive_rate(all_findings: List[Any]) -> Dict[str, An
 def safe_escape(text):
     """安全转义HTML字符，防止XSS和渲染断裂"""
     if text is None:
-        return ''
+        return ""
     if not isinstance(text, str):
         text = str(text)
     return html.escape(text)
@@ -317,12 +330,24 @@ def sanitize_token_record(rec):
             elif isinstance(v, os.PathLike):
                 result[k] = str(v)
             else:
-                result[k] = str(v) if v is not None else ''
+                result[k] = str(v) if v is not None else ""
         return result
     result = {}
-    for attr in ['provider', 'model', 'prompt_tokens', 'completion_tokens', 'total_tokens',
-                 'duration', 'success', 'cached', 'timestamp', 'prompt', 'response',
-                 'agent_name', 'file_path']:
+    for attr in [
+        "provider",
+        "model",
+        "prompt_tokens",
+        "completion_tokens",
+        "total_tokens",
+        "duration",
+        "success",
+        "cached",
+        "timestamp",
+        "prompt",
+        "response",
+        "agent_name",
+        "file_path",
+    ]:
         if hasattr(rec, attr):
             v = getattr(rec, attr)
             if isinstance(v, (str, int, float, bool)) or v is None:
@@ -330,9 +355,9 @@ def sanitize_token_record(rec):
             elif isinstance(v, os.PathLike):
                 result[attr] = str(v)
             else:
-                result[attr] = str(v) if v is not None else ''
+                result[attr] = str(v) if v is not None else ""
         else:
-            result[attr] = ''
+            result[attr] = ""
     return result
 
 
@@ -407,19 +432,19 @@ class JSONReportGenerator(BaseReportGenerator):
             for finding in result.findings:
                 severity = finding.severity.value
                 severity_counts[severity] = severity_counts.get(severity, 0) + 1
-                metadata = getattr(finding, 'metadata', {})
+                metadata = getattr(finding, "metadata", {})
                 if isinstance(metadata, dict):
-                    source = metadata.get('source', 'ai')
+                    source = metadata.get("source", "ai")
                 else:
-                    source = 'ai'
+                    source = "ai"
                 source_counts[source] = source_counts.get(source, 0) + 1
 
-        total_files = sum(r.metadata.get('total_files', 1) for r in results)
+        total_files = sum(r.metadata.get("total_files", 1) for r in results)
 
         tool_statistics = None
         for result in results:
-            if hasattr(result, 'metadata') and 'tool_statistics' in result.metadata:
-                tool_statistics = result.metadata['tool_statistics']
+            if hasattr(result, "metadata") and "tool_statistics" in result.metadata:
+                tool_statistics = result.metadata["tool_statistics"]
                 break
 
         all_findings = [f for r in results for f in r.findings]
@@ -468,7 +493,7 @@ class HTMLReportGenerator(BaseReportGenerator):
         critical = summary["severity_counts"].get("critical", 0)
         high = summary["severity_counts"].get("high", 0)
         medium = summary["severity_counts"].get("medium", 0)
-        
+
         if total_findings == 0:
             return "safe", "安全状态良好"
         elif critical > 0:
@@ -497,11 +522,11 @@ class HTMLReportGenerator(BaseReportGenerator):
         debug_logs = []
         token_records = []
         for result in results:
-            if hasattr(result, 'debug_logs') and result.debug_logs:
+            if hasattr(result, "debug_logs") and result.debug_logs:
                 debug_logs.extend(result.debug_logs)
-            if hasattr(result, 'metadata') and 'debug_logs' in result.metadata:
-                debug_logs.extend(result.metadata['debug_logs'])
-            if hasattr(result, 'token_records') and result.token_records:
+            if hasattr(result, "metadata") and "debug_logs" in result.metadata:
+                debug_logs.extend(result.metadata["debug_logs"])
+            if hasattr(result, "token_records") and result.token_records:
                 token_records.extend(result.token_records)
 
         # 限制调试日志和 Token 记录数量，并截断过长内容
@@ -521,17 +546,19 @@ class HTMLReportGenerator(BaseReportGenerator):
 
         def sanitize_and_truncate_record(rec):
             sanitized = sanitize_token_record(rec)
-            if 'prompt' in sanitized and sanitized['prompt']:
-                sanitized['prompt'] = safe_escape(truncate_response(sanitized['prompt']))
-            if 'response' in sanitized and sanitized['response']:
-                sanitized['response'] = safe_escape(truncate_response(sanitized['response']))
+            if "prompt" in sanitized and sanitized["prompt"]:
+                sanitized["prompt"] = safe_escape(truncate_response(sanitized["prompt"]))
+            if "response" in sanitized and sanitized["response"]:
+                sanitized["response"] = safe_escape(truncate_response(sanitized["response"]))
             return sanitized
 
         token_records = [sanitize_and_truncate_record(rec) for rec in token_records]
         if len(token_records) > MAX_TOKEN_RECORDS:
             token_records = token_records[-MAX_TOKEN_RECORDS:]
 
-        print(f"[DEBUG] 调试日志数量限制: {len(debug_logs)}/{MAX_DEBUG_LOGS}, 令牌记录数量限制: {len(token_records)}/{MAX_TOKEN_RECORDS}")
+        print(
+            f"[DEBUG] 调试日志数量限制: {len(debug_logs)}/{MAX_DEBUG_LOGS}, 令牌记录数量限制: {len(token_records)}/{MAX_TOKEN_RECORDS}"
+        )
 
         all_findings = [f for r in results for f in r.findings]
         categorized_findings = _classify_findings(all_findings)
@@ -541,14 +568,17 @@ class HTMLReportGenerator(BaseReportGenerator):
         print(f"[DEBUG] 报告模板路径: {template_path}, 存在: {'是' if template_path.exists() else '否'}")
         if not template_path.exists():
             # 如果模板文件不存在，使用默认模板
-            return self._generate_default_html(results, summary, status, status_text, total_duration)
+            return self._generate_default_html(
+                results, summary, status, status_text, total_duration
+            )
 
         try:
             with open(template_path, "r", encoding="utf-8") as f:
                 template_content = f.read()
 
             if JINJA_AVAILABLE:
-                from jinja2 import Environment, BaseLoader
+                from jinja2 import BaseLoader, Environment
+
                 from src.core.engine import Severity
 
                 def sev(value):
@@ -557,147 +587,274 @@ class HTMLReportGenerator(BaseReportGenerator):
                     return str(value)
 
                 def sort_by_severity(findings):
-                    severity_order = {'critical': 0, 'high': 1, 'medium': 2, 'low': 3, 'info': 4}
+                    severity_order = {"critical": 0, "high": 1, "medium": 2, "low": 3, "info": 4}
+
                     def get_severity_key(f):
-                        sev_str = f.get('severity', 'info')
-                        sev_str = sev_str.lower().split('.')[-1]
+                        sev_str = f.get("severity", "info")
+                        sev_str = sev_str.lower().split(".")[-1]
                         return severity_order.get(sev_str, 5)
+
                     return sorted(findings, key=get_severity_key)
 
                 env = Environment(loader=BaseLoader())
-                env.filters['sev'] = sev
-                env.filters['sort_by_severity'] = sort_by_severity
+                env.filters["sev"] = sev
+                env.filters["sort_by_severity"] = sort_by_severity
                 template = env.from_string(template_content)
 
                 processed_results = []
                 finding_index = 0
                 for result in results:
                     processed_result = {
-                        'target': str(result.target) if isinstance(result.target, os.PathLike) else result.target,
-                        'status': result.status.value if hasattr(result.status, 'value') else str(result.status),
-                        'findings': [],
-                        'duration': result.duration,
-                        'metadata': result.metadata,
-                        'debug_logs': result.debug_logs if hasattr(result, 'debug_logs') else [],
-                        'token_records': result.token_records if hasattr(result, 'token_records') else [],
+                        "target": (
+                            str(result.target)
+                            if isinstance(result.target, os.PathLike)
+                            else result.target
+                        ),
+                        "status": (
+                            result.status.value
+                            if hasattr(result.status, "value")
+                            else str(result.status)
+                        ),
+                        "findings": [],
+                        "duration": result.duration,
+                        "metadata": result.metadata,
+                        "debug_logs": result.debug_logs if hasattr(result, "debug_logs") else [],
+                        "token_records": (
+                            result.token_records if hasattr(result, "token_records") else []
+                        ),
                     }
                     for finding in result.findings:
                         finding_index += 1
-                        metadata = finding.metadata if hasattr(finding, 'metadata') else {}
-                        should_include, status, needs_review = self._should_include_finding(finding, metadata)
+                        metadata = finding.metadata if hasattr(finding, "metadata") else {}
+                        should_include, status, needs_review = self._should_include_finding(
+                            finding, metadata
+                        )
 
                         if not should_include:
-                            print(f"[DEBUG] 跳过已拒绝漏洞: {getattr(finding, 'rule_name', finding.rule_id)}")
+                            print(
+                                f"[DEBUG] 跳过已拒绝漏洞: {getattr(finding, 'rule_name', finding.rule_id)}"
+                            )
                             finding_index -= 1
                             continue
 
-                        rule_id = getattr(finding, 'rule_id', '') or ''
+                        rule_id = getattr(finding, "rule_id", "") or ""
                         category = classify_rule(rule_id)
                         processed_finding = {
-                            'index': finding_index,
-                            'rule_id': safe_escape(finding.rule_id),
-                            'rule_name': safe_escape(finding.rule_name),
-                            'description': safe_escape(finding.description),
-                            'severity': finding.severity.value if isinstance(finding.severity, Severity) else str(finding.severity),
-                            'status': status,
-                            'needs_review': needs_review,
-                            'category': category.value,
-                            'location': {
-                                'file': safe_escape(finding.location.file if hasattr(finding.location, 'file') else str(finding.location)),
-                                'line': finding.location.line if hasattr(finding.location, 'line') else 0,
-                                'column': finding.location.column if hasattr(finding.location, 'column') else 0,
-                                'end_line': finding.location.end_line if hasattr(finding.location, 'end_line') else 0,
-                                'end_column': finding.location.end_column if hasattr(finding.location, 'end_column') else 0,
+                            "index": finding_index,
+                            "rule_id": safe_escape(finding.rule_id),
+                            "rule_name": safe_escape(finding.rule_name),
+                            "description": safe_escape(finding.description),
+                            "severity": (
+                                finding.severity.value
+                                if isinstance(finding.severity, Severity)
+                                else str(finding.severity)
+                            ),
+                            "status": status,
+                            "needs_review": needs_review,
+                            "category": category.value,
+                            "location": {
+                                "file": safe_escape(
+                                    finding.location.file
+                                    if hasattr(finding.location, "file")
+                                    else str(finding.location)
+                                ),
+                                "line": (
+                                    finding.location.line
+                                    if hasattr(finding.location, "line")
+                                    else 0
+                                ),
+                                "column": (
+                                    finding.location.column
+                                    if hasattr(finding.location, "column")
+                                    else 0
+                                ),
+                                "end_line": (
+                                    finding.location.end_line
+                                    if hasattr(finding.location, "end_line")
+                                    else 0
+                                ),
+                                "end_column": (
+                                    finding.location.end_column
+                                    if hasattr(finding.location, "end_column")
+                                    else 0
+                                ),
                             },
-                            'confidence': finding.confidence,
-                            'message': safe_escape(finding.message),
-                            'code_snippet': safe_escape(finding.code_snippet),
-                            'fix_suggestion': safe_escape(finding.fix_suggestion),
-                            'references': finding.references,
-                            'metadata': metadata,
-                            'evidence': metadata.get('evidence', []) if isinstance(metadata, dict) else [],
-                            'code_context': finding.code_context.to_dict() if hasattr(finding, 'code_context') and finding.code_context else None,
+                            "confidence": finding.confidence,
+                            "message": safe_escape(finding.message),
+                            "code_snippet": safe_escape(finding.code_snippet),
+                            "fix_suggestion": safe_escape(finding.fix_suggestion),
+                            "references": finding.references,
+                            "metadata": metadata,
+                            "evidence": (
+                                metadata.get("evidence", []) if isinstance(metadata, dict) else []
+                            ),
+                            "code_context": (
+                                finding.code_context.to_dict()
+                                if hasattr(finding, "code_context") and finding.code_context
+                                else None
+                            ),
                         }
 
                         if needs_review:
-                            print(f"[DEBUG] 标记为需要审查的待定漏洞: {getattr(finding, 'rule_name', finding.rule_id)}, 置信度: {getattr(finding, 'confidence', 0)}, 证据数: {len(metadata.get('evidence', []))}")
+                            print(
+                                f"[DEBUG] 标记为需要审查的待定漏洞: {getattr(finding, 'rule_name', finding.rule_id)}, 置信度: {getattr(finding, 'confidence', 0)}, 证据数: {len(metadata.get('evidence', []))}"
+                            )
 
-                        if hasattr(finding, 'files') and finding.files:
-                            processed_finding['files'] = [str(f) if hasattr(f, '__fspath__') else f for f in finding.files]
-                            processed_finding['is_multi_file'] = True
-                            processed_finding['snippet_count'] = len(finding.files)
+                        if hasattr(finding, "files") and finding.files:
+                            processed_finding["files"] = [
+                                str(f) if hasattr(f, "__fspath__") else f for f in finding.files
+                            ]
+                            processed_finding["is_multi_file"] = True
+                            processed_finding["snippet_count"] = len(finding.files)
                         else:
-                            location_file = finding.location.file if hasattr(finding.location, 'file') else None
-                            processed_finding['files'] = [str(location_file) if location_file else '']
-                            processed_finding['is_multi_file'] = False
-                            processed_finding['snippet_count'] = 1
+                            location_file = (
+                                finding.location.file if hasattr(finding.location, "file") else None
+                            )
+                            processed_finding["files"] = [
+                                str(location_file) if location_file else ""
+                            ]
+                            processed_finding["is_multi_file"] = False
+                            processed_finding["snippet_count"] = 1
 
-                        if hasattr(finding, 'snippets') and finding.snippets:
-                            processed_finding['snippets'] = {str(k): safe_escape(v) for k, v in finding.snippets.items()}
+                        if hasattr(finding, "snippets") and finding.snippets:
+                            processed_finding["snippets"] = {
+                                str(k): safe_escape(v) for k, v in finding.snippets.items()
+                            }
                         else:
-                            location_file = finding.location.file if hasattr(finding.location, 'file') else None
-                            processed_finding['snippets'] = {str(location_file) if location_file else '': safe_escape(finding.code_snippet)}
+                            location_file = (
+                                finding.location.file if hasattr(finding.location, "file") else None
+                            )
+                            processed_finding["snippets"] = {
+                                str(location_file)
+                                if location_file
+                                else "": safe_escape(finding.code_snippet)
+                            }
 
-                        if hasattr(finding, 'chain') and finding.chain:
-                            processed_finding['chain'] = [
+                        if hasattr(finding, "chain") and finding.chain:
+                            processed_finding["chain"] = [
                                 {
-                                    'file_path': safe_escape(str(getattr(step, 'file_path', step.get('file_path', '')))),
-                                    'line': getattr(step, 'line', step.get('line', 0)),
-                                    'description': safe_escape(getattr(step, 'description', step.get('description', ''))),
-                                    'code_snippet': safe_escape(getattr(step, 'code_snippet', step.get('code_snippet', ''))),
+                                    "file_path": safe_escape(
+                                        str(getattr(step, "file_path", step.get("file_path", "")))
+                                    ),
+                                    "line": getattr(step, "line", step.get("line", 0)),
+                                    "description": safe_escape(
+                                        getattr(step, "description", step.get("description", ""))
+                                    ),
+                                    "code_snippet": safe_escape(
+                                        getattr(step, "code_snippet", step.get("code_snippet", ""))
+                                    ),
                                 }
                                 for step in finding.chain
                             ]
-                            mermaid_lines = ['flowchart LR']
+                            mermaid_lines = ["flowchart LR"]
                             for i, step in enumerate(finding.chain):
-                                node_id = f'N{i + 1}'
-                                file_path_raw = str(getattr(step, 'file_path', step.get('file_path', '')))
-                                file_name = file_path_raw.split('/')[-1] if '/' in file_path_raw else file_path_raw.split('\\')[-1] if '\\' in file_path_raw else file_path_raw
-                                line_num = getattr(step, 'line', step.get('line', 0))
-                                node_label = f'{file_name}:{line_num}' if line_num else file_name
-                                mermaid_lines.append(f'    {node_id}[{node_label}]')
+                                node_id = f"N{i + 1}"
+                                file_path_raw = str(
+                                    getattr(step, "file_path", step.get("file_path", ""))
+                                )
+                                file_name = (
+                                    file_path_raw.split("/")[-1]
+                                    if "/" in file_path_raw
+                                    else (
+                                        file_path_raw.split("\\")[-1]
+                                        if "\\" in file_path_raw
+                                        else file_path_raw
+                                    )
+                                )
+                                line_num = getattr(step, "line", step.get("line", 0))
+                                node_label = f"{file_name}:{line_num}" if line_num else file_name
+                                mermaid_lines.append(f"    {node_id}[{node_label}]")
                                 if i > 0:
-                                    prev_node_id = f'N{i}'
-                                    mermaid_lines.append(f'    {prev_node_id} --> {node_id}')
-                            processed_finding['mermaid_graph'] = '\n'.join(mermaid_lines)
+                                    prev_node_id = f"N{i}"
+                                    mermaid_lines.append(f"    {prev_node_id} --> {node_id}")
+                            processed_finding["mermaid_graph"] = "\n".join(mermaid_lines)
                         else:
-                            processed_finding['chain'] = []
-                        existing_line_match_status = metadata.get('line_match_status', '') if isinstance(metadata, dict) else ''
+                            processed_finding["chain"] = []
+                        existing_line_match_status = (
+                            metadata.get("line_match_status", "")
+                            if isinstance(metadata, dict)
+                            else ""
+                        )
                         if existing_line_match_status:
-                            processed_finding['line_match_status'] = existing_line_match_status
-                            processed_finding['verified_line'] = -1
+                            processed_finding["line_match_status"] = existing_line_match_status
+                            processed_finding["verified_line"] = -1
                         elif LINENUMBER_VALIDATOR_AVAILABLE:
-                            file_content = metadata.get('file_content', '') if isinstance(metadata, dict) else ''
+                            file_content = (
+                                metadata.get("file_content", "")
+                                if isinstance(metadata, dict)
+                                else ""
+                            )
                             if not file_content:
                                 try:
-                                    file_path = finding.location.file if hasattr(finding.location, 'file') else None
+                                    file_path = (
+                                        finding.location.file
+                                        if hasattr(finding.location, "file")
+                                        else None
+                                    )
                                     if file_path and Path(file_path).exists():
-                                        file_content = Path(file_path).read_text(encoding='utf-8', errors='ignore')
+                                        file_content = Path(file_path).read_text(
+                                            encoding="utf-8", errors="ignore"
+                                        )
                                 except Exception:
                                     pass
                             if file_content:
                                 try:
                                     validator = LineNumberValidator()
                                     vuln_data = {
-                                        'location': str(finding.location),
-                                        'evidence': metadata.get('evidence', []) if isinstance(metadata, dict) else [],
-                                        'rule_name': getattr(finding, 'rule_name', '') or metadata.get('rule_name', '') if isinstance(metadata, dict) else '',
-                                        'description': getattr(finding, 'description', '') or metadata.get('description', '') if isinstance(metadata, dict) else '',
+                                        "location": str(finding.location),
+                                        "evidence": (
+                                            metadata.get("evidence", [])
+                                            if isinstance(metadata, dict)
+                                            else []
+                                        ),
+                                        "rule_name": (
+                                            getattr(finding, "rule_name", "")
+                                            or metadata.get("rule_name", "")
+                                            if isinstance(metadata, dict)
+                                            else ""
+                                        ),
+                                        "description": (
+                                            getattr(finding, "description", "")
+                                            or metadata.get("description", "")
+                                            if isinstance(metadata, dict)
+                                            else ""
+                                        ),
                                     }
                                     validated = validator.validate_location(vuln_data, file_content)
-                                    processed_finding['line_match_status'] = validated.get('line_match_status', LineMatchStatus.UNVERIFIED.value if LineMatchStatus else 'UNVERIFIED')
-                                    processed_finding['verified_line'] = validated.get('verified_line', -1)
-                                    if validated.get('code_snippet'):
-                                        processed_finding['code_snippet'] = validated.get('code_snippet')
-                                    elif 'ai_reported_line' in validated:
-                                        processed_finding['ai_reported_line'] = validated.get('ai_reported_line', -1)
+                                    processed_finding["line_match_status"] = validated.get(
+                                        "line_match_status",
+                                        (
+                                            LineMatchStatus.UNVERIFIED.value
+                                            if LineMatchStatus
+                                            else "UNVERIFIED"
+                                        ),
+                                    )
+                                    processed_finding["verified_line"] = validated.get(
+                                        "verified_line", -1
+                                    )
+                                    if validated.get("code_snippet"):
+                                        processed_finding["code_snippet"] = validated.get(
+                                            "code_snippet"
+                                        )
+                                    elif "ai_reported_line" in validated:
+                                        processed_finding["ai_reported_line"] = validated.get(
+                                            "ai_reported_line", -1
+                                        )
                                 except Exception:
-                                    processed_finding['line_match_status'] = LineMatchStatus.UNVERIFIED.value if LineMatchStatus else 'UNVERIFIED'
-                                    processed_finding['verified_line'] = -1
+                                    processed_finding["line_match_status"] = (
+                                        LineMatchStatus.UNVERIFIED.value
+                                        if LineMatchStatus
+                                        else "UNVERIFIED"
+                                    )
+                                    processed_finding["verified_line"] = -1
                             else:
-                                processed_finding['line_match_status'] = LineMatchStatus.UNVERIFIED.value if LineMatchStatus else 'UNVERIFIED'
-                                processed_finding['verified_line'] = -1
-                        processed_result['findings'].append(processed_finding)
+                                processed_finding["line_match_status"] = (
+                                    LineMatchStatus.UNVERIFIED.value
+                                    if LineMatchStatus
+                                    else "UNVERIFIED"
+                                )
+                                processed_finding["verified_line"] = -1
+                        processed_result["findings"].append(processed_finding)
                     processed_results.append(processed_result)
 
                 html = template.render(
@@ -710,7 +867,7 @@ class HTMLReportGenerator(BaseReportGenerator):
                     token_records=token_records,
                     categorized_findings=categorized_findings,
                     getattr=getattr,
-                    hasattr=hasattr
+                    hasattr=hasattr,
                 )
             else:
                 # 简单的字符串替换（如果没有 Jinja2）
@@ -720,39 +877,74 @@ class HTMLReportGenerator(BaseReportGenerator):
                 html = html.replace("{{ summary.total_scans }}", str(summary["total_scans"]))
                 html = html.replace("{{ summary.total_findings }}", str(summary["total_findings"]))
                 html = html.replace("{{ total_duration }}", str(total_duration))
-                html = html.replace("{{ summary.severity_counts.critical }}", str(summary["severity_counts"].get("critical", 0)))
-                html = html.replace("{{ summary.severity_counts.high }}", str(summary["severity_counts"].get("high", 0)))
-                html = html.replace("{{ summary.severity_counts.medium }}", str(summary["severity_counts"].get("medium", 0)))
-                html = html.replace("{{ summary.severity_counts.low }}", str(summary["severity_counts"].get("low", 0)))
-                html = html.replace("{{ summary.severity_counts.info }}", str(summary["severity_counts"].get("info", 0)))
+                html = html.replace(
+                    "{{ summary.severity_counts.critical }}",
+                    str(summary["severity_counts"].get("critical", 0)),
+                )
+                html = html.replace(
+                    "{{ summary.severity_counts.high }}",
+                    str(summary["severity_counts"].get("high", 0)),
+                )
+                html = html.replace(
+                    "{{ summary.severity_counts.medium }}",
+                    str(summary["severity_counts"].get("medium", 0)),
+                )
+                html = html.replace(
+                    "{{ summary.severity_counts.low }}",
+                    str(summary["severity_counts"].get("low", 0)),
+                )
+                html = html.replace(
+                    "{{ summary.severity_counts.info }}",
+                    str(summary["severity_counts"].get("info", 0)),
+                )
 
             return html
         except Exception as e:
             print(f"[WARN] 模板渲染失败: {e}, 尝试使用备用方案")
             try:
                 import re
-                if 'template_content' not in dir():
-                    return self._generate_default_html(results, summary, status, status_text, total_duration)
+
+                if "template_content" not in dir():
+                    return self._generate_default_html(
+                        results, summary, status, status_text, total_duration
+                    )
                 html = template_content
-                html = re.sub(r'\{\{.*?\}\}', '', html)
-                html = self._apply_simple_replacements(html, summary, status, status_text, total_duration)
+                html = re.sub(r"\{\{.*?\}\}", "", html)
+                html = self._apply_simple_replacements(
+                    html, summary, status, status_text, total_duration
+                )
                 return html
             except Exception as fallback_error:
                 print(f"[WARN] 备用方案也失败: {fallback_error}, 使用默认模板")
-                return self._generate_default_html(results, summary, status, status_text, total_duration)
+                return self._generate_default_html(
+                    results, summary, status, status_text, total_duration
+                )
 
-    def _apply_simple_replacements(self, html: str, summary: Dict, status: str, status_text: str, total_duration: float) -> str:
+    def _apply_simple_replacements(
+        self, html: str, summary: Dict, status: str, status_text: str, total_duration: float
+    ) -> str:
         """对模板进行简单的变量替换"""
         html = html.replace("{{ status }}", status)
         html = html.replace("{{ status_text }}", status_text)
         html = html.replace("{{ summary.total_scans }}", str(summary["total_scans"]))
         html = html.replace("{{ summary.total_findings }}", str(summary["total_findings"]))
         html = html.replace("{{ total_duration }}", str(total_duration))
-        html = html.replace("{{ summary.severity_counts.critical }}", str(summary["severity_counts"].get("critical", 0)))
-        html = html.replace("{{ summary.severity_counts.high }}", str(summary["severity_counts"].get("high", 0)))
-        html = html.replace("{{ summary.severity_counts.medium }}", str(summary["severity_counts"].get("medium", 0)))
-        html = html.replace("{{ summary.severity_counts.low }}", str(summary["severity_counts"].get("low", 0)))
-        html = html.replace("{{ summary.severity_counts.info }}", str(summary["severity_counts"].get("info", 0)))
+        html = html.replace(
+            "{{ summary.severity_counts.critical }}",
+            str(summary["severity_counts"].get("critical", 0)),
+        )
+        html = html.replace(
+            "{{ summary.severity_counts.high }}", str(summary["severity_counts"].get("high", 0))
+        )
+        html = html.replace(
+            "{{ summary.severity_counts.medium }}", str(summary["severity_counts"].get("medium", 0))
+        )
+        html = html.replace(
+            "{{ summary.severity_counts.low }}", str(summary["severity_counts"].get("low", 0))
+        )
+        html = html.replace(
+            "{{ summary.severity_counts.info }}", str(summary["severity_counts"].get("info", 0))
+        )
         return html
 
     def _generate_default_html(self, results, summary, status, status_text, total_duration):
@@ -790,16 +982,18 @@ class HTMLReportGenerator(BaseReportGenerator):
         for result in results:
             for finding in result.findings:
                 # 确保使用正确的字段
-                location = getattr(finding, 'location', 'unknown')
+                location = getattr(finding, "location", "unknown")
                 if isinstance(location, dict):
-                    location = location.get('file', 'unknown')
-                
-                description = getattr(finding, 'description', getattr(finding, 'message', '无描述'))
-                
+                    location = location.get("file", "unknown")
+
+                description = getattr(finding, "description", getattr(finding, "message", "无描述"))
+
                 # 处理修复建议
-                fix_suggestion = getattr(finding, 'fix_suggestion', '')
-                fix_suggestion_html = f"<p><strong>修复建议:</strong> {fix_suggestion}</p>" if fix_suggestion else ""
-                
+                fix_suggestion = getattr(finding, "fix_suggestion", "")
+                fix_suggestion_html = (
+                    f"<p><strong>修复建议:</strong> {fix_suggestion}</p>" if fix_suggestion else ""
+                )
+
                 html += f"""
     <div class="finding severity-{finding.severity.value}">
         <h3>{finding.rule_name} ({finding.rule_id})</h3>
@@ -816,8 +1010,6 @@ class HTMLReportGenerator(BaseReportGenerator):
 
         return html
 
-
-
     def _generate_summary(self, results: List[ScanResult]) -> Dict[str, Any]:
         """生成摘要
 
@@ -832,19 +1024,19 @@ class HTMLReportGenerator(BaseReportGenerator):
             for finding in result.findings:
                 severity = finding.severity.value
                 severity_counts[severity] = severity_counts.get(severity, 0) + 1
-                metadata = getattr(finding, 'metadata', {})
+                metadata = getattr(finding, "metadata", {})
                 if isinstance(metadata, dict):
-                    source = metadata.get('source', 'ai')
+                    source = metadata.get("source", "ai")
                 else:
-                    source = 'ai'
+                    source = "ai"
                 source_counts[source] = source_counts.get(source, 0) + 1
 
-        total_files = sum(r.metadata.get('total_files', 1) for r in results)
+        total_files = sum(r.metadata.get("total_files", 1) for r in results)
 
         tool_statistics = None
         for result in results:
-            if hasattr(result, 'metadata') and 'tool_statistics' in result.metadata:
-                tool_statistics = result.metadata['tool_statistics']
+            if hasattr(result, "metadata") and "tool_statistics" in result.metadata:
+                tool_statistics = result.metadata["tool_statistics"]
                 break
 
         all_findings = [f for r in results for f in r.findings]
@@ -874,20 +1066,20 @@ class HTMLReportGenerator(BaseReportGenerator):
         if metadata is None:
             metadata = {}
 
-        status = metadata.get('status', 'UNCERTAIN')
-        confidence = getattr(finding, 'confidence', 0) or metadata.get('confidence', 0)
-        evidence = metadata.get('evidence', [])
+        status = metadata.get("status", "UNCERTAIN")
+        confidence = getattr(finding, "confidence", 0) or metadata.get("confidence", 0)
+        evidence = metadata.get("evidence", [])
         evidence_count = len(evidence) if evidence else 0
 
         needs_review = False
 
-        if status == 'CONFIRMED':
+        if status == "CONFIRMED":
             return True, status, False
-        elif status == 'REFINED':
+        elif status == "REFINED":
             return True, status, False
-        elif status == 'REJECTED':
+        elif status == "REJECTED":
             return False, status, False
-        elif status == 'UNCERTAIN':
+        elif status == "UNCERTAIN":
             if confidence >= 0.7 or evidence_count >= 2:
                 return True, status, False
             else:
@@ -948,8 +1140,8 @@ class MarkdownReportGenerator(BaseReportGenerator):
 
         # 添加攻击链路分析结果
         for result in results:
-            if hasattr(result, 'metadata') and 'attack_chain' in result.metadata:
-                attack_chain = result.metadata['attack_chain']
+            if hasattr(result, "metadata") and "attack_chain" in result.metadata:
+                attack_chain = result.metadata["attack_chain"]
                 md += """
 ## 攻击链路分析
 
@@ -966,9 +1158,14 @@ class MarkdownReportGenerator(BaseReportGenerator):
 {paths}
 
 """.format(
-                    summary=attack_chain['summary'],
-                    risk_score=attack_chain['risk_score'],
-                    paths='\n'.join([f"- {i+1}. {path.description} (风险: {path.risk_score:.2f})" for i, path in enumerate(attack_chain['paths'][:5])])
+                    summary=attack_chain["summary"],
+                    risk_score=attack_chain["risk_score"],
+                    paths="\n".join(
+                        [
+                            f"- {i+1}. {path.description} (风险: {path.risk_score:.2f})"
+                            for i, path in enumerate(attack_chain["paths"][:5])
+                        ]
+                    ),
                 )
 
         return md
@@ -976,60 +1173,64 @@ class MarkdownReportGenerator(BaseReportGenerator):
     def _generate_finding_markdown(self, finding) -> str:
         """生成单个发现的 Markdown"""
         severity = finding.severity.value
-        
-        metadata = getattr(finding, 'metadata', {})
+
+        metadata = getattr(finding, "metadata", {})
         if isinstance(metadata, dict):
-            source = metadata.get('source', 'ai')
+            source = metadata.get("source", "ai")
         else:
-            source = 'ai'
-        
+            source = "ai"
+
         location_str = str(finding.location)
         if LINENUMBER_VALIDATOR_AVAILABLE and isinstance(metadata, dict):
-            file_content = metadata.get('file_content', '')
+            file_content = metadata.get("file_content", "")
             if file_content:
                 try:
                     validator = LineNumberValidator()
                     vuln_data = {
-                        'location': str(finding.location),
-                        'evidence': metadata.get('evidence', []),
+                        "location": str(finding.location),
+                        "evidence": metadata.get("evidence", []),
                     }
                     validated = validator.validate_location(vuln_data, file_content)
-                    match_status = validated.get('line_match_status', 'UNVERIFIED')
-                    verified_line = validated.get('verified_line', -1)
-                    ai_reported_line = validated.get('ai_reported_line', -1)
-                    
+                    match_status = validated.get("line_match_status", "UNVERIFIED")
+                    verified_line = validated.get("verified_line", -1)
+                    ai_reported_line = validated.get("ai_reported_line", -1)
+
                     if match_status == LineMatchStatus.EXACT.value:
                         location_str = f"{finding.location} ✓"
-                    elif match_status == LineMatchStatus.ADJUSTED.value and verified_line > 0 and ai_reported_line > 0:
+                    elif (
+                        match_status == LineMatchStatus.ADJUSTED.value
+                        and verified_line > 0
+                        and ai_reported_line > 0
+                    ):
                         location_str = f"{finding.location} (已校正，原报告: {ai_reported_line})"
                     elif match_status == LineMatchStatus.UNVERIFIED.value:
                         location_str = f"{finding.location} ⚠️ [未验证]"
                 except Exception:
                     location_str = f"{finding.location} ⚠️ [验证失败]"
-        
+
         poc_md = ""
-        if hasattr(finding, 'poc') and finding.poc:
+        if hasattr(finding, "poc") and finding.poc:
             poc_md = f"""
-**漏洞利用 (POC)**: 
+**漏洞利用 (POC)**:
 ```
 {finding.poc}
 ```
 """
-        
+
         fix_md = ""
-        if hasattr(finding, 'fix_suggestion') and finding.fix_suggestion:
+        if hasattr(finding, "fix_suggestion") and finding.fix_suggestion:
             fix_md = f"""
 **修复建议**: {finding.fix_suggestion}
 """
-        
+
         code_md = ""
-        if hasattr(finding, 'code_snippet') and finding.code_snippet:
+        if hasattr(finding, "code_snippet") and finding.code_snippet:
             code_md = f"""
 ```
 {finding.code_snippet}
 ```
 """
-        
+
         return f"""
 ### {finding.rule_name} ({finding.rule_id})
 
@@ -1058,19 +1259,19 @@ class MarkdownReportGenerator(BaseReportGenerator):
             for finding in result.findings:
                 severity = finding.severity.value
                 severity_counts[severity] = severity_counts.get(severity, 0) + 1
-                metadata = getattr(finding, 'metadata', {})
+                metadata = getattr(finding, "metadata", {})
                 if isinstance(metadata, dict):
-                    source = metadata.get('source', 'ai')
+                    source = metadata.get("source", "ai")
                 else:
-                    source = 'ai'
+                    source = "ai"
                 source_counts[source] = source_counts.get(source, 0) + 1
 
-        total_files = sum(r.metadata.get('total_files', 1) for r in results)
+        total_files = sum(r.metadata.get("total_files", 1) for r in results)
 
         tool_statistics = None
         for result in results:
-            if hasattr(result, 'metadata') and 'tool_statistics' in result.metadata:
-                tool_statistics = result.metadata['tool_statistics']
+            if hasattr(result, "metadata") and "tool_statistics" in result.metadata:
+                tool_statistics = result.metadata["tool_statistics"]
                 break
 
         all_findings = [f for r in results for f in r.findings]
@@ -1117,42 +1318,40 @@ class SARIFReportGenerator(BaseReportGenerator):
 
         for result in results:
             run = {
-                "tool": {
-                    "driver": {
-                        "name": "HOS-LS",
-                        "version": "1.0.0",
-                        "rules": []
-                    }
-                },
-                "results": []
+                "tool": {"driver": {"name": "HOS-LS", "version": "1.0.0", "rules": []}},
+                "results": [],
             }
 
             # 添加结果
             for finding in result.findings:
-                run["results"].append({
-                    "ruleId": finding.rule_id,
-                    "message": {
-                        "text": finding.message
-                    },
-                    "severity": finding.severity.value,
-                    "locations": [{
-                        "physicalLocation": {
-                            "artifactLocation": {
-                                "uri": finding.location.file
-                            },
-                            "region": {
-                                "startLine": finding.location.line if finding.location.line > 0 else 1
+                run["results"].append(
+                    {
+                        "ruleId": finding.rule_id,
+                        "message": {"text": finding.message},
+                        "severity": finding.severity.value,
+                        "locations": [
+                            {
+                                "physicalLocation": {
+                                    "artifactLocation": {"uri": finding.location.file},
+                                    "region": {
+                                        "startLine": (
+                                            finding.location.line
+                                            if finding.location.line > 0
+                                            else 1
+                                        )
+                                    },
+                                }
                             }
-                        }
-                    }]
-                })
+                        ],
+                    }
+                )
 
             runs.append(run)
 
         return {
             "$schema": "https://json.schemastore.org/sarif-2.1.0.json",
             "version": "2.1.0",
-            "runs": runs
+            "runs": runs,
         }
 
 

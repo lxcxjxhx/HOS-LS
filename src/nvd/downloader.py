@@ -1,54 +1,58 @@
-import os
 import hashlib
+import os
 import zipfile
-from pathlib import Path
-from datetime import datetime
 from dataclasses import dataclass
-from typing import Optional, List, Dict
+from datetime import datetime
+from pathlib import Path
+from typing import Dict, List, Optional
+
 from .db.connection import NVDConnection
 
 DATA_SOURCES = {
-    'cvelistV5': {
-        'url': 'https://github.com/CVEProject/cvelistV5/archive/refs/heads/main.zip',
-        'zip_file': 'cvelistV5-main.zip',
-        'extract_dir': 'cvelistV5'
+    "cvelistV5": {
+        "url": "https://github.com/CVEProject/cvelistV5/archive/refs/heads/main.zip",
+        "zip_file": "cvelistV5-main.zip",
+        "extract_dir": "cvelistV5",
     },
-    'nvd': {
-        'url': 'https://github.com/fkie-cad/nvd-json-data-feeds/archive/refs/heads/main.zip',
-        'zip_file': 'nvd-json-data-feeds-main.zip',
-        'extract_dir': 'nvd-json-data-feeds'
+    "nvd": {
+        "url": "https://github.com/fkie-cad/nvd-json-data-feeds/archive/refs/heads/main.zip",
+        "zip_file": "nvd-json-data-feeds-main.zip",
+        "extract_dir": "nvd-json-data-feeds",
     },
-    'cwe': {
-        'url': 'https://cwe.mitre.org/data/xml/cwec_latest.xml.zip',
-        'zip_file': 'cwec_latest.xml.zip',
-        'extract_dir': 'cwec'
+    "cwe": {
+        "url": "https://cwe.mitre.org/data/xml/cwec_latest.xml.zip",
+        "zip_file": "cwec_latest.xml.zip",
+        "extract_dir": "cwec",
     },
-    'kev': {
-        'url': 'https://github.com/cisagov/kev-data/archive/refs/heads/develop.zip',
-        'zip_file': 'kev-data-develop.zip',
-        'extract_dir': 'kev-data'
+    "kev": {
+        "url": "https://github.com/cisagov/kev-data/archive/refs/heads/develop.zip",
+        "zip_file": "kev-data-develop.zip",
+        "extract_dir": "kev-data",
     },
-    'exploitdb': {
-        'url': 'https://github.com/offensive-security/exploitdb/archive/refs/heads/main.zip',
-        'zip_file': 'exploitdb-main.zip',
-        'extract_dir': 'exploitdb'
+    "exploitdb": {
+        "url": "https://github.com/offensive-security/exploitdb/archive/refs/heads/main.zip",
+        "zip_file": "exploitdb-main.zip",
+        "extract_dir": "exploitdb",
     },
-    'poc': {
-        'url': 'https://github.com/nomi-sec/PoC-in-GitHub/archive/refs/heads/master.zip',
-        'zip_file': 'PoC-in-GitHub-master.zip',
-        'extract_dir': 'PoC-in-GitHub'
-    }
+    "poc": {
+        "url": "https://github.com/nomi-sec/PoC-in-GitHub/archive/refs/heads/master.zip",
+        "zip_file": "PoC-in-GitHub-master.zip",
+        "extract_dir": "PoC-in-GitHub",
+    },
 }
+
 
 @dataclass
 class DownloadRecord:
     """下载记录"""
+
     source: str
     file_name: str
     downloaded_at: datetime
     file_size: int
     checksum: str
     version: str = ""
+
 
 class DownloadManager:
     """下载管理器"""
@@ -64,17 +68,17 @@ class DownloadManager:
 
     def get_zip_path(self, source: str) -> Path:
         """获取压缩包路径"""
-        return self.TEMP_ZIP_DIR / DATA_SOURCES[source]['zip_file']
+        return self.TEMP_ZIP_DIR / DATA_SOURCES[source]["zip_file"]
 
     def get_extract_path(self, source: str) -> Path:
         """获取解压目录路径"""
-        return self.TEMP_DATA_DIR / DATA_SOURCES[source]['extract_dir']
+        return self.TEMP_DATA_DIR / DATA_SOURCES[source]["extract_dir"]
 
     def calculate_checksum(self, file_path: Path) -> str:
         """计算SHA256校验和"""
         sha256 = hashlib.sha256()
-        with open(file_path, 'rb') as f:
-            for chunk in iter(lambda: f.read(8192), b''):
+        with open(file_path, "rb") as f:
+            for chunk in iter(lambda: f.read(8192), b""):
                 sha256.update(chunk)
         return sha256.hexdigest()
 
@@ -89,7 +93,7 @@ class DownloadManager:
             SELECT checksum FROM download_records
             WHERE source = %s AND file_name = %s
         """
-        result = self.conn.fetch_one(query, (source, DATA_SOURCES[source]['zip_file']))
+        result = self.conn.fetch_one(query, (source, DATA_SOURCES[source]["zip_file"]))
         return result and result[0] == current_checksum
 
     def download_from_local(self, source: str) -> bool:
@@ -106,13 +110,13 @@ class DownloadManager:
         extract_path = self.get_extract_path(source)
         print(f"解压 {zip_path} 到 {extract_path}")
 
-        with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+        with zipfile.ZipFile(zip_path, "r") as zip_ref:
             zip_ref.extractall(self.TEMP_DATA_DIR)
 
         file_size = zip_path.stat().st_size
         checksum = self.calculate_checksum(zip_path)
 
-        self._save_download_record(source, DATA_SOURCES[source]['zip_file'], file_size, checksum)
+        self._save_download_record(source, DATA_SOURCES[source]["zip_file"], file_size, checksum)
         print(f"{source} 解压完成")
         return True
 
@@ -130,7 +134,9 @@ class DownloadManager:
             results[source] = self.download(source)
         return results
 
-    def _save_download_record(self, source: str, file_name: str, file_size: int, checksum: str) -> None:
+    def _save_download_record(
+        self, source: str, file_name: str, file_size: int, checksum: str
+    ) -> None:
         """保存下载记录"""
         query = """
             INSERT INTO download_records (source, file_name, file_size, checksum, downloaded_at)

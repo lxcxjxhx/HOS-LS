@@ -175,6 +175,7 @@ class Finding:
 @dataclass
 class VulnerabilityStep:
     """漏洞攻击链中的单个步骤"""
+
     file_path: str
     line: int
     description: str
@@ -202,6 +203,7 @@ class CrossFileVulnerability:
     - 入口文件 + 处理器漏洞
     - 数据流跨越多个文件
     """
+
     vuln_id: str
     files: List[str]
     line_ranges: Dict[str, tuple]
@@ -246,7 +248,9 @@ class CrossFileVulnerability:
         }
 
     @classmethod
-    def from_finding(cls, finding: "Finding", related_findings: List["Finding"] = None) -> "CrossFileVulnerability":
+    def from_finding(
+        cls, finding: "Finding", related_findings: List["Finding"] = None
+    ) -> "CrossFileVulnerability":
         """从 Finding 对象创建 CrossFileVulnerability
 
         Args:
@@ -259,12 +263,14 @@ class CrossFileVulnerability:
         files = [finding.file_path]
         snippets = {finding.file_path: finding.code_snippet}
         line_ranges = {finding.file_path: (finding.line, finding.line + 10)}
-        chain = [VulnerabilityStep(
-            file_path=finding.file_path,
-            line=finding.line,
-            description=finding.description,
-            code_snippet=finding.code_snippet,
-        )]
+        chain = [
+            VulnerabilityStep(
+                file_path=finding.file_path,
+                line=finding.line,
+                description=finding.description,
+                code_snippet=finding.code_snippet,
+            )
+        ]
 
         if related_findings:
             for rf in related_findings:
@@ -272,12 +278,14 @@ class CrossFileVulnerability:
                     files.append(rf.file_path)
                     snippets[rf.file_path] = rf.code_snippet
                     line_ranges[rf.file_path] = (rf.line, rf.line + 10)
-                    chain.append(VulnerabilityStep(
-                        file_path=rf.file_path,
-                        line=rf.line,
-                        description=rf.description,
-                        code_snippet=rf.code_snippet,
-                    ))
+                    chain.append(
+                        VulnerabilityStep(
+                            file_path=rf.file_path,
+                            line=rf.line,
+                            description=rf.description,
+                            code_snippet=rf.code_snippet,
+                        )
+                    )
 
         return cls(
             vuln_id=f"xfv_{finding.rule_id}_{finding.file_path}_{finding.line}",
@@ -351,7 +359,9 @@ class CVE:
             "attack_vector": self.attack_vector,
             "tags": self.tags,
             "published_date": self.published_date.isoformat() if self.published_date else None,
-            "last_modified_date": self.last_modified_date.isoformat() if self.last_modified_date else None,
+            "last_modified_date": (
+                self.last_modified_date.isoformat() if self.last_modified_date else None
+            ),
             "affected_products": self.affected_products,
             "references": self.references,
             "metadata": self.metadata,
@@ -476,12 +486,16 @@ class CVECollection:
     def filter_by_severity(self, severity: str) -> "CVECollection":
         """按严重级别过滤"""
         filtered_cves = [cve for cve in self.cves if cve.severity == severity]
-        return CVECollection(cves=filtered_cves, last_sync_time=self.last_sync_time, sync_source=self.sync_source)
+        return CVECollection(
+            cves=filtered_cves, last_sync_time=self.last_sync_time, sync_source=self.sync_source
+        )
 
     def filter_by_exploit(self, has_exploit: bool = True) -> "CVECollection":
         """按是否有 exploit 过滤"""
         filtered_cves = [cve for cve in self.cves if cve.exploit == has_exploit]
-        return CVECollection(cves=filtered_cves, last_sync_time=self.last_sync_time, sync_source=self.sync_source)
+        return CVECollection(
+            cves=filtered_cves, last_sync_time=self.last_sync_time, sync_source=self.sync_source
+        )
 
 
 # 基类（用于类型提示）

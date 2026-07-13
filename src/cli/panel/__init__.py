@@ -5,9 +5,9 @@
 
 from typing import Optional
 
-from .base import InteractivePanel, PanelItem, Key, clear_screen, print_divider
+from .base import InteractivePanel, Key, PanelItem, clear_screen, print_divider
 from .config_panel import ConfigPanel
-from .main_menu import MainMenuPanel, CategoryPanel
+from .main_menu import CategoryPanel, MainMenuPanel
 
 __all__ = [
     "InteractivePanel",

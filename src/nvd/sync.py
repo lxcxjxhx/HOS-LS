@@ -1,35 +1,38 @@
-import click
 from pathlib import Path
-from typing import Optional, Dict
-from .downloader import DownloadManager
+from typing import Dict, Optional
+
+import click
+
 from .db.connection import NVDConnection
 from .db.schema import NVDSche
+from .downloader import DownloadManager
 from .etl.cve_etl import CVEETL
-from .etl.nvd_etl import NVDETL
 from .etl.cwe_etl import CWEETL
-from .etl.kev_etl import KEVETL
 from .etl.exploit_etl import ExploitETL
+from .etl.kev_etl import KEVETL
+from .etl.nvd_etl import NVDETL
 from .etl.poc_etl import PoCETL
+
 
 class NVDDataSync:
     """NVD数据同步调度器"""
 
     ETL_MAPPING = {
-        'cvelistV5': CVEETL,
-        'nvd': NVDETL,
-        'cwe': CWEETL,
-        'kev': KEVETL,
-        'exploitdb': ExploitETL,
-        'poc': PoCETL,
+        "cvelistV5": CVEETL,
+        "nvd": NVDETL,
+        "cwe": CWEETL,
+        "kev": KEVETL,
+        "exploitdb": ExploitETL,
+        "poc": PoCETL,
     }
 
     DATA_DIRS = {
-        'cvelistV5': 'cvelistV5',
-        'nvd': 'nvd-json-data-feeds',
-        'cwe': 'cwec',
-        'kev': 'kev-data',
-        'exploitdb': 'exploitdb',
-        'poc': 'PoC-in-GitHub',
+        "cvelistV5": "cvelistV5",
+        "nvd": "nvd-json-data-feeds",
+        "cwe": "cwec",
+        "kev": "kev-data",
+        "exploitdb": "exploitdb",
+        "poc": "PoC-in-GitHub",
     }
 
     def __init__(self):
@@ -48,7 +51,7 @@ class NVDDataSync:
         self._download()
 
         print("\n开始ETL处理...")
-        results['etl'] = self._run_all_etl()
+        results["etl"] = self._run_all_etl()
 
         print("\n刷新物化视图...")
         self.schema.refresh_materialized_view()
@@ -82,7 +85,9 @@ class NVDDataSync:
             etl = etl_class(self.connection)
             try:
                 etl.run(str(data_path))
-                print(f"  完成: 处理 {etl.records_processed} 条, 插入 {etl.records_inserted} 条, 跳过 {etl.records_skipped} 条")
+                print(
+                    f"  完成: 处理 {etl.records_processed} 条, 插入 {etl.records_inserted} 条, 跳过 {etl.records_skipped} 条"
+                )
             except Exception as e:
                 print(f"  错误: {e}")
 
@@ -99,7 +104,10 @@ class NVDDataSync:
         self.download_manager.download(source)
 
         etl_class = self.ETL_MAPPING[source]
-        data_path = Path(r"c:\1AAA_PROJECT\HOS\HOS-LS\HOS-LS\All Vulnerabilities\temp_data") / self.DATA_DIRS[source]
+        data_path = (
+            Path(r"c:\1AAA_PROJECT\HOS\HOS-LS\HOS-LS\All Vulnerabilities\temp_data")
+            / self.DATA_DIRS[source]
+        )
 
         if not data_path.exists():
             print(f"数据目录不存在: {data_path}")

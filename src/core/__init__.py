@@ -5,8 +5,8 @@
 
 from src.config.config import Config, ConfigManager
 from src.core.engine import ScanEngine
+from src.core.registry import DependencyInjector, ModuleRegistry
 from src.core.scanner import SecurityScanner
-from src.core.registry import ModuleRegistry, DependencyInjector
 
 __all__ = [
     "Config",
@@ -23,10 +23,8 @@ __all__ = [
 def __getattr__(name):
     """延迟导入 RAGGraphIntegrator"""
     if name in ("RAGGraphIntegrator", "get_rag_graph_integrator"):
-        from src.ai.pure_ai.rag.graph_integrator import (
-            RAGGraphIntegrator,
-            get_rag_graph_integrator,
-        )
+        from src.ai.pure_ai.rag.graph_integrator import RAGGraphIntegrator, get_rag_graph_integrator
+
         if name == "RAGGraphIntegrator":
             return RAGGraphIntegrator
         else:

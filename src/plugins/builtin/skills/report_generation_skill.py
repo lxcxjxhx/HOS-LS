@@ -158,7 +158,7 @@ class ReportGenerationSkill(SkillPlugin):
                     "scan_config": "",
                     "false_positive_notes": "",
                     "follow_up_recommendations": "",
-                }
+                },
             ),
             SkillPrompt(
                 name="scan_report",
@@ -337,7 +337,7 @@ class ReportGenerationSkill(SkillPlugin):
                     "tool_versions": "",
                     "scan_timeline": "",
                     "glossary": "",
-                }
+                },
             ),
             SkillPrompt(
                 name="summary_report",
@@ -490,7 +490,7 @@ class ReportGenerationSkill(SkillPlugin):
                     "achievement_2": "0",
                     "conclusion_outlook": "",
                     "next_assessment_plan": "",
-                }
+                },
             ),
             SkillPrompt(
                 name="incident_report",
@@ -653,7 +653,7 @@ class ReportGenerationSkill(SkillPlugin):
                     "personnel_involved": "",
                     "related_documents": "",
                     "follow_up_items": "",
-                }
+                },
             ),
         ]
 

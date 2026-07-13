@@ -18,7 +18,7 @@ logger = get_logger(__name__)
 class PromptEngine:
     """Prompt 模板引擎"""
 
-    _instance: Optional['PromptEngine'] = None
+    _instance: Optional["PromptEngine"] = None
 
     def __init__(self, templates_dir: Optional[Path] = None):
         if templates_dir is None:
@@ -28,7 +28,7 @@ class PromptEngine:
         self.templates_dir = Path(templates_dir)
         self._env = Environment(
             loader=FileSystemLoader(str(self.templates_dir)),
-            autoescape=select_autoescape(['html', 'xml']),
+            autoescape=select_autoescape(["html", "xml"]),
             trim_blocks=True,
             lstrip_blocks=True,
             keep_trailing_newline=True,
@@ -37,7 +37,7 @@ class PromptEngine:
         logger.info(f"PromptEngine initialized with templates: {self.templates_dir}")
 
     @classmethod
-    def get_instance(cls) -> 'PromptEngine':
+    def get_instance(cls) -> "PromptEngine":
         """获取单例实例"""
         if cls._instance is None:
             cls._instance = cls()
@@ -73,7 +73,7 @@ class PromptEngine:
             渲染后的 Prompt 字符串
         """
         agent_config = self._config_center.get_agent_config(agent_name)
-        template_name = agent_config.get('template', f'{agent_name}.jinja2')
+        template_name = agent_config.get("template", f"{agent_name}.jinja2")
         return self.render(template_name, **kwargs)
 
     def get_available_templates(self) -> list:
@@ -90,12 +90,12 @@ class PromptEngine:
         formatted = []
         for i, file_info in enumerate(related_files):
             if isinstance(file_info, dict):
-                path = file_info.get('path', '未知路径')
-                content = file_info.get('content', '').strip()[:500]
+                path = file_info.get("path", "未知路径")
+                content = file_info.get("content", "").strip()[:500]
                 formatted.append(f"文件 {i+1}: {path}\n{content}\n")
             else:
                 formatted.append(f"文件 {i+1}: {str(file_info)}\n")
-        return '\n'.join(formatted)
+        return "\n".join(formatted)
 
     @staticmethod
     def format_imports(imports: Any) -> str:
@@ -105,7 +105,7 @@ class PromptEngine:
         if isinstance(imports, str):
             return imports
         if isinstance(imports, list):
-            return '\n'.join(imports)
+            return "\n".join(imports)
         return str(imports)
 
     @staticmethod
@@ -116,7 +116,7 @@ class PromptEngine:
         if isinstance(function_calls, str):
             return function_calls
         if isinstance(function_calls, list):
-            return '\n'.join(function_calls)
+            return "\n".join(function_calls)
         return str(function_calls)
 
 

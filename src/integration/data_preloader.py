@@ -4,22 +4,22 @@
 支持智能增量下载和动态路径解析。
 """
 
-import re
-import os
-import hashlib
-import zipfile
 import concurrent.futures
+import hashlib
+import os
+import re
+import zipfile
+from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import List, Optional, Dict, Any
-from dataclasses import dataclass, field
+from typing import Any, Dict, List, Optional
 from urllib.parse import urlparse
 
 import requests
 from tqdm import tqdm
 
-from src.utils.logger import get_logger
 from src.nvd.db.sqlite_connection import SQLiteConnection
+from src.utils.logger import get_logger
 
 logger = get_logger(__name__)
 
@@ -105,6 +105,7 @@ TEMP_DATA_DIR = BASE_DIR / "temp_data"
 @dataclass
 class DataSourceConfig:
     """数据源配置"""
+
     urls: List[str] = field(default_factory=list)
     sources_file: Path = field(default_factory=lambda: SOURCES_FILE)
 
@@ -123,10 +124,10 @@ class DataSourceConfig:
             return
 
         try:
-            with open(self.sources_file, 'r', encoding='utf-8') as f:
+            with open(self.sources_file, "r", encoding="utf-8") as f:
                 for line_num, line in enumerate(f, 1):
                     line = line.strip()
-                    if not line or line.startswith('#'):
+                    if not line or line.startswith("#"):
                         continue
                     if self._is_valid_url(line):
                         self.urls.append(line)
@@ -140,25 +141,29 @@ class DataSourceConfig:
         """验证 URL 格式"""
         try:
             result = urlparse(url)
-            return all([result.scheme in ('http', 'https', 'git'),
-                       result.netloc or (url.startswith('git+') and '://' in url)])
+            return all(
+                [
+                    result.scheme in ("http", "https", "git"),
+                    result.netloc or (url.startswith("git+") and "://" in url),
+                ]
+            )
         except Exception:
             return False
 
     def get_source_name(self, url: str) -> str:
         """从 URL 提取数据源名称"""
         parsed = urlparse(url)
-        path = parsed.path.strip('/')
-        parts = path.split('/')
+        path = parsed.path.strip("/")
+        parts = path.split("/")
 
-        if 'github.com' in parsed.netloc and len(parts) >= 2:
-            return parts[1].replace('.git', '')
-        elif 'gitlab.com' in parsed.netloc and len(parts) >= 2:
-            return parts[1].replace('.git', '')
-        elif parsed.netloc == 'cwe.mitre.org':
-            return 'cwec'
+        if "github.com" in parsed.netloc and len(parts) >= 2:
+            return parts[1].replace(".git", "")
+        elif "gitlab.com" in parsed.netloc and len(parts) >= 2:
+            return parts[1].replace(".git", "")
+        elif parsed.netloc == "cwe.mitre.org":
+            return "cwec"
         else:
-            name = parts[-1].replace('.git', '') if parts else 'unknown'
+            name = parts[-1].replace(".git", "") if parts else "unknown"
             return name
 
     def get_zip_file_name(self, url: str) -> str:
@@ -166,24 +171,24 @@ class DataSourceConfig:
         name = self.get_source_name(url)
         parsed = urlparse(url)
 
-        if 'github.com' in parsed.netloc:
+        if "github.com" in parsed.netloc:
             branch = self._extract_github_branch(url)
             return f"{name}-{branch}.zip"
-        elif '.zip' in url.lower():
-            return url.split('/')[-1]
+        elif ".zip" in url.lower():
+            return url.split("/")[-1]
         else:
             return f"{name}.zip"
 
     def _extract_github_branch(self, url: str) -> str:
         """从 GitHub URL 提取分支名"""
-        if '/archive/refs/heads/' in url:
-            return url.split('/archive/refs/heads/')[-1].replace('.zip', '')
-        elif '/tree/' in url:
-            parts = url.split('/tree/')
+        if "/archive/refs/heads/" in url:
+            return url.split("/archive/refs/heads/")[-1].replace(".zip", "")
+        elif "/tree/" in url:
+            parts = url.split("/tree/")
             if len(parts) > 1:
-                branch = parts[1].split('?')[0]
+                branch = parts[1].split("?")[0]
                 return branch
-        return 'main'
+        return "main"
 
     def convert_github_to_zip_url(self, url: str) -> str:
         """将 GitHub 仓库 URL 转换为 ZIP 下载 URL
@@ -195,15 +200,15 @@ class DataSourceConfig:
             ZIP 下载 URL (如 https://github.com/user/repo/archive/refs/heads/main.zip)
         """
         parsed = urlparse(url)
-        if parsed.netloc not in ('github.com', 'www.github.com'):
+        if parsed.netloc not in ("github.com", "www.github.com"):
             return url
 
-        path_parts = parsed.path.strip('/').split('/')
+        path_parts = parsed.path.strip("/").split("/")
         if len(path_parts) < 2:
             return url
 
-        repo = path_parts[1].replace('.git', '')
-        branch = 'main'
+        repo = path_parts[1].replace(".git", "")
+        branch = "main"
 
         return f"https://github.com/{path_parts[0]}/{repo}/archive/refs/heads/{branch}.zip"
 
@@ -219,7 +224,7 @@ class SourceDownloader:
         timeout: int = 300,
         chunk_size: int = 8192,
         skip_on_checksum_match: bool = True,
-        merge_strategy: str = "smart"
+        merge_strategy: str = "smart",
     ):
         self.url = url
         self.temp_zip_dir = Path(temp_zip_dir)
@@ -245,12 +250,12 @@ class SourceDownloader:
     def _convert_to_download_url(self) -> str:
         """转换 URL 为可下载的 ZIP URL"""
         parsed = urlparse(self.url)
-        if parsed.netloc in ('github.com', 'www.github.com'):
-            if '/archive/' not in self.url and '/tree/' not in self.url:
+        if parsed.netloc in ("github.com", "www.github.com"):
+            if "/archive/" not in self.url and "/tree/" not in self.url:
                 return self.config.convert_github_to_zip_url(self.url)
-            elif '/tree/' in self.url:
-                branch = self.url.split('/tree/')[-1].split('?')[0]
-                path_parts = parsed.path.strip('/').split('/')
+            elif "/tree/" in self.url:
+                branch = self.url.split("/tree/")[-1].split("?")[0]
+                path_parts = parsed.path.strip("/").split("/")
                 if len(path_parts) >= 2:
                     return f"https://github.com/{path_parts[0]}/{path_parts[1]}/archive/refs/heads/{branch}.zip"
         return self.url
@@ -258,8 +263,8 @@ class SourceDownloader:
     def calculate_checksum(self, file_path: Path) -> str:
         """计算 SHA256 校验和"""
         sha256 = hashlib.sha256()
-        with open(file_path, 'rb') as f:
-            for chunk in iter(lambda: f.read(self.chunk_size), b''):
+        with open(file_path, "rb") as f:
+            for chunk in iter(lambda: f.read(self.chunk_size), b""):
                 sha256.update(chunk)
         return sha256.hexdigest()
 
@@ -299,7 +304,10 @@ class SourceDownloader:
 
             recorded_checksum = result[0]
             if current_checksum != recorded_checksum:
-                return True, f"校验和不一致 (本地: {current_checksum[:8]}..., 记录: {recorded_checksum[:8]}...)"
+                return (
+                    True,
+                    f"校验和不一致 (本地: {current_checksum[:8]}..., 记录: {recorded_checksum[:8]}...)",
+                )
 
             if self.skip_on_checksum_match:
                 return False, f"校验和一致，跳过下载 (已下载: {self.zip_path.name})"
@@ -331,14 +339,14 @@ class SourceDownloader:
             response = requests.get(download_url, timeout=self.timeout, stream=True)
             response.raise_for_status()
 
-            total_size = int(response.headers.get('content-length', 0))
+            total_size = int(response.headers.get("content-length", 0))
             file_size = 0
 
             if show_progress:
-                with open(self.zip_path, 'wb') as f, tqdm(
+                with open(self.zip_path, "wb") as f, tqdm(
                     desc=self.source_name,
                     total=total_size,
-                    unit='B',
+                    unit="B",
                     unit_scale=True,
                     unit_divisor=1024,
                 ) as pbar:
@@ -348,7 +356,7 @@ class SourceDownloader:
                             file_size += len(chunk)
                             pbar.update(len(chunk))
             else:
-                with open(self.zip_path, 'wb') as f:
+                with open(self.zip_path, "wb") as f:
                     for chunk in response.iter_content(chunk_size=self.chunk_size):
                         if chunk:
                             f.write(chunk)
@@ -399,7 +407,7 @@ class SourceDownloader:
             if strategy == "smart":
                 self._smart_extract()
             else:
-                with zipfile.ZipFile(self.zip_path, 'r') as zip_ref:
+                with zipfile.ZipFile(self.zip_path, "r") as zip_ref:
                     zip_ref.extractall(self.temp_data_dir)
 
             logger.info(f"解压完成: {self.extract_path}")
@@ -417,7 +425,7 @@ class SourceDownloader:
 
         只覆盖已变化的文件，保留未变化的文件
         """
-        with zipfile.ZipFile(self.zip_path, 'r') as zip_ref:
+        with zipfile.ZipFile(self.zip_path, "r") as zip_ref:
             for member in zip_ref.namelist():
                 member_path = self.temp_data_dir / member
                 member_info = zip_ref.getinfo(member)
@@ -427,6 +435,7 @@ class SourceDownloader:
                         existing_mtime = member_path.stat().st_mtime
                         zip_mtime = member_info.date_time
                         from time import mktime
+
                         zip_mtime_ts = mktime(zip_mtime + (0, 0, 0))
 
                         if existing_mtime >= zip_mtime_ts:
@@ -456,8 +465,7 @@ class SourceDownloader:
         if expected_checksum:
             if actual_checksum != expected_checksum:
                 logger.error(
-                    f"校验和不匹配 ({self.source_name}): "
-                    f"期望 {expected_checksum}, 实际 {actual_checksum}"
+                    f"校验和不匹配 ({self.source_name}): " f"期望 {expected_checksum}, 实际 {actual_checksum}"
                 )
                 return False
             logger.info(f"校验和验证通过: {self.source_name}")
@@ -488,7 +496,9 @@ class SourceDownloader:
                     checksum = EXCLUDED.checksum,
                     downloaded_at = EXCLUDED.downloaded_at
             """
-            conn.execute(query, (self.source_name, self.zip_file_name, file_size, checksum, datetime.now()))
+            conn.execute(
+                query, (self.source_name, self.zip_file_name, file_size, checksum, datetime.now())
+            )
             logger.info(f"下载记录已保存: {self.source_name}")
             return True
 
@@ -557,7 +567,7 @@ class DataPreloader:
         max_workers: int = 4,
         timeout: int = 300,
         skip_on_checksum_match: bool = True,
-        merge_strategy: str = "smart"
+        merge_strategy: str = "smart",
     ):
         self.sources_file = Path(sources_file) if sources_file else SOURCES_FILE
         self.temp_zip_dir = Path(temp_zip_dir) if temp_zip_dir else TEMP_ZIP_DIR
@@ -578,14 +588,11 @@ class DataPreloader:
             temp_data_dir=self.temp_data_dir,
             timeout=self.timeout,
             skip_on_checksum_match=self.skip_on_checksum_match,
-            merge_strategy=self.merge_strategy
+            merge_strategy=self.merge_strategy,
         )
 
     def download_all(
-        self,
-        parallel: bool = True,
-        force: bool = False,
-        source_filter: Optional[str] = None
+        self, parallel: bool = True, force: bool = False, source_filter: Optional[str] = None
     ) -> Dict[str, bool]:
         """下载所有数据源
 
@@ -631,8 +638,7 @@ class DataPreloader:
 
         with concurrent.futures.ThreadPoolExecutor(max_workers=self.max_workers) as executor:
             future_to_url = {
-                executor.submit(self._create_downloader(url).process, force): url
-                for url in urls
+                executor.submit(self._create_downloader(url).process, force): url for url in urls
             }
 
             for future in concurrent.futures.as_completed(future_to_url):
@@ -654,10 +660,7 @@ class DataPreloader:
         Returns:
             状态信息
         """
-        status = {
-            "total_sources": len(self.config.urls),
-            "sources": []
-        }
+        status = {"total_sources": len(self.config.urls), "sources": []}
 
         for url in self.config.urls:
             downloader = self._create_downloader(url)
@@ -669,7 +672,7 @@ class DataPreloader:
                 "zip_file": downloader.zip_file_name,
                 "zip_exists": downloader.zip_path.exists(),
                 "needs_download": should_download,
-                "reason": reason
+                "reason": reason,
             }
 
             if downloader.zip_path.exists():
@@ -686,14 +689,14 @@ class DataPreloader:
             每个数据源的验证结果
         """
         results = {}
-        zip_files = list(self.temp_zip_dir.glob('*.zip'))
+        zip_files = list(self.temp_zip_dir.glob("*.zip"))
 
         for zip_file in zip_files:
             try:
                 downloader = SourceDownloader(
                     url=f"file://{zip_file}",
                     temp_zip_dir=self.temp_zip_dir,
-                    temp_data_dir=self.temp_data_dir
+                    temp_data_dir=self.temp_data_dir,
                 )
                 downloader.zip_path = zip_file
                 results[zip_file.stem] = downloader.verify_checksum()
@@ -718,19 +721,18 @@ class DataPreloader:
         """
         records = conn.fetch_all(query)
 
-        status = {
-            "total_sources": len(self.config.urls),
-            "records": []
-        }
+        status = {"total_sources": len(self.config.urls), "records": []}
 
         for record in records:
-            status["records"].append({
-                "source": record[0],
-                "file_name": record[1],
-                "file_size": record[2],
-                "checksum": record[3],
-                "downloaded_at": record[4].isoformat() if record[4] else None
-            })
+            status["records"].append(
+                {
+                    "source": record[0],
+                    "file_name": record[1],
+                    "file_size": record[2],
+                    "checksum": record[3],
+                    "downloaded_at": record[4].isoformat() if record[4] else None,
+                }
+            )
 
         return status
 
@@ -745,7 +747,7 @@ class DataPreloader:
 
         dirs = []
         for item in self.temp_data_dir.iterdir():
-            if item.is_dir() and not item.name.startswith('.'):
+            if item.is_dir() and not item.name.startswith("."):
                 dirs.append(item)
 
         return dirs
@@ -758,7 +760,7 @@ class DataPreloader:
         """
         count = 0
         if self.temp_zip_dir.exists():
-            for zip_file in self.temp_zip_dir.glob('*.zip'):
+            for zip_file in self.temp_zip_dir.glob("*.zip"):
                 try:
                     zip_file.unlink()
                     count += 1
@@ -775,7 +777,7 @@ class DataPreloader:
         Returns:
             统计信息
         """
-        zip_count = len(list(self.temp_zip_dir.glob('*.zip'))) if self.temp_zip_dir.exists() else 0
+        zip_count = len(list(self.temp_zip_dir.glob("*.zip"))) if self.temp_zip_dir.exists() else 0
         data_dir_count = len(self.get_temp_data_dirs())
 
         conn = NVDConnection.get_instance()
@@ -791,7 +793,7 @@ class DataPreloader:
             "zip_dir": str(self.temp_zip_dir),
             "data_dir": str(self.temp_data_dir),
             "skip_on_checksum_match": self.skip_on_checksum_match,
-            "merge_strategy": self.merge_strategy
+            "merge_strategy": self.merge_strategy,
         }
 
 
@@ -801,7 +803,7 @@ def create_data_preloader(
     temp_data_dir: Optional[Path] = None,
     max_workers: int = 4,
     skip_on_checksum_match: bool = True,
-    merge_strategy: str = "smart"
+    merge_strategy: str = "smart",
 ) -> DataPreloader:
     """创建数据预加载器
 
@@ -822,5 +824,5 @@ def create_data_preloader(
         temp_data_dir=temp_data_dir,
         max_workers=max_workers,
         skip_on_checksum_match=skip_on_checksum_match,
-        merge_strategy=merge_strategy
+        merge_strategy=merge_strategy,
     )

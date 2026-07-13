@@ -4,12 +4,13 @@
 """
 
 from dataclasses import dataclass, field
-from typing import List, Optional, Dict, Any, Set, Tuple
 from enum import Enum
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 
 class Severity(Enum):
     """严重级别"""
+
     CRITICAL = "critical"
     HIGH = "high"
     MEDIUM = "medium"
@@ -70,109 +71,130 @@ class AggregatedFinding:
               RemoteTokenServices_SSRF -> SSRF
         """
         import re
+
         rule_id = self.rule_id
         if not rule_id:
             return ""
-        parts = rule_id.split('_')
+        parts = rule_id.split("_")
 
         if len(parts) > 2:
             if parts[-1].isdigit():
-                base_rule = '_'.join(parts[:-1])
+                base_rule = "_".join(parts[:-1])
                 return base_rule
 
-        if rule_id.endswith('_windows') or rule_id.endswith('_linux') or rule_id.endswith('_unix'):
-            return '_'.join(parts[:-1])
+        if rule_id.endswith("_windows") or rule_id.endswith("_linux") or rule_id.endswith("_unix"):
+            return "_".join(parts[:-1])
 
         rule_id_lower = rule_id.lower()
 
-        if 'ssrf' in rule_id_lower:
-            return 'SSRF'
-        if 'sql' in rule_id_lower and 'inject' in rule_id_lower:
-            return 'SQL_INJECTION'
-        if 'xss' in rule_id_lower or 'crosssite' in rule_id_lower:
-            return 'XSS'
-        if 'csrf' in rule_id_lower or 'crosssite' in rule_id_lower:
-            return 'CSRF'
-        if 'path' in rule_id_lower and 'traversal' in rule_id_lower:
-            return 'PATH_TRAVERSAL'
-        if 'command' in rule_id_lower and 'inject' in rule_id_lower:
-            return 'COMMAND_INJECTION'
-        if 'xxe' in rule_id_lower:
-            return 'XXE'
-        if 'json' in rule_id_lower and ('web' in rule_id_lower or 'vulnerability' in rule_id_lower):
-            return 'JSON_WEB_VULNERABILITY'
-        if 'spring' in rule_id_lower and 'cloud' in rule_id_lower:
-            return 'SPRING_CLOUD_VULNERABILITY'
-        if 'authentication' in rule_id_lower or 'auth' in rule_id_lower:
-            return 'AUTHENTICATION'
-        if 'authorization' in rule_id_lower or 'authz' in rule_id_lower:
-            return 'AUTHORIZATION'
-        if 'credential' in rule_id_lower or 'secret' in rule_id_lower or 'password' in rule_id_lower:
-            return 'CREDENTIAL'
-        if 'token' in rule_id_lower and ('jwt' in rule_id_lower or 'session' in rule_id_lower):
-            return 'TOKEN_VULNERABILITY'
-        if 'remote' in rule_id_lower and 'code' in rule_id_lower and 'exec' in rule_id_lower:
-            return 'RCE'
-        if 'deserializ' in rule_id_lower:
-            return 'DESERIALIZATION'
-        if 'access' in rule_id_lower and 'control' in rule_id_lower:
-            return 'ACCESS_CONTROL'
-        if 'rate' in rule_id_lower and 'limit' in rule_id_lower:
-            return 'RATE_LIMITING'
-        if 'cors' in rule_id_lower:
-            return 'CORS'
-        if 'redirect' in rule_id_lower and ('open' in rule_id_lower or 'unvalidated' in rule_id_lower):
-            return 'OPEN_REDIRECT'
-        if 'idor' in rule_id_lower or 'indirect' in rule_id_lower and 'object' in rule_id_lower:
-            return 'IDOR'
-        if 'ssti' in rule_id_lower or ('server' in rule_id_lower and 'template' in rule_id_lower and 'inject' in rule_id_lower):
-            return 'SSTI'
-        if 'websocket' in rule_id_lower:
-            return 'WEBSOCKET'
-        if 'htt' in rule_id_lower and 'response' in rule_id_lower and 'split' in rule_id_lower:
-            return 'HTTP_RESPONSE_SPLITTING'
+        if "ssrf" in rule_id_lower:
+            return "SSRF"
+        if "sql" in rule_id_lower and "inject" in rule_id_lower:
+            return "SQL_INJECTION"
+        if "xss" in rule_id_lower or "crosssite" in rule_id_lower:
+            return "XSS"
+        if "csrf" in rule_id_lower or "crosssite" in rule_id_lower:
+            return "CSRF"
+        if "path" in rule_id_lower and "traversal" in rule_id_lower:
+            return "PATH_TRAVERSAL"
+        if "command" in rule_id_lower and "inject" in rule_id_lower:
+            return "COMMAND_INJECTION"
+        if "xxe" in rule_id_lower:
+            return "XXE"
+        if "json" in rule_id_lower and ("web" in rule_id_lower or "vulnerability" in rule_id_lower):
+            return "JSON_WEB_VULNERABILITY"
+        if "spring" in rule_id_lower and "cloud" in rule_id_lower:
+            return "SPRING_CLOUD_VULNERABILITY"
+        if "authentication" in rule_id_lower or "auth" in rule_id_lower:
+            return "AUTHENTICATION"
+        if "authorization" in rule_id_lower or "authz" in rule_id_lower:
+            return "AUTHORIZATION"
+        if (
+            "credential" in rule_id_lower
+            or "secret" in rule_id_lower
+            or "password" in rule_id_lower
+        ):
+            return "CREDENTIAL"
+        if "token" in rule_id_lower and ("jwt" in rule_id_lower or "session" in rule_id_lower):
+            return "TOKEN_VULNERABILITY"
+        if "remote" in rule_id_lower and "code" in rule_id_lower and "exec" in rule_id_lower:
+            return "RCE"
+        if "deserializ" in rule_id_lower:
+            return "DESERIALIZATION"
+        if "access" in rule_id_lower and "control" in rule_id_lower:
+            return "ACCESS_CONTROL"
+        if "rate" in rule_id_lower and "limit" in rule_id_lower:
+            return "RATE_LIMITING"
+        if "cors" in rule_id_lower:
+            return "CORS"
+        if "redirect" in rule_id_lower and (
+            "open" in rule_id_lower or "unvalidated" in rule_id_lower
+        ):
+            return "OPEN_REDIRECT"
+        if "idor" in rule_id_lower or "indirect" in rule_id_lower and "object" in rule_id_lower:
+            return "IDOR"
+        if "ssti" in rule_id_lower or (
+            "server" in rule_id_lower and "template" in rule_id_lower and "inject" in rule_id_lower
+        ):
+            return "SSTI"
+        if "websocket" in rule_id_lower:
+            return "WEBSOCKET"
+        if "htt" in rule_id_lower and "response" in rule_id_lower and "split" in rule_id_lower:
+            return "HTTP_RESPONSE_SPLITTING"
 
         # 新增：处理中文漏洞名称的相似性
-        if 'sql注入' in rule_id_lower or 'sql injection' in rule_id_lower:
-            return 'SQL_INJECTION'
-        if '路径变量' in rule_id_lower and ('modeid' in rule_id_lower or 'mode_id' in rule_id_lower):
-            return 'PATH_VARIABLE_SQL_INJECTION'
-        if '路径变量未经验证' in rule_id_lower:
-            return 'UNVALIDATED_PATH_VARIABLE'
-        if '未授权访问' in rule_id_lower or '越权' in rule_id_lower:
-            return 'UNAUTHORIZED_ACCESS'
-        if '硬编码路径' in rule_id_lower or 'hardcoded' in rule_id_lower:
-            return 'HARDCODED_PATH'
-        if '反序列化' in rule_id_lower or 'deserial' in rule_id_lower:
-            return 'DESERIALIZATION'
-        if 'swagger' in rule_id_lower:
-            return 'SWAGGER_EXPOSURE'
-        if '验证码' in rule_id_lower or 'kaptcha' in rule_id_lower:
-            return 'CAPTCHA_EXPOSURE'
-        if 'redis' in rule_id_lower and 'keys' in rule_id_lower:
-            return 'REDIS_KEYS_BLOCKING'
-        if '注销' in rule_id_lower or 'logout' in rule_id_lower:
-            return 'LOGOUT_AUTH'
-        if '配置数据' in rule_id_lower or 'config' in rule_id_lower and '未授权' in rule_id_lower:
-            return 'UNAUTHORIZED_CONFIG_ACCESS'
-        if '输入校验' in rule_id_lower or 'valid' in rule_id_lower and '输入' in rule_id_lower:
-            return 'INPUT_VALIDATION'
-        if '类型转换' in rule_id_lower or 'cast' in rule_id_lower:
-            return 'TYPE_CONVERSION'
-        if '刷新' in rule_id_lower or 'refresh' in rule_id_lower:
-            return 'CONFIG_REFRESH'
-        if '错误码' in rule_id_lower or 'error_code' in rule_id_lower:
-            return 'ERROR_CODE_LEAK'
-        if 'id删除' in rule_id_lower or 'delete.*id' in rule_id_lower:
-            return 'DELETE_BY_ID'
-        if 'preauthorize' in rule_id_lower:
-            return 'PREAUTHORIZE_ISSUE'
-        if '凭据' in rule_id_lower or 'credential' in rule_id_lower:
-            return 'CREDENTIAL_REUSE'
+        if "sql注入" in rule_id_lower or "sql injection" in rule_id_lower:
+            return "SQL_INJECTION"
+        if "路径变量" in rule_id_lower and ("modeid" in rule_id_lower or "mode_id" in rule_id_lower):
+            return "PATH_VARIABLE_SQL_INJECTION"
+        if "路径变量未经验证" in rule_id_lower:
+            return "UNVALIDATED_PATH_VARIABLE"
+        if "未授权访问" in rule_id_lower or "越权" in rule_id_lower:
+            return "UNAUTHORIZED_ACCESS"
+        if "硬编码路径" in rule_id_lower or "hardcoded" in rule_id_lower:
+            return "HARDCODED_PATH"
+        if "反序列化" in rule_id_lower or "deserial" in rule_id_lower:
+            return "DESERIALIZATION"
+        if "swagger" in rule_id_lower:
+            return "SWAGGER_EXPOSURE"
+        if "验证码" in rule_id_lower or "kaptcha" in rule_id_lower:
+            return "CAPTCHA_EXPOSURE"
+        if "redis" in rule_id_lower and "keys" in rule_id_lower:
+            return "REDIS_KEYS_BLOCKING"
+        if "注销" in rule_id_lower or "logout" in rule_id_lower:
+            return "LOGOUT_AUTH"
+        if "配置数据" in rule_id_lower or "config" in rule_id_lower and "未授权" in rule_id_lower:
+            return "UNAUTHORIZED_CONFIG_ACCESS"
+        if "输入校验" in rule_id_lower or "valid" in rule_id_lower and "输入" in rule_id_lower:
+            return "INPUT_VALIDATION"
+        if "类型转换" in rule_id_lower or "cast" in rule_id_lower:
+            return "TYPE_CONVERSION"
+        if "刷新" in rule_id_lower or "refresh" in rule_id_lower:
+            return "CONFIG_REFRESH"
+        if "错误码" in rule_id_lower or "error_code" in rule_id_lower:
+            return "ERROR_CODE_LEAK"
+        if "id删除" in rule_id_lower or "delete.*id" in rule_id_lower:
+            return "DELETE_BY_ID"
+        if "preauthorize" in rule_id_lower:
+            return "PREAUTHORIZE_ISSUE"
+        if "凭据" in rule_id_lower or "credential" in rule_id_lower:
+            return "CREDENTIAL_REUSE"
 
-        common_suffixes = ['vulnerability', 'vuln', 'issue', 'problem', 'risk', 'weakness', 'finding', 'security', '漏洞', '风险', '问题']
+        common_suffixes = [
+            "vulnerability",
+            "vuln",
+            "issue",
+            "problem",
+            "risk",
+            "weakness",
+            "finding",
+            "security",
+            "漏洞",
+            "风险",
+            "问题",
+        ]
         for suffix in common_suffixes:
-            pattern = r'(.+?)' + suffix + r'$'
+            pattern = r"(.+?)" + suffix + r"$"
             match = re.match(pattern, rule_id_lower)
             if match:
                 return match.group(1).upper()
@@ -254,7 +276,7 @@ class ResultAggregator:
         key = finding.get_deduplication_key()
         if key in self._seen_keys:
             return False
-        
+
         self._seen_keys.add(key)
         self.findings.append(finding)
         return True
@@ -310,7 +332,9 @@ class ResultAggregator:
                 best_finding = max(group, key=lambda f: f.confidence)
                 unique_findings.append(best_finding)
                 removed_count += len(group) - 1
-                print(f"[DEBUG] 智能去重: 合并 {len(group)} 个相似发现 -> 保留 1 个, 规则: {signal_key[0]}, 文件: {signal_key[1]}, 行号: {signal_key[2]}")
+                print(
+                    f"[DEBUG] 智能去重: 合并 {len(group)} 个相似发现 -> 保留 1 个, 规则: {signal_key[0]}, 文件: {signal_key[1]}, 行号: {signal_key[2]}"
+                )
 
         # 第二轮：跨文件语义去重（处理同一漏洞在不同文件中被报告的情况）
         semantic_groups: Dict[str, List[AggregatedFinding]] = {}
@@ -335,7 +359,9 @@ class ResultAggregator:
                     print(f"[DEBUG] 语义去重: 合并 {len(group)} 个跨文件发现 -> 保留 1 个, 语义键: {semantic_key}")
 
         self.findings = unique_findings
-        print(f"[DEBUG] 智能去重完成: 原始 {original_count} 个发现, 去重后 {len(unique_findings)} 个发现, 移除 {removed_count} 个重复")
+        print(
+            f"[DEBUG] 智能去重完成: 原始 {original_count} 个发现, 去重后 {len(unique_findings)} 个发现, 移除 {removed_count} 个重复"
+        )
         return removed_count
 
     def _generate_semantic_key(self, finding: AggregatedFinding) -> str:
@@ -344,47 +370,48 @@ class ResultAggregator:
         基于漏洞类型和关键描述生成唯一键
         """
         import hashlib
+
         # 提取漏洞关键词
         rule_normalized = finding._normalize_rule_id()
         description = finding.description.lower()
-        
+
         # 提取关键实体（如SQL注入、未授权访问等）
         keywords = []
-        if 'sql注入' in description or 'sql injection' in description:
-            keywords.append('SQL_INJECTION')
-        if '未授权' in description or '越权' in description:
-            keywords.append('UNAUTHORIZED')
-        if '硬编码' in description or 'hardcoded' in description:
-            keywords.append('HARDCODED')
-        if '反序列化' in description or 'deserial' in description:
-            keywords.append('DESERIALIZATION')
-        if '路径变量' in description or 'path variable' in description:
-            keywords.append('PATH_VARIABLE')
-        if 'modeid' in description or 'mode_id' in description:
-            keywords.append('MODE_ID')
-        if 'swagger' in description:
-            keywords.append('SWAGGER')
-        if 'redis' in description:
-            keywords.append('REDIS')
-        if '注销' in description or 'logout' in description:
-            keywords.append('LOGOUT')
-        if '配置' in description or 'config' in description:
-            keywords.append('CONFIG')
-        if '输入校验' in description or 'validation' in description:
-            keywords.append('VALIDATION')
-        if '类型转换' in description or 'cast' in description:
-            keywords.append('TYPE_CAST')
-        if '刷新' in description or 'refresh' in description:
-            keywords.append('REFRESH')
-        if '错误码' in description or 'error_code' in description:
-            keywords.append('ERROR_CODE')
-        if '凭据' in description or 'credential' in description:
-            keywords.append('CREDENTIAL')
-        
+        if "sql注入" in description or "sql injection" in description:
+            keywords.append("SQL_INJECTION")
+        if "未授权" in description or "越权" in description:
+            keywords.append("UNAUTHORIZED")
+        if "硬编码" in description or "hardcoded" in description:
+            keywords.append("HARDCODED")
+        if "反序列化" in description or "deserial" in description:
+            keywords.append("DESERIALIZATION")
+        if "路径变量" in description or "path variable" in description:
+            keywords.append("PATH_VARIABLE")
+        if "modeid" in description or "mode_id" in description:
+            keywords.append("MODE_ID")
+        if "swagger" in description:
+            keywords.append("SWAGGER")
+        if "redis" in description:
+            keywords.append("REDIS")
+        if "注销" in description or "logout" in description:
+            keywords.append("LOGOUT")
+        if "配置" in description or "config" in description:
+            keywords.append("CONFIG")
+        if "输入校验" in description or "validation" in description:
+            keywords.append("VALIDATION")
+        if "类型转换" in description or "cast" in description:
+            keywords.append("TYPE_CAST")
+        if "刷新" in description or "refresh" in description:
+            keywords.append("REFRESH")
+        if "错误码" in description or "error_code" in description:
+            keywords.append("ERROR_CODE")
+        if "凭据" in description or "credential" in description:
+            keywords.append("CREDENTIAL")
+
         # 生成语义键
         key_parts = [rule_normalized] + keywords
-        semantic_key = '_'.join(key_parts) if key_parts else finding.rule_id
-        
+        semantic_key = "_".join(key_parts) if key_parts else finding.rule_id
+
         return semantic_key
 
     def sort_by_severity(self, descending: bool = True) -> None:
@@ -420,10 +447,7 @@ class ResultAggregator:
     def filter_by_severity(self, min_severity: Severity) -> List[AggregatedFinding]:
         """按最小严重级别过滤"""
         min_order = min_severity.get_order()
-        return [
-            f for f in self.findings
-            if f.severity.get_order() <= min_order
-        ]
+        return [f for f in self.findings if f.severity.get_order() <= min_order]
 
     def filter_by_file(self, file_path: str) -> List[AggregatedFinding]:
         """按文件过滤"""
@@ -473,15 +497,13 @@ class ResultAggregator:
             file_counts[file_path] = file_counts.get(file_path, 0) + 1
 
             if include_verification:
-                v_level = finding.metadata.get('verification_level', 'unknown')
+                v_level = finding.metadata.get("verification_level", "unknown")
                 if v_level in verification_stats:
                     verification_stats[v_level] += 1
 
         total_findings = len(self.findings)
         avg_confidence = (
-            sum(f.confidence for f in self.findings) / total_findings
-            if total_findings > 0
-            else 0.0
+            sum(f.confidence for f in self.findings) / total_findings if total_findings > 0 else 0.0
         )
 
         result = {
@@ -504,7 +526,7 @@ class ResultAggregator:
         findings: List[AggregatedFinding] = None,
         sort_by: str = "severity",
         include_verification: bool = True,
-        enable_smart_dedup: bool = True
+        enable_smart_dedup: bool = True,
     ) -> AggregatedResult:
         """执行聚合
 
@@ -577,9 +599,7 @@ def convert_to_aggregated_finding(data: Dict[str, Any]) -> AggregatedFinding:
     line = data.get("line", 0)
     rule_id = data.get("rule_id", "")
 
-    finding_id = hashlib.md5(
-        f"{rule_id}:{file_path}:{line}".encode()
-    ).hexdigest()[:16]
+    finding_id = hashlib.md5(f"{rule_id}:{file_path}:{line}".encode()).hexdigest()[:16]
 
     return AggregatedFinding(
         finding_id=finding_id,

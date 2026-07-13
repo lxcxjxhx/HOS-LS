@@ -1,14 +1,12 @@
 """检查点管理器测试"""
 
-import pytest
-import tempfile
 import shutil
+import tempfile
 from pathlib import Path
-from src.ai.pure_ai.checkpoint_manager import (
-    CheckpointManager,
-    CheckpointData,
-    CheckpointLevel
-)
+
+import pytest
+
+from src.ai.pure_ai.checkpoint_manager import CheckpointData, CheckpointLevel, CheckpointManager
 
 
 class TestCheckpointManager:
@@ -25,8 +23,7 @@ class TestCheckpointManager:
     def checkpoint_manager(self, temp_project_dir):
         """创建检查点管理器实例"""
         return CheckpointManager(
-            project_path=temp_project_dir,
-            config={"auto_save_interval": 5, "max_checkpoints": 10}
+            project_path=temp_project_dir, config={"auto_save_interval": 5, "max_checkpoints": 10}
         )
 
     def test_create_checkpoint(self, checkpoint_manager):
@@ -37,7 +34,7 @@ class TestCheckpointManager:
             current_step="scanning",
             processed_files=processed_files,
             current_file="file3.py",
-            agent_states={"agent1": "running"}
+            agent_states={"agent1": "running"},
         )
 
         assert checkpoint is not None
@@ -53,9 +50,7 @@ class TestCheckpointManager:
         """测试保存和加载检查点"""
         processed_files = ["file1.py", "file2.py"]
         checkpoint = checkpoint_manager.create_checkpoint(
-            level=CheckpointLevel.FILE,
-            current_step="analyzing",
-            processed_files=processed_files
+            level=CheckpointLevel.FILE, current_step="analyzing", processed_files=processed_files
         )
 
         save_result = checkpoint_manager.save_checkpoint(checkpoint)
@@ -84,16 +79,12 @@ class TestCheckpointManager:
     def test_list_checkpoints(self, checkpoint_manager):
         """测试列出检查点"""
         checkpoint1 = checkpoint_manager.create_checkpoint(
-            level=CheckpointLevel.STEP,
-            current_step="step1",
-            processed_files=["file1.py"]
+            level=CheckpointLevel.STEP, current_step="step1", processed_files=["file1.py"]
         )
         checkpoint_manager.save_checkpoint(checkpoint1)
 
         checkpoint2 = checkpoint_manager.create_checkpoint(
-            level=CheckpointLevel.AGENT,
-            current_step="step2",
-            processed_files=["file2.py"]
+            level=CheckpointLevel.AGENT, current_step="step2", processed_files=["file2.py"]
         )
         checkpoint_manager.save_checkpoint(checkpoint2)
 
@@ -105,9 +96,7 @@ class TestCheckpointManager:
     def test_delete_checkpoint(self, checkpoint_manager):
         """测试删除检查点"""
         checkpoint = checkpoint_manager.create_checkpoint(
-            level=CheckpointLevel.STEP,
-            current_step="to_delete",
-            processed_files=["file1.py"]
+            level=CheckpointLevel.STEP, current_step="to_delete", processed_files=["file1.py"]
         )
         checkpoint_manager.save_checkpoint(checkpoint)
 

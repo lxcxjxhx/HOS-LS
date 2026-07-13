@@ -1,5 +1,11 @@
 from typing import List
-from src.analyzers.verification.interfaces import Validator, ValidationResult, VulnContext, create_uncertain_result
+
+from src.analyzers.verification.interfaces import (
+    ValidationResult,
+    Validator,
+    VulnContext,
+    create_uncertain_result,
+)
 
 
 class RestTemplateSSRFValidator(Validator):
@@ -33,10 +39,7 @@ class RestTemplateSSRFValidator(Validator):
 
     def validate(self, context: VulnContext) -> ValidationResult:
         if not self.check_applicability(context):
-            return create_uncertain_result(
-                "此验证器不适用于当前代码上下文",
-                confidence=0.3
-            )
+            return create_uncertain_result("此验证器不适用于当前代码上下文", confidence=0.3)
 
         if self._has_url_validation(context.code_snippet):
             return ValidationResult(
@@ -44,7 +47,7 @@ class RestTemplateSSRFValidator(Validator):
                 is_false_positive=True,
                 confidence=0.85,
                 reason="检测到 URL 验证机制",
-                evidence={"validation_found": True}
+                evidence={"validation_found": True},
             )
 
         if self._is_url_from_user_input(context.code_snippet):
@@ -53,7 +56,7 @@ class RestTemplateSSRFValidator(Validator):
                 is_false_positive=False,
                 confidence=0.8,
                 reason="URL 来自用户输入，可能存在 SSRF",
-                evidence={"user_input": True}
+                evidence={"user_input": True},
             )
 
         if self._is_localhost_or_internal(context.code_snippet):
@@ -62,13 +65,10 @@ class RestTemplateSSRFValidator(Validator):
                 is_false_positive=False,
                 confidence=0.75,
                 reason="检测到本地或内网地址访问",
-                evidence={"internal_access": True}
+                evidence={"internal_access": True},
             )
 
-        return create_uncertain_result(
-            "无法确定 URL 来源，需人工复核",
-            confidence=0.5
-        )
+        return create_uncertain_result("无法确定 URL 来源，需人工复核", confidence=0.5)
 
     def _has_url_validation(self, code_snippet: str) -> bool:
         validation_patterns = [

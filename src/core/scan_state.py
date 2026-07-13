@@ -4,17 +4,18 @@
 """
 
 import json
+import time
 import uuid
-from dataclasses import dataclass, field, asdict
+from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import List, Optional, Dict, Any
-import time
+from typing import Any, Dict, List, Optional
 
 
 @dataclass
 class ScanState:
     """扫描状态类"""
+
     scan_id: str
     started_at: str
     last_updated: str
@@ -28,7 +29,7 @@ class ScanState:
     start_time: float = 0.0
 
     @classmethod
-    def create(cls, total_files: int, max_duration: int = 0, max_files: int = 0) -> 'ScanState':
+    def create(cls, total_files: int, max_duration: int = 0, max_files: int = 0) -> "ScanState":
         """创建新的扫描状态"""
         now = datetime.now().isoformat()
         return cls(
@@ -42,25 +43,25 @@ class ScanState:
             truncation_reason=None,
             max_duration=max_duration,
             max_files=max_files,
-            start_time=time.time()
+            start_time=time.time(),
         )
 
     @classmethod
-    def load(cls, path: str) -> Optional['ScanState']:
+    def load(cls, path: str) -> Optional["ScanState"]:
         """从文件加载扫描状态"""
         try:
             state_file = Path(path)
 
             # 首先检查指定路径
             if state_file.exists():
-                with open(state_file, 'r', encoding='utf-8') as f:
+                with open(state_file, "r", encoding="utf-8") as f:
                     data = json.load(f)
                 return cls._from_dict(data)
 
             # 回退检查：检查旧路径（当前工作目录下的同名文件）
             old_path = Path.cwd() / state_file.name
             if old_path.exists():
-                with open(old_path, 'r', encoding='utf-8') as f:
+                with open(old_path, "r", encoding="utf-8") as f:
                     data = json.load(f)
                 return cls._from_dict(data)
 
@@ -70,28 +71,29 @@ class ScanState:
             return None
 
     @classmethod
-    def _from_dict(cls, data: Dict[str, Any]) -> 'ScanState':
+    def _from_dict(cls, data: Dict[str, Any]) -> "ScanState":
         """从字典数据创建 ScanState 实例"""
         return cls(
-            scan_id=data['scan_id'],
-            started_at=data['started_at'],
-            last_updated=data['last_updated'],
-            total_files=data['total_files'],
-            completed_files=data.get('completed_files', []),
-            findings=data.get('findings', []),
-            truncated=data.get('truncated', False),
-            truncation_reason=data.get('truncation_reason'),
-            max_duration=data.get('max_duration', 0),
-            max_files=data.get('max_files', 0),
-            start_time=data.get('start_time', 0.0)
+            scan_id=data["scan_id"],
+            started_at=data["started_at"],
+            last_updated=data["last_updated"],
+            total_files=data["total_files"],
+            completed_files=data.get("completed_files", []),
+            findings=data.get("findings", []),
+            truncated=data.get("truncated", False),
+            truncation_reason=data.get("truncation_reason"),
+            max_duration=data.get("max_duration", 0),
+            max_files=data.get("max_files", 0),
+            start_time=data.get("start_time", 0.0),
         )
 
     def _to_dict(self) -> Dict[str, Any]:
         """将状态转换为可序列化的字典"""
+
         def make_serializable(obj):
             if isinstance(obj, Path):
                 return str(obj)
-            elif hasattr(obj, '__dict__'):
+            elif hasattr(obj, "__dict__"):
                 return {k: make_serializable(v) for k, v in obj.__dict__.items()}
             elif isinstance(obj, dict):
                 return {k: make_serializable(v) for k, v in obj.items()}
@@ -107,17 +109,17 @@ class ScanState:
                     return str(obj)
 
         return {
-            'scan_id': self.scan_id,
-            'started_at': self.started_at,
-            'last_updated': self.last_updated,
-            'total_files': self.total_files,
-            'completed_files': [str(f) for f in self.completed_files],
-            'findings': make_serializable(self.findings),
-            'truncated': self.truncated,
-            'truncation_reason': self.truncation_reason,
-            'max_duration': self.max_duration,
-            'max_files': self.max_files,
-            'start_time': self.start_time,
+            "scan_id": self.scan_id,
+            "started_at": self.started_at,
+            "last_updated": self.last_updated,
+            "total_files": self.total_files,
+            "completed_files": [str(f) for f in self.completed_files],
+            "findings": make_serializable(self.findings),
+            "truncated": self.truncated,
+            "truncation_reason": self.truncation_reason,
+            "max_duration": self.max_duration,
+            "max_files": self.max_files,
+            "start_time": self.start_time,
         }
 
     def save(self, path: str) -> bool:
@@ -128,7 +130,7 @@ class ScanState:
             state_file.parent.mkdir(parents=True, exist_ok=True)
 
             serializable_state = self._to_dict()
-            with open(state_file, 'w', encoding='utf-8') as f:
+            with open(state_file, "w", encoding="utf-8") as f:
                 json.dump(serializable_state, f, ensure_ascii=False, indent=2)
 
             return True
@@ -174,10 +176,12 @@ class ScanState:
     def get_progress(self) -> Dict[str, Any]:
         """获取进度信息"""
         return {
-            'total': self.total_files,
-            'completed': len(self.completed_files),
-            'pending': self.total_files - len(self.completed_files),
-            'percentage': (len(self.completed_files) / self.total_files * 100) if self.total_files > 0 else 0,
-            'truncated': self.truncated,
-            'truncation_reason': self.truncation_reason
+            "total": self.total_files,
+            "completed": len(self.completed_files),
+            "pending": self.total_files - len(self.completed_files),
+            "percentage": (
+                (len(self.completed_files) / self.total_files * 100) if self.total_files > 0 else 0
+            ),
+            "truncated": self.truncated,
+            "truncation_reason": self.truncation_reason,
         }

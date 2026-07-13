@@ -1,7 +1,8 @@
-from pathlib import Path
-from typing import Dict, List, Optional, Any
-import yaml
 import time
+from pathlib import Path
+from typing import Any, Dict, List, Optional
+
+import yaml
 
 
 class ConfigLoader:
@@ -31,12 +32,12 @@ class ConfigLoader:
             return
 
         try:
-            with open(self.config_path, 'r', encoding='utf-8') as f:
+            with open(self.config_path, "r", encoding="utf-8") as f:
                 self.config = yaml.safe_load(f) or {}
 
-            self.validators_config = self.config.get('validators', {})
-            self.rules_config = self.config.get('rules', {})
-            self.global_config = self.config.get('global', {})
+            self.validators_config = self.config.get("validators", {})
+            self.rules_config = self.config.get("rules", {})
+            self.global_config = self.config.get("global", {})
 
             self._last_modified = self.config_path.stat().st_mtime
 
@@ -47,68 +48,68 @@ class ConfigLoader:
     def _create_default_config(self):
         """创建默认配置"""
         self.config = {
-            'validators': {
-                'sql_injection': [
-                    {'name': 'mybatis_dollar_brace', 'enabled': True, 'priority': 'high'},
-                    {'name': 'entity_wrapper_safe', 'enabled': True, 'priority': 'medium'},
-                    {'name': 'string_concat', 'enabled': True, 'priority': 'high'},
+            "validators": {
+                "sql_injection": [
+                    {"name": "mybatis_dollar_brace", "enabled": True, "priority": "high"},
+                    {"name": "entity_wrapper_safe", "enabled": True, "priority": "medium"},
+                    {"name": "string_concat", "enabled": True, "priority": "high"},
                 ],
-                'auth_bypass': [
-                    {'name': 'csrf_disabled', 'enabled': True, 'priority': 'high'},
-                    {'name': 'permit_all_wildcard', 'enabled': True, 'priority': 'high'},
-                    {'name': 'wildcard_bypass', 'enabled': True, 'priority': 'medium'},
+                "auth_bypass": [
+                    {"name": "csrf_disabled", "enabled": True, "priority": "high"},
+                    {"name": "permit_all_wildcard", "enabled": True, "priority": "high"},
+                    {"name": "wildcard_bypass", "enabled": True, "priority": "medium"},
                 ],
-                'secrets': [
-                    {'name': 'code_hardcoded', 'enabled': True, 'priority': 'high'},
-                    {'name': 'config_stored', 'enabled': True, 'priority': 'medium'},
-                    {'name': 'database_stored', 'enabled': True, 'priority': 'low'},
+                "secrets": [
+                    {"name": "code_hardcoded", "enabled": True, "priority": "high"},
+                    {"name": "config_stored", "enabled": True, "priority": "medium"},
+                    {"name": "database_stored", "enabled": True, "priority": "low"},
                 ],
-                'ssrf': [
-                    {'name': 'resttemplate', 'enabled': True, 'priority': 'high'},
-                    {'name': 'url_controllable', 'enabled': True, 'priority': 'high'},
+                "ssrf": [
+                    {"name": "resttemplate", "enabled": True, "priority": "high"},
+                    {"name": "url_controllable", "enabled": True, "priority": "high"},
                 ],
-                'deserialization': [
-                    {'name': 'objectinputstream', 'enabled': True, 'priority': 'high'},
-                    {'name': 'jackson_config', 'enabled': True, 'priority': 'medium'},
+                "deserialization": [
+                    {"name": "objectinputstream", "enabled": True, "priority": "high"},
+                    {"name": "jackson_config", "enabled": True, "priority": "medium"},
                 ],
             },
-            'rules': {
-                'sql_injection': {
-                    'confidence_threshold': 0.7,
-                    'min_evidence_count': 2,
-                    'check_hardcoded': True,
+            "rules": {
+                "sql_injection": {
+                    "confidence_threshold": 0.7,
+                    "min_evidence_count": 2,
+                    "check_hardcoded": True,
                 },
-                'auth_bypass': {
-                    'confidence_threshold': 0.6,
-                    'check_annotation': True,
+                "auth_bypass": {
+                    "confidence_threshold": 0.6,
+                    "check_annotation": True,
                 },
-                'secrets': {
-                    'confidence_threshold': 0.8,
-                    'allow_config_center': True,
+                "secrets": {
+                    "confidence_threshold": 0.8,
+                    "allow_config_center": True,
                 },
-                'ssrf': {
-                    'confidence_threshold': 0.7,
-                    'check_url_validation': True,
+                "ssrf": {
+                    "confidence_threshold": 0.7,
+                    "check_url_validation": True,
                 },
-                'deserialization': {
-                    'confidence_threshold': 0.8,
-                    'check_input_validation': True,
+                "deserialization": {
+                    "confidence_threshold": 0.8,
+                    "check_input_validation": True,
                 },
             },
-            'global': {
-                'verification_enabled': False,
-                'auto_generate_poc': False,
-                'output_reports_dir': 'reports/verified',
-                'pocs_output_dir': 'dynamic_code/pocs/generated',
-                'methods_storage_dir': 'dynamic_code/methods',
-                'max_verification_time': 300,
-                'parallel_workers': 4,
-            }
+            "global": {
+                "verification_enabled": False,
+                "auto_generate_poc": False,
+                "output_reports_dir": "reports/verified",
+                "pocs_output_dir": "dynamic_code/pocs/generated",
+                "methods_storage_dir": "dynamic_code/methods",
+                "max_verification_time": 300,
+                "parallel_workers": 4,
+            },
         }
 
-        self.validators_config = self.config.get('validators', {})
-        self.rules_config = self.config.get('rules', {})
-        self.global_config = self.config.get('global', {})
+        self.validators_config = self.config.get("validators", {})
+        self.rules_config = self.config.get("rules", {})
+        self.global_config = self.config.get("global", {})
 
         self.save_config()
 
@@ -117,7 +118,7 @@ class ConfigLoader:
         try:
             self.config_path.parent.mkdir(parents=True, exist_ok=True)
 
-            with open(self.config_path, 'w', encoding='utf-8') as f:
+            with open(self.config_path, "w", encoding="utf-8") as f:
                 yaml.dump(self.config, f, allow_unicode=True, sort_keys=False)
 
             self._last_modified = self.config_path.stat().st_mtime
@@ -166,7 +167,7 @@ class ConfigLoader:
             启用的验证器名称列表
         """
         validators = self.validators_config.get(vuln_type, [])
-        return [v['name'] for v in validators if v.get('enabled', True)]
+        return [v["name"] for v in validators if v.get("enabled", True)]
 
     def set_validator_enabled(self, vuln_type: str, validator_name: str, enabled: bool):
         """
@@ -180,14 +181,14 @@ class ConfigLoader:
         validators = self.validators_config.get(vuln_type, [])
 
         for v in validators:
-            if v['name'] == validator_name:
-                v['enabled'] = enabled
+            if v["name"] == validator_name:
+                v["enabled"] = enabled
                 break
         else:
-            validators.append({'name': validator_name, 'enabled': enabled, 'priority': 'medium'})
+            validators.append({"name": validator_name, "enabled": enabled, "priority": "medium"})
 
         self.validators_config[vuln_type] = validators
-        self.config['validators'] = self.validators_config
+        self.config["validators"] = self.validators_config
         self.save_config()
 
     def get_rule_config(self, vuln_type: str) -> Dict[str, Any]:
@@ -213,7 +214,7 @@ class ConfigLoader:
             置信度阈值
         """
         rule = self.rules_config.get(vuln_type, {})
-        return rule.get('confidence_threshold', 0.7)
+        return rule.get("confidence_threshold", 0.7)
 
     def get_global_config(self, key: str, default: Any = None) -> Any:
         """
@@ -237,12 +238,12 @@ class ConfigLoader:
             value: 配置值
         """
         self.global_config[key] = value
-        self.config['global'] = self.global_config
+        self.config["global"] = self.global_config
         self.save_config()
 
     def is_verification_enabled(self) -> bool:
         """检查是否启用验证"""
-        return self.global_config.get('verification_enabled', False)
+        return self.global_config.get("verification_enabled", False)
 
     def set_verification_enabled(self, enabled: bool):
         """
@@ -251,7 +252,7 @@ class ConfigLoader:
         Args:
             enabled: 是否启用
         """
-        self.set_global_config('verification_enabled', enabled)
+        self.set_global_config("verification_enabled", enabled)
 
     def get_all_vuln_types(self) -> List[str]:
         """
@@ -264,12 +265,12 @@ class ConfigLoader:
 
     def get_pocs_output_dir(self) -> str:
         """获取 POC 输出目录"""
-        return self.global_config.get('pocs_output_dir', 'dynamic_code/pocs/generated')
+        return self.global_config.get("pocs_output_dir", "dynamic_code/pocs/generated")
 
     def get_methods_storage_dir(self) -> str:
         """获取方法存储目录"""
-        return self.global_config.get('methods_storage_dir', 'dynamic_code/methods')
+        return self.global_config.get("methods_storage_dir", "dynamic_code/methods")
 
     def get_reports_output_dir(self) -> str:
         """获取报告输出目录"""
-        return self.global_config.get('output_reports_dir', 'reports/verified')
+        return self.global_config.get("output_reports_dir", "reports/verified")

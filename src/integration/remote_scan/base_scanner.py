@@ -5,12 +5,13 @@
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import List, Dict, Any, Optional
 from enum import Enum
+from typing import Any, Dict, List, Optional
 
 
 class ScannerType(Enum):
     """扫描器类型"""
+
     NETWORK = "network"
     SERIAL = "serial"
 
@@ -18,6 +19,7 @@ class ScannerType(Enum):
 @dataclass
 class RemoteFile:
     """远程文件"""
+
     path: str
     size: int
     modified_time: float
@@ -29,6 +31,7 @@ class RemoteFile:
 @dataclass
 class ScanResult:
     """扫描结果"""
+
     files: List[RemoteFile]
     target: str
     scanner_type: ScannerType

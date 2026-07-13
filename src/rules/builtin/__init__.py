@@ -3,40 +3,40 @@
 提供开箱即用的安全检测规则。
 """
 
-from src.rules.builtin.injection.sql_injection import SQLInjectionRule
-from src.rules.builtin.injection.command_injection import CommandInjectionRule
-from src.rules.builtin.injection.xss import XSSRule
-from src.rules.builtin.authentication.hardcoded_credentials import HardcodedCredentialsRule
-from src.rules.builtin.cryptography.weak_crypto import WeakCryptoRule
-from src.rules.builtin.cryptography.hardcoded_keys import HardcodedKeysRule
-from src.rules.builtin.cryptography.insecure_random import InsecureRandomRule
-from src.rules.builtin.data_protection.sensitive_data_exposure import SensitiveDataExposureRule
-from src.rules.builtin.ai_security.prompt_injection import (
-    DirectPromptInjectionRule,
-    InstructionOverrideRule,
-    ContextOverflowRule,
-)
 from src.rules.builtin.ai_security.encoding_issues import (
+    BidirectionalTextInjectionRule,
     HomoglyphAttackRule,
     UnicodeNormalizationRule,
-    BidirectionalTextInjectionRule,
-)
-from src.rules.builtin.ai_security.output_control import (
-    UnvalidatedModelOutputRule,
-    SchemaValidationMissingRule,
-    HallucinationRiskRule,
-    OutputSafetyFilterMissingRule,
 )
 from src.rules.builtin.ai_security.insecure_design import (
-    IDORRule,
     BusinessLogicFlawRule,
+    IDORRule,
     RaceConditionRule,
 )
 from src.rules.builtin.ai_security.logging_security import (
-    MissingSecurityEventLoggingRule,
     InsufficientAuditTrailRule,
+    MissingSecurityEventLoggingRule,
     SensitiveDataInLogsRule,
 )
+from src.rules.builtin.ai_security.output_control import (
+    HallucinationRiskRule,
+    OutputSafetyFilterMissingRule,
+    SchemaValidationMissingRule,
+    UnvalidatedModelOutputRule,
+)
+from src.rules.builtin.ai_security.prompt_injection import (
+    ContextOverflowRule,
+    DirectPromptInjectionRule,
+    InstructionOverrideRule,
+)
+from src.rules.builtin.authentication.hardcoded_credentials import HardcodedCredentialsRule
+from src.rules.builtin.cryptography.hardcoded_keys import HardcodedKeysRule
+from src.rules.builtin.cryptography.insecure_random import InsecureRandomRule
+from src.rules.builtin.cryptography.weak_crypto import WeakCryptoRule
+from src.rules.builtin.data_protection.sensitive_data_exposure import SensitiveDataExposureRule
+from src.rules.builtin.injection.command_injection import CommandInjectionRule
+from src.rules.builtin.injection.sql_injection import SQLInjectionRule
+from src.rules.builtin.injection.xss import XSSRule
 
 __all__ = [
     "SQLInjectionRule",

@@ -5,13 +5,14 @@
 
 import re
 from dataclasses import dataclass, field
-from pathlib import Path
-from typing import List, Optional, Dict, Any
 from enum import Enum
+from pathlib import Path
+from typing import Any, Dict, List, Optional
 
 
 class Language(Enum):
     """支持的编程语言"""
+
     PYTHON = "python"
     JAVASCRIPT = "javascript"
     TYPESCRIPT = "typescript"
@@ -62,7 +63,7 @@ class BaseCodeSlicer:
     def load_file(self) -> bool:
         """加载文件内容"""
         try:
-            with open(self.file_path, 'r', encoding='utf-8') as f:
+            with open(self.file_path, "r", encoding="utf-8") as f:
                 self.lines = f.readlines()
             return True
         except Exception as e:
@@ -79,11 +80,12 @@ class BaseCodeSlicer:
             start = 0
         if end > len(self.lines):
             end = len(self.lines)
-        return ''.join(self.lines[start:end])
+        return "".join(self.lines[start:end])
 
     def _generate_slice_id(self, slice_type: str, name: str, start_line: int) -> str:
         """生成切片 ID"""
         import hashlib
+
         content = f"{self.file_path}:{slice_type}:{name}:{start_line}"
         return hashlib.md5(content.encode()).hexdigest()[:12]
 
@@ -111,15 +113,15 @@ class PythonSlicer(BaseCodeSlicer):
 
             # 收集上下文（导入、装饰器等）
             if not in_function and not in_class:
-                if stripped.startswith(('import ', 'from ')) or stripped.startswith('@'):
+                if stripped.startswith(("import ", "from ")) or stripped.startswith("@"):
                     context_lines.append(line)
-                elif stripped and not stripped.startswith('#'):
+                elif stripped and not stripped.startswith("#"):
                     # 遇到非空非注释行，重置上下文（保留最近的导入）
                     if len(context_lines) > 20:
                         context_lines = context_lines[-10:]
 
             # 检测函数定义
-            if stripped.startswith('def ') or stripped.startswith('async def '):
+            if stripped.startswith("def ") or stripped.startswith("async def "):
                 if in_function:
                     # 结束上一个函数
                     self._add_function_slice(function_name, function_start, i, context_lines)
@@ -130,7 +132,7 @@ class PythonSlicer(BaseCodeSlicer):
                 continue
 
             # 检测类定义
-            if stripped.startswith('class '):
+            if stripped.startswith("class "):
                 if in_function:
                     self._add_function_slice(function_name, function_start, i, context_lines)
                     in_function = False
@@ -144,11 +146,13 @@ class PythonSlicer(BaseCodeSlicer):
 
             # 检测函数/类结束（缩进减少）
             if in_function or in_class:
-                if stripped and not stripped.startswith('#'):
+                if stripped and not stripped.startswith("#"):
                     indent = len(line) - len(line.lstrip())
-                    if indent <= current_indent and not stripped.endswith(':'):
+                    if indent <= current_indent and not stripped.endswith(":"):
                         if in_function:
-                            self._add_function_slice(function_name, function_start, i + 1, context_lines)
+                            self._add_function_slice(
+                                function_name, function_start, i + 1, context_lines
+                            )
                             in_function = False
                         elif in_class and indent < current_indent:
                             self._add_class_slice(class_name, class_start, i, context_lines)
@@ -168,66 +172,72 @@ class PythonSlicer(BaseCodeSlicer):
 
     def _extract_function_name(self, line: str) -> str:
         """提取函数名"""
-        match = re.search(r'(?:async\s+)?def\s+(\w+)', line)
+        match = re.search(r"(?:async\s+)?def\s+(\w+)", line)
         return match.group(1) if match else "unknown"
 
     def _extract_class_name(self, line: str) -> str:
         """提取类名"""
-        match = re.search(r'class\s+(\w+)', line)
+        match = re.search(r"class\s+(\w+)", line)
         return match.group(1) if match else "unknown"
 
     def _add_function_slice(self, name: str, start: int, end: int, context: List[str]):
         """添加函数切片"""
         code = self._get_line_content(start, end)
-        context_str = ''.join(context[-10:])  # 保留最近 10 行上下文
+        context_str = "".join(context[-10:])  # 保留最近 10 行上下文
         slice_id = self._generate_slice_id("function", name, start)
-        self.slices.append(CodeSlice(
-            slice_id=slice_id,
-            file_path=self.file_path,
-            language=Language.PYTHON,
-            slice_type="function",
-            name=name,
-            start_line=start + 1,
-            end_line=end,
-            code=code,
-            context=context_str,
-            metadata={"has_async": "async" in self.lines[start]}
-        ))
+        self.slices.append(
+            CodeSlice(
+                slice_id=slice_id,
+                file_path=self.file_path,
+                language=Language.PYTHON,
+                slice_type="function",
+                name=name,
+                start_line=start + 1,
+                end_line=end,
+                code=code,
+                context=context_str,
+                metadata={"has_async": "async" in self.lines[start]},
+            )
+        )
 
     def _add_class_slice(self, name: str, start: int, end: int, context: List[str]):
         """添加类切片"""
         code = self._get_line_content(start, end)
-        context_str = ''.join(context[-10:])
+        context_str = "".join(context[-10:])
         slice_id = self._generate_slice_id("class", name, start)
-        self.slices.append(CodeSlice(
-            slice_id=slice_id,
-            file_path=self.file_path,
-            language=Language.PYTHON,
-            slice_type="class",
-            name=name,
-            start_line=start + 1,
-            end_line=end,
-            code=code,
-            context=context_str,
-            metadata={}
-        ))
+        self.slices.append(
+            CodeSlice(
+                slice_id=slice_id,
+                file_path=self.file_path,
+                language=Language.PYTHON,
+                slice_type="class",
+                name=name,
+                start_line=start + 1,
+                end_line=end,
+                code=code,
+                context=context_str,
+                metadata={},
+            )
+        )
 
     def _add_whole_file_slice(self, context: List[str]):
         """添加整个文件切片"""
-        code = ''.join(self.lines)
+        code = "".join(self.lines)
         slice_id = self._generate_slice_id("module", "whole_file", 0)
-        self.slices.append(CodeSlice(
-            slice_id=slice_id,
-            file_path=self.file_path,
-            language=Language.PYTHON,
-            slice_type="module",
-            name="whole_file",
-            start_line=1,
-            end_line=len(self.lines),
-            code=code,
-            context='',
-            metadata={}
-        ))
+        self.slices.append(
+            CodeSlice(
+                slice_id=slice_id,
+                file_path=self.file_path,
+                language=Language.PYTHON,
+                slice_type="module",
+                name="whole_file",
+                start_line=1,
+                end_line=len(self.lines),
+                code=code,
+                context="",
+                metadata={},
+            )
+        )
 
 
 class JavaScriptSlicer(BaseCodeSlicer):
@@ -249,45 +259,49 @@ class JavaScriptSlicer(BaseCodeSlicer):
 
             # 收集上下文
             if not function_stack and not class_stack:
-                if stripped.startswith(('import ', 'export ', 'const ', 'let ', 'var ')):
+                if stripped.startswith(("import ", "export ", "const ", "let ", "var ")):
                     context_lines.append(line)
 
             # 统计大括号
-            brace_count += line.count('{') - line.count('}')
+            brace_count += line.count("{") - line.count("}")
 
             # 检测函数定义
             func_match = self._match_function(stripped, i)
             if func_match:
-                function_stack.append({
-                    'name': func_match['name'],
-                    'start': i,
-                    'start_brace': brace_count - line.count('{')
-                })
+                function_stack.append(
+                    {
+                        "name": func_match["name"],
+                        "start": i,
+                        "start_brace": brace_count - line.count("{"),
+                    }
+                )
 
             # 检测类定义
             class_match = self._match_class(stripped, i)
             if class_match:
-                class_stack.append({
-                    'name': class_match['name'],
-                    'start': i,
-                    'start_brace': brace_count - line.count('{')
-                })
+                class_stack.append(
+                    {
+                        "name": class_match["name"],
+                        "start": i,
+                        "start_brace": brace_count - line.count("{"),
+                    }
+                )
 
             # 检测函数结束
-            while function_stack and brace_count <= function_stack[-1]['start_brace']:
+            while function_stack and brace_count <= function_stack[-1]["start_brace"]:
                 func = function_stack.pop()
-                self._add_function_slice(func['name'], func['start'], i + 1, context_lines)
+                self._add_function_slice(func["name"], func["start"], i + 1, context_lines)
 
             # 检测类结束
-            while class_stack and brace_count <= class_stack[-1]['start_brace']:
+            while class_stack and brace_count <= class_stack[-1]["start_brace"]:
                 cls = class_stack.pop()
-                self._add_class_slice(cls['name'], cls['start'], i + 1, context_lines)
+                self._add_class_slice(cls["name"], cls["start"], i + 1, context_lines)
 
         # 处理未闭合的函数/类
         for func in function_stack:
-            self._add_function_slice(func['name'], func['start'], len(self.lines), context_lines)
+            self._add_function_slice(func["name"], func["start"], len(self.lines), context_lines)
         for cls in class_stack:
-            self._add_class_slice(cls['name'], cls['start'], len(self.lines), context_lines)
+            self._add_class_slice(cls["name"], cls["start"], len(self.lines), context_lines)
 
         # 如果没有切片，添加整个文件
         if not self.slices and self.lines:
@@ -298,75 +312,81 @@ class JavaScriptSlicer(BaseCodeSlicer):
     def _match_function(self, line: str, line_num: int) -> Optional[Dict[str, str]]:
         """匹配函数定义"""
         patterns = [
-            r'(?:async\s+)?function\s+(\w+)',
-            r'(?:const|let|var)\s+(\w+)\s*=\s*(?:async\s+)?(?:function|\([^)]*\)\s*=>|\w+\s*=>)',
-            r'(\w+)\s*:\s*(?:async\s+)?(?:function|\([^)]*\)\s*=>)',
+            r"(?:async\s+)?function\s+(\w+)",
+            r"(?:const|let|var)\s+(\w+)\s*=\s*(?:async\s+)?(?:function|\([^)]*\)\s*=>|\w+\s*=>)",
+            r"(\w+)\s*:\s*(?:async\s+)?(?:function|\([^)]*\)\s*=>)",
         ]
         for pattern in patterns:
             match = re.search(pattern, line)
             if match:
-                return {'name': match.group(1)}
+                return {"name": match.group(1)}
         return None
 
     def _match_class(self, line: str, line_num: int) -> Optional[Dict[str, str]]:
         """匹配类定义"""
-        match = re.search(r'class\s+(\w+)', line)
+        match = re.search(r"class\s+(\w+)", line)
         if match:
-            return {'name': match.group(1)}
+            return {"name": match.group(1)}
         return None
 
     def _add_function_slice(self, name: str, start: int, end: int, context: List[str]):
         """添加函数切片"""
         code = self._get_line_content(start, end)
-        context_str = ''.join(context[-10:])
+        context_str = "".join(context[-10:])
         slice_id = self._generate_slice_id("function", name, start)
-        self.slices.append(CodeSlice(
-            slice_id=slice_id,
-            file_path=self.file_path,
-            language=self.language,
-            slice_type="function",
-            name=name,
-            start_line=start + 1,
-            end_line=end,
-            code=code,
-            context=context_str,
-            metadata={}
-        ))
+        self.slices.append(
+            CodeSlice(
+                slice_id=slice_id,
+                file_path=self.file_path,
+                language=self.language,
+                slice_type="function",
+                name=name,
+                start_line=start + 1,
+                end_line=end,
+                code=code,
+                context=context_str,
+                metadata={},
+            )
+        )
 
     def _add_class_slice(self, name: str, start: int, end: int, context: List[str]):
         """添加类切片"""
         code = self._get_line_content(start, end)
-        context_str = ''.join(context[-10:])
+        context_str = "".join(context[-10:])
         slice_id = self._generate_slice_id("class", name, start)
-        self.slices.append(CodeSlice(
-            slice_id=slice_id,
-            file_path=self.file_path,
-            language=self.language,
-            slice_type="class",
-            name=name,
-            start_line=start + 1,
-            end_line=end,
-            code=code,
-            context=context_str,
-            metadata={}
-        ))
+        self.slices.append(
+            CodeSlice(
+                slice_id=slice_id,
+                file_path=self.file_path,
+                language=self.language,
+                slice_type="class",
+                name=name,
+                start_line=start + 1,
+                end_line=end,
+                code=code,
+                context=context_str,
+                metadata={},
+            )
+        )
 
     def _add_whole_file_slice(self, context: List[str]):
         """添加整个文件切片"""
-        code = ''.join(self.lines)
+        code = "".join(self.lines)
         slice_id = self._generate_slice_id("module", "whole_file", 0)
-        self.slices.append(CodeSlice(
-            slice_id=slice_id,
-            file_path=self.file_path,
-            language=self.language,
-            slice_type="module",
-            name="whole_file",
-            start_line=1,
-            end_line=len(self.lines),
-            code=code,
-            context='',
-            metadata={}
-        ))
+        self.slices.append(
+            CodeSlice(
+                slice_id=slice_id,
+                file_path=self.file_path,
+                language=self.language,
+                slice_type="module",
+                name="whole_file",
+                start_line=1,
+                end_line=len(self.lines),
+                code=code,
+                context="",
+                metadata={},
+            )
+        )
 
 
 def get_slicer(file_path: str, language: Optional[str] = None) -> BaseCodeSlicer:
@@ -387,15 +407,15 @@ def get_slicer(file_path: str, language: Optional[str] = None) -> BaseCodeSlicer
 def _detect_language(file_path: str) -> str:
     """根据文件扩展名检测语言"""
     ext = Path(file_path).suffix.lower()
-    if ext == '.py':
-        return 'python'
-    elif ext in ['.js', '.jsx']:
-        return 'javascript'
-    elif ext in ['.ts', '.tsx']:
-        return 'typescript'
-    elif ext == '.java':
-        return 'java'
-    return 'unknown'
+    if ext == ".py":
+        return "python"
+    elif ext in [".js", ".jsx"]:
+        return "javascript"
+    elif ext in [".ts", ".tsx"]:
+        return "typescript"
+    elif ext == ".java":
+        return "java"
+    return "unknown"
 
 
 def slice_code(file_path: str, language: Optional[str] = None) -> List[CodeSlice]:

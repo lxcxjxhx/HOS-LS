@@ -7,16 +7,16 @@ import asyncio
 import json
 import os
 from pathlib import Path
-from typing import List, Optional, Dict, Any
+from typing import Any, Dict, List, Optional
 
 from rich.console import Console
 
-from src.core.config import Config
-from src.ai.client import get_model_manager, AIProvider
+from src.ai.client import AIProvider, get_model_manager
 from src.ai.models import AnalysisContext, SecurityAnalysisResult, VulnerabilityFinding
-from src.ai.pure_ai.multi_agent_pipeline import MultiAgentPipeline
 from src.ai.pure_ai.cache import CacheManager
+from src.ai.pure_ai.multi_agent_pipeline import MultiAgentPipeline
 from src.ai.pure_ai.schema_validator import LineNumberValidator
+from src.core.config import Config
 from src.nvd.nvd_query_adapter import NVDQueryAdapter
 
 console = Console()
@@ -44,8 +44,8 @@ class PureAIAnalyzer:
         self.initialized = False
         self.debug_logs: List[str] = []
         self.nvd_adapter = NVDQueryAdapter()
-        self.reject_unverified_findings: bool = getattr(config, 'reject_unverified_findings', True)
-    
+        self.reject_unverified_findings: bool = getattr(config, "reject_unverified_findings", True)
+
     async def _initialize(self):
         """异步初始化"""
         try:
@@ -87,6 +87,7 @@ class PureAIAnalyzer:
 
             # 映射提供商名称到AIProvider枚举
             from src.ai.client import AIProvider
+
             provider_map = {
                 "anthropic": AIProvider.ANTHROPIC,
                 "openai": AIProvider.OPENAI,
@@ -125,19 +126,19 @@ class PureAIAnalyzer:
                     console.print(f"[yellow][!] API访问验证异常: {e}[/yellow]")
 
                 # 创建pipeline配置，包含模型信息
-                pipeline_config = {
-                    'max_retries': 3,
-                    'model': self.ai_model
-                }
+                pipeline_config = {"max_retries": 3, "model": self.ai_model}
                 self.pipeline = MultiAgentPipeline(self.client, pipeline_config)
                 self.initialized = True  # 标记初始化成功
-                console.print(f"[green][OK] 纯AI分析器初始化成功[/green] (提供商: {self.ai_provider}, 模型: {self.ai_model})")
+                console.print(
+                    f"[green][OK] 纯AI分析器初始化成功[/green] (提供商: {self.ai_provider}, 模型: {self.ai_model})"
+                )
             else:
                 console.print(f"[red][X] 纯AI分析器初始化失败：无法获取AI客户端[/red]")
                 console.print(f"[dim]请检查API密钥配置和网络连接[/dim]")
         except Exception as e:
             console.print(f"[red][X] 纯AI分析器初始化失败: {e}[/red]")
             import traceback
+
             traceback.print_exc()
             self.initialized = False
 
@@ -165,9 +166,9 @@ class PureAIAnalyzer:
         print(f"[DEBUG] 多Agent分析完成，结果类型: {type(result)}")
 
         # 收集 pipeline 的 debug_logs (过滤掉WARN消息)
-        if isinstance(result, dict) and 'debug_logs' in result:
-            pipeline_logs = result['debug_logs']
-            filtered_logs = [log for log in pipeline_logs if '[WARN]' not in str(log)]
+        if isinstance(result, dict) and "debug_logs" in result:
+            pipeline_logs = result["debug_logs"]
+            filtered_logs = [log for log in pipeline_logs if "[WARN]" not in str(log)]
             self.debug_logs.extend(filtered_logs)
 
         # 验证结果完整性
@@ -206,23 +207,25 @@ class PureAIAnalyzer:
 
             for item in evidence:
                 if isinstance(item, dict):
-                    item_confidence = item.get('confidence', 0.5)
+                    item_confidence = item.get("confidence", 0.5)
                     if isinstance(item_confidence, (int, float)):
                         evidence_quality_score += item_confidence
                         confidence_values.append(float(item_confidence))
 
-                    code_snippet = item.get('code_snippet', '')
-                    location = item.get('location', '')
-                    reason = item.get('reason', '')
+                    code_snippet = item.get("code_snippet", "")
+                    location = item.get("location", "")
+                    reason = item.get("reason", "")
 
                     if code_snippet and len(code_snippet) > 10:
                         context_completeness += 0.15
-                    if location and location not in ('N/A', 'Unknown', '', None):
+                    if location and location not in ("N/A", "Unknown", "", None):
                         context_completeness += 0.1
                     if reason and len(reason) > 20:
                         attack_path_clarity += 0.15
 
-            evidence_quality_avg = evidence_quality_score / evidence_count if evidence_count > 0 else 0.0
+            evidence_quality_avg = (
+                evidence_quality_score / evidence_count if evidence_count > 0 else 0.0
+            )
 
             if evidence_count <= 3:
                 base_confidence = 0.3
@@ -235,10 +238,10 @@ class PureAIAnalyzer:
             attack_path_clarity = min(attack_path_clarity, 0.3)
 
             dynamic_confidence = (
-                base_confidence * 0.4 +
-                evidence_quality_avg * 0.3 +
-                context_completeness +
-                attack_path_clarity
+                base_confidence * 0.4
+                + evidence_quality_avg * 0.3
+                + context_completeness
+                + attack_path_clarity
             )
 
             confidence_dispersion = self._calculate_confidence_dispersion(confidence_values)
@@ -247,8 +250,8 @@ class PureAIAnalyzer:
 
             return min(max(dynamic_confidence, 0.0), 0.95)
 
-        if isinstance(evidence, dict) and 'confidence' in evidence:
-            conf = evidence['confidence']
+        if isinstance(evidence, dict) and "confidence" in evidence:
+            conf = evidence["confidence"]
             if isinstance(conf, (int, float)):
                 return float(conf)
 
@@ -268,7 +271,7 @@ class PureAIAnalyzer:
 
         mean = sum(confidence_values) / len(confidence_values)
         variance = sum((x - mean) ** 2 for x in confidence_values) / len(confidence_values)
-        return variance ** 0.5
+        return variance**0.5
 
     def normalize_severity(self, severity: str) -> str:
         """确保严重等级合法
@@ -280,29 +283,31 @@ class PureAIAnalyzer:
             合法的严重等级（CRITICAL/HIGH/MEDIUM/LOW/INFO）
         """
         if not severity:
-            return 'MEDIUM'
+            return "MEDIUM"
 
-        valid_severities = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW', 'INFO']
+        valid_severities = ["CRITICAL", "HIGH", "MEDIUM", "LOW", "INFO"]
         normalized = severity.upper().strip()
 
         if normalized in valid_severities:
             return normalized
 
-        if 'critical' in normalized or '严重' in severity:
-            return 'CRITICAL'
-        elif 'high' in normalized or '高' in severity:
-            return 'HIGH'
-        elif 'medium' in normalized or '中' in severity:
-            return 'MEDIUM'
-        elif 'low' in normalized or '低' in severity:
-            return 'LOW'
-        elif 'info' in normalized or '信息' in severity:
-            return 'INFO'
+        if "critical" in normalized or "严重" in severity:
+            return "CRITICAL"
+        elif "high" in normalized or "高" in severity:
+            return "HIGH"
+        elif "medium" in normalized or "中" in severity:
+            return "MEDIUM"
+        elif "low" in normalized or "低" in severity:
+            return "LOW"
+        elif "info" in normalized or "信息" in severity:
+            return "INFO"
 
         print(f"[DEBUG] [normalize_severity] 未知严重等级 '{severity}'，使用默认 '中'")
-        return 'MEDIUM'
+        return "MEDIUM"
 
-    def _extract_location_from_evidence(self, finding: Dict[str, Any], file_path_context: str) -> str:
+    def _extract_location_from_evidence(
+        self, finding: Dict[str, Any], file_path_context: str
+    ) -> str:
         """从evidence中提取位置信息
 
         Args:
@@ -312,28 +317,30 @@ class PureAIAnalyzer:
         Returns:
             提取的位置字符串
         """
-        evidence = finding.get('evidence', [])
+        evidence = finding.get("evidence", [])
         if not evidence:
             return file_path_context
 
         if isinstance(evidence, list):
             for ev in evidence:
                 if isinstance(ev, dict):
-                    loc = ev.get('location', '')
-                    if loc and loc not in ('N/A', 'Unknown', '', None):
+                    loc = ev.get("location", "")
+                    if loc and loc not in ("N/A", "Unknown", "", None):
                         if isinstance(loc, (int, float)):
                             return f"{Path(file_path_context).name}:{int(loc)}"
-                        if ':' in str(loc) and str(loc).count(':') >= 2:
+                        if ":" in str(loc) and str(loc).count(":") >= 2:
                             return str(loc)
-                        if ':' in str(loc):
-                            parts = str(loc).rsplit(':', 1)
-                            if len(parts) == 2 and parts[0].endswith(('.java', '.py', '.js', '.ts', '.go', '.rb')):
+                        if ":" in str(loc):
+                            parts = str(loc).rsplit(":", 1)
+                            if len(parts) == 2 and parts[0].endswith(
+                                (".java", ".py", ".js", ".ts", ".go", ".rb")
+                            ):
                                 return str(loc)
                         return f"{Path(file_path_context).name}:{loc}"
         elif isinstance(evidence, dict):
-            loc = evidence.get('location', '')
-            if loc and loc not in ('N/A', 'Unknown', '', None):
-                if ':' in str(loc) and str(loc).count(':') >= 2:
+            loc = evidence.get("location", "")
+            if loc and loc not in ("N/A", "Unknown", "", None):
+                if ":" in str(loc) and str(loc).count(":") >= 2:
                     return str(loc)
                 return f"{Path(file_path_context).name}:{loc}"
 
@@ -355,7 +362,7 @@ class PureAIAnalyzer:
             path = Path(file_path)
             if not path.exists():
                 return False
-            with open(path, 'r', encoding='utf-8', errors='ignore') as f:
+            with open(path, "r", encoding="utf-8", errors="ignore") as f:
                 lines = f.readlines()
                 return 0 < line_num <= len(lines)
         except Exception:
@@ -376,17 +383,19 @@ class PureAIAnalyzer:
             path = Path(file_path)
             if not path.exists():
                 return ""
-            with open(path, 'r', encoding='utf-8', errors='ignore') as f:
+            with open(path, "r", encoding="utf-8", errors="ignore") as f:
                 lines = f.readlines()
                 if line_num <= 0 or line_num > len(lines):
                     return ""
                 start = max(0, line_num - context_lines)
                 end = min(len(lines), line_num + context_lines + 1)
-                return ''.join(lines[start:end])
+                return "".join(lines[start:end])
         except Exception:
             return ""
 
-    def _verify_code_pattern_in_file(self, file_path: str, line_num: int, pattern_keywords: List[str]) -> bool:
+    def _verify_code_pattern_in_file(
+        self, file_path: str, line_num: int, pattern_keywords: List[str]
+    ) -> bool:
         """验证代码模式是否在指定行附近存在
 
         Args:
@@ -408,7 +417,9 @@ class PureAIAnalyzer:
         except Exception:
             return False
 
-    def _validate_finding_location(self, finding: Dict[str, Any], file_path_context: str) -> Dict[str, Any]:
+    def _validate_finding_location(
+        self, finding: Dict[str, Any], file_path_context: str
+    ) -> Dict[str, Any]:
         """验证漏洞发现的位置和代码是否真实存在
 
         Args:
@@ -418,23 +429,27 @@ class PureAIAnalyzer:
         Returns:
             验证结果，包含 is_valid, reason, verified_line 等信息
         """
-        location = finding.get('location', '')
+        location = finding.get("location", "")
         if not location:
-            return {'is_valid': False, 'reason': '位置信息为空'}
+            return {"is_valid": False, "reason": "位置信息为空"}
 
         # 解析位置：可能是 "文件名:行号" 或 "完整路径:行号" 格式
         file_name = ""
         line_num = 0
 
-        if isinstance(location, str) and ':' in location:
-            parts = location.rsplit(':', 1)
+        if isinstance(location, str) and ":" in location:
+            parts = location.rsplit(":", 1)
             if len(parts) == 2:
                 potential_drive = parts[0]
                 potential_line = parts[1]
                 if len(potential_drive) == 1 and potential_drive.isalpha():
-                    file_name = potential_drive + ':' + potential_line.rsplit(':', 1)[0] if ':' in potential_line else location
+                    file_name = (
+                        potential_drive + ":" + potential_line.rsplit(":", 1)[0]
+                        if ":" in potential_line
+                        else location
+                    )
                     try:
-                        line_num = int(potential_line.rsplit(':', 1)[-1])
+                        line_num = int(potential_line.rsplit(":", 1)[-1])
                     except ValueError:
                         line_num = 0
                 else:
@@ -442,10 +457,10 @@ class PureAIAnalyzer:
                     try:
                         line_num = int(parts[1])
                     except ValueError:
-                        return {'is_valid': False, 'reason': f'行号无效: {parts[1]}'}
+                        return {"is_valid": False, "reason": f"行号无效: {parts[1]}"}
         elif isinstance(location, dict):
-            file_name = location.get('file', '')
-            line_num = location.get('line', 0)
+            file_name = location.get("file", "")
+            line_num = location.get("line", 0)
 
         # 确定要检查的文件路径
         check_file = file_name if file_name else file_path_context
@@ -459,36 +474,37 @@ class PureAIAnalyzer:
         if line_num > 0 and check_file:
             if not self._line_exists_in_file(check_file, line_num):
                 return {
-                    'is_valid': False,
-                    'reason': f'声称的位置 {check_file}:{line_num} 行不存在或文件无法读取',
-                    'file': check_file,
-                    'line': line_num
+                    "is_valid": False,
+                    "reason": f"声称的位置 {check_file}:{line_num} 行不存在或文件无法读取",
+                    "file": check_file,
+                    "line": line_num,
                 }
 
             # 如果发现中有 code_snippet，验证关键词是否在代码中
-            code_snippet = finding.get('code_snippet', '')
+            code_snippet = finding.get("code_snippet", "")
             if code_snippet:
                 # 提取关键词（过滤掉常见的非代码词）
                 keywords = [kw.strip() for kw in code_snippet.split() if len(kw) > 3]
-                suspicious_keywords = ['EXAMPLE', 'SAMPLE', 'TEST', 'DEMO', 'FIXME', 'TODO', 'XXX']
-                meaningful_keywords = [kw for kw in keywords if kw.upper() not in suspicious_keywords]
+                suspicious_keywords = ["EXAMPLE", "SAMPLE", "TEST", "DEMO", "FIXME", "TODO", "XXX"]
+                meaningful_keywords = [
+                    kw for kw in keywords if kw.upper() not in suspicious_keywords
+                ]
                 if meaningful_keywords:
-                    if not self._verify_code_pattern_in_file(check_file, line_num, meaningful_keywords[:5]):
+                    if not self._verify_code_pattern_in_file(
+                        check_file, line_num, meaningful_keywords[:5]
+                    ):
                         return {
-                            'is_valid': False,
-                            'reason': f'声称的问题代码模式在指定位置附近未找到匹配',
-                            'file': check_file,
-                            'line': line_num
+                            "is_valid": False,
+                            "reason": f"声称的问题代码模式在指定位置附近未找到匹配",
+                            "file": check_file,
+                            "line": line_num,
                         }
 
-        return {
-            'is_valid': True,
-            'reason': '位置验证通过',
-            'file': check_file,
-            'line': line_num
-        }
+        return {"is_valid": True, "reason": "位置验证通过", "file": check_file, "line": line_num}
 
-    def _generate_recommendation(self, risk_type: str, severity: str, description: str, evidence: str) -> str:
+    def _generate_recommendation(
+        self, risk_type: str, severity: str, description: str, evidence: str
+    ) -> str:
         """根据风险类型和严重程度生成具体修复建议
 
         Args:
@@ -504,14 +520,51 @@ class PureAIAnalyzer:
         desc_upper = description.upper()
         combined = f"{risk_upper} {desc_upper}"
 
-        high_keywords = ["SQL", "INJECT", "XSS", "CSRF", "COMMAND", "RCE", "PRIVILEGE",
-                         "AUTHENTICATION", "CREDENTIAL", "SECRET", "KEY", "PASSWORD",
-                         "UNSAFE", "DESERIALIZ", "SSRF", "PATH", "SENSITIVE",
-                         "DATA EXPOSURE", "JWT", "TOKEN", "EXPOSURE", "REDIS",
-                         "DENIAL", "DOS", "SERVICE", "ATTACK", "SCAN"]
-        medium_keywords = ["WEAK", "DEFAULT", "MISSING", "HARDCODED", "CONFIGURATION",
-                          "BROKEN", "INSECURE", "TRAVERSAL", "CONTEXT", "TENANT",
-                          "CUSTOM SECURITY", "AUTHORIZATION", "PERMISSION", "越权"]
+        high_keywords = [
+            "SQL",
+            "INJECT",
+            "XSS",
+            "CSRF",
+            "COMMAND",
+            "RCE",
+            "PRIVILEGE",
+            "AUTHENTICATION",
+            "CREDENTIAL",
+            "SECRET",
+            "KEY",
+            "PASSWORD",
+            "UNSAFE",
+            "DESERIALIZ",
+            "SSRF",
+            "PATH",
+            "SENSITIVE",
+            "DATA EXPOSURE",
+            "JWT",
+            "TOKEN",
+            "EXPOSURE",
+            "REDIS",
+            "DENIAL",
+            "DOS",
+            "SERVICE",
+            "ATTACK",
+            "SCAN",
+        ]
+        medium_keywords = [
+            "WEAK",
+            "DEFAULT",
+            "MISSING",
+            "HARDCODED",
+            "CONFIGURATION",
+            "BROKEN",
+            "INSECURE",
+            "TRAVERSAL",
+            "CONTEXT",
+            "TENANT",
+            "CUSTOM SECURITY",
+            "AUTHORIZATION",
+            "PERMISSION",
+            "越权",
+        ]
         low_keywords = ["INFO", "LOGGING", "DEBUG", "REMEDIATION", "BEST", "PRACTICE"]
 
         if any(kw in combined for kw in high_keywords):
@@ -520,11 +573,16 @@ class PureAIAnalyzer:
                 "HIGH": "优先修复",
                 "MEDIUM": "尽快修复",
                 "LOW": "建议修复",
-                "INFO": "可选择修复"
+                "INFO": "可选择修复",
             }.get(severity.upper() if severity else "MEDIUM", "建议修复")
 
             if "HARDCODED" in combined or "硬编码" in combined:
-                if "CREDENTIAL" in combined or "PASSWORD" in combined or "SECRET" in combined or "KEY" in combined:
+                if (
+                    "CREDENTIAL" in combined
+                    or "PASSWORD" in combined
+                    or "SECRET" in combined
+                    or "KEY" in combined
+                ):
                     return f"{severity_advice}：将硬编码的凭据移动到安全存储（如环境变量或密钥管理系统），实施凭据轮换策略"
                 elif "PATH" in combined or "路径" in combined:
                     return f"{severity_advice}：将硬编码的路径改为从配置文件或环境变量读取，提高可移植性"
@@ -538,7 +596,12 @@ class PureAIAnalyzer:
                 return f"{severity_advice}：为所有状态修改请求添加CSRF Token验证，使用SameSite Cookie"
             elif "COMMAND" in combined or "RCE" in combined:
                 return f"{severity_advice}：避免直接执行用户输入，使用安全的API或白名单验证"
-            elif "AUTHENTICATION" in combined or "CREDENTIAL" in combined or "PASSWORD" in combined or "SECRET" in combined:
+            elif (
+                "AUTHENTICATION" in combined
+                or "CREDENTIAL" in combined
+                or "PASSWORD" in combined
+                or "SECRET" in combined
+            ):
                 return f"{severity_advice}：使用安全的方式存储凭据，实施强密码策略和密钥轮换"
             elif "PRIVILEGE" in combined or "ACCESS" in combined:
                 return f"{severity_advice}：实施最小权限原则，使用基于角色的访问控制(RBAC)"
@@ -548,15 +611,42 @@ class PureAIAnalyzer:
                 return f"{severity_advice}：对用户输入进行路径规范化，使用白名单验证文件路径"
             elif "DESERIALIZ" in combined:
                 return f"{severity_advice}：避免反序列化不受信任的数据，使用安全的序列化方案"
-            elif "SENSITIVE" in combined or "DATA EXPOSURE" in combined or "EXPOSURE" in combined or "敏感" in description or "暴露" in description:
+            elif (
+                "SENSITIVE" in combined
+                or "DATA EXPOSURE" in combined
+                or "EXPOSURE" in combined
+                or "敏感" in description
+                or "暴露" in description
+            ):
                 return f"{severity_advice}：对敏感数据进行脱敏处理，最小化令牌中存储的信息，仅保留必要的用户标识"
             elif "JWT" in combined or "TOKEN" in combined or "令牌" in description:
                 return f"{severity_advice}：确保令牌不包含敏感信息，使用令牌加密或签名保护完整性"
-            elif "REDIS" in combined or "DENIAL" in combined or "DOS" in combined or "SERVICE" in combined or "ATTACK" in combined or "SCAN" in combined or "服务" in description or "拒绝" in description:
+            elif (
+                "REDIS" in combined
+                or "DENIAL" in combined
+                or "DOS" in combined
+                or "SERVICE" in combined
+                or "ATTACK" in combined
+                or "SCAN" in combined
+                or "服务" in description
+                or "拒绝" in description
+            ):
                 return f"{severity_advice}：优化查询效率，对大键集合使用游标遍历而非一次性加载，限制资源消耗"
-            elif "AUTHENTICATION" in combined or "CREDENTIAL" in combined or "PASSWORD" in combined or "SECRET" in combined:
+            elif (
+                "AUTHENTICATION" in combined
+                or "CREDENTIAL" in combined
+                or "PASSWORD" in combined
+                or "SECRET" in combined
+            ):
                 return f"{severity_advice}：使用安全的方式存储凭据，实施强密码策略和密钥轮换"
-            elif "PRIVILEGE" in combined or "ACCESS" in combined or "AUTHORIZATION" in combined or "PERMISSION" in combined or "越权" in description or "授权" in description:
+            elif (
+                "PRIVILEGE" in combined
+                or "ACCESS" in combined
+                or "AUTHORIZATION" in combined
+                or "PERMISSION" in combined
+                or "越权" in description
+                or "授权" in description
+            ):
                 return f"{severity_advice}：实施最小权限原则，使用基于角色的访问控制(RBAC)，验证用户操作权限"
             else:
                 return f"{severity_advice}：基于代码证据评估后实施相应安全措施"
@@ -567,7 +657,7 @@ class PureAIAnalyzer:
                 "HIGH": "优先修复",
                 "MEDIUM": "尽快修复",
                 "LOW": "建议修复",
-                "INFO": "可选择修复"
+                "INFO": "可选择修复",
             }.get(severity.upper() if severity else "LOW", "建议修复")
 
             if "WEAK" in combined or "DEFAULT" in combined:
@@ -578,7 +668,12 @@ class PureAIAnalyzer:
                 return f"{severity_advice}：将硬编码的配置移动到安全存储（如环境变量或密钥管理系统）"
             elif "CONFIGURATION" in combined or "CONFIG" in combined or "配置" in description:
                 return f"{severity_advice}：修正安全配置，遵循安全最佳实践"
-            elif "CONTEXT" in combined or "TENANT" in combined or "上下文" in description or "租户" in description:
+            elif (
+                "CONTEXT" in combined
+                or "TENANT" in combined
+                or "上下文" in description
+                or "租户" in description
+            ):
                 return f"{severity_advice}：确保上下文隔离正确实现，验证多线程/异步场景下的上下文传递"
             elif "CUSTOM SECURITY" in combined or "自定义" in description:
                 return f"{severity_advice}：审查自定义安全逻辑，进行代码审计和渗透测试"
@@ -615,142 +710,101 @@ class PureAIAnalyzer:
             "SQL_INJECTION": "SQL注入",
             "SQLINJECTION": "SQL注入",
             "SQL": "SQL注入",
-
             "XSS": "跨站脚本攻击",
             "CROSS-SITE SCRIPTING": "跨站脚本攻击",
             "CROSS SITE SCRIPTING": "跨站脚本攻击",
-
             "CSRF": "跨站请求伪造",
             "CROSS-SITE REQUEST FORGERY": "跨站请求伪造",
             "CROSS SITE REQUEST FORGERY": "跨站请求伪造",
-
             "SSRF": "服务器端请求伪造",
             "SERVER-SIDE REQUEST FORGERY": "服务器端请求伪造",
-
             "PATH TRAVERSAL": "路径遍历",
             "PATH_TRAVERSAL": "路径遍历",
             "DIRECTORY TRAVERSAL": "目录遍历",
-
             "COMMAND INJECTION": "命令注入",
             "COMMAND_INJECTION": "命令注入",
             "RCE": "远程代码执行",
             "REMOTE CODE EXECUTION": "远程代码执行",
-
             "XXE": "XML外部实体注入",
-
             "LFI": "本地文件包含",
             "LOCAL FILE INCLUSION": "本地文件包含",
-
             "RFI": "远程文件包含",
             "REMOTE FILE INCLUSION": "远程文件包含",
-
             "IDOR": "越权访问",
             "INSECURE DIRECT OBJECT REFERENCE": "越权访问",
-
             "SSTI": "服务器端模板注入",
             "SERVER SIDE TEMPLATE INJECTION": "服务器端模板注入",
-
             "SENSITIVE DATA EXPOSURE": "敏感数据泄露",
             "DATA EXPOSURE": "敏感数据泄露",
             "INFORMATION DISCLOSURE": "信息泄露",
-
             "WEAK CRYPTOGRAPHY": "弱加密算法",
             "WEAK ENCRYPTION": "弱加密算法",
             "INSECURE ENCRYPTION": "不安全加密",
-
             "HARDCODED CREDENTIAL": "硬编码凭据",
             "HARDCODED PASSWORD": "硬编码密码",
             "HARDCODED SECRET": "硬编码密钥",
             "HARDCODED API KEY": "硬编码API密钥",
-
             "JWT VULNERABILITY": "JWT安全漏洞",
             "JWT": "令牌安全漏洞",
             "TOKEN": "令牌安全漏洞",
             "BEARER TOKEN": "令牌安全漏洞",
-
             "CORS MISCONFIGURATION": "CORS配置不当",
             "CORS": "跨域资源共享配置不当",
-
             "DESERIALIZATION": "反序列化漏洞",
             "INSECURE DESERIALIZATION": "不安全反序列化",
-
             "OPEN REDIRECT": "开放重定向",
             "UNVALIDATED REDIRECT": "未验证重定向",
-
             "BUFFER OVERFLOW": "缓冲区溢出",
-
             "PRINTF FORMAT STRING": "格式化字符串漏洞",
-
             "PATH DEPENDENCY": "路径依赖风险",
             "HARDCODED PATH": "硬编码路径",
-
             "CREDENTIAL": "凭据安全风险",
             "PASSWORD": "密码安全风险",
             "SECRET": "密钥安全风险",
             "APIKEY": "API密钥安全风险",
-
             "FRAME OPTIONS": "X-Frame-Options配置问题",
             "X-FRAME-OPTIONS": "X-Frame-Options配置问题",
-
             "CSRF PROTECTION": "CSRF保护缺失",
             "CSRF PROTECTION DISABLED": "CSRF保护被禁用",
-
             "AUTHORIZATION": "授权问题",
             "UNAUTHORIZED": "未授权访问",
             "AUTHORIZATION BYPASS": "授权绕过",
-
             "AUTHENTICATION": "认证问题",
             "WEAK AUTHENTICATION": "弱认证",
-
             "SESSION": "会话管理问题",
             "SESSION FIXATION": "会话固定",
-
             "REMOTE TOKEN SERVICE": "远程令牌服务风险",
             "REMOTETOKENSERVICES": "远程令牌服务风险",
-
             "SWAGGER": "Swagger文档暴露",
             "API DOCUMENTATION": "API文档暴露",
-
             "DEBUG MODE": "调试模式启用",
             "DEBUG": "调试信息泄露",
-
             "ERROR HANDLING": "错误处理问题",
             "STACK TRACE": "堆栈跟踪泄露",
-
             "XML INJECTION": "XML注入",
             "JSON INJECTION": "JSON注入",
-
             "CLICKJACKING": "点击劫持",
-
             "MIME SNIFFING": "MIME类型嗅探",
-
             "DOM XSS": "DOM型跨站脚本",
-
             "STORAGE": "存储安全风险",
             "LOCAL STORAGE": "本地存储风险",
             "SESSION STORAGE": "会话存储风险",
-
             "BEST PRACTICE": "最佳实践违规",
             "CODE SMELL": "代码规范问题",
-
             "CONFIGURATION": "配置问题",
             "MISCONFIGURATION": "配置错误",
             "INSECURE CONFIGURATION": "不安全配置",
-
             "SUSPICIOUS PATTERN": "可疑模式",
             "SUSPICIOUS_PATTERN": "可疑模式",
             "SUSPICIOUS": "可疑模式",
             "PATTERN": "模式",
-
             "WEAK SECURITY SIGNAL": "弱安全信号",
             "WEAK_SECURITY_SIGNAL": "弱安全信号",
             "WEAK_SIGNAL": "弱安全信号",
-
             "SECURITY MISCONFIGURATION": "安全配置错误",
             "INSECURE SETTING": "不安全设置",
             "INSECURE CONFIG": "不安全配置",
             "SECURITY CONFIG": "安全配置",
-
             "HARDCODED": "硬编码",
             "HARDCODED VALUE": "硬编码值",
             "HARDCODED CONFIG": "硬编码配置",
@@ -816,15 +870,30 @@ class PureAIAnalyzer:
                 return chinese
 
         # 处理蛇形命名（snake_case）：拆分为单词并逐个翻译
-        if '_' in vulnerability and not self._contains_chinese(vulnerability):
+        if "_" in vulnerability and not self._contains_chinese(vulnerability):
             snake_case_translation = self._translate_snake_case_name(vulnerability)
             if snake_case_translation and snake_case_translation != vulnerability:
                 return snake_case_translation
 
-        if any(term in vuln_upper for term in ["VULNERABILITY", "VULN", "ISSUE", "PROBLEM", "RISK", "WEAK", "INSECURE", "MISSING", "WITHOUT"]):
+        if any(
+            term in vuln_upper
+            for term in [
+                "VULNERABILITY",
+                "VULN",
+                "ISSUE",
+                "PROBLEM",
+                "RISK",
+                "WEAK",
+                "INSECURE",
+                "MISSING",
+                "WITHOUT",
+            ]
+        ):
             if vulnerability.endswith("相关安全风险"):
                 return vulnerability
-            if any(term in vuln_upper for term in ["UNVERIFIED", "UNKNOWN", "GENERIC", "PLACEHOLDER"]):
+            if any(
+                term in vuln_upper for term in ["UNVERIFIED", "UNKNOWN", "GENERIC", "PLACEHOLDER"]
+            ):
                 return vulnerability
             return f"{vulnerability}相关安全风险"
 
@@ -833,7 +902,7 @@ class PureAIAnalyzer:
     def _contains_chinese(self, text: str) -> bool:
         """检查文本是否包含中文字符"""
         for char in text:
-            if '\u4e00' <= char <= '\u9fff':
+            if "\u4e00" <= char <= "\u9fff":
                 return True
         return False
 
@@ -846,7 +915,7 @@ class PureAIAnalyzer:
         Returns:
             中文翻译（如 CSRF保护被禁用）
         """
-        words = snake_name.split('_')
+        words = snake_name.split("_")
         if len(words) < 2:
             return snake_name
 
@@ -1028,7 +1097,7 @@ class PureAIAnalyzer:
                 cwe_results = self.nvd_adapter.match_cwe(keywords, limit=1)
                 if cwe_results and len(cwe_results) > 0:
                     cwe_info = cwe_results[0]
-                    nvd_context = cwe_info.get('cwe_description', '')
+                    nvd_context = cwe_info.get("cwe_description", "")
             except Exception:
                 pass
 
@@ -1050,11 +1119,9 @@ class PureAIAnalyzer:
                 return self._normalize_vulnerability_name(vulnerability)
 
             from src.ai.models import AIRequest
+
             ai_request = AIRequest(
-                prompt=prompt,
-                model=self.ai_model,
-                temperature=0.1,
-                max_tokens=100
+                prompt=prompt, model=self.ai_model, temperature=0.1, max_tokens=100
             )
             response = await self.client.generate(ai_request)
             translation = response.content.strip()
@@ -1081,13 +1148,17 @@ class PureAIAnalyzer:
             loop = asyncio.get_event_loop()
             if loop.is_running():
                 try:
-                    future = asyncio.ensure_future(self._translate_vulnerability_name_ai_async(vulnerability))
+                    future = asyncio.ensure_future(
+                        self._translate_vulnerability_name_ai_async(vulnerability)
+                    )
                     return loop.run_until_complete(asyncio.shield(future))
                 except RuntimeError:
                     pass
             else:
                 try:
-                    return loop.run_until_complete(self._translate_vulnerability_name_ai_async(vulnerability))
+                    return loop.run_until_complete(
+                        self._translate_vulnerability_name_ai_async(vulnerability)
+                    )
                 except RuntimeError:
                     pass
         except Exception:
@@ -1106,31 +1177,52 @@ class PureAIAnalyzer:
             详细的中文描述
         """
         vuln_upper = vulnerability.upper()
-        evidence_list = finding.get('evidence', [])
+        evidence_list = finding.get("evidence", [])
         evidence_text = ""
         if evidence_list and isinstance(evidence_list, list):
-            evidence_text = " ".join([
-                e.get('reason', e.get('description', '')) if isinstance(e, dict) else str(e)
-                for e in evidence_list[:3]
-            ])
+            evidence_text = " ".join(
+                [
+                    e.get("reason", e.get("description", "")) if isinstance(e, dict) else str(e)
+                    for e in evidence_list[:3]
+                ]
+            )
 
         combined = f"{vuln_upper} {evidence_text.upper()}"
 
         if "SQL" in vuln_upper or "INJECT" in vuln_upper:
             return "SQL注入漏洞：攻击者可通过在用户输入中注入恶意SQL语句来操作数据库，可能导致敏感数据泄露、数据篡改或服务器沦陷。常见于使用字符串拼接构建SQL查询的场景。"
-        elif "UNAUTHORIZED" in vuln_upper or "ACCESS" in vuln_upper or "未授权" in vulnerability or "越权" in vulnerability:
+        elif (
+            "UNAUTHORIZED" in vuln_upper
+            or "ACCESS" in vuln_upper
+            or "未授权" in vulnerability
+            or "越权" in vulnerability
+        ):
             return "未授权访问/越权漏洞：应用程序未对用户操作权限进行充分验证，导致低权限用户可执行高权限操作或访问他人资源。可能导致数据泄露、账户劫持或业务逻辑被恶意利用。"
         elif "XSS" in vuln_upper or "跨站脚本" in vulnerability:
             return "跨站脚本(XSS)漏洞：攻击者可在页面中注入恶意JavaScript代码，窃取用户Cookie、会话令牌或劫持用户操作。常见于未对用户输入进行HTML编码就输出到页面的场景。"
         elif "CSRF" in vuln_upper or "跨站请求伪造" in vulnerability:
             return "跨站请求伪造(CSRF)漏洞：攻击者诱骗已登录用户在不知情的情况下发起恶意请求，可导致账户设置被修改、密码被更改等敏感操作被执行。"
-        elif "PATH" in vuln_upper and ("TRAVERSAL" in vuln_upper or "遍历" in vulnerability or "路径" in vulnerability):
+        elif "PATH" in vuln_upper and (
+            "TRAVERSAL" in vuln_upper or "遍历" in vulnerability or "路径" in vulnerability
+        ):
             return "路径遍历漏洞：应用程序对用户提供的文件路径未进行充分验证，攻击者可通过构造 '../' 等特殊字符序列访问服务器上的敏感文件。"
         elif "COMMAND" in vuln_upper or "RCE" in vuln_upper or "命令注入" in vulnerability:
             return "命令注入/远程代码执行漏洞：应用程序将用户输入传递给系统命令执行函数，攻击者可通过构造恶意命令在服务器上执行任意代码，获取服务器完全控制权。"
-        elif "CREDENTIAL" in vuln_upper or "PASSWORD" in vuln_upper or "SECRET" in vuln_upper or "KEY" in vuln_upper or "凭据" in vulnerability or "密码" in vulnerability:
+        elif (
+            "CREDENTIAL" in vuln_upper
+            or "PASSWORD" in vuln_upper
+            or "SECRET" in vuln_upper
+            or "KEY" in vuln_upper
+            or "凭据" in vulnerability
+            or "密码" in vulnerability
+        ):
             return "硬编码凭据风险：代码中包含硬编码的敏感凭据（如密码、API密钥、加密密钥），可能被源码泄露或通过代码审查被发现，造成严重安全风险。建议使用环境变量或密钥管理系统存储敏感信息。"
-        elif "SENSITIVE" in vuln_upper or "DATA EXPOSURE" in vuln_upper or "暴露" in vulnerability or "泄露" in vulnerability:
+        elif (
+            "SENSITIVE" in vuln_upper
+            or "DATA EXPOSURE" in vuln_upper
+            or "暴露" in vulnerability
+            or "泄露" in vulnerability
+        ):
             return "敏感数据泄露：应用程序在响应、日志或令牌中暴露了不应公开的敏感信息（如用户密码、身份证号、银行卡号等），违反数据保护合规要求。"
         elif "JWT" in vuln_upper or "TOKEN" in vuln_upper or "令牌" in vulnerability:
             return "令牌安全配置问题：令牌的生成、验证或存储存在安全缺陷，可能被伪造、窃取或重放，导致会话劫持或身份冒充。"
@@ -1138,7 +1230,12 @@ class PureAIAnalyzer:
             return "服务端请求伪造(SSRF)漏洞：应用程序从用户指定URL获取资源时未进行充分验证，攻击者可利用此漏洞访问内网服务、读取本地文件或探测内网结构。"
         elif "DESERIALIZ" in vuln_upper or "反序列化" in vulnerability:
             return "不安全的反序列化漏洞：应用程序反序列化来自不可信源的数据，攻击者可通过构造恶意序列化对象执行任意代码或进行拒绝服务攻击。"
-        elif "WEAK" in vuln_upper or "ENCRYPT" in vuln_upper or "加密" in vulnerability or "CRYPTO" in vuln_upper:
+        elif (
+            "WEAK" in vuln_upper
+            or "ENCRYPT" in vuln_upper
+            or "加密" in vulnerability
+            or "CRYPTO" in vuln_upper
+        ):
             return "弱加密算法风险：使用了存在已知攻击方法或密钥长度不足的加密算法（如MD5、SHA1、DES等），攻击者可能破解敏感数据。"
         elif "CORS" in vuln_upper or "跨域" in vulnerability:
             return "CORS配置不当：跨域资源共享(CORS)策略配置过于宽松，允许任意来源的跨域请求，可能导致敏感API被恶意网站调用。"
@@ -1146,43 +1243,93 @@ class PureAIAnalyzer:
             return "文件上传漏洞：应用程序对用户上传文件的类型、内容和大小缺乏充分验证，攻击者可上传恶意文件（如WebShell）并执行任意代码。"
         elif "REDIS" in vuln_upper or "CACHE" in vuln_upper or "缓存" in vulnerability:
             return "缓存安全配置问题：缓存机制未进行适当的访问控制或数据隔离，不同用户/租户的数据可能发生混淆，导致信息泄露。"
-        elif "HARDCODED" in vuln_upper or "硬编码" in vulnerability or "RESOURCE" in vuln_upper or "路径" in vulnerability or "配置" in vulnerability:
+        elif (
+            "HARDCODED" in vuln_upper
+            or "硬编码" in vulnerability
+            or "RESOURCE" in vuln_upper
+            or "路径" in vulnerability
+            or "配置" in vulnerability
+        ):
             if "PATH" in vuln_upper or "路径" in vulnerability:
                 return "硬编码路径风险：代码中包含硬编码的文件路径或资源路径，可能导致在不同环境或部署配置下出现路径错误，降低系统的可移植性和配置灵活性。"
-            elif "CREDENTIAL" in vuln_upper or "PASSWORD" in vuln_upper or "SECRET" in vuln_upper or "KEY" in vuln_upper:
+            elif (
+                "CREDENTIAL" in vuln_upper
+                or "PASSWORD" in vuln_upper
+                or "SECRET" in vuln_upper
+                or "KEY" in vuln_upper
+            ):
                 return "硬编码凭据风险：代码中包含硬编码的敏感凭据（如密码、API密钥、加密密钥），可能被源码泄露或通过代码审查被发现，造成严重安全风险。建议使用环境变量或密钥管理系统存储敏感信息。"
             else:
                 return "硬编码配置风险：代码中包含硬编码的配置值，降低了系统的可配置性和可维护性。建议将配置外部化到配置文件或环境变量中。"
         else:
-            evidence = finding.get('evidence_chain_summary', '') or finding.get('reason', '') or finding.get('description', '')
+            evidence = (
+                finding.get("evidence_chain_summary", "")
+                or finding.get("reason", "")
+                or finding.get("description", "")
+            )
             if evidence and len(evidence) > 20:
                 return f"安全风险：{evidence[:150]}..."
-            if 'evidence' in finding and isinstance(finding['evidence'], list) and len(finding['evidence']) > 0:
-                ev = finding['evidence'][0]
+            if (
+                "evidence" in finding
+                and isinstance(finding["evidence"], list)
+                and len(finding["evidence"]) > 0
+            ):
+                ev = finding["evidence"][0]
                 if isinstance(ev, dict):
-                    reason = ev.get('reason', ev.get('description', ''))
+                    reason = ev.get("reason", ev.get("description", ""))
                     if reason and len(reason) > 15:
                         return f"发现可疑代码模式：{reason[:100]}..."
             return f"发现{vulnerability}相关安全风险，建议根据详细代码上下文进行人工复核确认。"
 
     HIGH_RISK_TYPES = [
-        'sql', 'sql注入', 'sql injection', 'sqli',
-        'xss', 'cross-site', '跨站脚本',
-        'csrf', 'cross-site request',
-        '认证', 'authentication', 'auth bypass', '认证绕过',
-        '授权', 'authorization', '越权', '权限',
-        'session', '会话',
-        '敏感信息', 'sensitive', 'password', 'secret', 'token',
-        '注入', 'injection',
-        '文件上传', 'file upload',
-        '路径遍历', 'path traversal', 'directory traversal',
-        '命令执行', 'command execution', 'rce',
-        '远程代码执行', 'remote code execution',
-        'xxe', 'xml external entity',
-        '反序列化', 'deserialization', 'serialization',
-        'cors', '跨域',
-        'ssl', 'tls', '证书',
-        '中间人', 'mitm',
+        "sql",
+        "sql注入",
+        "sql injection",
+        "sqli",
+        "xss",
+        "cross-site",
+        "跨站脚本",
+        "csrf",
+        "cross-site request",
+        "认证",
+        "authentication",
+        "auth bypass",
+        "认证绕过",
+        "授权",
+        "authorization",
+        "越权",
+        "权限",
+        "session",
+        "会话",
+        "敏感信息",
+        "sensitive",
+        "password",
+        "secret",
+        "token",
+        "注入",
+        "injection",
+        "文件上传",
+        "file upload",
+        "路径遍历",
+        "path traversal",
+        "directory traversal",
+        "命令执行",
+        "command execution",
+        "rce",
+        "远程代码执行",
+        "remote code execution",
+        "xxe",
+        "xml external entity",
+        "反序列化",
+        "deserialization",
+        "serialization",
+        "cors",
+        "跨域",
+        "ssl",
+        "tls",
+        "证书",
+        "中间人",
+        "mitm",
     ]
 
     def _is_high_risk_type(self, title: str) -> bool:
@@ -1202,7 +1349,9 @@ class PureAIAnalyzer:
                 return True
         return False
 
-    def _check_rejection_completeness(self, risk_findings: List[Dict], all_rejected: bool = False) -> List[Dict]:
+    def _check_rejection_completeness(
+        self, risk_findings: List[Dict], all_rejected: bool = False
+    ) -> List[Dict]:
         """检查拒绝完整性，识别可能的审核失误
 
         当所有风险都被拒绝时，检查是否存在高危类型被错误拒绝的情况。
@@ -1220,17 +1369,17 @@ class PureAIAnalyzer:
 
         modified_count = 0
         for risk in risk_findings:
-            title = risk.get('title', risk.get('risk_type', ''))
-            verification_decision = risk.get('verification_decision', '')
-            signal_state = risk.get('signal_state', '')
+            title = risk.get("title", risk.get("risk_type", ""))
+            verification_decision = risk.get("verification_decision", "")
+            signal_state = risk.get("signal_state", "")
 
-            if verification_decision == 'REJECTED' and signal_state == 'REJECTED':
+            if verification_decision == "REJECTED" and signal_state == "REJECTED":
                 if self._is_high_risk_type(title):
                     print(f"[WARN] [完整性检查] 高危风险类型被拒绝，进入人工复核: {title}")
-                    risk['requires_human_review'] = True
-                    risk['high_risk_override'] = True
-                    risk['status'] = 'REFINED'
-                    risk['signal_state'] = 'REFINED'
+                    risk["requires_human_review"] = True
+                    risk["high_risk_override"] = True
+                    risk["status"] = "REFINED"
+                    risk["signal_state"] = "REFINED"
                     modified_count += 1
 
         if modified_count > 0:
@@ -1249,34 +1398,46 @@ class PureAIAnalyzer:
         Returns:
             修改后的风险字典
         """
-        verification_decision = risk.get('verification_decision', '')
-        signal_state = risk.get('signal_state', 'NEW')
-        reason = risk.get('reason', '')
+        verification_decision = risk.get("verification_decision", "")
+        signal_state = risk.get("signal_state", "NEW")
+        reason = risk.get("reason", "")
 
-        if verification_decision == 'CONFIRMED' and signal_state != 'CONFIRMED':
-            print(f"[DEBUG] 验证覆盖: verification_decision={verification_decision}, signal_state={signal_state}, 采用验证决策")
-            self.debug_logs.append(f"[DEBUG] 验证覆盖: verification_decision={verification_decision}, signal_state={signal_state}")
-            risk['signal_state'] = 'CONFIRMED'
-            risk['status'] = 'CONFIRMED'
-            risk['verification_override'] = True
-            risk['override_reason'] = f"验证决策: {verification_decision}, 原因: {reason}"
+        if verification_decision == "CONFIRMED" and signal_state != "CONFIRMED":
+            print(
+                f"[DEBUG] 验证覆盖: verification_decision={verification_decision}, signal_state={signal_state}, 采用验证决策"
+            )
+            self.debug_logs.append(
+                f"[DEBUG] 验证覆盖: verification_decision={verification_decision}, signal_state={signal_state}"
+            )
+            risk["signal_state"] = "CONFIRMED"
+            risk["status"] = "CONFIRMED"
+            risk["verification_override"] = True
+            risk["override_reason"] = f"验证决策: {verification_decision}, 原因: {reason}"
             self.debug_logs.append(f"[DEBUG] 覆盖原因: {reason}")
 
-        elif verification_decision == 'REFINED' and signal_state not in ['CONFIRMED', 'REFINED']:
-            print(f"[DEBUG] 验证覆盖: verification_decision={verification_decision}, signal_state={signal_state}, 采用验证决策")
-            self.debug_logs.append(f"[DEBUG] 验证覆盖: verification_decision={verification_decision}, signal_state={signal_state}")
-            risk['signal_state'] = 'REFINED'
-            risk['status'] = 'REFINED'
-            risk['verification_override'] = True
-            risk['override_reason'] = f"验证决策: {verification_decision}, 原因: {reason}"
+        elif verification_decision == "REFINED" and signal_state not in ["CONFIRMED", "REFINED"]:
+            print(
+                f"[DEBUG] 验证覆盖: verification_decision={verification_decision}, signal_state={signal_state}, 采用验证决策"
+            )
+            self.debug_logs.append(
+                f"[DEBUG] 验证覆盖: verification_decision={verification_decision}, signal_state={signal_state}"
+            )
+            risk["signal_state"] = "REFINED"
+            risk["status"] = "REFINED"
+            risk["verification_override"] = True
+            risk["override_reason"] = f"验证决策: {verification_decision}, 原因: {reason}"
 
-        elif verification_decision == 'REJECTED' and signal_state != 'REJECTED':
-            print(f"[DEBUG] 验证覆盖: verification_decision={verification_decision}, signal_state={signal_state}, 采用验证决策")
-            self.debug_logs.append(f"[DEBUG] 验证覆盖: verification_decision={verification_decision}, signal_state={signal_state}")
-            risk['signal_state'] = 'REJECTED'
-            risk['status'] = 'REJECTED'
-            risk['verification_override'] = True
-            risk['override_reason'] = f"验证决策: {verification_decision}, 原因: {reason}"
+        elif verification_decision == "REJECTED" and signal_state != "REJECTED":
+            print(
+                f"[DEBUG] 验证覆盖: verification_decision={verification_decision}, signal_state={signal_state}, 采用验证决策"
+            )
+            self.debug_logs.append(
+                f"[DEBUG] 验证覆盖: verification_decision={verification_decision}, signal_state={signal_state}"
+            )
+            risk["signal_state"] = "REJECTED"
+            risk["status"] = "REJECTED"
+            risk["verification_override"] = True
+            risk["override_reason"] = f"验证决策: {verification_decision}, 原因: {reason}"
 
         return risk
 
@@ -1290,14 +1451,14 @@ class PureAIAnalyzer:
             漏洞发现列表
         """
         findings = []
-        file_path_context = str(result.get('file_path', 'unknown'))
+        file_path_context = str(result.get("file_path", "unknown"))
         try:
             print(f"[DEBUG] 开始转换结果，结果包含: {list(result.keys())}")
             self.debug_logs.append(f"[DEBUG] 开始转换结果，结果包含: {list(result.keys())}")
-            final_decision = result.get('final_decision', {})
+            final_decision = result.get("final_decision", {})
             print(f"[DEBUG] final_decision 类型: {type(final_decision)}")
             self.debug_logs.append(f"[DEBUG] final_decision 类型: {type(final_decision)}")
-            final_findings = final_decision.get('final_findings', [])
+            final_findings = final_decision.get("final_findings", [])
             print(f"[DEBUG] 找到 {len(final_findings)} 个最终发现")
             self.debug_logs.append(f"[DEBUG] 找到 {len(final_findings)} 个最终发现")
 
@@ -1309,355 +1470,528 @@ class PureAIAnalyzer:
             MIN_CONFIDENCE = 0.3  # 统一阈值
 
             if len(final_findings) == 0:
-                vuln_verif = result.get('vulnerability_verification', {})
-                vulnerabilities = vuln_verif.get('vulnerabilities', [])
-                risks = vuln_verif.get('risks', [])
+                vuln_verif = result.get("vulnerability_verification", {})
+                vulnerabilities = vuln_verif.get("vulnerabilities", [])
+                risks = vuln_verif.get("risks", [])
 
                 def get_verification_state(v):
-                    return v.get('signal_state') or v.get('verification_decision') or 'UNKNOWN'
+                    return v.get("signal_state") or v.get("verification_decision") or "UNKNOWN"
 
-                confirmed = [v for v in vulnerabilities if get_verification_state(v) == 'CONFIRMED']
+                confirmed = [v for v in vulnerabilities if get_verification_state(v) == "CONFIRMED"]
                 refined_with_high_confidence = []
 
                 for v in vulnerabilities:
-                    if get_verification_state(v) == 'REFINED':
-                        evidence = v.get('evidence', [])
+                    if get_verification_state(v) == "REFINED":
+                        evidence = v.get("evidence", [])
                         avg_conf = self._calculate_evidence_confidence(evidence)
                         if avg_conf and avg_conf >= MIN_CONFIDENCE:
                             refined_with_high_confidence.append((v, avg_conf))
 
                 print(f"[DEBUG] Fallback: 从 vulnerability_verification 提取已确认漏洞: {len(confirmed)}")
-                print(f"[DEBUG] Fallback: 从 vulnerability_verification 提取高置信度已细化漏洞: {len(refined_with_high_confidence)}")
+                print(
+                    f"[DEBUG] Fallback: 从 vulnerability_verification 提取高置信度已细化漏洞: {len(refined_with_high_confidence)}"
+                )
 
-                adversarial_val = result.get('adversarial_validation', {})
-                adversarial_analysis = adversarial_val.get('adversarial_analysis', [])
+                adversarial_val = result.get("adversarial_validation", {})
+                adversarial_analysis = adversarial_val.get("adversarial_analysis", [])
                 adversarial_findings = []
 
                 for item in adversarial_analysis:
-                    verdict = item.get('verdict', '')
-                    if verdict in ['ACCEPT', 'ESCALATE']:
-                        item_confidence = item.get('confidence', 0)
+                    verdict = item.get("verdict", "")
+                    if verdict in ["ACCEPT", "ESCALATE"]:
+                        item_confidence = item.get("confidence", 0)
                         if isinstance(item_confidence, str):
                             try:
-                                item_confidence = float(item_confidence.replace('%', '')) / 100.0 if '%' in item_confidence else 0.5
+                                item_confidence = (
+                                    float(item_confidence.replace("%", "")) / 100.0
+                                    if "%" in item_confidence
+                                    else 0.5
+                                )
                             except:
                                 item_confidence = 0.5
 
-                        if verdict == 'ESCALATE' and item_confidence < MIN_CONFIDENCE:
-                            print(f"[DEBUG] 跳过低置信度待定: {item.get('attack_chain_name', '未知')} (置信度={item_confidence:.2f})")
+                        if verdict == "ESCALATE" and item_confidence < MIN_CONFIDENCE:
+                            print(
+                                f"[DEBUG] 跳过低置信度待定: {item.get('attack_chain_name', '未知')} (置信度={item_confidence:.2f})"
+                            )
                             continue
 
-                        vuln_info = item.get('vulnerability', {})
+                        vuln_info = item.get("vulnerability", {})
                         raw_location = None
                         if isinstance(vuln_info, dict):
-                            raw_location = vuln_info.get('location', None)
-                            if not raw_location or raw_location in ('Unknown', '', None):
-                                raw_location = self._extract_location_from_evidence(item, file_path_context)
+                            raw_location = vuln_info.get("location", None)
+                            if not raw_location or raw_location in ("Unknown", "", None):
+                                raw_location = self._extract_location_from_evidence(
+                                    item, file_path_context
+                                )
                             else:
                                 raw_location = f"{Path(file_path_context).name}:{raw_location}"
-                            adversarial_findings.append({
-                                'vulnerability': self._translate_vulnerability_name_ai(vuln_info.get('title', item.get('attack_chain_name', 'Unknown'))),
-                                'location': raw_location,
-                                'severity': self.normalize_severity(vuln_info.get('severity', 'MEDIUM')),
-                                'status': 'VALID' if verdict == 'ACCEPT' else 'UNCERTAIN',
-                                'confidence': item_confidence,
-                                'cvss_score': vuln_info.get('cvss_score', ''),
-                                'recommendation': self._generate_recommendation(
-                                    vuln_info.get('title', item.get('attack_chain_name', 'Unknown')),
-                                    self.normalize_severity(vuln_info.get('severity', 'MEDIUM')),
-                                    item.get('reason', ''),
-                                    str(item.get('evidence', ''))
-                                ),
-                                'evidence': item.get('evidence', []),
-                                'requires_human_review': item.get('requires_human_review', True)
-                            })
+                            adversarial_findings.append(
+                                {
+                                    "vulnerability": self._translate_vulnerability_name_ai(
+                                        vuln_info.get(
+                                            "title", item.get("attack_chain_name", "Unknown")
+                                        )
+                                    ),
+                                    "location": raw_location,
+                                    "severity": self.normalize_severity(
+                                        vuln_info.get("severity", "MEDIUM")
+                                    ),
+                                    "status": "VALID" if verdict == "ACCEPT" else "UNCERTAIN",
+                                    "confidence": item_confidence,
+                                    "cvss_score": vuln_info.get("cvss_score", ""),
+                                    "recommendation": self._generate_recommendation(
+                                        vuln_info.get(
+                                            "title", item.get("attack_chain_name", "Unknown")
+                                        ),
+                                        self.normalize_severity(
+                                            vuln_info.get("severity", "MEDIUM")
+                                        ),
+                                        item.get("reason", ""),
+                                        str(item.get("evidence", "")),
+                                    ),
+                                    "evidence": item.get("evidence", []),
+                                    "requires_human_review": item.get(
+                                        "requires_human_review", True
+                                    ),
+                                }
+                            )
                         else:
-                            raw_location = self._extract_location_from_evidence(item, file_path_context)
-                            adversarial_findings.append({
-                                'vulnerability': self._translate_vulnerability_name_ai(item.get('attack_chain_name', 'Unknown')),
-                                'location': raw_location,
-                                'severity': self.normalize_severity(item.get('severity', 'MEDIUM')),
-                                'status': 'VALID' if verdict == 'ACCEPT' else 'UNCERTAIN',
-                                'confidence': item_confidence,
-                                'cvss_score': '',
-                                'recommendation': self._generate_recommendation(
-                                    item.get('attack_chain_name', 'Unknown'),
-                                    self.normalize_severity(item.get('severity', 'MEDIUM')),
-                                    item.get('reason', ''),
-                                    str(item.get('evidence', ''))
-                                ),
-                                'evidence': item.get('evidence', []),
-                                'requires_human_review': item.get('requires_human_review', True)
-                            })
+                            raw_location = self._extract_location_from_evidence(
+                                item, file_path_context
+                            )
+                            adversarial_findings.append(
+                                {
+                                    "vulnerability": self._translate_vulnerability_name_ai(
+                                        item.get("attack_chain_name", "Unknown")
+                                    ),
+                                    "location": raw_location,
+                                    "severity": self.normalize_severity(
+                                        item.get("severity", "MEDIUM")
+                                    ),
+                                    "status": "VALID" if verdict == "ACCEPT" else "UNCERTAIN",
+                                    "confidence": item_confidence,
+                                    "cvss_score": "",
+                                    "recommendation": self._generate_recommendation(
+                                        item.get("attack_chain_name", "Unknown"),
+                                        self.normalize_severity(item.get("severity", "MEDIUM")),
+                                        item.get("reason", ""),
+                                        str(item.get("evidence", "")),
+                                    ),
+                                    "evidence": item.get("evidence", []),
+                                    "requires_human_review": item.get(
+                                        "requires_human_review", True
+                                    ),
+                                }
+                            )
 
-                risk_enum = result.get('risk_enumeration', {})
-                risk_findings = risk_enum.get('risks', [])
+                risk_enum = result.get("risk_enumeration", {})
+                risk_findings = risk_enum.get("risks", [])
 
-                vuln_verif = result.get('vulnerability_verification', {})
+                vuln_verif = result.get("vulnerability_verification", {})
                 signal_id_to_verification = {
-                    v.get('signal_id'): v
-                    for v in vuln_verif.get('vulnerabilities', [])
-                    if v.get('signal_id')
+                    v.get("signal_id"): v
+                    for v in vuln_verif.get("vulnerabilities", [])
+                    if v.get("signal_id")
                 }
 
-                evidence_chain = result.get('evidence_chain', {})
-                tracker_signal_states = evidence_chain.get('signal_states', {})
+                evidence_chain = result.get("evidence_chain", {})
+                tracker_signal_states = evidence_chain.get("signal_states", {})
 
                 if not risk_findings and tracker_signal_states:
                     confirmed_signals = {
-                        sig_id: sig_data for sig_id, sig_data in tracker_signal_states.items()
-                        if sig_data.get('state') in ['CONFIRMED', 'REFINED']
+                        sig_id: sig_data
+                        for sig_id, sig_data in tracker_signal_states.items()
+                        if sig_data.get("state") in ["CONFIRMED", "REFINED"]
                     }
                     if confirmed_signals:
-                        print(f"[DEBUG] risk_enumeration.risks 为空，从 signal_tracker 提取 {len(confirmed_signals)} 个已确认信号")
+                        print(
+                            f"[DEBUG] risk_enumeration.risks 为空，从 signal_tracker 提取 {len(confirmed_signals)} 个已确认信号"
+                        )
                         for sig_id, sig_data in confirmed_signals.items():
                             verification = signal_id_to_verification.get(sig_id, {})
-                            evidence_list = verification.get('evidence', [])
+                            evidence_list = verification.get("evidence", [])
                             if not evidence_list:
-                                evidence_list = sig_data.get('evidence', [])
-                            stored_title = sig_data.get('title', '') or sig_data.get('type', '')
-                            stored_desc = sig_data.get('description', '')
+                                evidence_list = sig_data.get("evidence", [])
+                            stored_title = sig_data.get("title", "") or sig_data.get("type", "")
+                            stored_desc = sig_data.get("description", "")
 
-                            has_meaningful_info = bool(stored_title and stored_title not in ('', 'UNKNOWN', 'unknown'))
+                            has_meaningful_info = bool(
+                                stored_title and stored_title not in ("", "UNKNOWN", "unknown")
+                            )
                             has_meaningful_desc = bool(stored_desc and stored_desc.strip())
                             has_evidence = bool(evidence_list and len(evidence_list) > 0)
 
-                            if not has_meaningful_info and not has_meaningful_desc and not has_evidence:
+                            if (
+                                not has_meaningful_info
+                                and not has_meaningful_desc
+                                and not has_evidence
+                            ):
                                 print(f"[DEBUG] Fallback: 跳过信息不完整的信号 {sig_id}")
                                 continue
 
                             if not stored_title and stored_desc:
-                                stored_title = stored_desc[:50] + "..." if len(stored_desc) > 50 else stored_desc
+                                stored_title = (
+                                    stored_desc[:50] + "..."
+                                    if len(stored_desc) > 50
+                                    else stored_desc
+                                )
 
-                            risk_findings.append({
-                                'signal_id': sig_id,
-                                'title': stored_title,
-                                'risk_type': stored_title,
-                                'severity': sig_data.get('severity', 'MEDIUM'),
-                                'description': stored_desc or f"信号追踪确认漏洞: {sig_id}",
-                                'evidence': evidence_list,
-                                'verification_decision': verification.get('verification_decision', 'CONFIRMED'),
-                                'verification_reason': verification.get('reason', ''),
-                                'status': 'CONFIRMED'
-                            })
+                            risk_findings.append(
+                                {
+                                    "signal_id": sig_id,
+                                    "title": stored_title,
+                                    "risk_type": stored_title,
+                                    "severity": sig_data.get("severity", "MEDIUM"),
+                                    "description": stored_desc or f"信号追踪确认漏洞: {sig_id}",
+                                    "evidence": evidence_list,
+                                    "verification_decision": verification.get(
+                                        "verification_decision", "CONFIRMED"
+                                    ),
+                                    "verification_reason": verification.get("reason", ""),
+                                    "status": "CONFIRMED",
+                                }
+                            )
 
                 risk_based_findings = []
 
                 for risk in risk_findings:
-                    signal_id = risk.get('signal_id', '')
+                    signal_id = risk.get("signal_id", "")
 
                     # NEW-BUG-007 修复: 检查标题是否泛化，如果是则从 signal_tracker 获取正确信息
-                    risk_title = risk.get('title', '') or risk.get('vulnerability', '') or risk.get('risk_type', '')
-                    泛化标记 = ['risk相关安全风险', 'UNKNOWN', 'unknown', '', 'UNVERIFIED_RISK', 'UNVERIFIED', 'GENERIC', 'PLACEHOLDER']
-                    is泛化 = not risk_title or risk_title in 泛化标记 or 'UNVERIFIED' in risk_title.upper()
+                    risk_title = (
+                        risk.get("title", "")
+                        or risk.get("vulnerability", "")
+                        or risk.get("risk_type", "")
+                    )
+                    泛化标记 = [
+                        "risk相关安全风险",
+                        "UNKNOWN",
+                        "unknown",
+                        "",
+                        "UNVERIFIED_RISK",
+                        "UNVERIFIED",
+                        "GENERIC",
+                        "PLACEHOLDER",
+                    ]
+                    is泛化 = (
+                        not risk_title or risk_title in 泛化标记 or "UNVERIFIED" in risk_title.upper()
+                    )
 
                     if is泛化 and signal_id and signal_id in tracker_signal_states:
                         sig_data = tracker_signal_states[signal_id]
-                        tracker_title = sig_data.get('title', '') or sig_data.get('type', '')
-                        if tracker_title and tracker_title not in ('', 'UNKNOWN', 'unknown'):
+                        tracker_title = sig_data.get("title", "") or sig_data.get("type", "")
+                        if tracker_title and tracker_title not in ("", "UNKNOWN", "unknown"):
                             print(f"[DEBUG] 替换泛化标题: '{risk_title}' -> '{tracker_title}'")
-                            risk['title'] = tracker_title
-                            risk['vulnerability'] = tracker_title
-                            risk['risk_type'] = tracker_title
-                            risk['description'] = sig_data.get('description', '') or risk.get('description', '')
+                            risk["title"] = tracker_title
+                            risk["vulnerability"] = tracker_title
+                            risk["risk_type"] = tracker_title
+                            risk["description"] = sig_data.get("description", "") or risk.get(
+                                "description", ""
+                            )
 
                     tracker_state = None
                     if signal_id and signal_id in tracker_signal_states:
-                        tracker_state = tracker_signal_states[signal_id].get('state', None)
+                        tracker_state = tracker_signal_states[signal_id].get("state", None)
 
                     if signal_id and signal_id in signal_id_to_verification:
                         verification = signal_id_to_verification[signal_id]
-                        risk['verification_decision'] = verification.get('verification_decision', '')
-                        risk['verification_reason'] = verification.get('verification_reason', '')
+                        risk["verification_decision"] = verification.get(
+                            "verification_decision", ""
+                        )
+                        risk["verification_reason"] = verification.get("verification_reason", "")
 
                     risk = self._merge_verification_results(risk)
 
-                    verification_decision = risk.get('verification_decision', '')
+                    verification_decision = risk.get("verification_decision", "")
 
                     if tracker_state:
-                        if verification_decision in ['CONFIRMED', 'REFINED'] and tracker_state in ['REJECTED', 'NEW']:
-                            print(f"[DEBUG] Agent-3 验证覆盖 tracker 状态: {tracker_state} -> {verification_decision}")
-                            risk['signal_state'] = verification_decision
+                        if verification_decision in ["CONFIRMED", "REFINED"] and tracker_state in [
+                            "REJECTED",
+                            "NEW",
+                        ]:
+                            print(
+                                f"[DEBUG] Agent-3 验证覆盖 tracker 状态: {tracker_state} -> {verification_decision}"
+                            )
+                            risk["signal_state"] = verification_decision
                             risk_state = verification_decision
                         else:
-                            risk['signal_state'] = tracker_state
+                            risk["signal_state"] = tracker_state
                             risk_state = tracker_state
                     else:
-                        risk_state = risk.get('signal_state', 'NEW')
+                        risk_state = risk.get("signal_state", "NEW")
 
-                    risk_confidence = self._calculate_evidence_confidence(risk.get('evidence', []))
+                    risk_confidence = self._calculate_evidence_confidence(risk.get("evidence", []))
                     MIN_CONFIDENCE = 0.3
 
-                    risk_title = risk.get('title', risk.get('risk_type', ''))
+                    risk_title = risk.get("title", risk.get("risk_type", ""))
                     is_high_risk = self._is_high_risk_type(risk_title)
 
                     if self.reject_unverified_findings and is泛化:
-                        is_unverified_risk_title = 'UNVERIFIED_RISK' in risk_title.upper() or risk_title in 泛化标记
+                        is_unverified_risk_title = (
+                            "UNVERIFIED_RISK" in risk_title.upper() or risk_title in 泛化标记
+                        )
                         if is_unverified_risk_title:
-                            if risk_confidence < 0.6 and risk_state not in ['CONFIRMED', 'REFINED']:
-                                print(f"[DEBUG] [UNVERIFIED_RISK过滤] 拒绝未验证占位符风险: {risk_title}, confidence={risk_confidence:.2f}, state={risk_state}")
+                            if risk_confidence < 0.6 and risk_state not in ["CONFIRMED", "REFINED"]:
+                                print(
+                                    f"[DEBUG] [UNVERIFIED_RISK过滤] 拒绝未验证占位符风险: {risk_title}, confidence={risk_confidence:.2f}, state={risk_state}"
+                                )
                                 continue
-                            elif risk_state not in ['CONFIRMED', 'REFINED']:
-                                print(f"[DEBUG] [UNVERIFIED_RISK过滤] 标记未验证占位符风险待人工复核: {risk_title}, confidence={risk_confidence:.2f}, state={risk_state}")
-                                risk['requires_human_review'] = True
+                            elif risk_state not in ["CONFIRMED", "REFINED"]:
+                                print(
+                                    f"[DEBUG] [UNVERIFIED_RISK过滤] 标记未验证占位符风险待人工复核: {risk_title}, confidence={risk_confidence:.2f}, state={risk_state}"
+                                )
+                                risk["requires_human_review"] = True
 
-                    if risk_state == 'REJECTED' and verification_decision not in ['CONFIRMED', 'REFINED']:
-                        rejection_confidence = risk.get('rejection_confidence', 0.5)
+                    if risk_state == "REJECTED" and verification_decision not in [
+                        "CONFIRMED",
+                        "REFINED",
+                    ]:
+                        rejection_confidence = risk.get("rejection_confidence", 0.5)
                         if is_high_risk and rejection_confidence < 0.7:
-                            print(f"[WARN] [审核检查] 高危风险被拒绝(低置信度): {risk_title}, 置信度: {rejection_confidence:.2f}, 标记为待人工复核")
-                            risk['requires_human_review'] = True
-                            risk['high_risk_override'] = True
-                            risk_state = 'REFINED'
-                            risk['signal_state'] = 'REFINED'
+                            print(
+                                f"[WARN] [审核检查] 高危风险被拒绝(低置信度): {risk_title}, 置信度: {rejection_confidence:.2f}, 标记为待人工复核"
+                            )
+                            risk["requires_human_review"] = True
+                            risk["high_risk_override"] = True
+                            risk_state = "REFINED"
+                            risk["signal_state"] = "REFINED"
                         elif is_high_risk and rejection_confidence >= 0.7:
-                            print(f"[DEBUG] 高危风险被明确拒绝(高置信度: {rejection_confidence:.2f}): {risk_title}, 跳过")
+                            print(
+                                f"[DEBUG] 高危风险被明确拒绝(高置信度: {rejection_confidence:.2f}): {risk_title}, 跳过"
+                            )
                             continue
                         else:
-                            print(f"[DEBUG] 跳过已拒绝信号: {risk.get('title', risk.get('risk_type', '未知风险'))}, 验证决策: {verification_decision or 'N/A'}")
+                            print(
+                                f"[DEBUG] 跳过已拒绝信号: {risk.get('title', risk.get('risk_type', '未知风险'))}, 验证决策: {verification_decision or 'N/A'}"
+                            )
                             continue
 
-                    if risk_state in ['CONFIRMED', 'REFINED'] or (risk_confidence and risk_confidence >= MIN_CONFIDENCE):
+                    if risk_state in ["CONFIRMED", "REFINED"] or (
+                        risk_confidence and risk_confidence >= MIN_CONFIDENCE
+                    ):
                         if risk_confidence and risk_confidence < MIN_CONFIDENCE:
-                            print(f"[DEBUG] 跳过极低置信度风险: {risk.get('title', risk.get('risk_type', '未知风险'))}, 置信度: {risk_confidence:.4f}")
+                            print(
+                                f"[DEBUG] 跳过极低置信度风险: {risk.get('title', risk.get('risk_type', '未知风险'))}, 置信度: {risk_confidence:.4f}"
+                            )
                             continue
-                        risk_title_raw = risk.get('title', risk.get('risk_type', 'UNKNOWN_RISK'))
+                        risk_title_raw = risk.get("title", risk.get("risk_type", "UNKNOWN_RISK"))
                         risk_title = self._translate_vulnerability_name_ai(risk_title_raw)
-                        risk_severity = self.normalize_severity(risk.get('severity', 'MEDIUM'))
-                        risk_location = risk.get('location', '')
-                        if not risk_location or risk_location in ('Unknown', '', None):
-                            risk_location = self._extract_location_from_evidence(risk, file_path_context)
-                        risk_status = risk.get('status', 'UNCERTAIN')
-                        if risk.get('verification_override'):
-                            risk_status = 'CONFIRMED'
-                        if risk_state in ['CONFIRMED', 'REFINED'] and risk_status not in ['CONFIRMED', 'REFINED']:
+                        risk_severity = self.normalize_severity(risk.get("severity", "MEDIUM"))
+                        risk_location = risk.get("location", "")
+                        if not risk_location or risk_location in ("Unknown", "", None):
+                            risk_location = self._extract_location_from_evidence(
+                                risk, file_path_context
+                            )
+                        risk_status = risk.get("status", "UNCERTAIN")
+                        if risk.get("verification_override"):
+                            risk_status = "CONFIRMED"
+                        if risk_state in ["CONFIRMED", "REFINED"] and risk_status not in [
+                            "CONFIRMED",
+                            "REFINED",
+                        ]:
                             risk_status = risk_state
-                        risk_based_findings.append({
-                            'vulnerability': risk_title,
-                            'location': risk_location,
-                            'severity': risk_severity,
-                            'status': risk_status,
-                            'confidence': risk_confidence if risk_confidence else 0.5,
-                            'cvss_score': '',
-                            'recommendation': self._generate_recommendation(risk_title, risk_severity, risk.get('description', ''), str(risk.get('evidence', []))),
-                            'evidence': risk.get('evidence', []),
-                            'requires_human_review': True,
-                            'signal_state': risk_state,
-                            'verification_decision': verification_decision
-                        })
+                        risk_based_findings.append(
+                            {
+                                "vulnerability": risk_title,
+                                "location": risk_location,
+                                "severity": risk_severity,
+                                "status": risk_status,
+                                "confidence": risk_confidence if risk_confidence else 0.5,
+                                "cvss_score": "",
+                                "recommendation": self._generate_recommendation(
+                                    risk_title,
+                                    risk_severity,
+                                    risk.get("description", ""),
+                                    str(risk.get("evidence", [])),
+                                ),
+                                "evidence": risk.get("evidence", []),
+                                "requires_human_review": True,
+                                "signal_state": risk_state,
+                                "verification_decision": verification_decision,
+                            }
+                        )
 
-                all_rejected = (len(risk_findings) > 0 and len(risk_based_findings) == 0)
+                all_rejected = len(risk_findings) > 0 and len(risk_based_findings) == 0
                 if all_rejected:
                     print(f"[WARN] [完整性检查] 所有 {len(risk_findings)} 个风险都被拒绝，执行高危类型检查...")
-                    risk_findings = self._check_rejection_completeness(risk_findings, all_rejected=True)
+                    risk_findings = self._check_rejection_completeness(
+                        risk_findings, all_rejected=True
+                    )
 
                     for risk in risk_findings:
-                        title = risk.get('title', risk.get('risk_type', ''))
+                        title = risk.get("title", risk.get("risk_type", ""))
                         is_high_risk = self._is_high_risk_type(title)
-                        if is_high_risk and risk.get('high_risk_override'):
-                            risk_confidence = self._calculate_evidence_confidence(risk.get('evidence', []))
-                            risk_location = risk.get('location', '')
-                            if not risk_location or risk_location in ('Unknown', '', None):
-                                risk_location = self._extract_location_from_evidence(risk, file_path_context)
-                            risk_based_findings.append({
-                                'vulnerability': title,
-                                'location': risk_location,
-                                'severity': self.normalize_severity(risk.get('severity', 'MEDIUM')),
-                                'status': 'REFINED',
-                                'confidence': risk_confidence if risk_confidence else 0.5,
-                                'cvss_score': '',
-                                'recommendation': self._generate_recommendation(title, self.normalize_severity(risk.get('severity', 'MEDIUM')), risk.get('description', ''), str(risk.get('evidence', []))),
-                                'evidence': risk.get('evidence', []),
-                                'requires_human_review': True,
-                                'signal_state': 'REFINED',
-                                'verification_decision': 'REFINED'
-                            })
+                        if is_high_risk and risk.get("high_risk_override"):
+                            risk_confidence = self._calculate_evidence_confidence(
+                                risk.get("evidence", [])
+                            )
+                            risk_location = risk.get("location", "")
+                            if not risk_location or risk_location in ("Unknown", "", None):
+                                risk_location = self._extract_location_from_evidence(
+                                    risk, file_path_context
+                                )
+                            risk_based_findings.append(
+                                {
+                                    "vulnerability": title,
+                                    "location": risk_location,
+                                    "severity": self.normalize_severity(
+                                        risk.get("severity", "MEDIUM")
+                                    ),
+                                    "status": "REFINED",
+                                    "confidence": risk_confidence if risk_confidence else 0.5,
+                                    "cvss_score": "",
+                                    "recommendation": self._generate_recommendation(
+                                        title,
+                                        self.normalize_severity(risk.get("severity", "MEDIUM")),
+                                        risk.get("description", ""),
+                                        str(risk.get("evidence", [])),
+                                    ),
+                                    "evidence": risk.get("evidence", []),
+                                    "requires_human_review": True,
+                                    "signal_state": "REFINED",
+                                    "verification_decision": "REFINED",
+                                }
+                            )
 
                 print(f"[DEBUG] Fallback 检查:")
-                print(f"  - vulnerability_verification.vulnerabilities (CONFIRMED): {len(confirmed)}")
-                print(f"  - vulnerability_verification (REFINED 高置信度): {len(refined_with_high_confidence)}")
+                print(
+                    f"  - vulnerability_verification.vulnerabilities (CONFIRMED): {len(confirmed)}"
+                )
+                print(
+                    f"  - vulnerability_verification (REFINED 高置信度): {len(refined_with_high_confidence)}"
+                )
                 print(f"  - adversarial_validation.ACCEPT/ESCALATE: {len(adversarial_findings)}")
-                print(f"  - risk_enumeration.risks: {len(risk_findings)} (可用: {len(risk_based_findings)})")
+                print(
+                    f"  - risk_enumeration.risks: {len(risk_findings)} (可用: {len(risk_based_findings)})"
+                )
 
                 if adversarial_findings:
-                    print(f"[DEBUG] 使用 fallback: 从 adversarial_validation 获取 {len(adversarial_findings)} 个漏洞")
+                    print(
+                        f"[DEBUG] 使用 fallback: 从 adversarial_validation 获取 {len(adversarial_findings)} 个漏洞"
+                    )
                     final_findings = adversarial_findings
                 elif confirmed:
-                    print(f"[DEBUG] 使用 fallback: 从 vulnerability_verification.confirmed_vulnerabilities 获取 {len(confirmed)} 个漏洞")
+                    print(
+                        f"[DEBUG] 使用 fallback: 从 vulnerability_verification.confirmed_vulnerabilities 获取 {len(confirmed)} 个漏洞"
+                    )
                     final_findings = []
                     for v in confirmed:
-                        v_type = v.get('vulnerability') or v.get('type') or v.get('title') or v.get('risk_type') or 'SUSPICIOUS_PATTERN'
+                        v_type = (
+                            v.get("vulnerability")
+                            or v.get("type")
+                            or v.get("title")
+                            or v.get("risk_type")
+                            or "SUSPICIOUS_PATTERN"
+                        )
                         v_copy = dict(v)
-                        v_copy['vulnerability'] = v_type
+                        v_copy["vulnerability"] = v_type
                         final_findings.append(v_copy)
                 elif refined_with_high_confidence:
-                    print(f"[DEBUG] 使用 fallback: 从高置信度已细化获取 {len(refined_with_high_confidence)} 个漏洞")
+                    print(
+                        f"[DEBUG] 使用 fallback: 从高置信度已细化获取 {len(refined_with_high_confidence)} 个漏洞"
+                    )
                     final_findings = []
                     for v, conf in refined_with_high_confidence:
-                        v_type = v.get('title') or v.get('risk_type') or 'SUSPICIOUS_PATTERN'
+                        v_type = v.get("title") or v.get("risk_type") or "SUSPICIOUS_PATTERN"
                         v_copy = dict(v)
-                        v_copy['vulnerability'] = v_type
-                        v_copy['status'] = 'UNCERTAIN'
-                        v_copy['confidence'] = conf
+                        v_copy["vulnerability"] = v_type
+                        v_copy["status"] = "UNCERTAIN"
+                        v_copy["confidence"] = conf
                         final_findings.append(v_copy)
                 elif risk_based_findings:
-                    print(f"[DEBUG] 使用 fallback: 从 risk_enumeration 获取 {len(risk_based_findings)} 个漏洞")
+                    print(
+                        f"[DEBUG] 使用 fallback: 从 risk_enumeration 获取 {len(risk_based_findings)} 个漏洞"
+                    )
                     verified_findings = []
                     unverified_findings = []
                     rejected_findings = []
                     for v in risk_based_findings:
-                        if 'metadata' not in v:
-                            v['metadata'] = {}
-                        signal_state = v.get('signal_state', 'NEW')
-                        status = v.get('status', 'UNKNOWN')
-                        confidence = v.get('confidence', 0)
-                        verification_decision = v.get('verification_decision', '')
-                        evidence = v.get('evidence', [])
-                        has_code_snippet = any(
-                            isinstance(e, dict) and e.get('type') == 'code_line' and e.get('code_snippet')
-                            for e in evidence
-                        ) if evidence else False
+                        if "metadata" not in v:
+                            v["metadata"] = {}
+                        signal_state = v.get("signal_state", "NEW")
+                        status = v.get("status", "UNKNOWN")
+                        confidence = v.get("confidence", 0)
+                        verification_decision = v.get("verification_decision", "")
+                        evidence = v.get("evidence", [])
+                        has_code_snippet = (
+                            any(
+                                isinstance(e, dict)
+                                and e.get("type") == "code_line"
+                                and e.get("code_snippet")
+                                for e in evidence
+                            )
+                            if evidence
+                            else False
+                        )
 
-                        if signal_state == 'REJECTED' and verification_decision not in ['CONFIRMED', 'REFINED']:
-                            v['metadata']['line_match_status'] = 'REJECTED'
+                        if signal_state == "REJECTED" and verification_decision not in [
+                            "CONFIRMED",
+                            "REFINED",
+                        ]:
+                            v["metadata"]["line_match_status"] = "REJECTED"
                             rejected_findings.append(v)
-                            print(f"[DEBUG] 丢弃已拒绝信号: {v.get('vulnerability', '未知')}, verification_decision={verification_decision}")
+                            print(
+                                f"[DEBUG] 丢弃已拒绝信号: {v.get('vulnerability', '未知')}, verification_decision={verification_decision}"
+                            )
                             continue
 
-                        if signal_state == 'NEW' and verification_decision in ['CONFIRMED', 'REFINED']:
-                            v['metadata']['line_match_status'] = 'VERIFIED'
+                        if signal_state == "NEW" and verification_decision in [
+                            "CONFIRMED",
+                            "REFINED",
+                        ]:
+                            v["metadata"]["line_match_status"] = "VERIFIED"
                             verified_findings.append(v)
-                            print(f"[DEBUG] [动态验证优先] signal_state=NEW但verification_decision={verification_decision}，接受为已验证漏洞: {v.get('vulnerability', '未知')}")
+                            print(
+                                f"[DEBUG] [动态验证优先] signal_state=NEW但verification_decision={verification_decision}，接受为已验证漏洞: {v.get('vulnerability', '未知')}"
+                            )
                             continue
 
-                        if signal_state == 'NEW' and not has_code_snippet and verification_decision not in ['CONFIRMED', 'REFINED']:
-                            v['metadata']['line_match_status'] = 'REJECTED_NO_VERIFICATION'
+                        if (
+                            signal_state == "NEW"
+                            and not has_code_snippet
+                            and verification_decision not in ["CONFIRMED", "REFINED"]
+                        ):
+                            v["metadata"]["line_match_status"] = "REJECTED_NO_VERIFICATION"
                             unverified_findings.append(v)
-                            print(f"[DEBUG] [放宽条件] 未验证信号（无代码片段）添加人工复核: {v.get('vulnerability', '未知')}, verification_decision={verification_decision}")
+                            print(
+                                f"[DEBUG] [放宽条件] 未验证信号（无代码片段）添加人工复核: {v.get('vulnerability', '未知')}, verification_decision={verification_decision}"
+                            )
                             continue
 
-                        if signal_state == 'NEW' and confidence < MIN_CONFIDENCE and verification_decision not in ['CONFIRMED', 'REFINED']:
-                            v['metadata']['line_match_status'] = 'REJECTED_LOW_CONFIDENCE'
+                        if (
+                            signal_state == "NEW"
+                            and confidence < MIN_CONFIDENCE
+                            and verification_decision not in ["CONFIRMED", "REFINED"]
+                        ):
+                            v["metadata"]["line_match_status"] = "REJECTED_LOW_CONFIDENCE"
                             unverified_findings.append(v)
-                            print(f"[DEBUG] [放宽条件] 低置信度未验证信号添加人工复核: {v.get('vulnerability', '未知')}, confidence={confidence:.4f}")
+                            print(
+                                f"[DEBUG] [放宽条件] 低置信度未验证信号添加人工复核: {v.get('vulnerability', '未知')}, confidence={confidence:.4f}"
+                            )
                             continue
 
-                        if status == 'CONFIRMED':
-                            v['metadata']['line_match_status'] = 'VERIFIED'
+                        if status == "CONFIRMED":
+                            v["metadata"]["line_match_status"] = "VERIFIED"
                             verified_findings.append(v)
-                        elif status == 'REFINED':
-                            v['metadata']['line_match_status'] = 'VERIFIED'
+                        elif status == "REFINED":
+                            v["metadata"]["line_match_status"] = "VERIFIED"
                             verified_findings.append(v)
                         else:
-                            v['metadata']['line_match_status'] = 'UNVERIFIED'
+                            v["metadata"]["line_match_status"] = "UNVERIFIED"
                             unverified_findings.append(v)
                     if rejected_findings:
                         print(f"[DEBUG] 检查 {len(rejected_findings)} 个已拒绝漏洞是否有高置信度...")
-                        high_conf_rejected = [v for v in rejected_findings if v.get('confidence', 0) >= MIN_CONFIDENCE]
+                        high_conf_rejected = [
+                            v for v in rejected_findings if v.get("confidence", 0) >= MIN_CONFIDENCE
+                        ]
                         if high_conf_rejected:
-                            print(f"[DEBUG] 从 {len(rejected_findings)} 个已拒绝漏洞中筛选出 {len(high_conf_rejected)} 个高置信度漏洞进行人工复核")
+                            print(
+                                f"[DEBUG] 从 {len(rejected_findings)} 个已拒绝漏洞中筛选出 {len(high_conf_rejected)} 个高置信度漏洞进行人工复核"
+                            )
                             for v in high_conf_rejected:
-                                v['status'] = 'UNCERTAIN'
-                                v['requires_human_review'] = True
+                                v["status"] = "UNCERTAIN"
+                                v["requires_human_review"] = True
                             unverified_findings.extend(high_conf_rejected)
                     if verified_findings:
                         print(f"[DEBUG] 从 risk_enumeration 筛选出 {len(verified_findings)} 个已验证漏洞")
@@ -1665,68 +1999,110 @@ class PureAIAnalyzer:
                             print(f"[DEBUG] 额外添加 {len(unverified_findings)} 个高置信度未验证/已拒绝漏洞进行人工复核")
                         final_findings = verified_findings + unverified_findings
                     elif unverified_findings:
-                        print(f"[DEBUG] 警告: risk_enumeration 中无 Agent-3 验证的漏洞，使用 {len(unverified_findings)} 个高置信度漏洞")
+                        print(
+                            f"[DEBUG] 警告: risk_enumeration 中无 Agent-3 验证的漏洞，使用 {len(unverified_findings)} 个高置信度漏洞"
+                        )
                         strict_unverified = []
                         for v in unverified_findings:
-                            v_title = v.get('vulnerability', '') or v.get('title', '') or ''
-                            v_confidence = v.get('confidence', 0)
-                            v_signal_state = v.get('signal_state', 'NEW')
-                            is_unverified_risk = 'UNVERIFIED' in v_title.upper() or 'UNVERIFIED_RISK' in v_title
+                            v_title = v.get("vulnerability", "") or v.get("title", "") or ""
+                            v_confidence = v.get("confidence", 0)
+                            v_signal_state = v.get("signal_state", "NEW")
+                            is_unverified_risk = (
+                                "UNVERIFIED" in v_title.upper() or "UNVERIFIED_RISK" in v_title
+                            )
                             if is_unverified_risk:
                                 if self.reject_unverified_findings:
-                                    if v_confidence < 0.6 and v_signal_state not in ['CONFIRMED', 'REFINED']:
-                                        print(f"[DEBUG] [UNVERIFIED_RISK过滤] 拒绝未验证占位符: {v_title}, confidence={v_confidence:.2f}, state={v_signal_state}")
+                                    if v_confidence < 0.6 and v_signal_state not in [
+                                        "CONFIRMED",
+                                        "REFINED",
+                                    ]:
+                                        print(
+                                            f"[DEBUG] [UNVERIFIED_RISK过滤] 拒绝未验证占位符: {v_title}, confidence={v_confidence:.2f}, state={v_signal_state}"
+                                        )
                                         continue
-                                    elif v_confidence >= 0.6 and v_signal_state in ['CONFIRMED', 'REFINED']:
-                                        print(f"[DEBUG] [UNVERIFIED_RISK过滤] 置信度 {v_confidence:.2f} >= 0.6 且状态 {v_signal_state}，通过: {v_title}")
-                                        v['requires_human_review'] = True
+                                    elif v_confidence >= 0.6 and v_signal_state in [
+                                        "CONFIRMED",
+                                        "REFINED",
+                                    ]:
+                                        print(
+                                            f"[DEBUG] [UNVERIFIED_RISK过滤] 置信度 {v_confidence:.2f} >= 0.6 且状态 {v_signal_state}，通过: {v_title}"
+                                        )
+                                        v["requires_human_review"] = True
                                         strict_unverified.append(v)
                                     else:
-                                        print(f"[DEBUG] [UNVERIFIED_RISK过滤] 标记待人工复核: {v_title}, confidence={v_confidence:.2f}, state={v_signal_state}")
-                                        v['requires_human_review'] = True
+                                        print(
+                                            f"[DEBUG] [UNVERIFIED_RISK过滤] 标记待人工复核: {v_title}, confidence={v_confidence:.2f}, state={v_signal_state}"
+                                        )
+                                        v["requires_human_review"] = True
                                         strict_unverified.append(v)
                                 else:
-                                    if v_confidence >= 0.6 and v_signal_state in ['CONFIRMED', 'REFINED']:
-                                        print(f"[DEBUG] [UNVERIFIED_RISK过滤] 置信度 {v_confidence:.2f} >= 0.6，通过: {v_title}")
+                                    if v_confidence >= 0.6 and v_signal_state in [
+                                        "CONFIRMED",
+                                        "REFINED",
+                                    ]:
+                                        print(
+                                            f"[DEBUG] [UNVERIFIED_RISK过滤] 置信度 {v_confidence:.2f} >= 0.6，通过: {v_title}"
+                                        )
                                         strict_unverified.append(v)
                                     else:
-                                        print(f"[DEBUG] [UNVERIFIED_RISK过滤] 丢弃低置信度UNVERIFIED_RISK: {v_title}, confidence={v_confidence:.2f}, state={v_signal_state}")
+                                        print(
+                                            f"[DEBUG] [UNVERIFIED_RISK过滤] 丢弃低置信度UNVERIFIED_RISK: {v_title}, confidence={v_confidence:.2f}, state={v_signal_state}"
+                                        )
                                         continue
                             else:
                                 strict_unverified.append(v)
                         final_findings = strict_unverified
                     else:
                         print(f"[DEBUG] [紧急Fallback] 所有标准源为空，检查是否存在未处理的tracker信号...")
-                        if hasattr(self, 'pipeline') and hasattr(self.pipeline, 'evidence_chain_tracker'):
+                        if hasattr(self, "pipeline") and hasattr(
+                            self.pipeline, "evidence_chain_tracker"
+                        ):
                             tracker = self.pipeline.evidence_chain_tracker
-                            all_tracker_signals = tracker.get_all_signals() if hasattr(tracker, 'get_all_signals') else []
+                            all_tracker_signals = (
+                                tracker.get_all_signals()
+                                if hasattr(tracker, "get_all_signals")
+                                else []
+                            )
                             tracker_findings = []
                             for sig in all_tracker_signals:
-                                sig_id = sig.get('signal_id', '')
+                                sig_id = sig.get("signal_id", "")
                                 if sig_id:
-                                    sig_title = sig.get('title', sig.get('risk_type', 'UNKNOWN'))
-                                    sig_desc = sig.get('description', '')
-                                    sig_severity = sig.get('severity', 'MEDIUM')
-                                    sig_confidence = sig.get('confidence', 0.5)
-                                    sig_location = sig.get('location', '')
-                                    sig_evidence = sig.get('evidence', [])
-                                    if sig_title not in ('', 'UNKNOWN', 'unknown') or sig_desc:
-                                        print(f"[DEBUG] [紧急Fallback] 从tracker恢复信号: {sig_id} - {sig_title}")
-                                        tracker_findings.append({
-                                            'vulnerability': sig_title,
-                                            'location': sig_location or 'Unknown location',
-                                            'severity': self.normalize_severity(sig_severity),
-                                            'status': 'UNCERTAIN',
-                                            'confidence': sig_confidence if sig_confidence else 0.5,
-                                            'cvss_score': '',
-                                            'recommendation': self._generate_recommendation(sig_title, self.normalize_severity(sig_severity), sig_desc, str(sig_evidence)),
-                                            'evidence': sig_evidence,
-                                            'requires_human_review': True,
-                                            'signal_state': sig.get('state', 'NEW'),
-                                            'verification_decision': 'TRACKER_FALLBACK'
-                                        })
+                                    sig_title = sig.get("title", sig.get("risk_type", "UNKNOWN"))
+                                    sig_desc = sig.get("description", "")
+                                    sig_severity = sig.get("severity", "MEDIUM")
+                                    sig_confidence = sig.get("confidence", 0.5)
+                                    sig_location = sig.get("location", "")
+                                    sig_evidence = sig.get("evidence", [])
+                                    if sig_title not in ("", "UNKNOWN", "unknown") or sig_desc:
+                                        print(
+                                            f"[DEBUG] [紧急Fallback] 从tracker恢复信号: {sig_id} - {sig_title}"
+                                        )
+                                        tracker_findings.append(
+                                            {
+                                                "vulnerability": sig_title,
+                                                "location": sig_location or "Unknown location",
+                                                "severity": self.normalize_severity(sig_severity),
+                                                "status": "UNCERTAIN",
+                                                "confidence": (
+                                                    sig_confidence if sig_confidence else 0.5
+                                                ),
+                                                "cvss_score": "",
+                                                "recommendation": self._generate_recommendation(
+                                                    sig_title,
+                                                    self.normalize_severity(sig_severity),
+                                                    sig_desc,
+                                                    str(sig_evidence),
+                                                ),
+                                                "evidence": sig_evidence,
+                                                "requires_human_review": True,
+                                                "signal_state": sig.get("state", "NEW"),
+                                                "verification_decision": "TRACKER_FALLBACK",
+                                            }
+                                        )
                             if tracker_findings:
-                                print(f"[DEBUG] [紧急Fallback] 从tracker恢复 {len(tracker_findings)} 个未验证漏洞进行人工复核")
+                                print(
+                                    f"[DEBUG] [紧急Fallback] 从tracker恢复 {len(tracker_findings)} 个未验证漏洞进行人工复核"
+                                )
                                 final_findings = tracker_findings
                             else:
                                 print(f"[DEBUG] Fallback: 未找到任何漏洞")
@@ -1742,115 +2118,139 @@ class PureAIAnalyzer:
 
             for finding in final_findings:
                 try:
-                    status = finding.get('status', 'UNKNOWN')
-                    vuln_name = finding.get('vulnerability', '') or ''
+                    status = finding.get("status", "UNKNOWN")
+                    vuln_name = finding.get("vulnerability", "") or ""
 
-                    if status == 'REJECTED':
+                    if status == "REJECTED":
                         print(f"[DEBUG] 跳过 final_decision 中的已拒绝发现: {vuln_name}")
                         self.debug_logs.append(f"[DEBUG] 跳过 final_decision 中的已拒绝发现: {vuln_name}")
                         continue
 
                     status_display = status
-                    if status == 'CONFIRMED':
-                        status_display = '已确认'
-                    elif status == 'REJECTED':
-                        status_display = '已拒绝'
-                    elif status == 'REFINED':
-                        status_display = '已细化'
-                    elif status == 'NEW':
-                        status_display = '新增'
-                    elif status == 'UNCERTAIN':
-                        status_display = '待定'
+                    if status == "CONFIRMED":
+                        status_display = "已确认"
+                    elif status == "REJECTED":
+                        status_display = "已拒绝"
+                    elif status == "REFINED":
+                        status_display = "已细化"
+                    elif status == "NEW":
+                        status_display = "新增"
+                    elif status == "UNCERTAIN":
+                        status_display = "待定"
                     print(f"[DEBUG] 处理发现: {finding.get('vulnerability')}, 状态: {status_display}")
-                    self.debug_logs.append(f"[DEBUG] 处理发现: {finding.get('vulnerability')}, 状态: {finding.get('status')}")
+                    self.debug_logs.append(
+                        f"[DEBUG] 处理发现: {finding.get('vulnerability')}, 状态: {finding.get('status')}"
+                    )
                     # 处理所有状态的发现，包括INVALID
-                    status = finding.get('status', 'UNKNOWN')
+                    status = finding.get("status", "UNKNOWN")
 
                     # 提取详细信息
-                    vulnerability_desc = finding.get('vulnerability', 'unknown')
-                    location = finding.get('location', 'unknown')
-                    recommendation = finding.get('recommendation', '')
-                    evidence = finding.get('evidence', [])
+                    vulnerability_desc = finding.get("vulnerability", "unknown")
+                    location = finding.get("location", "unknown")
+                    recommendation = finding.get("recommendation", "")
+                    evidence = finding.get("evidence", [])
 
                     # 优先从 evidence 提取真实的源代码位置（AI 可能输出路由级位置）
                     if evidence and isinstance(evidence, list) and len(evidence) > 0:
                         for e in evidence:
-                            if isinstance(e, dict) and e.get('location'):
-                                loc = e.get('location')
-                                if loc and loc != 'N/A' and ':' in str(loc) and not str(loc).startswith('/'):
+                            if isinstance(e, dict) and e.get("location"):
+                                loc = e.get("location")
+                                if (
+                                    loc
+                                    and loc != "N/A"
+                                    and ":" in str(loc)
+                                    and not str(loc).startswith("/")
+                                ):
                                     location = str(loc)
                                     break
                     else:
                         # 如果 evidence 中没有有效位置，使用 AI 提供的位置
-                        if not location or location in ('Unknown', 'unknown', '', None):
-                            location = self._extract_location_from_evidence(finding, file_path_context)
+                        if not location or location in ("Unknown", "unknown", "", None):
+                            location = self._extract_location_from_evidence(
+                                finding, file_path_context
+                            )
 
                     # 生成规则名称 - 只包含漏洞名称（中文化）
                     rule_name = self._translate_vulnerability_name_ai(vulnerability_desc)
-                    if status == 'INVALID' and total_vulnerabilities < 10:
+                    if status == "INVALID" and total_vulnerabilities < 10:
                         rule_name = f"[需人工复核] {rule_name}"
 
                     # 生成详细的描述
-                    raw_description = finding.get('description') or finding.get('reason') or ''
+                    raw_description = finding.get("description") or finding.get("reason") or ""
                     if raw_description == vulnerability_desc or not raw_description:
-                        description = self._generate_detailed_description(vulnerability_desc, finding)
+                        description = self._generate_detailed_description(
+                            vulnerability_desc, finding
+                        )
                     else:
                         description = raw_description
 
                     # 清理模拟数据路径
-                    if location and location.startswith('/path/to/'):
-                        location = self._extract_location_from_evidence(finding, file_path_context) or location
+                    if location and location.startswith("/path/to/"):
+                        location = (
+                            self._extract_location_from_evidence(finding, file_path_context)
+                            or location
+                        )
 
                     # 处理 Severity 枚举对象转换为字符串
-                    severity_obj = finding.get('severity')
-                    if hasattr(severity_obj, 'value'):
+                    severity_obj = finding.get("severity")
+                    if hasattr(severity_obj, "value"):
                         severity = str(severity_obj.value)
-                    elif hasattr(severity_obj, 'name'):
+                    elif hasattr(severity_obj, "name"):
                         severity = str(severity_obj.name)
                     elif isinstance(severity_obj, str):
                         severity = severity_obj
                     else:
-                        severity = 'medium'
+                        severity = "medium"
 
                     # 如果 severity 格式是 "severity.HIGH" 则提取后面的部分
-                    if severity.startswith('severity.'):
-                        severity = severity.split('.')[-1]
+                    if severity.startswith("severity."):
+                        severity = severity.split(".")[-1]
 
                     # 保存原始严重级别
                     original_severity = severity
 
                     # 处理置信度，避免空字符串转换错误
-                    confidence_value = finding.get('confidence', 50)
+                    confidence_value = finding.get("confidence", 50)
                     try:
                         if isinstance(confidence_value, str):
-                            if '%' in confidence_value:
-                                confidence_value = confidence_value.replace('%', '')
+                            if "%" in confidence_value:
+                                confidence_value = confidence_value.replace("%", "")
                                 confidence = float(confidence_value) / 100.0
                             elif float(confidence_value) > 1:
                                 confidence = float(confidence_value) / 100.0
                             else:
                                 confidence = float(confidence_value)
                         else:
-                            confidence = float(confidence_value) / 100.0 if float(confidence_value) > 1 else float(confidence_value)
+                            confidence = (
+                                float(confidence_value) / 100.0
+                                if float(confidence_value) > 1
+                                else float(confidence_value)
+                            )
                     except (ValueError, TypeError):
                         confidence = 0.5
 
                     if confidence < 0.3:
                         print(f"[DEBUG] 跳过极低置信度漏洞: {vulnerability_desc}, 置信度: {confidence:.4f}")
-                        self.debug_logs.append(f"[DEBUG] 跳过极低置信度漏洞: {vulnerability_desc}, 置信度: {confidence:.4f}")
+                        self.debug_logs.append(
+                            f"[DEBUG] 跳过极低置信度漏洞: {vulnerability_desc}, 置信度: {confidence:.4f}"
+                        )
                         continue
 
                     # 验证漏洞位置和代码是否真实存在（防止AI编造）
                     validation_result = self._validate_finding_location(finding, file_path_context)
-                    if not validation_result['is_valid']:
-                        print(f"[WARN] 漏洞验证失败，跳过: {vulnerability_desc} - {validation_result['reason']}")
-                        self.debug_logs.append(f"[WARN] 漏洞验证失败，跳过: {vulnerability_desc} - {validation_result['reason']}")
+                    if not validation_result["is_valid"]:
+                        print(
+                            f"[WARN] 漏洞验证失败，跳过: {vulnerability_desc} - {validation_result['reason']}"
+                        )
+                        self.debug_logs.append(
+                            f"[WARN] 漏洞验证失败，跳过: {vulnerability_desc} - {validation_result['reason']}"
+                        )
                         continue
 
                     # 提取行号
                     line_num = 0
-                    if isinstance(location, str) and ':' in location:
-                        parts = location.rsplit(':', 1)
+                    if isinstance(location, str) and ":" in location:
+                        parts = location.rsplit(":", 1)
                         if len(parts) == 2 and parts[1].isdigit():
                             line_num = int(parts[1])
 
@@ -1859,18 +2259,28 @@ class PureAIAnalyzer:
                     try:
                         if line_num > 0 and file_path_context:
                             validator = LineNumberValidator()  # 使用配置中的tolerance值
-                            with open(file_path_context, 'r', encoding='utf-8', errors='ignore') as f:
+                            with open(
+                                file_path_context, "r", encoding="utf-8", errors="ignore"
+                            ) as f:
                                 file_content = f.read()
-                            actual_line, match_status, candidates = validator.find_actual_line(finding, file_content)
-                            finding['line_match_status'] = match_status
+                            actual_line, match_status, candidates = validator.find_actual_line(
+                                finding, file_content
+                            )
+                            finding["line_match_status"] = match_status
 
                             if match_status == "NOT_FOUND":
                                 print(f"[WARN] 行号验证失败，跳过: {rule_name} - AI报告行{line_num}无法验证")
-                                self.debug_logs.append(f"[WARN] 行号验证失败，跳过: {rule_name} - AI报告行{line_num}无法验证")
+                                self.debug_logs.append(
+                                    f"[WARN] 行号验证失败，跳过: {rule_name} - AI报告行{line_num}无法验证"
+                                )
                                 line_validation_passed = False
                             elif actual_line > 0 and actual_line != line_num:
-                                print(f"[DEBUG] Line number adjusted: {line_num} -> {actual_line} (status: {match_status})")
-                                self.debug_logs.append(f"[DEBUG] Line number adjusted: {line_num} -> {actual_line}")
+                                print(
+                                    f"[DEBUG] Line number adjusted: {line_num} -> {actual_line} (status: {match_status})"
+                                )
+                                self.debug_logs.append(
+                                    f"[DEBUG] Line number adjusted: {line_num} -> {actual_line}"
+                                )
                                 line_num = actual_line
                     except Exception as e:
                         print(f"[DEBUG] Line number validation skipped: {e}")
@@ -1880,9 +2290,7 @@ class PureAIAnalyzer:
                         continue
 
                     code_snippet = self._extract_code_at_line(
-                        file_path_context,
-                        line_num if line_num > 0 else 1,
-                        context_lines=3
+                        file_path_context, line_num if line_num > 0 else 1, context_lines=3
                     )
 
                     ai_hallucination_warning = False
@@ -1892,51 +2300,79 @@ class PureAIAnalyzer:
                         ai_hallucination_warning = True
                         hallucination_reasons.append("code_snippet_too_short")
 
-                    vulnerability_name = vulnerability_desc or ''
-                    placeholder_list = ['UNVERIFIED_RISK', 'UNKNOWN', 'GENERIC', 'PLACEHOLDER', 'UNVERIFIED', 'SUSPICIOUS_PATTERN', '未知风险', '无法验证', 'PLACEHOLDER_VULNERABILITY_NAME']
-                    if any(ph in vulnerability_name.upper() for ph in placeholder_list) or '未知风险' in vulnerability_name or '无法验证' in vulnerability_name:
+                    vulnerability_name = vulnerability_desc or ""
+                    placeholder_list = [
+                        "UNVERIFIED_RISK",
+                        "UNKNOWN",
+                        "GENERIC",
+                        "PLACEHOLDER",
+                        "UNVERIFIED",
+                        "SUSPICIOUS_PATTERN",
+                        "未知风险",
+                        "无法验证",
+                        "PLACEHOLDER_VULNERABILITY_NAME",
+                    ]
+                    if (
+                        any(ph in vulnerability_name.upper() for ph in placeholder_list)
+                        or "未知风险" in vulnerability_name
+                        or "无法验证" in vulnerability_name
+                    ):
                         ai_hallucination_warning = True
                         hallucination_reasons.append("placeholder_vulnerability_name")
 
                     if ai_hallucination_warning:
-                        print(f"[WARN] 拒绝 hallucination 漏洞发现: {vulnerability_name} - 原因: {hallucination_reasons}")
-                        self.debug_logs.append(f"[WARN] 拒绝 hallucination 漏洞发现: {vulnerability_name} - 原因: {hallucination_reasons}")
+                        print(
+                            f"[WARN] 拒绝 hallucination 漏洞发现: {vulnerability_name} - 原因: {hallucination_reasons}"
+                        )
+                        self.debug_logs.append(
+                            f"[WARN] 拒绝 hallucination 漏洞发现: {vulnerability_name} - 原因: {hallucination_reasons}"
+                        )
                         continue
 
                     if ai_hallucination_warning:
-                        print(f"[DEBUG] [Hallucination Warning] {vulnerability_name}: {hallucination_reasons}")
-                        self.debug_logs.append(f"[DEBUG] [Hallucination Warning] {vulnerability_name}: {hallucination_reasons}")
+                        print(
+                            f"[DEBUG] [Hallucination Warning] {vulnerability_name}: {hallucination_reasons}"
+                        )
+                        self.debug_logs.append(
+                            f"[DEBUG] [Hallucination Warning] {vulnerability_name}: {hallucination_reasons}"
+                        )
 
                     # 计算 end_line：根据代码片段实际行数计算
-                    snippet_lines = code_snippet.count('\n') + 1 if code_snippet else 1
+                    snippet_lines = code_snippet.count("\n") + 1 if code_snippet else 1
                     end_line = line_num + snippet_lines - 1
 
                     # 提取来源信息
-                    vuln_source = finding.get('source', 'ai_analysis')
-                    original_rule_id = finding.get('rule_id', finding.get('vulnerability', 'unknown'))
+                    vuln_source = finding.get("source", "ai_analysis")
+                    original_rule_id = finding.get(
+                        "rule_id", finding.get("vulnerability", "unknown")
+                    )
 
                     # 提取evidence数据
-                    evidence = finding.get('evidence', [])
+                    evidence = finding.get("evidence", [])
                     dynamic_confidence = self._calculate_evidence_confidence(evidence)
 
                     # 检测可疑的均匀置信度（AI未动态计算时可能出现）
                     # 如果AI返回的是固定值，则使用动态计算的置信度
                     if confidence in [0.85, 0.9, 0.8, 0.95, 1.0] and dynamic_confidence > 0:
-                        print(f"[WARN] 可疑均匀置信度检测: {rule_name} - AI报告{confidence}但证据计算{dynamic_confidence}，使用动态置信度")
-                        self.debug_logs.append(f"[WARN] 可疑均匀置信度: AI={confidence}, 证据计算={dynamic_confidence}，使用动态置信度")
+                        print(
+                            f"[WARN] 可疑均匀置信度检测: {rule_name} - AI报告{confidence}但证据计算{dynamic_confidence}，使用动态置信度"
+                        )
+                        self.debug_logs.append(
+                            f"[WARN] 可疑均匀置信度: AI={confidence}, 证据计算={dynamic_confidence}，使用动态置信度"
+                        )
                         confidence = dynamic_confidence
                     elif confidence in [0.85, 0.9, 0.8, 0.95, 1.0]:
                         # 如果动态计算失败，至少设置一个非固定的默认值
                         confidence = 0.5
 
                     metadata = {
-                        'evidence': evidence,
-                        'requires_human_review': finding.get('requires_human_review', False),
-                        'line_match_status': finding.get('line_match_status', 'UNVERIFIED'),
-                        'signal_state': finding.get('signal_state', 'NEW'),
-                        'status': finding.get('status', 'UNKNOWN'),
-                        'source': vuln_source,
-                        'rule_id': original_rule_id
+                        "evidence": evidence,
+                        "requires_human_review": finding.get("requires_human_review", False),
+                        "line_match_status": finding.get("line_match_status", "UNVERIFIED"),
+                        "signal_state": finding.get("signal_state", "NEW"),
+                        "status": finding.get("status", "UNKNOWN"),
+                        "source": vuln_source,
+                        "rule_id": original_rule_id,
                     }
 
                     vulnerability = VulnerabilityFinding(
@@ -1946,15 +2382,19 @@ class PureAIAnalyzer:
                         confidence=confidence,
                         confidence_score=dynamic_confidence,
                         location={
-                            'file': location.rsplit(':', 1)[0] if isinstance(location, str) and ':' in location else location,
-                            'line': line_num,
-                            'end_line': end_line
+                            "file": (
+                                location.rsplit(":", 1)[0]
+                                if isinstance(location, str) and ":" in location
+                                else location
+                            ),
+                            "line": line_num,
+                            "end_line": end_line,
                         },
                         description=description,
                         fix_suggestion=recommendation,
                         explanation=json.dumps(finding, ensure_ascii=False),
                         code_snippet=code_snippet,
-                        metadata=metadata
+                        metadata=metadata,
                     )
                     findings.append(vulnerability)
                     print(f"[DEBUG] 添加漏洞发现: {rule_name}")
@@ -1967,6 +2407,7 @@ class PureAIAnalyzer:
             print(f"[PURE-AI] 转换结果失败: {e}")
             self.debug_logs.append(f"[DEBUG] 转换结果失败: {e}")
             import traceback
+
             traceback.print_exc()
 
         print(f"[DEBUG] 转换完成，生成 {len(findings)} 个漏洞发现")
@@ -2012,9 +2453,16 @@ class PureAIAnalyzer:
         Returns:
             bool: 结果是否完整
         """
-        required_fields = ['file_path', 'context_analysis', 'code_understanding',
-                          'risk_enumeration', 'vulnerability_verification',
-                          'attack_chain_analysis', 'adversarial_validation', 'final_decision']
+        required_fields = [
+            "file_path",
+            "context_analysis",
+            "code_understanding",
+            "risk_enumeration",
+            "vulnerability_verification",
+            "attack_chain_analysis",
+            "adversarial_validation",
+            "final_decision",
+        ]
 
         for field in required_fields:
             if field not in result:
@@ -2024,51 +2472,62 @@ class PureAIAnalyzer:
                     raise ValueError(error_msg)
                 return False
 
-        final_decision = result.get('final_decision', {})
-        if 'final_findings' not in final_decision:
+        final_decision = result.get("final_decision", {})
+        if "final_findings" not in final_decision:
             error_msg = "Final Agent 输出结构错误：缺少 final_findings 字段"
             print(f"[DEBUG] {error_msg}")
             if strict:
                 raise ValueError(error_msg)
-            final_decision['final_findings'] = []
+            final_decision["final_findings"] = []
 
-        final_findings = final_decision.get('final_findings', [])
+        final_findings = final_decision.get("final_findings", [])
         if len(final_findings) == 0:
-            risk_enum = result.get('risk_enumeration', {})
-            vuln_verif = result.get('vulnerability_verification', {})
-            adversarial_val = result.get('adversarial_validation', {})
+            risk_enum = result.get("risk_enumeration", {})
+            vuln_verif = result.get("vulnerability_verification", {})
+            adversarial_val = result.get("adversarial_validation", {})
 
-            potential_vulns = risk_enum.get('potential_vulnerabilities', [])
-            confirmed_vulns = vuln_verif.get('confirmed_vulnerabilities', [])
-            adversarial_findings = adversarial_val.get('findings', [])
-            risks = risk_enum.get('risks', [])
+            potential_vulns = risk_enum.get("potential_vulnerabilities", [])
+            confirmed_vulns = vuln_verif.get("confirmed_vulnerabilities", [])
+            adversarial_findings = adversarial_val.get("findings", [])
+            risks = risk_enum.get("risks", [])
 
             high_quality_risks = []
             for r in risks:
-                evidence = r.get('evidence', [])
-                has_code_evidence = any(
-                    isinstance(e, dict) and e.get('code_snippet')
-                    for e in evidence
-                ) if evidence else False
-                confidence = r.get('confidence', 0)
-                risk_title = r.get('title', '') or r.get('vulnerability', '') or ''
-                is_unverified_placeholder = not risk_title or 'UNVERIFIED' in risk_title.upper() or risk_title in ['UNKNOWN', 'unknown', '']
+                evidence = r.get("evidence", [])
+                has_code_evidence = (
+                    any(isinstance(e, dict) and e.get("code_snippet") for e in evidence)
+                    if evidence
+                    else False
+                )
+                confidence = r.get("confidence", 0)
+                risk_title = r.get("title", "") or r.get("vulnerability", "") or ""
+                is_unverified_placeholder = (
+                    not risk_title
+                    or "UNVERIFIED" in risk_title.upper()
+                    or risk_title in ["UNKNOWN", "unknown", ""]
+                )
                 if has_code_evidence and confidence >= 0.3 and not is_unverified_placeholder:
                     high_quality_risks.append(r)
 
             has_potential_findings = (
-                (potential_vulns and len(potential_vulns) > 0) or
-                (confirmed_vulns and len(confirmed_vulns) > 0) or
-                (adversarial_findings and len(adversarial_findings) > 0) or
-                (high_quality_risks and len(high_quality_risks) > 0)
+                (potential_vulns and len(potential_vulns) > 0)
+                or (confirmed_vulns and len(confirmed_vulns) > 0)
+                or (adversarial_findings and len(adversarial_findings) > 0)
+                or (high_quality_risks and len(high_quality_risks) > 0)
             )
 
             if has_potential_findings:
                 print(f"[WARN] Agent 6 判定无漏洞，但其他 Agent 发现了潜在漏洞")
-                print(f"[WARN]   - risk_enumeration potential_vulnerabilities: {len(potential_vulns)}")
-                print(f"[WARN]   - vulnerability_verification confirmed_vulnerabilities: {len(confirmed_vulns)}")
+                print(
+                    f"[WARN]   - risk_enumeration potential_vulnerabilities: {len(potential_vulns)}"
+                )
+                print(
+                    f"[WARN]   - vulnerability_verification confirmed_vulnerabilities: {len(confirmed_vulns)}"
+                )
                 print(f"[WARN]   - adversarial_validation findings: {len(adversarial_findings)}")
-                print(f"[WARN]   - high_quality_risks (confidence>=0.3, has_code): {len(high_quality_risks)}")
+                print(
+                    f"[WARN]   - high_quality_risks (confidence>=0.3, has_code): {len(high_quality_risks)}"
+                )
                 if strict:
                     raise ValueError("Agent 6 漏报：发现了潜在漏洞但 final_findings 为空")
 
@@ -2118,10 +2577,13 @@ class PureAIAnalyzer:
             console.print(f"[red][X] 纯AI分析文件失败: {e}[/red]")
             if self.config.debug:
                 import traceback
+
                 traceback.print_exc()
             return []
 
-    async def analyze_batch(self, file_infos: List[Any], max_concurrent: int = 5) -> List[List[VulnerabilityFinding]]:
+    async def analyze_batch(
+        self, file_infos: List[Any], max_concurrent: int = 5
+    ) -> List[List[VulnerabilityFinding]]:
         """批量分析文件 - 智能分层扫描
 
         仿人类专家思维：
@@ -2152,7 +2614,7 @@ class PureAIAnalyzer:
 
         # Step 1: 快速预检 - CodeVulnScanner 扫描所有文件
         from src.analyzers.code_vuln_scanner import CodeVulnScanner
-        from src.core.file_filter import SecurityFileFilter, RiskLevel
+        from src.core.file_filter import RiskLevel, SecurityFileFilter
 
         code_scanner = CodeVulnScanner()
         file_filter = SecurityFileFilter()
@@ -2163,10 +2625,20 @@ class PureAIAnalyzer:
         print(f"[DEBUG] 智能分层扫描：先快速预检 {total_files} 个文件...")
 
         DEPENDENCY_FILES = {
-            'pom.xml', 'build.gradle', 'build.gradle.kts',
-            'package.json', 'requirements.txt', 'Pipfile', 'Pipfile.lock',
-            'Gemfile', 'Gemfile.lock', 'go.mod', 'go.sum',
-            'Cargo.toml', 'composer.json', 'package-lock.json'
+            "pom.xml",
+            "build.gradle",
+            "build.gradle.kts",
+            "package.json",
+            "requirements.txt",
+            "Pipfile",
+            "Pipfile.lock",
+            "Gemfile",
+            "Gemfile.lock",
+            "go.mod",
+            "go.sum",
+            "Cargo.toml",
+            "composer.json",
+            "package-lock.json",
         }
 
         from pathlib import Path
@@ -2178,7 +2650,7 @@ class PureAIAnalyzer:
             file_name = Path(file_info.path).name.lower()
             if file_name in DEPENDENCY_FILES:
                 try:
-                    with open(file_info.path, 'r', encoding='utf-8') as f:
+                    with open(file_info.path, "r", encoding="utf-8") as f:
                         dependency_files[file_name] = f.read()
                 except Exception:
                     pass
@@ -2190,30 +2662,39 @@ class PureAIAnalyzer:
         if dependency_files:
             try:
                 from src.scanner.library_matcher import get_library_matcher
+
                 library_matcher = get_library_matcher()
 
                 if library_matcher._nvd_available:
                     for file_name, content in dependency_files.items():
-                        language = 'java'
-                        if file_name == 'package.json' or file_name == 'package-lock.json':
-                            language = 'javascript'
-                        elif file_name in ('requirements.txt', 'Pipfile', 'Pipfile.lock'):
-                            language = 'python'
+                        language = "java"
+                        if file_name == "package.json" or file_name == "package-lock.json":
+                            language = "javascript"
+                        elif file_name in ("requirements.txt", "Pipfile", "Pipfile.lock"):
+                            language = "python"
 
                         libs = library_matcher.detect_libraries(content, language)
                         project_libraries.extend(libs)
 
                     if project_libraries:
-                        print(f"[DEBUG] Build project dependency table: found {len(project_libraries)} libraries")
+                        print(
+                            f"[DEBUG] Build project dependency table: found {len(project_libraries)} libraries"
+                        )
 
                     if library_matcher._nvd_available:
-                        nvd_vulnerabilities = library_matcher.match_vulnerabilities(project_libraries)
+                        nvd_vulnerabilities = library_matcher.match_vulnerabilities(
+                            project_libraries
+                        )
                         if nvd_vulnerabilities:
-                            print(f"[DEBUG] Found {len(nvd_vulnerabilities)} known CVE vulnerabilities in project dependencies")
+                            print(
+                                f"[DEBUG] Found {len(nvd_vulnerabilities)} known CVE vulnerabilities in project dependencies"
+                            )
 
                             for vuln in nvd_vulnerabilities[:5]:
-                                cvss = vuln.metadata.get('cvss_score', 0)
-                                print(f"[DEBUG]   - {vuln.library_name}: {vuln.cve_id} (CVSS: {cvss})")
+                                cvss = vuln.metadata.get("cvss_score", 0)
+                                print(
+                                    f"[DEBUG]   - {vuln.library_name}: {vuln.cve_id} (CVSS: {cvss})"
+                                )
                             if len(nvd_vulnerabilities) > 5:
                                 print(f"[DEBUG]   ... and {len(nvd_vulnerabilities) - 5} more CVEs")
             except Exception as e:
@@ -2233,9 +2714,9 @@ class PureAIAnalyzer:
 
                 if vulnerable_library_names and library_matcher:
                     try:
-                        with open(file_path, 'r', encoding='utf-8') as f:
+                        with open(file_path, "r", encoding="utf-8") as f:
                             content = f.read()
-                        language = file_info.language.value if file_info.language else 'java'
+                        language = file_info.language.value if file_info.language else "java"
                         imported_libs = library_matcher.detect_libraries(content, language)
                         imported_names = {lib.name for lib in imported_libs}
                         if imported_names & vulnerable_library_names:
@@ -2243,7 +2724,10 @@ class PureAIAnalyzer:
                     except Exception:
                         pass
 
-                if classified.risk_level in (RiskLevel.CRITICAL, RiskLevel.HIGH, RiskLevel.MEDIUM) or uses_vulnerable_lib:
+                if (
+                    classified.risk_level in (RiskLevel.CRITICAL, RiskLevel.HIGH, RiskLevel.MEDIUM)
+                    or uses_vulnerable_lib
+                ):
                     quick_results = code_scanner.scan_file(file_path)
                     if quick_results or uses_vulnerable_lib:
                         suspicious_files.append((i, file_info, quick_results))
@@ -2272,8 +2756,16 @@ class PureAIAnalyzer:
         print(f"[DEBUG] 开始 AI 深度分析 {len(suspicious_files)} 个可疑文件 (并发数: {dynamic_concurrent})...")
 
         semaphore = asyncio.Semaphore(dynamic_concurrent)
-        
-        from rich.progress import Progress, SpinnerColumn, BarColumn, TextColumn, TimeElapsedColumn, TaskProgressColumn
+
+        from rich.progress import (
+            BarColumn,
+            Progress,
+            SpinnerColumn,
+            TaskProgressColumn,
+            TextColumn,
+            TimeElapsedColumn,
+        )
+
         progress = Progress(
             SpinnerColumn(),
             TextColumn("[progress.description]{task.description}"),
@@ -2282,7 +2774,7 @@ class PureAIAnalyzer:
             TimeElapsedColumn(),
             console=console,
         )
-        
+
         task_id = None
         with progress:
             task_id = progress.add_task(f"[cyan]AI analyzing files...", total=len(suspicious_files))
@@ -2293,7 +2785,11 @@ class PureAIAnalyzer:
                         print(f"[DEBUG] AI 分析文件 {idx+1}/{len(suspicious_files)}: {file_info.path}")
                     result = await self.analyze_file(file_info)
                     if task_id is not None:
-                        progress.update(task_id, advance=1, description=f"[cyan]Analyzing: {Path(file_info.path).name}")
+                        progress.update(
+                            task_id,
+                            advance=1,
+                            description=f"[cyan]Analyzing: {Path(file_info.path).name}",
+                        )
                     return idx, result
 
             tasks = [analyze_with_limit(idx, fi) for idx, fi, _ in suspicious_files]
@@ -2309,9 +2805,9 @@ class PureAIAnalyzer:
         if vulnerable_library_names and library_matcher:
             for idx, file_info, _ in suspicious_files:
                 try:
-                    with open(file_info.path, 'r', encoding='utf-8') as f:
+                    with open(file_info.path, "r", encoding="utf-8") as f:
                         content = f.read()
-                    language = file_info.language.value if file_info.language else 'java'
+                    language = file_info.language.value if file_info.language else "java"
                     imported_libs = library_matcher.detect_libraries(content, language)
                     imported_names = {lib.name for lib in imported_libs}
                     matched_libs = imported_names & vulnerable_library_names
@@ -2327,53 +2823,69 @@ class PureAIAnalyzer:
             if not all_findings and quick_results:
                 for qr in quick_results:
                     from dataclasses import asdict
+
                     qr_dict = asdict(qr)
-                    qr_dict['rule_id'] = qr_dict.get('vuln_type', 'unknown')
-                    qr_dict['rule_name'] = qr_dict.get('vuln_type', 'unknown')
-                    severity_map = {'CRITICAL': 'critical', 'HIGH': 'high', 'MEDIUM': 'medium', 'LOW': 'low'}
-                    level = qr_dict.get('level', 'MEDIUM')
-                    if hasattr(level, 'value'):
-                        level = level.value
-                    qr_dict['severity'] = severity_map.get(str(level).upper(), 'medium')
-                    qr_dict['fix_suggestion'] = qr_dict.get('remediation', '')
-                    qr_dict['location'] = {
-                        'file': qr_dict.get('file_path', ''),
-                        'line': qr_dict.get('line_number', 0),
-                        'column': 0,
-                        'end_line': qr_dict.get('line_number', 0),
-                        'end_column': 0
+                    qr_dict["rule_id"] = qr_dict.get("vuln_type", "unknown")
+                    qr_dict["rule_name"] = qr_dict.get("vuln_type", "unknown")
+                    severity_map = {
+                        "CRITICAL": "critical",
+                        "HIGH": "high",
+                        "MEDIUM": "medium",
+                        "LOW": "low",
                     }
-                    for key in ['vuln_type', 'level', 'remediation', 'file_path', 'line_number']:
+                    level = qr_dict.get("level", "MEDIUM")
+                    if hasattr(level, "value"):
+                        level = level.value
+                    qr_dict["severity"] = severity_map.get(str(level).upper(), "medium")
+                    qr_dict["fix_suggestion"] = qr_dict.get("remediation", "")
+                    qr_dict["location"] = {
+                        "file": qr_dict.get("file_path", ""),
+                        "line": qr_dict.get("line_number", 0),
+                        "column": 0,
+                        "end_line": qr_dict.get("line_number", 0),
+                        "end_column": 0,
+                    }
+                    for key in ["vuln_type", "level", "remediation", "file_path", "line_number"]:
                         qr_dict.pop(key, None)
-                    all_findings.append(type('Finding', (), qr_dict)())
+                    all_findings.append(type("Finding", (), qr_dict)())
 
             if idx in file_to_vuln_libs and nvd_vulnerabilities:
                 for vuln in nvd_vulnerabilities:
                     if vuln.library_name in file_to_vuln_libs[idx]:
-                        cvss_score = vuln.metadata.get('cvss_score', 0)
+                        cvss_score = vuln.metadata.get("cvss_score", 0)
                         severity_map = {
-                            'CRITICAL': 'critical', 'HIGH': 'high',
-                            'MEDIUM': 'medium', 'LOW': 'low'
+                            "CRITICAL": "critical",
+                            "HIGH": "high",
+                            "MEDIUM": "medium",
+                            "LOW": "low",
                         }
-                        severity = severity_map.get(vuln.severity.upper(), 'medium')
+                        severity = severity_map.get(vuln.severity.upper(), "medium")
 
-                        finding = type('Finding', (), {
-                            'rule_id': f"NVD-{vuln.cve_id}",
-                            'rule_name': f"{vuln.library_name} 存在已知漏洞",
-                            'description': f"{vuln.library_name} 版本 {vuln.affected_versions[0] if vuln.affected_versions else '未知'} 存在CVE漏洞",
-                            'severity': severity,
-                            'confidence': min(1.0, cvss_score / 10.0 + 0.3),
-                            'message': f"{vuln.library_name} 存在 {vuln.cve_id}，受影响版本: {', '.join(vuln.affected_versions[:3]) if vuln.affected_versions else '未知'}",
-                            'code_snippet': f"检测到库: {vuln.library_name}",
-                            'fix_suggestion': f"升级到安全版本: {vuln.fix_version}" if vuln.fix_version else "请查看官方安全公告并升级",
-                            'metadata': {
-                                'source': 'nvd_library_matcher',
-                                'cve_id': vuln.cve_id,
-                                'library_name': vuln.library_name,
-                                'verified': True,
-                                'cvss_score': cvss_score
-                            }
-                        })()
+                        finding = type(
+                            "Finding",
+                            (),
+                            {
+                                "rule_id": f"NVD-{vuln.cve_id}",
+                                "rule_name": f"{vuln.library_name} 存在已知漏洞",
+                                "description": f"{vuln.library_name} 版本 {vuln.affected_versions[0] if vuln.affected_versions else '未知'} 存在CVE漏洞",
+                                "severity": severity,
+                                "confidence": min(1.0, cvss_score / 10.0 + 0.3),
+                                "message": f"{vuln.library_name} 存在 {vuln.cve_id}，受影响版本: {', '.join(vuln.affected_versions[:3]) if vuln.affected_versions else '未知'}",
+                                "code_snippet": f"检测到库: {vuln.library_name}",
+                                "fix_suggestion": (
+                                    f"升级到安全版本: {vuln.fix_version}"
+                                    if vuln.fix_version
+                                    else "请查看官方安全公告并升级"
+                                ),
+                                "metadata": {
+                                    "source": "nvd_library_matcher",
+                                    "cve_id": vuln.cve_id,
+                                    "library_name": vuln.library_name,
+                                    "verified": True,
+                                    "cvss_score": cvss_score,
+                                },
+                            },
+                        )()
                         all_findings.append(finding)
 
             results[idx] = all_findings
@@ -2382,7 +2894,7 @@ class PureAIAnalyzer:
         all_ai_findings = []
         for idx, findings in enumerate(results):
             for f in findings:
-                if hasattr(f, 'metadata') and f.metadata.get('source') != 'nvd_library_matcher':
+                if hasattr(f, "metadata") and f.metadata.get("source") != "nvd_library_matcher":
                     all_ai_findings.append((idx, f))
 
         cve_confirmed_count = 0
@@ -2395,73 +2907,87 @@ class PureAIAnalyzer:
             verified_library_names = {v.library_name for v in nvd_vulnerabilities}
 
             for idx, finding in all_ai_findings:
-                if not hasattr(finding, 'metadata'):
+                if not hasattr(finding, "metadata"):
                     continue
 
                 metadata = finding.metadata
-                library_name = metadata.get('library_name', '')
+                library_name = metadata.get("library_name", "")
 
                 if library_name and library_name in verified_library_names:
                     for vuln in nvd_vulnerabilities:
                         if vuln.library_name == library_name:
-                            metadata['cve_confirmed'] = True
-                            metadata['cve_id'] = vuln.cve_id
-                            metadata['cvss_score'] = vuln.metadata.get('cvss_score', 0)
-                            metadata['triple_verified'] = True
+                            metadata["cve_confirmed"] = True
+                            metadata["cve_id"] = vuln.cve_id
+                            metadata["cvss_score"] = vuln.metadata.get("cvss_score", 0)
+                            metadata["triple_verified"] = True
                             cve_confirmed_count += 1
                             break
                 else:
-                    if library_name and not any(v.library_name == library_name for v in nvd_vulnerabilities):
-                        metadata['cve_confirmed'] = False
-                        metadata['hallucination_risk'] = 'MEDIUM'
-                        metadata['triple_verified'] = False
-                        hallucination_warnings.append({
-                            'file_idx': idx,
-                            'library_name': library_name,
-                            'rule_name': getattr(finding, 'rule_name', 'Unknown')
-                        })
+                    if library_name and not any(
+                        v.library_name == library_name for v in nvd_vulnerabilities
+                    ):
+                        metadata["cve_confirmed"] = False
+                        metadata["hallucination_risk"] = "MEDIUM"
+                        metadata["triple_verified"] = False
+                        hallucination_warnings.append(
+                            {
+                                "file_idx": idx,
+                                "library_name": library_name,
+                                "rule_name": getattr(finding, "rule_name", "Unknown"),
+                            }
+                        )
 
             for vuln in nvd_vulnerabilities:
                 already_found = any(
-                    hasattr(f, 'metadata') and f.metadata.get('cve_id') == vuln.cve_id
+                    hasattr(f, "metadata") and f.metadata.get("cve_id") == vuln.cve_id
                     for findings in results
                     for f in findings
                 )
                 if not already_found:
                     for idx, file_info, _ in suspicious_files:
                         try:
-                            with open(file_info.path, 'r', encoding='utf-8') as f:
+                            with open(file_info.path, "r", encoding="utf-8") as f:
                                 content = f.read()
-                            language = file_info.language.value if file_info.language else 'java'
+                            language = file_info.language.value if file_info.language else "java"
                             imported_libs = library_matcher.detect_libraries(content, language)
                             imported_names = {lib.name for lib in imported_libs}
                             if vuln.library_name in imported_names:
-                                cvss_score = vuln.metadata.get('cvss_score', 0)
+                                cvss_score = vuln.metadata.get("cvss_score", 0)
                                 severity_map = {
-                                    'CRITICAL': 'critical', 'HIGH': 'high',
-                                    'MEDIUM': 'medium', 'LOW': 'low'
+                                    "CRITICAL": "critical",
+                                    "HIGH": "high",
+                                    "MEDIUM": "medium",
+                                    "LOW": "low",
                                 }
-                                severity = severity_map.get(vuln.severity.upper(), 'medium')
+                                severity = severity_map.get(vuln.severity.upper(), "medium")
 
-                                gap_finding = type('Finding', (), {
-                                    'rule_id': f"NVD-{vuln.cve_id}",
-                                    'rule_name': f"{vuln.library_name} 存在已知漏洞 (Triple-Verified)",
-                                    'description': f"{vuln.library_name} 版本 {vuln.affected_versions[0] if vuln.affected_versions else '未知'} 存在CVE漏洞",
-                                    'severity': severity,
-                                    'confidence': min(1.0, cvss_score / 10.0 + 0.3),
-                                    'message': f"{vuln.library_name} 存在 {vuln.cve_id}，受影响版本: {', '.join(vuln.affected_versions[:3]) if vuln.affected_versions else '未知'}",
-                                    'code_snippet': f"检测到库: {vuln.library_name}",
-                                    'fix_suggestion': f"升级到安全版本: {vuln.fix_version}" if vuln.fix_version else "请查看官方安全公告并升级",
-                                    'metadata': {
-                                        'source': 'nvd_library_matcher',
-                                        'cve_id': vuln.cve_id,
-                                        'library_name': vuln.library_name,
-                                        'verified': True,
-                                        'cvss_score': cvss_score,
-                                        'triple_verified': True,
-                                        'gap_filled': True
-                                    }
-                                })()
+                                gap_finding = type(
+                                    "Finding",
+                                    (),
+                                    {
+                                        "rule_id": f"NVD-{vuln.cve_id}",
+                                        "rule_name": f"{vuln.library_name} 存在已知漏洞 (Triple-Verified)",
+                                        "description": f"{vuln.library_name} 版本 {vuln.affected_versions[0] if vuln.affected_versions else '未知'} 存在CVE漏洞",
+                                        "severity": severity,
+                                        "confidence": min(1.0, cvss_score / 10.0 + 0.3),
+                                        "message": f"{vuln.library_name} 存在 {vuln.cve_id}，受影响版本: {', '.join(vuln.affected_versions[:3]) if vuln.affected_versions else '未知'}",
+                                        "code_snippet": f"检测到库: {vuln.library_name}",
+                                        "fix_suggestion": (
+                                            f"升级到安全版本: {vuln.fix_version}"
+                                            if vuln.fix_version
+                                            else "请查看官方安全公告并升级"
+                                        ),
+                                        "metadata": {
+                                            "source": "nvd_library_matcher",
+                                            "cve_id": vuln.cve_id,
+                                            "library_name": vuln.library_name,
+                                            "verified": True,
+                                            "cvss_score": cvss_score,
+                                            "triple_verified": True,
+                                            "gap_filled": True,
+                                        },
+                                    },
+                                )()
                                 results[idx].append(gap_finding)
                                 filled_gaps_count += 1
                                 break
@@ -2470,7 +2996,9 @@ class PureAIAnalyzer:
 
             print(f"[DEBUG] [Triple Verification] CVE confirmed: {cve_confirmed_count}")
             if hallucination_warnings:
-                print(f"[DEBUG] [Triple Verification] Hallucination warnings: {len(hallucination_warnings)}")
+                print(
+                    f"[DEBUG] [Triple Verification] Hallucination warnings: {len(hallucination_warnings)}"
+                )
                 for hw in hallucination_warnings[:3]:
                     print(f"[DEBUG]   - {hw['rule_name']} ({hw['library_name']})")
             print(f"[DEBUG] [Triple Verification] Gap-filling (NVD): {filled_gaps_count}")
@@ -2488,35 +3016,53 @@ class PureAIAnalyzer:
                     for fp in file_paths[1:]:
                         parts = fp.parts
                         common_parts = tuple(p for p in common_parts if p in parts)
-                    project_root = str(Path(*common_parts)) if common_parts else str(file_paths[0].parent)
+                    project_root = (
+                        str(Path(*common_parts)) if common_parts else str(file_paths[0].parent)
+                    )
                 else:
                     project_root = ""
 
-                verification_results = verify_ai_findings(all_findings, project_root, nvd_vulnerabilities)
+                verification_results = verify_ai_findings(
+                    all_findings, project_root, nvd_vulnerabilities
+                )
 
-                verified_count = sum(1 for v in verification_results if v['verification_level'] != 'potential_hallucination')
-                hallucination_count = sum(1 for v in verification_results if v['is_hallucination'])
+                verified_count = sum(
+                    1
+                    for v in verification_results
+                    if v["verification_level"] != "potential_hallucination"
+                )
+                hallucination_count = sum(1 for v in verification_results if v["is_hallucination"])
 
-                triple_verified = sum(1 for v in verification_results if v['verification_level'] == 'triple_verified')
-                double_verified = sum(1 for v in verification_results if v['verification_level'] == 'double_verified')
-                single_verified = sum(1 for v in verification_results if v['verification_level'] == 'single_verified')
+                triple_verified = sum(
+                    1 for v in verification_results if v["verification_level"] == "triple_verified"
+                )
+                double_verified = sum(
+                    1 for v in verification_results if v["verification_level"] == "double_verified"
+                )
+                single_verified = sum(
+                    1 for v in verification_results if v["verification_level"] == "single_verified"
+                )
 
                 print(f"[DEBUG] [Triple Verification] Path/Code verification results:")
                 print(f"[DEBUG]   - Total findings: {len(all_findings)}")
                 print(f"[DEBUG]   - Triple verified: {triple_verified}")
                 print(f"[DEBUG]   - Double verified: {double_verified}")
                 print(f"[DEBUG]   - Single verified: {single_verified}")
-                print(f"[DEBUG]   - Needs review: {len(all_findings) - verified_count - hallucination_count}")
+                print(
+                    f"[DEBUG]   - Needs review: {len(all_findings) - verified_count - hallucination_count}"
+                )
                 print(f"[DEBUG]   - Potential hallucinations: {hallucination_count}")
 
                 if hallucination_count > 0:
                     print(f"[DEBUG] [Triple Verification] Potential hallucinations detected:")
                     hallucinated_indices = set()
                     for i, v in enumerate(verification_results):
-                        if v['is_hallucination']:
+                        if v["is_hallucination"]:
                             finding = all_findings[i]
                             hallucinated_indices.add(i)
-                            print(f"[DEBUG]   - [{finding.rule_name}] confidence: {v['confidence']:.2f}, reason: file path or code not verified")
+                            print(
+                                f"[DEBUG]   - [{finding.rule_name}] confidence: {v['confidence']:.2f}, reason: file path or code not verified"
+                            )
 
                     filtered_results = []
                     flat_index = 0
@@ -2528,7 +3074,9 @@ class PureAIAnalyzer:
                             flat_index += 1
                         filtered_results.append(filtered_file_findings)
                     results = filtered_results
-                    print(f"[DEBUG] [Triple Verification] Filtered out {hallucination_count} hallucinated findings, remaining: {sum(len(f) for f in results)}")
+                    print(
+                        f"[DEBUG] [Triple Verification] Filtered out {hallucination_count} hallucinated findings, remaining: {sum(len(f) for f in results)}"
+                    )
 
         except Exception as e:
             print(f"[DEBUG] [Triple Verification] File path verification failed: {e}")
@@ -2553,9 +3101,9 @@ class PureAIAnalyzer:
             if self.config.debug:
                 console.print(f"[dim][DEBUG] 开始从断点恢复扫描[/dim]")
 
-            processed_files = checkpoint_data.get('processed_files', [])
-            pending_files = checkpoint_data.get('pending_files', [])
-            results = checkpoint_data.get('results', [])
+            processed_files = checkpoint_data.get("processed_files", [])
+            pending_files = checkpoint_data.get("pending_files", [])
+            results = checkpoint_data.get("results", [])
 
             if self.config.debug:
                 console.print(f"[dim][DEBUG] 已处理文件数: {len(processed_files)}[/dim]")
@@ -2579,15 +3127,17 @@ class PureAIAnalyzer:
                     processed_files.append(file_info.path)
 
                     # 调用检查点回调
-                    if hasattr(self, 'checkpoint_callback') and self.checkpoint_callback:
-                        self.checkpoint_callback({
-                            'processed_file': file_info.path,
-                            'findings_count': len(findings),
-                            'total_processed': len(processed_files)
-                        })
+                    if hasattr(self, "checkpoint_callback") and self.checkpoint_callback:
+                        self.checkpoint_callback(
+                            {
+                                "processed_file": file_info.path,
+                                "findings_count": len(findings),
+                                "total_processed": len(processed_files),
+                            }
+                        )
 
                     # 更新上下文记忆
-                    if hasattr(self, 'context_memory') and self.context_memory:
+                    if hasattr(self, "context_memory") and self.context_memory:
                         await self.context_memory.update(file_info.path, findings)
 
                 except Exception as e:
@@ -2603,11 +3153,13 @@ class PureAIAnalyzer:
         except Exception as e:
             console.print(f"[red][X] 断点恢复失败: {e}[/red]")
             import traceback
+
             traceback.print_exc()
             return []
 
-    async def incremental_scan(self, file_infos: List[Any],
-                               incremental_index: Any) -> List[List[VulnerabilityFinding]]:
+    async def incremental_scan(
+        self, file_infos: List[Any], incremental_index: Any
+    ) -> List[List[VulnerabilityFinding]]:
         """增量扫描
 
         Args:
@@ -2637,7 +3189,9 @@ class PureAIAnalyzer:
                 if is_changed:
                     changed_files.append((file_info, change_type))
                     if self.config.debug:
-                        console.print(f"[dim][DEBUG] 检测到变更文件: {file_info.path} (类型: {change_type})[/dim]")
+                        console.print(
+                            f"[dim][DEBUG] 检测到变更文件: {file_info.path} (类型: {change_type})[/dim]"
+                        )
                 else:
                     unchanged_files.append(file_info)
                     # 复用未变更文件的缓存结果
@@ -2648,7 +3202,9 @@ class PureAIAnalyzer:
                         cached_results.append([])
 
             if self.config.debug:
-                console.print(f"[dim][DEBUG] 变更文件: {len(changed_files)}, 未变更文件: {len(unchanged_files)}[/dim]")
+                console.print(
+                    f"[dim][DEBUG] 变更文件: {len(changed_files)}, 未变更文件: {len(unchanged_files)}[/dim]"
+                )
 
             # 构建结果列表，保持原始顺序
             results = []
@@ -2664,15 +3220,19 @@ class PureAIAnalyzer:
                     changed_idx += 1
 
                     # 更新检查点回调
-                    if hasattr(self, 'checkpoint_callback') and self.checkpoint_callback:
-                        self.checkpoint_callback({
-                            'processed_file': file_info.path,
-                            'findings_count': len(findings),
-                            'change_type': 'incremental'
-                        })
+                    if hasattr(self, "checkpoint_callback") and self.checkpoint_callback:
+                        self.checkpoint_callback(
+                            {
+                                "processed_file": file_info.path,
+                                "findings_count": len(findings),
+                                "change_type": "incremental",
+                            }
+                        )
                 else:
                     # 复用缓存结果
-                    results.append(cached_results[cached_idx] if cached_idx < len(cached_results) else [])
+                    results.append(
+                        cached_results[cached_idx] if cached_idx < len(cached_results) else []
+                    )
                     cached_idx += 1
 
             if self.config.debug:
@@ -2683,6 +3243,7 @@ class PureAIAnalyzer:
         except Exception as e:
             console.print(f"[red][X] 增量扫描失败: {e}[/red]")
             import traceback
+
             traceback.print_exc()
             return [[] for _ in file_infos]
 

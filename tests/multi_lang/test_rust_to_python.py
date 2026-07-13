@@ -1,22 +1,24 @@
-import sys
 import ast
-import subprocess
-import tempfile
 import os
 import runpy
+import subprocess
+import sys
+import tempfile
 
 project_root = os.path.join(os.path.dirname(__file__), "..", "..")
 sys.path.insert(0, project_root)
 
 module_name = "ast_transpiler_engine"
-module_path = os.path.join(project_root, "src", "analyzers", "verification", "ast_transpiler_engine.py")
+module_path = os.path.join(
+    project_root, "src", "analyzers", "verification", "ast_transpiler_engine.py"
+)
 
 mod_info = runpy.run_path(module_path, run_name=module_name)
 RustASTParser = mod_info["RustASTParser"]
 
 
 def test_rust_to_python_transpilation():
-    rust_code = '''
+    rust_code = """
 struct HelloWorld {
     name: String,
 }
@@ -35,7 +37,7 @@ fn main() {
     let hello = HelloWorld::new("World");
     println!("{}", hello.get_name());
 }
-'''
+"""
 
     print("=" * 60)
     print("Rust to Python Transpilation Test")
@@ -52,7 +54,7 @@ fn main() {
         "syntax_valid": False,
         "executable": False,
         "output": "",
-        "error": None
+        "error": None,
     }
 
     print("\n[2] Generated Python Code:")
@@ -85,16 +87,15 @@ fn main() {
     print("-" * 40)
 
     try:
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False, encoding='utf-8') as f:
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".py", delete=False, encoding="utf-8"
+        ) as f:
             f.write(python_code)
             temp_file = f.name
 
         try:
             result = subprocess.run(
-                [sys.executable, temp_file],
-                capture_output=True,
-                text=True,
-                timeout=10
+                [sys.executable, temp_file], capture_output=True, text=True, timeout=10
             )
 
             if result.returncode == 0:
@@ -140,11 +141,11 @@ def print_test_summary(results):
     print(f"Syntax Valid:    {'PASS' if results['syntax_valid'] else 'FAIL'}")
     print(f"Executable:      {'PASS' if results['executable'] else 'FAIL'}")
     print(f"Overall Status:  {'SUCCESS' if results['success'] else 'PARTIAL/FAIL'}")
-    if results['error']:
+    if results["error"]:
         print(f"Error: {results['error']}")
     print("=" * 60)
 
 
 if __name__ == "__main__":
     results = test_rust_to_python_transpilation()
-    sys.exit(0 if results['success'] else 1)
+    sys.exit(0 if results["success"] else 1)

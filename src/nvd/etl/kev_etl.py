@@ -1,10 +1,13 @@
 import json
 import re
-from pathlib import Path
 from datetime import datetime
-from typing import Optional, Dict, List
+from pathlib import Path
+from typing import Dict, List, Optional
+
 from tqdm import tqdm
+
 from .base import BaseETL
+
 
 class KEVETL(BaseETL):
     """KEV数据ETL处理器 - 适配 known_exploited_vulnerabilities.json 格式"""
@@ -69,10 +72,10 @@ class KEVETL(BaseETL):
 
     def _process_json_file(self, json_file: Path) -> None:
         """处理KEV JSON文件"""
-        with open(json_file, 'r', encoding='utf-8') as f:
+        with open(json_file, "r", encoding="utf-8") as f:
             data = json.load(f)
 
-        vulnerabilities = data.get('vulnerabilities', [])
+        vulnerabilities = data.get("vulnerabilities", [])
 
         if not vulnerabilities:
             print(f"╔══════════════════════════════════════════════════════════════╗")
@@ -105,19 +108,19 @@ class KEVETL(BaseETL):
     def _extract_kev_data(self, item: Dict) -> Optional[Dict]:
         """提取KEV数据"""
         try:
-            cve_id = item.get('cveID', '')
+            cve_id = item.get("cveID", "")
             if not cve_id:
                 return None
 
-            date_added_str = item.get('dateAdded', '')
-            due_date_str = item.get('dueDate', '')
+            date_added_str = item.get("dateAdded", "")
+            due_date_str = item.get("dueDate", "")
 
             return {
-                'cve_id': cve_id,
-                'exploited': True,
-                'due_date': self._parse_date(due_date_str),
-                'short_description': item.get('shortDescription', ''),
-                'notes': item.get('notes', '')
+                "cve_id": cve_id,
+                "exploited": True,
+                "due_date": self._parse_date(due_date_str),
+                "short_description": item.get("shortDescription", ""),
+                "notes": item.get("notes", ""),
             }
         except Exception:
             return None
@@ -127,7 +130,7 @@ class KEVETL(BaseETL):
         if not date_str:
             return None
         try:
-            return datetime.strptime(date_str, '%Y-%m-%d')
+            return datetime.strptime(date_str, "%Y-%m-%d")
         except:
             return None
 
@@ -146,13 +149,16 @@ class KEVETL(BaseETL):
                 cursor = conn.cursor()
                 for item in batch:
                     try:
-                        cursor.execute(query, (
-                            item.get('cve_id'),
-                            item.get('exploited', 1),
-                            item.get('due_date'),
-                            item.get('short_description', ''),
-                            item.get('notes', '')
-                        ))
+                        cursor.execute(
+                            query,
+                            (
+                                item.get("cve_id"),
+                                item.get("exploited", 1),
+                                item.get("due_date"),
+                                item.get("short_description", ""),
+                                item.get("notes", ""),
+                            ),
+                        )
                     except Exception:
                         pass
         except Exception as e:

@@ -5,8 +5,8 @@
 """
 
 import re
-from typing import Any, Dict, List, Optional, Union, Set
 from pathlib import Path
+from typing import Any, Dict, List, Optional, Set, Union
 
 from src.rules.base import BaseRule, RuleCategory, RuleMetadata, RuleResult, RuleSeverity
 
@@ -96,9 +96,7 @@ class MissingSecurityEventLoggingRule(BaseRule):
         self._sensitive_operation_patterns = [
             re.compile(p, re.IGNORECASE) for p in self._sensitive_operations
         ]
-        self._logging_pattern = re.compile(
-            r"|".join(self._logging_patterns), re.IGNORECASE
-        )
+        self._logging_pattern = re.compile(r"|".join(self._logging_patterns), re.IGNORECASE)
 
     def check(self, target: Union[str, Path, Dict[str, Any]]) -> List[RuleResult]:
         """执行缺失安全事件日志检测
@@ -214,16 +212,16 @@ class InsufficientAuditTrailRule(BaseRule):
             (
                 re.compile(
                     r"log\.(?:info|warning|error|debug)\s*\(\s*[\"'][^\"']*[\"']\s*\)",
-                    re.IGNORECASE
+                    re.IGNORECASE,
                 ),
-                "日志记录缺少结构化字段（用户ID、时间戳、IP地址等）"
+                "日志记录缺少结构化字段（用户ID、时间戳、IP地址等）",
             ),
             (
                 re.compile(
                     r"logger\.(?:info|warning|error|debug)\s*\(\s*[\"'][^\"']*[\"']\s*(?:,\s*\{[^}]*\})?\s*\)",
-                    re.IGNORECASE
+                    re.IGNORECASE,
                 ),
-                "日志记录可能缺少关键审计字段"
+                "日志记录可能缺少关键审计字段",
             ),
         ]
 
@@ -405,19 +403,25 @@ class SensitiveDataInLogsRule(BaseRule):
         self._dangerous_patterns = [
             (
                 re.compile(
-                    r"(?:" + "|".join(self._logging_patterns) + r")" +
-                    r"[a-z]*\s*\([^)]*(?:" + "|".join(self._sensitive_data_patterns) + r")[^)]*\)",
-                    re.IGNORECASE | re.DOTALL
+                    r"(?:"
+                    + "|".join(self._logging_patterns)
+                    + r")"
+                    + r"[a-z]*\s*\([^)]*(?:"
+                    + "|".join(self._sensitive_data_patterns)
+                    + r")[^)]*\)",
+                    re.IGNORECASE | re.DOTALL,
                 ),
-                "日志记录包含敏感数据"
+                "日志记录包含敏感数据",
             ),
             (
                 re.compile(
-                    r"(?:log|logger|logging)\.(?:info|warn|error|debug|info|warning)\s*\(\s*f?[\"'][^\"']*" +
-                    r"(?:" + "|".join(self._sensitive_data_patterns) + r")[^\"']*[\"']",
-                    re.IGNORECASE
+                    r"(?:log|logger|logging)\.(?:info|warn|error|debug|info|warning)\s*\(\s*f?[\"'][^\"']*"
+                    + r"(?:"
+                    + "|".join(self._sensitive_data_patterns)
+                    + r")[^\"']*[\"']",
+                    re.IGNORECASE,
                 ),
-                "f-string/格式化字符串日志包含敏感数据"
+                "f-string/格式化字符串日志包含敏感数据",
             ),
         ]
 

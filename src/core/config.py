@@ -5,6 +5,7 @@
 
 import os
 import time
+from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
@@ -13,14 +14,12 @@ from pydantic import BaseModel, Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
-from enum import Enum
-
-
 class AuditMode(Enum):
     """审计模式枚举"""
-    STATIC = "static"      # 纯静态分析，不加载动态组件
-    DYNAMIC = "dynamic"    # 纯动态AI红队POC测试，不进行静态扫描
-    HYBRID = "hybrid"      # 静动态混合，原有行为
+
+    STATIC = "static"  # 纯静态分析，不加载动态组件
+    DYNAMIC = "dynamic"  # 纯动态AI红队POC测试，不进行静态扫描
+    HYBRID = "hybrid"  # 静动态混合，原有行为
 
 
 class AIModuleConfig(BaseModel):
@@ -38,7 +37,9 @@ class AliyunConfig(BaseModel):
 
     enabled: bool = Field(default=False, description="是否启用阿里云API")
     api_key: Optional[str] = Field(default=None, description="阿里云API密钥")
-    base_url: str = Field(default="https://dashscope.aliyuncs.com/compatible-mode/v1", description="阿里云API基础URL")
+    base_url: str = Field(
+        default="https://dashscope.aliyuncs.com/compatible-mode/v1", description="阿里云API基础URL"
+    )
     model: str = Field(default="qwen3-coder-next", description="默认模型")
 
 
@@ -55,16 +56,18 @@ class TieredArchitectureConfig(BaseModel):
 
     enabled: bool = Field(default=False, description="是否启用双层架构")
     risk_threshold: float = Field(default=0.5, description="可疑文件判定阈值")
-    first_tier: TierModelConfig = Field(default_factory=lambda: TierModelConfig(
-        model="deepseek-v4-flash",
-        provider="deepseek",
-        purpose="快速预扫描，识别可疑文件"
-    ), description="第一层模型配置")
-    second_tier: TierModelConfig = Field(default_factory=lambda: TierModelConfig(
-        model="deepseek-v4-flash",
-        provider="deepseek",
-        purpose="深度分析危险路径"
-    ), description="第二层模型配置")
+    first_tier: TierModelConfig = Field(
+        default_factory=lambda: TierModelConfig(
+            model="deepseek-v4-flash", provider="deepseek", purpose="快速预扫描，识别可疑文件"
+        ),
+        description="第一层模型配置",
+    )
+    second_tier: TierModelConfig = Field(
+        default_factory=lambda: TierModelConfig(
+            model="deepseek-v4-flash", provider="deepseek", purpose="深度分析危险路径"
+        ),
+        description="第二层模型配置",
+    )
 
 
 class AIConfig(BaseModel):
@@ -83,7 +86,9 @@ class AIConfig(BaseModel):
 
     modules: Dict[str, AIModuleConfig] = Field(default_factory=dict, description="各模块的AI配置")
     aliyun: AliyunConfig = Field(default_factory=AliyunConfig, description="阿里云配置")
-    tiered_architecture: TieredArchitectureConfig = Field(default_factory=TieredArchitectureConfig, description="双层架构配置")
+    tiered_architecture: TieredArchitectureConfig = Field(
+        default_factory=TieredArchitectureConfig, description="双层架构配置"
+    )
 
     @field_validator("provider")
     @classmethod
@@ -179,7 +184,10 @@ class ScanConfig(BaseModel):
     port_scan_enabled: bool = Field(default=False, description="是否启用API端口配置扫描")
     ports_only: bool = Field(default=False, description="是否仅执行端口扫描")
     port_range: str = Field(default="1-65535", description="端口扫描范围，格式: start-end")
-    priority_strategy: str = Field(default="full-scan", description="扫描优先级策略: api-first, security-first, performance-first, full-scan, custom")
+    priority_strategy: str = Field(
+        default="full-scan",
+        description="扫描优先级策略: api-first, security-first, performance-first, full-scan, custom",
+    )
     priority_rules_path: str = Field(default="", description="自定义优先级规则文件路径")
 
 
@@ -209,7 +217,10 @@ class ReportConfig(BaseModel):
     output: str = Field(default="./security-report", description="输出路径")
     include_code_snippets: bool = Field(default=True, description="包含代码片段")
     include_fix_suggestions: bool = Field(default=True, description="包含修复建议")
-    category_filter: str = Field(default="all", description="报告分类过滤: all(全部), port-related(端口相关), general-static(一般静态), special-scan(特别扫描), api-security(API安全), auth-security(认证安全), data-protection(数据保护), config-security(配置安全)")
+    category_filter: str = Field(
+        default="all",
+        description="报告分类过滤: all(全部), port-related(端口相关), general-static(一般静态), special-scan(特别扫描), api-security(API安全), auth-security(认证安全), data-protection(数据保护), config-security(配置安全)",
+    )
 
     @field_validator("format")
     @classmethod
@@ -234,7 +245,9 @@ class SandboxConfig(BaseModel):
     """沙箱配置"""
 
     enabled: bool = Field(default=True, description="是否启用沙箱")
-    mode: AuditMode = Field(default=AuditMode.HYBRID, description="审计模式: static(静态), dynamic(动态), hybrid(混合)")
+    mode: AuditMode = Field(
+        default=AuditMode.HYBRID, description="审计模式: static(静态), dynamic(动态), hybrid(混合)"
+    )
     max_memory: int = Field(default=512 * 1024 * 1024, description="最大内存（字节）")
     max_cpu_time: int = Field(default=30, description="最大 CPU 时间（秒）")
     network_access: bool = Field(default=False, description="是否允许网络访问")
@@ -251,6 +264,7 @@ class Neo4jConfig(BaseModel):
 
 class RAGHybridConfig(BaseModel):
     """RAG 混合检索配置"""
+
     enabled: bool = Field(default=True, description="是否启用混合检索")
     hybrid_search_weight: float = Field(default=0.7, description="混合搜索权重")
     top_k: int = Field(default=10, description="返回结果数量")
@@ -258,6 +272,7 @@ class RAGHybridConfig(BaseModel):
 
 class RAGBM25Config(BaseModel):
     """RAG BM25 检索配置"""
+
     enabled: bool = Field(default=True, description="是否启用 BM25 检索")
     k1: float = Field(default=1.2, description="BM25 k1 参数")
     b: float = Field(default=0.75, description="BM25 b 参数")
@@ -265,12 +280,14 @@ class RAGBM25Config(BaseModel):
 
 class RAGRerankConfig(BaseModel):
     """RAG 重排序配置"""
+
     enabled: bool = Field(default=False, description="是否启用重排序")
     model: str = Field(default="BAAI/bge-reranker-large", description="重排序模型")
 
 
 class RAGConfig(BaseModel):
     """RAG 配置"""
+
     hybrid: RAGHybridConfig = Field(default_factory=RAGHybridConfig)
     bm25: RAGBM25Config = Field(default_factory=RAGBM25Config)
     rerank: RAGRerankConfig = Field(default_factory=RAGRerankConfig)
@@ -278,10 +295,11 @@ class RAGConfig(BaseModel):
 
 class NVDConfig(BaseModel):
     """NVD漏洞数据库配置"""
+
     enabled: bool = Field(default=True, description="是否启用NVD漏洞数据库")
     database_path: str = Field(
         default="All Vulnerabilities/sql_data/nvd_vulnerability.db",
-        description="NVD SQLite数据库路径"
+        description="NVD SQLite数据库路径",
     )
     min_cvss_score: float = Field(default=5.0, description="最低CVSS评分阈值")
     prefer_kev: bool = Field(default=True, description="是否优先显示已知被利用的漏洞")
@@ -292,33 +310,23 @@ class NVDConfig(BaseModel):
 
 class DataPreloadConfig(BaseModel):
     """数据预加载配置"""
+
     enabled: bool = Field(default=True, description="启用数据预加载检查")
     auto_update: bool = Field(default=False, description="是否自动更新（不询问）")
     update_threshold_days: int = Field(default=7, description="更新阈值（天）")
     sources_file: str = Field(
         default="All Vulnerabilities/download_source_link.txt",
-        description="数据源 URL 列表文件路径"
+        description="数据源 URL 列表文件路径",
     )
-    temp_zip_dir: str = Field(
-        default="All Vulnerabilities/temp_zip",
-        description="压缩包缓存目录"
-    )
-    temp_data_dir: str = Field(
-        default="All Vulnerabilities/temp_data",
-        description="解压数据目录"
-    )
-    skip_on_checksum_match: bool = Field(
-        default=True,
-        description="校验和一致时跳过下载"
-    )
-    merge_strategy: str = Field(
-        default="smart",
-        description="解压合并策略: smart(智能合并) 或 overwrite(覆盖)"
-    )
+    temp_zip_dir: str = Field(default="All Vulnerabilities/temp_zip", description="压缩包缓存目录")
+    temp_data_dir: str = Field(default="All Vulnerabilities/temp_data", description="解压数据目录")
+    skip_on_checksum_match: bool = Field(default=True, description="校验和一致时跳过下载")
+    merge_strategy: str = Field(default="smart", description="解压合并策略: smart(智能合并) 或 overwrite(覆盖)")
 
 
 class SemgrepConfig(BaseModel):
     """Semgrep 工具配置"""
+
     enabled: bool = Field(default=True, description="是否启用 Semgrep")
     config: str = Field(default="auto", description="Semgrep 配置")
     timeout: int = Field(default=30, description="超时时间（秒）")
@@ -326,6 +334,7 @@ class SemgrepConfig(BaseModel):
 
 class TrivyConfig(BaseModel):
     """Trivy 工具配置"""
+
     enabled: bool = Field(default=True, description="是否启用 Trivy")
     severity: str = Field(default="HIGH,CRITICAL", description="严重级别过滤")
     timeout: int = Field(default=300, description="超时时间（秒）")
@@ -333,6 +342,7 @@ class TrivyConfig(BaseModel):
 
 class SyftConfig(BaseModel):
     """Syft 工具配置"""
+
     enabled: bool = Field(default=True, description="是否启用 Syft")
     format: str = Field(default="json", description="输出格式")
     package_managers: List[str] = Field(default_factory=lambda: ["auto"], description="包管理器列表")
@@ -340,6 +350,7 @@ class SyftConfig(BaseModel):
 
 class GitleaksConfig(BaseModel):
     """Gitleaks 工具配置"""
+
     enabled: bool = Field(default=True, description="是否启用 Gitleaks")
     config: str = Field(default="", description="Gitleaks 配置文件路径")
     no_git: bool = Field(default=True, description="是否不使用 git 集成")
@@ -347,10 +358,11 @@ class GitleaksConfig(BaseModel):
 
 class ToolConfig(BaseModel):
     """工具编排配置"""
+
     enabled: bool = Field(default=True, description="是否启用工具编排")
     tool_chain: List[str] = Field(
         default_factory=lambda: ["semgrep", "trivy", "gitleaks", "code_vuln_scanner"],
-        description="工具执行链"
+        description="工具执行链",
     )
     semgrep: SemgrepConfig = Field(default_factory=SemgrepConfig)
     trivy: TrivyConfig = Field(default_factory=TrivyConfig)
@@ -360,6 +372,7 @@ class ToolConfig(BaseModel):
 
 class PriorityWeightsConfig(BaseModel):
     """优先级权重配置"""
+
     cvss: float = Field(default=0.40, description="CVSS 评分权重")
     exploitability: float = Field(default=0.35, description="可利用性权重")
     reachability: float = Field(default=0.25, description="可达性权重")
@@ -367,6 +380,7 @@ class PriorityWeightsConfig(BaseModel):
 
 class PriorityThresholdsConfig(BaseModel):
     """优先级阈值配置"""
+
     critical: float = Field(default=9.0, description="严重漏洞阈值")
     high: float = Field(default=7.0, description="高危漏洞阈值")
     medium: float = Field(default=4.0, description="中危漏洞阈值")
@@ -374,6 +388,7 @@ class PriorityThresholdsConfig(BaseModel):
 
 class PriorityConfig(BaseModel):
     """优先级配置"""
+
     enabled: bool = Field(default=True, description="是否启用优先级分析")
     weights: PriorityWeightsConfig = Field(default_factory=PriorityWeightsConfig)
     thresholds: PriorityThresholdsConfig = Field(default_factory=PriorityThresholdsConfig)
@@ -381,6 +396,7 @@ class PriorityConfig(BaseModel):
 
 class ValidationConfig(BaseModel):
     """验证配置"""
+
     enabled: bool = Field(default=True, description="是否启用自动验证")
     auto_validate_high: bool = Field(default=True, description="是否自动验证高危漏洞")
     auto_validate_medium: bool = Field(default=False, description="是否自动验证中危漏洞")
@@ -393,7 +409,7 @@ class ValidationConfig(BaseModel):
             "SemgrepRunner": 0.5,
             "TrivyRunner": 0.5,
         },
-        description="各扫描器特定的置信度阈值"
+        description="各扫描器特定的置信度阈值",
     )
 
     hallucination_threshold: float = Field(default=0.2, description="幻觉阈值")
@@ -408,6 +424,7 @@ class ValidationConfig(BaseModel):
 
 class AgentConfig(BaseModel):
     """Agent 配置"""
+
     dynamic_selection: bool = Field(default=True, description="是否启用动态工具选择")
     skip_context_if_sufficient: bool = Field(default=True, description="当上下文充足时是否跳过")
 
@@ -537,20 +554,20 @@ class ConfigManager:
             # 读取文件
             with open(path, "r", encoding="utf-8") as f:
                 data = yaml.safe_load(f)
-            
+
             # 处理环境变量
             def resolve_env_vars(obj):
                 if isinstance(obj, dict):
                     return {k: resolve_env_vars(v) for k, v in obj.items()}
                 elif isinstance(obj, list):
                     return [resolve_env_vars(item) for item in obj]
-                elif isinstance(obj, str) and obj.startswith('${') and obj.endswith('}'):
+                elif isinstance(obj, str) and obj.startswith("${") and obj.endswith("}"):
                     env_var = obj[2:-1]
                     return os.getenv(env_var, obj)
                 return obj
-            
+
             data = resolve_env_vars(data)
-            
+
             # 更新缓存
             self._config_cache[path_str] = data
             self._config_mtime[path_str] = current_mtime
@@ -638,10 +655,13 @@ class ConfigManager:
 
         # 复制文件
         import shutil
+
         shutil.copy2(path, backup_path)
 
         # 清理旧备份，保留最近 5 个
-        backups = sorted(backup_dir.glob(f"{path.name}.backup.*"), key=lambda x: x.name, reverse=True)
+        backups = sorted(
+            backup_dir.glob(f"{path.name}.backup.*"), key=lambda x: x.name, reverse=True
+        )
         for old_backup in backups[5:]:
             old_backup.unlink(missing_ok=True)
 

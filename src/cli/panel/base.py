@@ -3,15 +3,16 @@
 提供交互式面板的基类定义和通用功能。
 """
 
-import sys
 import os
-from typing import Callable, List, Optional, Any, Dict
+import sys
 from dataclasses import dataclass
 from enum import Enum
+from typing import Any, Callable, Dict, List, Optional
 
 
 class Key(Enum):
     """键盘按键枚举"""
+
     UP = "up"
     DOWN = "down"
     LEFT = "left"
@@ -28,6 +29,7 @@ class Key(Enum):
 @dataclass
 class PanelItem:
     """面板项数据结构"""
+
     label: str
     value: Any
     default: Any = None
@@ -124,7 +126,9 @@ class InteractivePanel:
             if isinstance(current.value, bool):
                 current.value = not current.value
             elif current.options:
-                idx = current.options.index(current.value) if current.value in current.options else -1
+                idx = (
+                    current.options.index(current.value) if current.value in current.options else -1
+                )
                 current.value = current.options[(idx + 1) % len(current.options)]
 
     def handle_character(self, char: str) -> None:
@@ -137,7 +141,7 @@ class InteractivePanel:
 
     def get_key(self) -> Key:
         """获取键盘按键（跨平台实现）"""
-        if os.name == 'nt':
+        if os.name == "nt":
             return self._get_key_windows()
         else:
             return self._get_key_unix()
@@ -145,67 +149,68 @@ class InteractivePanel:
     def _get_key_windows(self) -> Key:
         """Windows平台获取按键"""
         import msvcrt
+
         char = msvcrt.getch()
-        if char == b'\xe0':
+        if char == b"\xe0":
             char = msvcrt.getch()
-            if char == b'H':
+            if char == b"H":
                 return Key.UP
-            elif char == b'P':
+            elif char == b"P":
                 return Key.DOWN
-            elif char == b'M':
+            elif char == b"M":
                 return Key.RIGHT
-            elif char == b'K':
+            elif char == b"K":
                 return Key.LEFT
-        elif char == b'\r':
+        elif char == b"\r":
             return Key.ENTER
-        elif char == b' ':
+        elif char == b" ":
             return Key.SPACE
-        elif char == b'\x08':
+        elif char == b"\x08":
             return Key.BACKSPACE
-        elif char == b'\x1b':
+        elif char == b"\x1b":
             return Key.ESC
-        elif char == b'\t':
+        elif char == b"\t":
             return Key.TAB
-        elif char in (b'q', b'Q'):
+        elif char in (b"q", b"Q"):
             return Key.Q
         else:
             try:
-                return Key(char.decode('utf-8'))
+                return Key(char.decode("utf-8"))
             except:
                 return Key.UNKNOWN
 
     def _get_key_unix(self) -> Key:
         """Unix平台获取按键"""
-        import tty
-        import termios
         import sys as _sys
+        import termios
+        import tty
 
         fd = _sys.stdin.fileno()
         old_settings = termios.tcgetattr(fd)
         try:
             tty.setraw(fd)
             char = _sys.stdin.read(1)
-            if char == '\x1b':
+            if char == "\x1b":
                 next_char = _sys.stdin.read(1)
-                if next_char == '[':
+                if next_char == "[":
                     third_char = _sys.stdin.read(1)
-                    if third_char == 'A':
+                    if third_char == "A":
                         return Key.UP
-                    elif third_char == 'B':
+                    elif third_char == "B":
                         return Key.DOWN
-                    elif third_char == 'C':
+                    elif third_char == "C":
                         return Key.RIGHT
-                    elif third_char == 'D':
+                    elif third_char == "D":
                         return Key.LEFT
-            elif char == '\r' or char == '\n':
+            elif char == "\r" or char == "\n":
                 return Key.ENTER
-            elif char == ' ':
+            elif char == " ":
                 return Key.SPACE
-            elif char == '\x7f':
+            elif char == "\x7f":
                 return Key.BACKSPACE
-            elif char == '\t':
+            elif char == "\t":
                 return Key.TAB
-            elif char.lower() == 'q':
+            elif char.lower() == "q":
                 return Key.Q
             else:
                 return Key.UNKNOWN
@@ -248,17 +253,19 @@ class InteractivePanel:
                 self.is_running = False
                 result_panel = None
             elif key != Key.UNKNOWN:
-                self.handle_character(str(key.value) if hasattr(key.value, 'value') else key.name.lower())
+                self.handle_character(
+                    str(key.value) if hasattr(key.value, "value") else key.name.lower()
+                )
 
         return result_panel
 
 
 def clear_screen() -> None:
     """清除屏幕"""
-    if os.name == 'nt':
-        os.system('cls')
+    if os.name == "nt":
+        os.system("cls")
     else:
-        os.system('clear')
+        os.system("clear")
 
 
 def print_centered(text: str, width: int = 80) -> None:

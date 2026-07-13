@@ -6,7 +6,7 @@
 import json
 import time
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Tuple, Any
+from typing import Any, Dict, List, Optional, Tuple
 
 import requests
 from bs4 import BeautifulSoup
@@ -17,8 +17,9 @@ logger = get_logger(__name__)
 
 # 尝试导入 scikit-learn 和 numpy，如果不可用则禁用趋势预测
 try:
-    from sklearn.linear_model import LinearRegression
     import numpy as np
+    from sklearn.linear_model import LinearRegression
+
     SKLEARN_AVAILABLE = True
 except ImportError:
     SKLEARN_AVAILABLE = False
@@ -33,16 +34,17 @@ class ThreatIntelligenceAnalyzer:
             "freebuf": {
                 "name": "FreeBuf",
                 "url": "https://www.freebuf.com/vuls",
-                "parser": self._parse_freebuf
+                "parser": self._parse_freebuf,
             },
             "anquanke": {
                 "name": "安全客",
                 "url": "https://www.anquanke.com/vul",
-                "parser": self._parse_anquanke
-            }
+                "parser": self._parse_anquanke,
+            },
         }
         self.data_dir = "data/threat_intelligence"
         import os
+
         os.makedirs(self.data_dir, exist_ok=True)
 
     def _parse_freebuf(self, content: str) -> List[Dict[str, Any]]:
@@ -80,14 +82,16 @@ class ThreatIntelligenceAnalyzer:
                 for tag_elem in tag_elems:
                     tags.append(tag_elem.text.strip())
 
-                vulnerabilities.append({
-                    "title": name,
-                    "url": link,
-                    "description": description,
-                    "published_date": published_date,
-                    "tags": tags,
-                    "source": "FreeBuf"
-                })
+                vulnerabilities.append(
+                    {
+                        "title": name,
+                        "url": link,
+                        "description": description,
+                        "published_date": published_date,
+                        "tags": tags,
+                        "source": "FreeBuf",
+                    }
+                )
         except Exception as e:
             logger.error(f"解析FreeBuf失败: {e}")
         return vulnerabilities
@@ -127,14 +131,16 @@ class ThreatIntelligenceAnalyzer:
                 for tag_elem in tag_elems:
                     tags.append(tag_elem.text.strip())
 
-                vulnerabilities.append({
-                    "title": name,
-                    "url": link,
-                    "description": description,
-                    "published_date": published_date,
-                    "tags": tags,
-                    "source": "安全客"
-                })
+                vulnerabilities.append(
+                    {
+                        "title": name,
+                        "url": link,
+                        "description": description,
+                        "published_date": published_date,
+                        "tags": tags,
+                        "source": "安全客",
+                    }
+                )
         except Exception as e:
             logger.error(f"解析安全客失败: {e}")
         return vulnerabilities
@@ -154,28 +160,32 @@ class ThreatIntelligenceAnalyzer:
         for source_name, source_config in self.sources.items():
             logger.info(f"从 {source_config['name']} 获取威胁情报")
             try:
-                response = requests.get(source_config['url'], timeout=30, headers={
-                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
-                })
+                response = requests.get(
+                    source_config["url"],
+                    timeout=30,
+                    headers={
+                        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+                    },
+                )
                 response.raise_for_status()
-                intelligence = source_config['parser'](response.content)
-                
+                intelligence = source_config["parser"](response.content)
+
                 # 过滤时间范围内的情报
                 filtered_intelligence = []
                 for item in intelligence:
-                    if item.get('published_date') and item['published_date'] >= cutoff_date:
+                    if item.get("published_date") and item["published_date"] >= cutoff_date:
                         filtered_intelligence.append(item)
-                
+
                 all_intelligence.extend(filtered_intelligence)
                 logger.info(f"从 {source_config['name']} 获取了 {len(filtered_intelligence)} 条情报")
             except Exception as e:
                 logger.error(f"从 {source_config['name']} 获取情报失败: {e}")
-            
+
             # 控制请求频率
             time.sleep(2)
 
         # 按发布日期排序
-        all_intelligence.sort(key=lambda x: x.get('published_date', datetime.min), reverse=True)
+        all_intelligence.sort(key=lambda x: x.get("published_date", datetime.min), reverse=True)
         return all_intelligence
 
     def analyze_trends(self, intelligence: List[Dict[str, Any]]) -> Dict[str, Any]:
@@ -193,9 +203,9 @@ class ThreatIntelligenceAnalyzer:
         # 按日期分组
         date_groups = {}
         for item in intelligence:
-            date = item.get('published_date')
+            date = item.get("published_date")
             if date:
-                date_str = date.strftime('%Y-%m-%d')
+                date_str = date.strftime("%Y-%m-%d")
                 if date_str not in date_groups:
                     date_groups[date_str] = []
                 date_groups[date_str].append(item)
@@ -213,13 +223,13 @@ class ThreatIntelligenceAnalyzer:
         # 分析热门漏洞类型
         tag_counts = {}
         for item in intelligence:
-            for tag in item.get('tags', []):
+            for tag in item.get("tags", []):
                 tag_counts[tag] = tag_counts.get(tag, 0) + 1
 
         # 按来源分析
         source_counts = {}
         for item in intelligence:
-            source = item.get('source', 'Unknown')
+            source = item.get("source", "Unknown")
             source_counts[source] = source_counts.get(source, 0) + 1
 
         return {
@@ -227,7 +237,7 @@ class ThreatIntelligenceAnalyzer:
             "prediction": prediction,
             "top_tags": dict(sorted(tag_counts.items(), key=lambda x: x[1], reverse=True)[:10]),
             "source_distribution": source_counts,
-            "total_intelligence": len(intelligence)
+            "total_intelligence": len(intelligence),
         }
 
     def _predict_trend(self, counts: List[int]) -> List[int]:
@@ -249,6 +259,7 @@ class ThreatIntelligenceAnalyzer:
             # 准备数据
             import numpy as np
             from sklearn.linear_model import LinearRegression
+
             X = np.array(range(len(counts))).reshape(-1, 1)
             y = np.array(counts)
 
@@ -267,7 +278,9 @@ class ThreatIntelligenceAnalyzer:
             logger.error(f"预测趋势失败: {e}")
             return []
 
-    def generate_threat_report(self, intelligence: List[Dict[str, Any]], trends: Dict[str, Any]) -> Dict[str, Any]:
+    def generate_threat_report(
+        self, intelligence: List[Dict[str, Any]], trends: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """生成威胁情报报告
 
         Args:
@@ -282,19 +295,21 @@ class ThreatIntelligenceAnalyzer:
             "summary": {
                 "total_intelligence": trends.get("total_intelligence", 0),
                 "sources": list(trends.get("source_distribution", {}).keys()),
-                "top_tags": list(trends.get("top_tags", {}).keys())[:5]
+                "top_tags": list(trends.get("top_tags", {}).keys())[:5],
             },
             "trends": {
                 "daily_counts": trends.get("daily_counts", {}),
                 "prediction": trends.get("prediction", []),
-                "top_tags": trends.get("top_tags", {})
+                "top_tags": trends.get("top_tags", {}),
             },
             "recent_intelligence": intelligence[:10],  # 最近10条情报
-            "recommendations": self._generate_recommendations(intelligence, trends)
+            "recommendations": self._generate_recommendations(intelligence, trends),
         }
         return report
 
-    def _generate_recommendations(self, intelligence: List[Dict[str, Any]], trends: Dict[str, Any]) -> List[str]:
+    def _generate_recommendations(
+        self, intelligence: List[Dict[str, Any]], trends: Dict[str, Any]
+    ) -> List[str]:
         """生成安全建议
 
         Args:
@@ -327,7 +342,9 @@ class ThreatIntelligenceAnalyzer:
 
         return recommendations
 
-    def save_intelligence(self, intelligence: List[Dict[str, Any]], filename: str = "threat_intelligence.json"):
+    def save_intelligence(
+        self, intelligence: List[Dict[str, Any]], filename: str = "threat_intelligence.json"
+    ):
         """保存威胁情报到文件
 
         Args:
@@ -335,11 +352,12 @@ class ThreatIntelligenceAnalyzer:
             filename: 文件名
         """
         import os
+
         file_path = os.path.join(self.data_dir, filename)
         # 转换日期为字符串
         for item in intelligence:
-            if isinstance(item.get('published_date'), datetime):
-                item['published_date'] = item['published_date'].isoformat()
+            if isinstance(item.get("published_date"), datetime):
+                item["published_date"] = item["published_date"].isoformat()
         with open(file_path, "w", encoding="utf-8") as f:
             json.dump(intelligence, f, indent=2, ensure_ascii=False)
         logger.info(f"威胁情报已保存到 {file_path}")
@@ -354,6 +372,7 @@ class ThreatIntelligenceAnalyzer:
             威胁情报列表
         """
         import os
+
         file_path = os.path.join(self.data_dir, filename)
         intelligence = []
         if os.path.exists(file_path):
@@ -362,9 +381,9 @@ class ThreatIntelligenceAnalyzer:
                     data = json.load(f)
                 # 转换日期字符串为datetime对象
                 for item in data:
-                    if isinstance(item.get('published_date'), str):
+                    if isinstance(item.get("published_date"), str):
                         try:
-                            item['published_date'] = datetime.fromisoformat(item['published_date'])
+                            item["published_date"] = datetime.fromisoformat(item["published_date"])
                         except Exception:
                             pass
                 intelligence = data
@@ -383,26 +402,29 @@ class ThreatIntelligenceAnalyzer:
             分析报告
         """
         logger.info(f"开始分析最近 {days} 天的威胁情报")
-        
+
         # 获取威胁情报
         intelligence = self.fetch_threat_intelligence(days)
-        
+
         # 保存情报
         self.save_intelligence(intelligence)
-        
+
         # 分析趋势
         trends = self.analyze_trends(intelligence)
-        
+
         # 生成报告
         report = self.generate_threat_report(intelligence, trends)
-        
+
         # 保存报告
         import os
-        report_path = os.path.join(self.data_dir, f"threat_report_{datetime.now().strftime('%Y%m%d')}.json")
+
+        report_path = os.path.join(
+            self.data_dir, f"threat_report_{datetime.now().strftime('%Y%m%d')}.json"
+        )
         with open(report_path, "w", encoding="utf-8") as f:
             json.dump(report, f, indent=2, ensure_ascii=False)
         logger.info(f"威胁情报报告已保存到 {report_path}")
-        
+
         return report
 
 

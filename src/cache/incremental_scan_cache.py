@@ -5,12 +5,12 @@
 
 import hashlib
 import json
+import logging
 import pickle
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -18,6 +18,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class FileCacheEntry:
     """文件缓存条目"""
+
     file_path: str
     content_hash: str
     last_modified: float
@@ -52,14 +53,14 @@ class IncrementalScanCache:
             return
 
         try:
-            with open(self.cache_file, 'rb') as f:
+            with open(self.cache_file, "rb") as f:
                 data = pickle.load(f)
 
-            if data.get('version') != self.CACHE_VERSION:
+            if data.get("version") != self.CACHE_VERSION:
                 logger.info("缓存版本不匹配，将重新创建缓存")
                 return
 
-            for file_path, entry_data in data.get('entries', {}).items():
+            for file_path, entry_data in data.get("entries", {}).items():
                 self.entries[file_path] = FileCacheEntry(**entry_data)
 
             logger.info(f"已加载 {len(self.entries)} 个缓存条目")
@@ -70,22 +71,22 @@ class IncrementalScanCache:
         """保存缓存文件"""
         try:
             data = {
-                'version': self.CACHE_VERSION,
-                'entries': {
+                "version": self.CACHE_VERSION,
+                "entries": {
                     fp: {
-                        'file_path': entry.file_path,
-                        'content_hash': entry.content_hash,
-                        'last_modified': entry.last_modified,
-                        'analysis_result': entry.analysis_result,
-                        'analysis_time': entry.analysis_time,
-                        'metadata': entry.metadata,
+                        "file_path": entry.file_path,
+                        "content_hash": entry.content_hash,
+                        "last_modified": entry.last_modified,
+                        "analysis_result": entry.analysis_result,
+                        "analysis_time": entry.analysis_time,
+                        "metadata": entry.metadata,
                     }
                     for fp, entry in self.entries.items()
                 },
-                'saved_at': datetime.now().isoformat(),
+                "saved_at": datetime.now().isoformat(),
             }
 
-            with open(self.cache_file, 'wb') as f:
+            with open(self.cache_file, "wb") as f:
                 pickle.dump(data, f)
 
             logger.debug(f"已保存 {len(self.entries)} 个缓存条目")
@@ -106,7 +107,7 @@ class IncrementalScanCache:
             if not path.exists():
                 return ""
 
-            with open(path, 'rb') as f:
+            with open(path, "rb") as f:
                 content = f.read()
                 return hashlib.sha256(content).hexdigest()
         except Exception as e:
@@ -235,10 +236,10 @@ class IncrementalScanCache:
         total_time = sum(e.analysis_time for e in self.entries.values())
 
         return {
-            'total_entries': total_entries,
-            'total_analysis_time': total_time,
-            'cache_file': str(self.cache_file),
-            'version': self.CACHE_VERSION,
+            "total_entries": total_entries,
+            "total_analysis_time": total_time,
+            "cache_file": str(self.cache_file),
+            "version": self.CACHE_VERSION,
         }
 
     def close(self) -> None:

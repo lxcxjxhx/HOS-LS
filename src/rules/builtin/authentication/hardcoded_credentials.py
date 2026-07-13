@@ -4,22 +4,22 @@
 """
 
 import re
-from typing import Any, Dict, List, Optional, Union
 from pathlib import Path
+from typing import Any, Dict, List, Optional, Union
 
 from src.rules.base import BaseRule, RuleCategory, RuleMetadata, RuleResult, RuleSeverity
 
 
 class HardcodedCredentialsRule(BaseRule):
     """硬编码凭证检测规则
-    
+
     检测以下模式:
     - 硬编码密码
     - 硬编码用户名和密码组合
     - 硬编码 API 密钥
     - 硬编码数据库连接字符串
     """
-    
+
     def __init__(self, config: Optional[Dict[str, Any]] = None) -> None:
         metadata = RuleMetadata(
             id="HOS004",
@@ -37,7 +37,7 @@ class HardcodedCredentialsRule(BaseRule):
             tags=["credentials", "password", "hardcoded", "secret", "security"],
         )
         super().__init__(metadata, config)
-        
+
         self._password_patterns = [
             (re.compile(r"password\s*=\s*[\"'][^\"']+[\"']", re.IGNORECASE), "硬编码密码"),
             (re.compile(r"passwd\s*=\s*[\"'][^\"']+[\"']", re.IGNORECASE), "硬编码密码"),
@@ -50,20 +50,26 @@ class HardcodedCredentialsRule(BaseRule):
             (re.compile(r"auth_token\s*=\s*[\"'][^\"']+[\"']", re.IGNORECASE), "硬编码认证令牌"),
             (re.compile(r"private_key\s*=\s*[\"'][^\"']+[\"']", re.IGNORECASE), "硬编码私钥"),
         ]
-        
+
         self._connection_patterns = [
             (re.compile(r"mysql://[^:]+:[^@]+@[^\"'\s]+", re.IGNORECASE), "MySQL 连接字符串含密码"),
-            (re.compile(r"postgresql://[^:]+:[^@]+@[^\"'\s]+", re.IGNORECASE), "PostgreSQL 连接字符串含密码"),
-            (re.compile(r"mongodb://[^:]+:[^@]+@[^\"'\s]+", re.IGNORECASE), "MongoDB 连接字符串含密码"),
+            (
+                re.compile(r"postgresql://[^:]+:[^@]+@[^\"'\s]+", re.IGNORECASE),
+                "PostgreSQL 连接字符串含密码",
+            ),
+            (
+                re.compile(r"mongodb://[^:]+:[^@]+@[^\"'\s]+", re.IGNORECASE),
+                "MongoDB 连接字符串含密码",
+            ),
             (re.compile(r"redis://[^:]*:[^@]+@[^\"'\s]+", re.IGNORECASE), "Redis 连接字符串含密码"),
         ]
-        
+
         self._env_patterns = [
             re.compile(r"os\.environ\[", re.IGNORECASE),
             re.compile(r"os\.getenv\s*\(", re.IGNORECASE),
             re.compile(r"process\.env\.", re.IGNORECASE),
         ]
-        
+
         self._whitelist_patterns = [
             re.compile(r"password\s*=\s*[\"']\$\{", re.IGNORECASE),
             re.compile(r"password\s*=\s*os\.environ", re.IGNORECASE),
@@ -72,15 +78,15 @@ class HardcodedCredentialsRule(BaseRule):
 
     def check(self, target: Union[str, Path, Dict[str, Any]]) -> List[RuleResult]:
         """执行硬编码凭证检测
-        
+
         Args:
             target: 检查目标（文件路径、代码内容或 AST 节点）
-            
+
         Returns:
             规则执行结果列表
         """
         results = []
-        
+
         if isinstance(target, Path):
             try:
                 content = target.read_text(encoding="utf-8")
@@ -95,26 +101,26 @@ class HardcodedCredentialsRule(BaseRule):
             file_path = target.get("file_path", "<unknown>")
         else:
             return results
-        
+
         lines = content.split("\n")
-        
+
         all_patterns = self._password_patterns + self._connection_patterns
-        
+
         for pattern, description in all_patterns:
             for match in pattern.finditer(content):
                 line_num = content[: match.start()].count("\n") + 1
                 col_num = match.start() - content[: match.start()].rfind("\n")
-                
+
                 if line_num <= len(lines):
                     code_snippet = lines[line_num - 1].strip()
                 else:
                     code_snippet = match.group()
-                
+
                 if self._is_whitelisted(code_snippet):
                     continue
-                
+
                 masked_snippet = self._mask_sensitive_data(code_snippet)
-                
+
                 result = RuleResult(
                     rule_id=self.metadata.id,
                     rule_name=self.metadata.name,
@@ -132,16 +138,16 @@ class HardcodedCredentialsRule(BaseRule):
                     references=self.metadata.references,
                 )
                 results.append(result)
-        
+
         return results
-    
+
     def _is_whitelisted(self, code: str) -> bool:
         """检查是否在白名单中（使用了环境变量等安全方式）"""
         for pattern in self._whitelist_patterns:
             if pattern.search(code):
                 return True
         return False
-    
+
     def _mask_sensitive_data(self, code: str) -> str:
         """遮蔽敏感数据"""
         masked = code
@@ -154,7 +160,7 @@ class HardcodedCredentialsRule(BaseRule):
         for pattern, replacement in patterns:
             masked = pattern.sub(replacement, masked)
         return masked
-    
+
     def _get_fix_suggestion(self, issue_type: str) -> str:
         """获取修复建议"""
         suggestions = {

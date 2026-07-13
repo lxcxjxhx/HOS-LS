@@ -54,6 +54,7 @@ class DataFlowRules:
 @dataclass
 class OWASPRules:
     """OWASP TOP10 规则配置"""
+
     a01_broken_access_control: List[str] = field(default_factory=list)
     a02_cryptographic_failures: List[str] = field(default_factory=list)
     a03_injection: List[str] = field(default_factory=list)
@@ -237,30 +238,104 @@ class CustomPriorityParser:
             "keywords": self._rules.keywords,
             "file_patterns": self._rules.file_patterns,
             "path_rules": self._rules.path_rules,
-            "related_file_rules": {
-                "keywords": self._rules.related_file_rules.keywords if self._rules.related_file_rules else [],
-                "patterns": self._rules.related_file_rules.patterns if self._rules.related_file_rules else [],
-            } if self._rules.related_file_rules else {},
-            "call_chain_rules": {
-                "java_patterns": self._rules.call_chain_rules.java_patterns if self._rules.call_chain_rules else [],
-                "python_patterns": self._rules.call_chain_rules.python_patterns if self._rules.call_chain_rules else [],
-            } if self._rules.call_chain_rules else {},
-            "data_flow_rules": {
-                "java_patterns": self._rules.data_flow_rules.java_patterns if self._rules.data_flow_rules else [],
-                "python_patterns": self._rules.data_flow_rules.python_patterns if self._rules.data_flow_rules else [],
-            } if self._rules.data_flow_rules else {},
-            "owasp_rules": {
-                "a01_broken_access_control": self._rules.owasp_rules.a01_broken_access_control if self._rules.owasp_rules else [],
-                "a02_cryptographic_failures": self._rules.owasp_rules.a02_cryptographic_failures if self._rules.owasp_rules else [],
-                "a03_injection": self._rules.owasp_rules.a03_injection if self._rules.owasp_rules else [],
-                "a04_insecure_design": self._rules.owasp_rules.a04_insecure_design if self._rules.owasp_rules else [],
-                "a05_security_misconfiguration": self._rules.owasp_rules.a05_security_misconfiguration if self._rules.owasp_rules else [],
-                "a06_vulnerable_components": self._rules.owasp_rules.a06_vulnerable_components if self._rules.owasp_rules else [],
-                "a07_authentication_failures": self._rules.owasp_rules.a07_authentication_failures if self._rules.owasp_rules else [],
-                "a08_software_integrity": self._rules.owasp_rules.a08_software_integrity if self._rules.owasp_rules else [],
-                "a09_logging_failures": self._rules.owasp_rules.a09_logging_failures if self._rules.owasp_rules else [],
-                "a10_ssrf": self._rules.owasp_rules.a10_ssrf if self._rules.owasp_rules else [],
-            } if self._rules.owasp_rules else {},
+            "related_file_rules": (
+                {
+                    "keywords": (
+                        self._rules.related_file_rules.keywords
+                        if self._rules.related_file_rules
+                        else []
+                    ),
+                    "patterns": (
+                        self._rules.related_file_rules.patterns
+                        if self._rules.related_file_rules
+                        else []
+                    ),
+                }
+                if self._rules.related_file_rules
+                else {}
+            ),
+            "call_chain_rules": (
+                {
+                    "java_patterns": (
+                        self._rules.call_chain_rules.java_patterns
+                        if self._rules.call_chain_rules
+                        else []
+                    ),
+                    "python_patterns": (
+                        self._rules.call_chain_rules.python_patterns
+                        if self._rules.call_chain_rules
+                        else []
+                    ),
+                }
+                if self._rules.call_chain_rules
+                else {}
+            ),
+            "data_flow_rules": (
+                {
+                    "java_patterns": (
+                        self._rules.data_flow_rules.java_patterns
+                        if self._rules.data_flow_rules
+                        else []
+                    ),
+                    "python_patterns": (
+                        self._rules.data_flow_rules.python_patterns
+                        if self._rules.data_flow_rules
+                        else []
+                    ),
+                }
+                if self._rules.data_flow_rules
+                else {}
+            ),
+            "owasp_rules": (
+                {
+                    "a01_broken_access_control": (
+                        self._rules.owasp_rules.a01_broken_access_control
+                        if self._rules.owasp_rules
+                        else []
+                    ),
+                    "a02_cryptographic_failures": (
+                        self._rules.owasp_rules.a02_cryptographic_failures
+                        if self._rules.owasp_rules
+                        else []
+                    ),
+                    "a03_injection": (
+                        self._rules.owasp_rules.a03_injection if self._rules.owasp_rules else []
+                    ),
+                    "a04_insecure_design": (
+                        self._rules.owasp_rules.a04_insecure_design
+                        if self._rules.owasp_rules
+                        else []
+                    ),
+                    "a05_security_misconfiguration": (
+                        self._rules.owasp_rules.a05_security_misconfiguration
+                        if self._rules.owasp_rules
+                        else []
+                    ),
+                    "a06_vulnerable_components": (
+                        self._rules.owasp_rules.a06_vulnerable_components
+                        if self._rules.owasp_rules
+                        else []
+                    ),
+                    "a07_authentication_failures": (
+                        self._rules.owasp_rules.a07_authentication_failures
+                        if self._rules.owasp_rules
+                        else []
+                    ),
+                    "a08_software_integrity": (
+                        self._rules.owasp_rules.a08_software_integrity
+                        if self._rules.owasp_rules
+                        else []
+                    ),
+                    "a09_logging_failures": (
+                        self._rules.owasp_rules.a09_logging_failures
+                        if self._rules.owasp_rules
+                        else []
+                    ),
+                    "a10_ssrf": self._rules.owasp_rules.a10_ssrf if self._rules.owasp_rules else [],
+                }
+                if self._rules.owasp_rules
+                else {}
+            ),
             "owasp_weight": self._rules.owasp_weight,
             "weights": {
                 "keyword_match": self._rules.weights.keyword_match,
@@ -297,12 +372,8 @@ class CustomPriorityParser:
             except Exception:
                 pass
 
-        keyword_score, matched_keywords = self._evaluate_keywords(
-            file_path, file_content
-        )
-        file_pattern_score, matched_file_patterns = self._evaluate_file_patterns(
-            file_path
-        )
+        keyword_score, matched_keywords = self._evaluate_keywords(file_path, file_content)
+        file_pattern_score, matched_file_patterns = self._evaluate_file_patterns(file_path)
         path_score, matched_paths = self._evaluate_paths(file_path)
 
         correlation_score, matched_related_files = self.evaluate_related_files(
@@ -315,10 +386,7 @@ class CustomPriorityParser:
             + path_score * self._rules.weights.path_match
         )
 
-        total_score = (
-            base_score * 0.7
-            + correlation_score * 0.3
-        )
+        total_score = base_score * 0.7 + correlation_score * 0.3
 
         priority_level = self._determine_priority_level(total_score)
 
@@ -335,9 +403,7 @@ class CustomPriorityParser:
             matched_related_files=matched_related_files,
         )
 
-    def _evaluate_keywords(
-        self, file_path: Path, file_content: str
-    ) -> tuple[float, List[str]]:
+    def _evaluate_keywords(self, file_path: Path, file_content: str) -> tuple[float, List[str]]:
         """评估关键词匹配
 
         Args:
@@ -398,7 +464,9 @@ class CustomPriorityParser:
                     matched.append(keyword)
                 score_details["low_priority"] += 0.3
 
-        max_possible = len(high_keywords) * 1.0 + len(medium_keywords) * 0.6 + len(low_keywords) * 0.3
+        max_possible = (
+            len(high_keywords) * 1.0 + len(medium_keywords) * 0.6 + len(low_keywords) * 0.3
+        )
         if max_possible == 0:
             return 0.0, matched
 
@@ -411,9 +479,7 @@ class CustomPriorityParser:
 
         return score, matched
 
-    def _evaluate_file_patterns(
-        self, file_path: Path
-    ) -> tuple[float, List[str]]:
+    def _evaluate_file_patterns(self, file_path: Path) -> tuple[float, List[str]]:
         """评估文件模式匹配
 
         Args:
@@ -456,7 +522,9 @@ class CustomPriorityParser:
                     matched.append(pattern)
                 score_details["low_priority"] += 0.3
 
-        max_possible = len(high_patterns) * 1.0 + len(medium_patterns) * 0.6 + len(low_patterns) * 0.3
+        max_possible = (
+            len(high_patterns) * 1.0 + len(medium_patterns) * 0.6 + len(low_patterns) * 0.3
+        )
         if max_possible == 0:
             return 0.0, matched
 
@@ -553,15 +621,13 @@ class CustomPriorityParser:
         elif "**" in pattern:
             regex_pattern = pattern.replace("**/", ".*/").replace("**", ".*")
             import re
+
             return bool(re.search(regex_pattern, file_path))
         else:
             return pattern in file_path
 
     def evaluate_related_files(
-        self,
-        file_path: Path,
-        file_content: str,
-        project_root: Optional[Union[str, Path]] = None
+        self, file_path: Path, file_content: str, project_root: Optional[Union[str, Path]] = None
     ) -> tuple[float, List[RelatedFileMatch]]:
         """评估相关文件的相关性评分
 
@@ -593,7 +659,9 @@ class CustomPriorityParser:
 
         if self._rules.related_file_rules:
             keyword_matches = self._scan_files_by_keywords(
-                project_root, self._rules.related_file_rules.keywords, self._rules.related_file_rules.patterns
+                project_root,
+                self._rules.related_file_rules.keywords,
+                self._rules.related_file_rules.patterns,
             )
             matched_files.extend(keyword_matches)
 
@@ -622,10 +690,7 @@ class CustomPriorityParser:
         return correlation_score, matched_files
 
     def _scan_files_by_keywords(
-        self,
-        project_root: Path,
-        keywords: List[str],
-        patterns: List[str]
+        self, project_root: Path, keywords: List[str], patterns: List[str]
     ) -> List[RelatedFileMatch]:
         """根据关键词和模式扫描相关文件
 
@@ -653,22 +718,21 @@ class CustomPriorityParser:
 
                         score = min(score, 1.0)
                         if score > 0:
-                            matched.append(RelatedFileMatch(
-                                file_path=str(file_path),
-                                match_type="related_file",
-                                matched_pattern=pattern,
-                                score=score,
-                            ))
+                            matched.append(
+                                RelatedFileMatch(
+                                    file_path=str(file_path),
+                                    match_type="related_file",
+                                    matched_pattern=pattern,
+                                    score=score,
+                                )
+                            )
                     except Exception:
                         pass
 
         return matched
 
     def _scan_call_chain_relationships(
-        self,
-        file_path: Path,
-        file_content: str,
-        project_root: Path
+        self, file_path: Path, file_content: str, project_root: Path
     ) -> List[RelatedFileMatch]:
         """扫描调用链关系
 
@@ -687,9 +751,7 @@ class CustomPriorityParser:
         if not call_chain_rules:
             return matched
 
-        all_patterns = (
-            call_chain_rules.java_patterns + call_chain_rules.python_patterns
-        )
+        all_patterns = call_chain_rules.java_patterns + call_chain_rules.python_patterns
 
         if not all_patterns:
             return matched
@@ -698,24 +760,21 @@ class CustomPriorityParser:
             if pattern in file_content:
                 referenced_name = self._extract_referenced_name(file_content, pattern)
                 if referenced_name:
-                    referenced_files = self._find_referenced_files(
-                        project_root, referenced_name
-                    )
+                    referenced_files = self._find_referenced_files(project_root, referenced_name)
                     for ref_file in referenced_files:
-                        matched.append(RelatedFileMatch(
-                            file_path=str(ref_file),
-                            match_type="call_chain",
-                            matched_pattern=pattern,
-                            score=0.8,
-                        ))
+                        matched.append(
+                            RelatedFileMatch(
+                                file_path=str(ref_file),
+                                match_type="call_chain",
+                                matched_pattern=pattern,
+                                score=0.8,
+                            )
+                        )
 
         return matched
 
     def _scan_data_flow_relationships(
-        self,
-        file_path: Path,
-        file_content: str,
-        project_root: Path
+        self, file_path: Path, file_content: str, project_root: Path
     ) -> List[RelatedFileMatch]:
         """扫描数据流关系
 
@@ -734,9 +793,7 @@ class CustomPriorityParser:
         if not data_flow_rules:
             return matched
 
-        all_patterns = (
-            data_flow_rules.java_patterns + data_flow_rules.python_patterns
-        )
+        all_patterns = data_flow_rules.java_patterns + data_flow_rules.python_patterns
 
         if not all_patterns:
             return matched
@@ -748,12 +805,14 @@ class CustomPriorityParser:
 
         if pattern_count > 0:
             score = min(pattern_count * 0.3, 1.0)
-            matched.append(RelatedFileMatch(
-                file_path=str(file_path),
-                match_type="data_flow",
-                matched_pattern="data_flow_patterns",
-                score=score,
-            ))
+            matched.append(
+                RelatedFileMatch(
+                    file_path=str(file_path),
+                    match_type="data_flow",
+                    matched_pattern="data_flow_patterns",
+                    score=score,
+                )
+            )
 
         return matched
 
@@ -788,9 +847,7 @@ class CustomPriorityParser:
 
         return None
 
-    def _find_referenced_files(
-        self, project_root: Path, referenced_name: str
-    ) -> List[Path]:
+    def _find_referenced_files(self, project_root: Path, referenced_name: str) -> List[Path]:
         """查找引用的相关文件
 
         Args:

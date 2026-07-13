@@ -4,8 +4,8 @@
 """
 
 import time
-from typing import Any, Optional, Dict
 from threading import Lock
+from typing import Any, Dict, Optional
 
 
 class NVDQueryCache:

@@ -1,9 +1,9 @@
 import re
 import time
-from typing import Dict, List, Any, Optional, Set
-from dataclasses import dataclass, field
 from collections import OrderedDict
+from dataclasses import dataclass, field
 from datetime import datetime
+from typing import Any, Dict, List, Optional, Set
 
 
 @dataclass
@@ -48,13 +48,26 @@ class ContextMemoryManager:
             "that class": "class",
             "these files": "file",
             "those files": "file",
-            "them": "entity"
+            "them": "entity",
         }
         self._type_keywords: Dict[str, List[str]] = {
-            "file": ["file", "path", ".py", ".js", ".ts", ".java", ".cpp", ".c", ".h", ".txt", "module", "script"],
+            "file": [
+                "file",
+                "path",
+                ".py",
+                ".js",
+                ".ts",
+                ".java",
+                ".cpp",
+                ".c",
+                ".h",
+                ".txt",
+                "module",
+                "script",
+            ],
             "function": ["function", "func", "method", "def", "()", "procedure"],
             "class": ["class", "object", "struct", "interface", "type"],
-            "variable": ["variable", "var", "const", "let", "value", "parameter", "arg"]
+            "variable": ["variable", "var", "const", "let", "value", "parameter", "arg"],
         }
         self._intent_patterns: Dict[str, List[str]] = {
             "scan": ["scan", "check", "review", "inspect", "examine"],
@@ -66,7 +79,7 @@ class ContextMemoryManager:
             "execute": ["run", "execute", "start", "launch", "call"],
             "explain": ["explain", "describe", "show", "tell", "what", "how"],
             "compare": ["compare", "diff", "versus", "vs"],
-            "refactor": ["refactor", "restructure", "reorganize", "optimize"]
+            "refactor": ["refactor", "restructure", "reorganize", "optimize"],
         }
 
     def extract_entities(self, text: str) -> List[Entity]:
@@ -75,23 +88,23 @@ class ContextMemoryManager:
         current_time = time.time()
 
         file_patterns = [
-            r'\b[\w/\\]+\.py\b',
-            r'\b[\w/\\]+\.js\b',
-            r'\b[\w/\\]+\.ts\b',
-            r'\b[\w/\\]+\.java\b',
-            r'\b[\w/\\]+\.cpp\b',
-            r'\b[\w/\\]+\.c\b',
-            r'\b[\w/\\]+\.h\b',
-            r'\b[\w/\\]+\.txt\b',
-            r'\b[\w/\\]+\.md\b',
-            r'\b[\w/\\]+\.json\b',
-            r'\b[\w/\\]+\.yaml\b',
-            r'\b[\w/\\]+\.yml\b',
-            r'\b[\w/\\]+\.xml\b',
-            r'\b[\w/\\]+\.html\b',
-            r'\b[\w/\\]+\.css\b',
-            r'\b[\w./\\_-]+\b(?:file|path|module|script|source)\b',
-            r'(?:src|lib|bin|obj|build|dist|test|tests|config|doc|docs)/[\w/\\.-]+',
+            r"\b[\w/\\]+\.py\b",
+            r"\b[\w/\\]+\.js\b",
+            r"\b[\w/\\]+\.ts\b",
+            r"\b[\w/\\]+\.java\b",
+            r"\b[\w/\\]+\.cpp\b",
+            r"\b[\w/\\]+\.c\b",
+            r"\b[\w/\\]+\.h\b",
+            r"\b[\w/\\]+\.txt\b",
+            r"\b[\w/\\]+\.md\b",
+            r"\b[\w/\\]+\.json\b",
+            r"\b[\w/\\]+\.yaml\b",
+            r"\b[\w/\\]+\.yml\b",
+            r"\b[\w/\\]+\.xml\b",
+            r"\b[\w/\\]+\.html\b",
+            r"\b[\w/\\]+\.css\b",
+            r"\b[\w./\\_-]+\b(?:file|path|module|script|source)\b",
+            r"(?:src|lib|bin|obj|build|dist|test|tests|config|doc|docs)/[\w/\\.-]+",
         ]
 
         for pattern in file_patterns:
@@ -111,7 +124,7 @@ class ContextMemoryManager:
                             value=file_path,
                             first_mentioned=current_time,
                             last_mentioned=current_time,
-                            mention_count=1
+                            mention_count=1,
                         )
                         self._entities[entity_key] = entity
                         self._enforce_entity_limit()
@@ -119,10 +132,10 @@ class ContextMemoryManager:
                         entities.append(entity)
 
         function_patterns = [
-            r'\b([a-zA-Z_][a-zA-Z0-9_]*)\s*\(',
-            r'(?:def|function|func|method)\s+([a-zA-Z_][a-zA-Z0-9_]*)',
-            r'(?:call|invoke|execute)\s+([a-zA-Z_][a-zA-Z0-9_]*)',
-            r'([a-zA-Z_][a-zA-Z0-9_]*)\s*(?:\(\))',
+            r"\b([a-zA-Z_][a-zA-Z0-9_]*)\s*\(",
+            r"(?:def|function|func|method)\s+([a-zA-Z_][a-zA-Z0-9_]*)",
+            r"(?:call|invoke|execute)\s+([a-zA-Z_][a-zA-Z0-9_]*)",
+            r"([a-zA-Z_][a-zA-Z0-9_]*)\s*(?:\(\))",
         ]
 
         for pattern in function_patterns:
@@ -142,7 +155,7 @@ class ContextMemoryManager:
                             value=func_name,
                             first_mentioned=current_time,
                             last_mentioned=current_time,
-                            mention_count=1
+                            mention_count=1,
                         )
                         self._entities[entity_key] = entity
                         self._enforce_entity_limit()
@@ -150,9 +163,9 @@ class ContextMemoryManager:
                         entities.append(entity)
 
         class_patterns = [
-            r'\bclass\s+([A-Z][a-zA-Z0-9_]*)',
-            r'(?:type|struct|interface)\s+([A-Z][a-zA-Z0-9_]*)',
-            r'([A-Z][a-zA-Z0-9_]*)\s+(?:class|object|instance)',
+            r"\bclass\s+([A-Z][a-zA-Z0-9_]*)",
+            r"(?:type|struct|interface)\s+([A-Z][a-zA-Z0-9_]*)",
+            r"([A-Z][a-zA-Z0-9_]*)\s+(?:class|object|instance)",
         ]
 
         for pattern in class_patterns:
@@ -171,7 +184,7 @@ class ContextMemoryManager:
                         value=class_name,
                         first_mentioned=current_time,
                         last_mentioned=current_time,
-                        mention_count=1
+                        mention_count=1,
                     )
                     self._entities[entity_key] = entity
                     self._enforce_entity_limit()
@@ -179,8 +192,8 @@ class ContextMemoryManager:
                     entities.append(entity)
 
         variable_patterns = [
-            r'\b([a-zA-Z_][a-zA-Z0-9_]*)\s*=\s*',
-            r'(?:const|let|var|parameter|arg)\s+([a-zA-Z_][a-zA-Z0-9_]*)',
+            r"\b([a-zA-Z_][a-zA-Z0-9_]*)\s*=\s*",
+            r"(?:const|let|var|parameter|arg)\s+([a-zA-Z_][a-zA-Z0-9_]*)",
         ]
 
         for pattern in variable_patterns:
@@ -200,7 +213,7 @@ class ContextMemoryManager:
                             value=var_name,
                             first_mentioned=current_time,
                             last_mentioned=current_time,
-                            mention_count=1
+                            mention_count=1,
                         )
                         self._entities[entity_key] = entity
                         self._enforce_entity_limit()
@@ -213,28 +226,97 @@ class ContextMemoryManager:
     def _is_likely_file_path(self, text: str) -> bool:
         if not text:
             return False
-        if text.startswith('http://') or text.startswith('https://'):
+        if text.startswith("http://") or text.startswith("https://"):
             return False
-        if text.startswith('www.'):
+        if text.startswith("www."):
             return False
         if len(text) < 3:
             return False
-        if re.search(r'^\d+$', text):
+        if re.search(r"^\d+$", text):
             return False
         return True
 
     def _is_common_keyword(self, word: str) -> bool:
         keywords = {
-            'if', 'else', 'elif', 'for', 'while', 'do', 'switch', 'case',
-            'break', 'continue', 'return', 'yield', 'throw', 'try', 'catch',
-            'finally', 'with', 'as', 'import', 'from', 'export', 'def', 'class',
-            'function', 'var', 'let', 'const', 'true', 'false', 'null', 'none',
-            'self', 'this', 'that', 'it', 'in', 'is', 'and', 'or', 'not', 'async',
-            'await', 'pass', 'lambda', 'map', 'filter', 'reduce', 'print', 'len',
-            'str', 'int', 'float', 'list', 'dict', 'set', 'tuple', 'type', 'void',
-            'new', 'delete', 'typeof', 'instanceof', 'static', 'public', 'private',
-            'protected', 'readonly', 'abstract', 'extends', 'implements', 'super',
-            'get', 'set', 'init', 'setup', 'teardown', 'main', 'run', 'execute'
+            "if",
+            "else",
+            "elif",
+            "for",
+            "while",
+            "do",
+            "switch",
+            "case",
+            "break",
+            "continue",
+            "return",
+            "yield",
+            "throw",
+            "try",
+            "catch",
+            "finally",
+            "with",
+            "as",
+            "import",
+            "from",
+            "export",
+            "def",
+            "class",
+            "function",
+            "var",
+            "let",
+            "const",
+            "true",
+            "false",
+            "null",
+            "none",
+            "self",
+            "this",
+            "that",
+            "it",
+            "in",
+            "is",
+            "and",
+            "or",
+            "not",
+            "async",
+            "await",
+            "pass",
+            "lambda",
+            "map",
+            "filter",
+            "reduce",
+            "print",
+            "len",
+            "str",
+            "int",
+            "float",
+            "list",
+            "dict",
+            "set",
+            "tuple",
+            "type",
+            "void",
+            "new",
+            "delete",
+            "typeof",
+            "instanceof",
+            "static",
+            "public",
+            "private",
+            "protected",
+            "readonly",
+            "abstract",
+            "extends",
+            "implements",
+            "super",
+            "get",
+            "set",
+            "init",
+            "setup",
+            "teardown",
+            "main",
+            "run",
+            "execute",
         }
         return word.lower() in keywords
 
@@ -258,7 +340,9 @@ class ContextMemoryManager:
                 target_entity: Optional[Entity] = None
 
                 for entity in recent_entities:
-                    if entity.type == entity_type or (entity_type == "entity" and entity.type in ["file", "function", "class"]):
+                    if entity.type == entity_type or (
+                        entity_type == "entity" and entity.type in ["file", "function", "class"]
+                    ):
                         target_entity = entity
                         break
 
@@ -271,8 +355,10 @@ class ContextMemoryManager:
                 if target_entity:
                     pronoun_replacements[pronoun] = f"[{target_entity.type}:{target_entity.name}]"
 
-        for pronoun, replacement in sorted(pronoun_replacements.items(), key=lambda x: len(x[0]), reverse=True):
-            pattern = r'\b' + re.escape(pronoun) + r'\b'
+        for pronoun, replacement in sorted(
+            pronoun_replacements.items(), key=lambda x: len(x[0]), reverse=True
+        ):
+            pattern = r"\b" + re.escape(pronoun) + r"\b"
             resolved_text = re.sub(pattern, replacement, resolved_text, flags=re.IGNORECASE)
 
         print(f"[DEBUG] 代词解析完成: {resolved_text[:80]}...")
@@ -306,15 +392,16 @@ class ContextMemoryManager:
         print(f"[DEBUG] 识别到意图: {best_intent}, 分数: {best_score}")
         return best_intent
 
-    def add_to_history(self, user_input: str, entities: List[Entity],
-                      intent: Optional[str], response_summary: str) -> None:
+    def add_to_history(
+        self, user_input: str, entities: List[Entity], intent: Optional[str], response_summary: str
+    ) -> None:
         print(f"[DEBUG] 添加到历史记录...")
         turn = ConversationTurn(
             timestamp=time.time(),
             user_input=user_input,
             entities_extracted=[entity.name for entity in entities],
             intent=intent,
-            response_summary=response_summary
+            response_summary=response_summary,
         )
 
         self._conversation_history.append(turn)
@@ -418,7 +505,7 @@ class ContextMemoryManager:
             "total_history": len(self._conversation_history),
             "by_type": {},
             "most_mentioned": [],
-            "recent_intent": self._current_intent
+            "recent_intent": self._current_intent,
         }
 
         for entity in self._entities.values():
@@ -426,10 +513,11 @@ class ContextMemoryManager:
                 stats["by_type"][entity.type] = 0
             stats["by_type"][entity.type] += 1
 
-        sorted_entities = sorted(self._entities.values(), key=lambda e: e.mention_count, reverse=True)
+        sorted_entities = sorted(
+            self._entities.values(), key=lambda e: e.mention_count, reverse=True
+        )
         stats["most_mentioned"] = [
-            {"name": e.name, "type": e.type, "count": e.mention_count}
-            for e in sorted_entities[:5]
+            {"name": e.name, "type": e.type, "count": e.mention_count} for e in sorted_entities[:5]
         ]
 
         return stats

@@ -1166,13 +1166,9 @@ class FilePriorityEngine:
         Returns:
             排序后的文件优先级列表
         """
-        priorities = [
-            self.calculate_priority(file_info, strategy) for file_info in files
-        ]
+        priorities = [self.calculate_priority(file_info, strategy) for file_info in files]
 
-        sorted_priorities = sorted(
-            priorities, key=lambda p: p.total_score, reverse=True
-        )
+        sorted_priorities = sorted(priorities, key=lambda p: p.total_score, reverse=True)
 
         for rank, priority in enumerate(sorted_priorities, 1):
             priority.rank = rank
@@ -1326,15 +1322,13 @@ class FilePriorityEngine:
 
         if file_info.language == Language.PYTHON:
             if any(
-                kw in path_str
-                for kw in ["views.py", "controllers.py", "handlers.py", "api.py"]
+                kw in path_str for kw in ["views.py", "controllers.py", "handlers.py", "api.py"]
             ):
                 score += 0.2
 
         if file_info.language in [Language.JAVASCRIPT, Language.TYPESCRIPT]:
             if any(
-                kw in path_str
-                for kw in ["route", "controller", "handler", "middleware", "api"]
+                kw in path_str for kw in ["route", "controller", "handler", "middleware", "api"]
             ):
                 score += 0.15
 
@@ -1558,7 +1552,10 @@ class FilePriorityEngine:
             security_config_score += 0.2
 
         if file_info.language == Language.JAVA:
-            if any(kw in path_str for kw in ["@restcontroller", "@requestmapping", "@getmapping", "@postmapping"]):
+            if any(
+                kw in path_str
+                for kw in ["@restcontroller", "@requestmapping", "@getmapping", "@postmapping"]
+            ):
                 api_route_score += 0.3
             elif any(kw in path_str for kw in ["@repository", "@mapper"]):
                 api_route_score += 0.15
@@ -1635,9 +1632,7 @@ class FilePriorityEngine:
 
         min_order = level_order[min_level]
 
-        priorities = [
-            self.calculate_priority(file_info, strategy) for file_info in files
-        ]
+        priorities = [self.calculate_priority(file_info, strategy) for file_info in files]
 
         return [p for p in priorities if level_order[p.priority_level] >= min_order]
 
@@ -1768,9 +1763,7 @@ class FilePriorityEngine:
         """清除缓存"""
         self._score_cache.clear()
 
-    def get_statistics(
-        self, priorities: List[FilePriority]
-    ) -> Dict[str, Any]:
+    def get_statistics(self, priorities: List[FilePriority]) -> Dict[str, Any]:
         """获取统计信息
 
         Args:

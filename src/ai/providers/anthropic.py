@@ -62,7 +62,7 @@ class AnthropicClient(AIClient):
 
         # 构建消息
         messages = []
-        
+
         # 处理多模态内容
         if request.multimodal_content:
             content = []
@@ -71,7 +71,16 @@ class AnthropicClient(AIClient):
             # 添加图像内容
             for item in request.multimodal_content:
                 if item.type == "image":
-                    content.append({"type": "image", "source": {"type": "base64", "media_type": "image/png", "data": item.content}})
+                    content.append(
+                        {
+                            "type": "image",
+                            "source": {
+                                "type": "base64",
+                                "media_type": "image/png",
+                                "data": item.content,
+                            },
+                        }
+                    )
             messages.append({"role": "user", "content": content})
         else:
             # 普通文本提示
@@ -115,7 +124,7 @@ class AnthropicClient(AIClient):
                 model="claude-3-5-haiku-20241022",
                 max_tokens=10,
                 messages=[{"role": "user", "content": "Hello"}],
-                timeout=10
+                timeout=10,
             )
 
             logger.info("Anthropic API access validated successfully")

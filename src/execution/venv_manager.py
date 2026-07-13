@@ -133,9 +133,7 @@ class VenvManager:
                 shutil.rmtree(venv_path, ignore_errors=True)
             return ""
 
-    def get_or_create_venv(
-        self, env_name: str, dependencies: Optional[List[str]] = None
-    ) -> str:
+    def get_or_create_venv(self, env_name: str, dependencies: Optional[List[str]] = None) -> str:
         """获取或创建虚拟环境
 
         Args:

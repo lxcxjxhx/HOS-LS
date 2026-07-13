@@ -5,13 +5,21 @@
 
 import os
 import time
-from typing import Optional, List
 from datetime import datetime
-from .manager import (
-    SerialManager, SerialConfig, SerialPortInfo,
-    Parity, StopBits, hex_encode, hex_decode, ascii_encode, is_hex_string
-)
+from typing import List, Optional
+
 from ..panel.base import InteractivePanel, PanelItem, clear_screen, print_divider
+from .manager import (
+    Parity,
+    SerialConfig,
+    SerialManager,
+    SerialPortInfo,
+    StopBits,
+    ascii_encode,
+    hex_decode,
+    hex_encode,
+    is_hex_string,
+)
 
 
 class SerialPortPanel(InteractivePanel):
@@ -89,11 +97,19 @@ class SerialPortPanel(InteractivePanel):
         port_desc = self.ports[self.selected_port_index].description if self.ports else ""
 
         print(f"  串口: [{self.selected_port_index}] {port_name}  {port_desc}")
-        print(f"  波特率: [{self.selected_baudrate_index}] {self.BAUDRATES[self.selected_baudrate_index]}")
-        print(f"  数据位: [{self.selected_datasize_index}] {self.DATASIZES[self.selected_datasize_index]}")
-        print(f"  校验位: [{self.selected_parity_index}] {self.PARITIES[self.selected_parity_index]} "
-              f"({'无' if self.PARITIES[self.selected_parity_index] == 'N' else '奇' if self.PARITIES[self.selected_parity_index] == 'O' else '偶' if self.PARITIES[self.selected_parity_index] == 'E' else '其他'})")
-        print(f"  停止位: [{self.selected_stopbits_index}] {self.STOPBITS[self.selected_stopbits_index]}")
+        print(
+            f"  波特率: [{self.selected_baudrate_index}] {self.BAUDRATES[self.selected_baudrate_index]}"
+        )
+        print(
+            f"  数据位: [{self.selected_datasize_index}] {self.DATASIZES[self.selected_datasize_index]}"
+        )
+        print(
+            f"  校验位: [{self.selected_parity_index}] {self.PARITIES[self.selected_parity_index]} "
+            f"({'无' if self.PARITIES[self.selected_parity_index] == 'N' else '奇' if self.PARITIES[self.selected_parity_index] == 'O' else '偶' if self.PARITIES[self.selected_parity_index] == 'E' else '其他'})"
+        )
+        print(
+            f"  停止位: [{self.selected_stopbits_index}] {self.STOPBITS[self.selected_stopbits_index]}"
+        )
 
         print()
         print_divider("─", 80)
@@ -104,7 +120,9 @@ class SerialPortPanel(InteractivePanel):
         print_divider("─", 80)
 
         if self.receive_buffer:
-            display_buffer = self.receive_buffer[-50:] if len(self.receive_buffer) > 50 else self.receive_buffer
+            display_buffer = (
+                self.receive_buffer[-50:] if len(self.receive_buffer) > 50 else self.receive_buffer
+            )
             for line in display_buffer:
                 print(f"  {line}")
         else:
@@ -164,9 +182,9 @@ class SerialPortPanel(InteractivePanel):
         if self.hex_mode:
             data = hex_decode(data)
         else:
-            data = data.encode('utf-8')
+            data = data.encode("utf-8")
             if self.add_newline:
-                data += b'\r\n'
+                data += b"\r\n"
 
         if data:
             self.manager.send(data)
@@ -175,7 +193,11 @@ class SerialPortPanel(InteractivePanel):
             self.send_index = -1
 
             timestamp = datetime.now().strftime("%H:%M:%S.%f")[:-3] if self.show_timestamp else ""
-            tx_line = f"[{timestamp}] TX: {self.send_input_buffer}" if timestamp else f"TX: {self.send_input_buffer}"
+            tx_line = (
+                f"[{timestamp}] TX: {self.send_input_buffer}"
+                if timestamp
+                else f"TX: {self.send_input_buffer}"
+            )
             self.receive_buffer.append(tx_line)
 
     def handle_key(self, key) -> None:
@@ -196,24 +218,36 @@ class SerialPortPanel(InteractivePanel):
                 self.send_input_buffer = ""
         elif key == Key.LEFT:
             if self.current_field == "baudrate":
-                self.selected_baudrate_index = (self.selected_baudrate_index - 1) % len(self.BAUDRATES)
+                self.selected_baudrate_index = (self.selected_baudrate_index - 1) % len(
+                    self.BAUDRATES
+                )
             elif self.current_field == "datasize":
-                self.selected_datasize_index = (self.selected_datasize_index - 1) % len(self.DATASIZES)
+                self.selected_datasize_index = (self.selected_datasize_index - 1) % len(
+                    self.DATASIZES
+                )
             elif self.current_field == "parity":
                 self.selected_parity_index = (self.selected_parity_index - 1) % len(self.PARITIES)
             elif self.current_field == "stopbits":
-                self.selected_stopbits_index = (self.selected_stopbits_index - 1) % len(self.STOPBITS)
+                self.selected_stopbits_index = (self.selected_stopbits_index - 1) % len(
+                    self.STOPBITS
+                )
             elif self.current_field == "port":
                 self.selected_port_index = (self.selected_port_index - 1) % max(len(self.ports), 1)
         elif key == Key.RIGHT:
             if self.current_field == "baudrate":
-                self.selected_baudrate_index = (self.selected_baudrate_index + 1) % len(self.BAUDRATES)
+                self.selected_baudrate_index = (self.selected_baudrate_index + 1) % len(
+                    self.BAUDRATES
+                )
             elif self.current_field == "datasize":
-                self.selected_datasize_index = (self.selected_datasize_index + 1) % len(self.DATASIZES)
+                self.selected_datasize_index = (self.selected_datasize_index + 1) % len(
+                    self.DATASIZES
+                )
             elif self.current_field == "parity":
                 self.selected_parity_index = (self.selected_parity_index + 1) % len(self.PARITIES)
             elif self.current_field == "stopbits":
-                self.selected_stopbits_index = (self.selected_stopbits_index + 1) % len(self.STOPBITS)
+                self.selected_stopbits_index = (self.selected_stopbits_index + 1) % len(
+                    self.STOPBITS
+                )
             elif self.current_field == "port":
                 self.selected_port_index = (self.selected_port_index + 1) % max(len(self.ports), 1)
         elif key == Key.SPACE:
@@ -228,7 +262,7 @@ class SerialPortPanel(InteractivePanel):
             self.add_newline = not self.add_newline
         elif key == Key.ESC:
             pass
-        elif hasattr(key, 'value') and isinstance(key.value, str):
+        elif hasattr(key, "value") and isinstance(key.value, str):
             char = key.value
             if len(char) == 1:
                 self.send_input_buffer += char
@@ -244,21 +278,21 @@ class SerialPortPanel(InteractivePanel):
 
             key = self.get_key()
 
-            if key.value in ('q', 'Q'):
+            if key.value in ("q", "Q"):
                 self.is_running = False
                 result_panel = self.parent_panel
-            elif key.value in ('c', 'C'):
+            elif key.value in ("c", "C"):
                 self._handle_connect()
-            elif key.value in ('d', 'D'):
+            elif key.value in ("d", "D"):
                 if self.manager.is_connected():
                     self.manager.disconnect()
-            elif key.value in ('s', 'S'):
+            elif key.value in ("s", "S"):
                 self._scan_ports()
-            elif key.value in ('t', 'T'):
+            elif key.value in ("t", "T"):
                 self.show_hex = not self.show_hex
-            elif key.value in ('r', 'R'):
+            elif key.value in ("r", "R"):
                 self.receive_buffer.clear()
-            elif key.value in ('n', 'N'):
+            elif key.value in ("n", "N"):
                 self.add_newline = not self.add_newline
             else:
                 self.handle_key(key)

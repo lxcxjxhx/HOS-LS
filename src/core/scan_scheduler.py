@@ -6,13 +6,14 @@
 import asyncio
 import time
 from dataclasses import dataclass, field
-from typing import List, Optional, Dict, Any, Callable, Awaitable
 from enum import Enum
 from functools import wraps
+from typing import Any, Awaitable, Callable, Dict, List, Optional
 
 
 class ScanStatus(Enum):
     """扫描任务状态"""
+
     PENDING = "pending"
     RUNNING = "running"
     COMPLETED = "completed"
@@ -47,6 +48,7 @@ class ScanTask:
 
 def async_retry(max_retries: int = 3, retry_delay: float = 1.0, backoff_factor: float = 2.0):
     """异步重试装饰器"""
+
     def decorator(func: Callable[..., Awaitable[Any]]):
         @wraps(func)
         async def wrapper(*args, **kwargs):
@@ -57,10 +59,12 @@ def async_retry(max_retries: int = 3, retry_delay: float = 1.0, backoff_factor: 
                 except Exception as e:
                     last_exception = e
                     if attempt < max_retries - 1:
-                        delay = retry_delay * (backoff_factor ** attempt)
+                        delay = retry_delay * (backoff_factor**attempt)
                         await asyncio.sleep(delay)
             raise last_exception
+
         return wrapper
+
     return decorator
 
 
@@ -79,7 +83,7 @@ class RateLimiter:
             now = time.time()
             # 移除过期的请求记录
             self.requests = [t for t in self.requests if now - t < self.time_window]
-            
+
             while len(self.requests) >= self.max_requests:
                 # 等待到最早的请求过期
                 wait_time = self.requests[0] + self.time_window - now
@@ -87,7 +91,7 @@ class RateLimiter:
                     await asyncio.sleep(wait_time)
                 now = time.time()
                 self.requests = [t for t in self.requests if now - t < self.time_window]
-            
+
             self.requests.append(time.time())
 
 
@@ -140,12 +144,9 @@ class ScanScheduler:
         """工作协程"""
         while self._running:
             try:
-                priority, task_id = await asyncio.wait_for(
-                    self._task_queue.get(),
-                    timeout=0.1
-                )
+                priority, task_id = await asyncio.wait_for(self._task_queue.get(), timeout=0.1)
                 task = self.tasks[task_id]
-                
+
                 if task.status in [ScanStatus.COMPLETED, ScanStatus.FAILED]:
                     self._task_queue.task_done()
                     continue
@@ -156,14 +157,14 @@ class ScanScheduler:
                 try:
                     # 速率限制
                     await self.rate_limiter.acquire()
-                    
+
                     # 执行扫描
                     result = await self._execute_with_retry(task, scan_func)
-                    
+
                     task.result = result
                     task.status = ScanStatus.COMPLETED
                     self._results.append(result)
-                    
+
                 except Exception as e:
                     task.error = str(e)
                     task.status = ScanStatus.FAILED
@@ -196,8 +197,7 @@ class ScanScheduler:
         """启动调度器"""
         self._running = True
         self._worker_tasks = [
-            asyncio.create_task(self._worker(scan_func))
-            for _ in range(self.max_concurrent)
+            asyncio.create_task(self._worker(scan_func)) for _ in range(self.max_concurrent)
         ]
 
     async def wait(self):
@@ -228,7 +228,7 @@ class ScanScheduler:
         completed = sum(1 for t in self.tasks.values() if t.status == ScanStatus.COMPLETED)
         failed = sum(1 for t in self.tasks.values() if t.status == ScanStatus.FAILED)
         pending = sum(1 for t in self.tasks.values() if t.status == ScanStatus.PENDING)
-        
+
         total_duration = sum(t.duration for t in self.tasks.values() if t.duration > 0)
         avg_duration = total_duration / completed if completed > 0 else 0
 
@@ -258,7 +258,7 @@ class MultiPhaseScanner:
         # 这里是简化实现，实际应该调用 LLM
         # 查找可疑点
         suspicious = []
-        
+
         # 简单的模式匹配作为示例
         patterns = [
             ("sql_injection", ["sql", "execute", "cursor"]),
@@ -270,16 +270,14 @@ class MultiPhaseScanner:
         for vuln_type, keywords in patterns:
             for keyword in keywords:
                 if keyword.lower() in code.lower():
-                    lines = code.split('\n')
+                    lines = code.split("\n")
                     for i, line in enumerate(lines):
                         if keyword.lower() in line.lower():
-                            suspicious.append({
-                                "line": i + 1,
-                                "type": vuln_type,
-                                "snippet": line.strip()
-                            })
+                            suspicious.append(
+                                {"line": i + 1, "type": vuln_type, "snippet": line.strip()}
+                            )
                             break
-        
+
         return suspicious
 
     async def scan_phase2(
@@ -291,14 +289,14 @@ class MultiPhaseScanner:
     ) -> List[Any]:
         """第二阶段：精扫（只分析局部代码 ±context_lines 行）"""
         results = []
-        lines = code.split('\n')
-        
+        lines = code.split("\n")
+
         for point in suspicious_points:
             line_num = point["line"] - 1
             start_line = max(0, line_num - context_lines)
             end_line = min(len(lines), line_num + context_lines + 1)
-            local_code = '\n'.join(lines[start_line:end_line])
-            
+            local_code = "\n".join(lines[start_line:end_line])
+
             # 这里应该调用 LLM 进行精细分析
             # 简化实现，实际应调用 AI 分析器
             result = {
@@ -309,7 +307,7 @@ class MultiPhaseScanner:
                 "code": local_code,
             }
             results.append(result)
-        
+
         return results
 
     async def multi_phase_scan(
@@ -320,11 +318,11 @@ class MultiPhaseScanner:
         """执行多阶段扫描"""
         # 第一阶段：轻量定位
         suspicious = await self.scan_phase1(code, file_path)
-        
+
         if not suspicious:
             return []
-        
+
         # 第二阶段：精扫
         results = await self.scan_phase2(code, file_path, suspicious)
-        
+
         return results

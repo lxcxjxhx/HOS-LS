@@ -5,7 +5,7 @@
 
 import re
 from abc import ABC, abstractmethod
-from typing import List, Dict, Any, Optional
+from typing import Any, Dict, List, Optional
 
 
 class AISecurityBaseRule(ABC):
@@ -91,8 +91,9 @@ class AISecurityBaseRule(ABC):
         """
         return self.match_pattern(text, self.SENSITIVE_DATA_PATTERNS) is not None
 
-    def create_finding(self, line_number: int, code: str, message: str,
-                       severity: Optional[str] = None) -> Dict[str, Any]:
+    def create_finding(
+        self, line_number: int, code: str, message: str, severity: Optional[str] = None
+    ) -> Dict[str, Any]:
         """创建检测结果
 
         Args:

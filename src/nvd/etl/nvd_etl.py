@@ -1,10 +1,13 @@
 import json
 import re
-from pathlib import Path
 from datetime import datetime
-from typing import Optional, Dict, List, Tuple
+from pathlib import Path
+from typing import Dict, List, Optional, Tuple
+
 from tqdm import tqdm
+
 from .base import BaseETL
+
 
 class NVDETL(BaseETL):
     """NVD数据ETL处理器（CVSS和CPE）- 适配NVD单文件JSON格式"""
@@ -12,7 +15,7 @@ class NVDETL(BaseETL):
     ETL_NAME = "nvd"
 
     CPE_PATTERN = re.compile(
-        r'cpe:2\.3:([a-z]):([^:]*):([^:]*):([^:]*):([^:]*):([^:]*):([^:]*):([^:]*):([^:]*):([^:]*)'
+        r"cpe:2\.3:([a-z]):([^:]*):([^:]*):([^:]*):([^:]*):([^:]*):([^:]*):([^:]*):([^:]*):([^:]*)"
     )
 
     def __init__(self, connection=None):
@@ -107,12 +110,12 @@ class NVDETL(BaseETL):
 
     def _process_json_file(self, json_file: Path) -> Tuple[str, Optional[Dict], List[Dict]]:
         """处理单个NVD JSON文件，返回(cve_id, cvss_data, cpe_list)"""
-        with open(json_file, 'r', encoding='utf-8') as f:
+        with open(json_file, "r", encoding="utf-8") as f:
             data = json.load(f)
 
-        cve_id = data.get('id', '')
+        cve_id = data.get("id", "")
         if not cve_id:
-            return '', None, []
+            return "", None, []
 
         cvss_data = self._extract_cvss(data, cve_id)
         cpe_list = self._extract_cpe(data, cve_id)
@@ -121,42 +124,42 @@ class NVDETL(BaseETL):
 
     def _extract_cvss(self, data: Dict, cve_id: str) -> Optional[Dict]:
         """提取CVSS数据"""
-        metrics = data.get('metrics', {})
+        metrics = data.get("metrics", {})
 
-        cvss_v31_list = metrics.get('cvssMetricV31', [])
+        cvss_v31_list = metrics.get("cvssMetricV31", [])
         if cvss_v31_list:
-            cvss_v31 = cvss_v31_list[0].get('cvssData', {})
+            cvss_v31 = cvss_v31_list[0].get("cvssData", {})
             if cvss_v31:
                 return {
-                    'cve_id': cve_id,
-                    'score': cvss_v31.get('baseScore'),
-                    'severity': cvss_v31.get('baseSeverity'),
-                    'vector': cvss_v31.get('vectorString', ''),
-                    'version': '3.1'
+                    "cve_id": cve_id,
+                    "score": cvss_v31.get("baseScore"),
+                    "severity": cvss_v31.get("baseSeverity"),
+                    "vector": cvss_v31.get("vectorString", ""),
+                    "version": "3.1",
                 }
 
-        cvss_v30_list = metrics.get('cvssMetricV30', [])
+        cvss_v30_list = metrics.get("cvssMetricV30", [])
         if cvss_v30_list:
-            cvss_v30 = cvss_v30_list[0].get('cvssData', {})
+            cvss_v30 = cvss_v30_list[0].get("cvssData", {})
             if cvss_v30:
                 return {
-                    'cve_id': cve_id,
-                    'score': cvss_v30.get('baseScore'),
-                    'severity': cvss_v30.get('baseSeverity'),
-                    'vector': cvss_v30.get('vectorString', ''),
-                    'version': '3.0'
+                    "cve_id": cve_id,
+                    "score": cvss_v30.get("baseScore"),
+                    "severity": cvss_v30.get("baseSeverity"),
+                    "vector": cvss_v30.get("vectorString", ""),
+                    "version": "3.0",
                 }
 
-        cvss_v2_list = metrics.get('cvssMetricV2', [])
+        cvss_v2_list = metrics.get("cvssMetricV2", [])
         if cvss_v2_list:
-            cvss_v2 = cvss_v2_list[0].get('cvssData', {})
+            cvss_v2 = cvss_v2_list[0].get("cvssData", {})
             if cvss_v2:
                 return {
-                    'cve_id': cve_id,
-                    'score': cvss_v2.get('baseScore'),
-                    'severity': cvss_v2_list[0].get('baseSeverity', ''),
-                    'vector': cvss_v2.get('vectorString', ''),
-                    'version': '2.0'
+                    "cve_id": cve_id,
+                    "score": cvss_v2.get("baseScore"),
+                    "severity": cvss_v2_list[0].get("baseSeverity", ""),
+                    "vector": cvss_v2.get("vectorString", ""),
+                    "version": "2.0",
                 }
 
         return None
@@ -164,12 +167,12 @@ class NVDETL(BaseETL):
     def _extract_cpe(self, data: Dict, cve_id: str) -> List[Dict]:
         """提取CPE配置列表"""
         cpe_list = []
-        configurations = data.get('configurations', [])
+        configurations = data.get("configurations", [])
 
         for config in configurations:
-            nodes = config.get('nodes', [])
+            nodes = config.get("nodes", [])
             for node in nodes:
-                cpe_matches = node.get('cpeMatch', [])
+                cpe_matches = node.get("cpeMatch", [])
                 for cpe in cpe_matches:
                     cpe_data = self._parse_cpe(cpe, cve_id)
                     if cpe_data:
@@ -179,7 +182,7 @@ class NVDETL(BaseETL):
 
     def _parse_cpe(self, cpe_match: Dict, cve_id: str) -> Optional[Dict]:
         """解析CPE字符串"""
-        cpe_str = cpe_match.get('criteria', '')
+        cpe_str = cpe_match.get("criteria", "")
 
         match = self.CPE_PATTERN.match(cpe_str)
         if not match:
@@ -188,14 +191,20 @@ class NVDETL(BaseETL):
         parts = match.groups()
 
         return {
-            'cve_id': cve_id,
-            'vendor': parts[1],
-            'product': parts[2],
-            'version': parts[3],
-            'version_start': cpe_match.get('versionStartIncluding', ''),
-            'version_end': cpe_match.get('versionEndExcluding', ''),
-            'version_start_type': 'including' if cpe_match.get('versionStartIncluding') else None,
-            'version_end_type': 'excluding' if cpe_match.get('versionEndExcluding') else 'including' if cpe_match.get('versionEndIncluding') else None
+            "cve_id": cve_id,
+            "vendor": parts[1],
+            "product": parts[2],
+            "version": parts[3],
+            "version_start": cpe_match.get("versionStartIncluding", ""),
+            "version_end": cpe_match.get("versionEndExcluding", ""),
+            "version_start_type": "including" if cpe_match.get("versionStartIncluding") else None,
+            "version_end_type": (
+                "excluding"
+                if cpe_match.get("versionEndExcluding")
+                else "including"
+                if cpe_match.get("versionEndIncluding")
+                else None
+            ),
         }
 
     def _batch_insert_cvss(self, batch: List[Dict]) -> None:
@@ -213,13 +222,16 @@ class NVDETL(BaseETL):
                 cursor = conn.cursor()
                 for item in batch:
                     try:
-                        cursor.execute(query, (
-                            item.get('cve_id'),
-                            item.get('score'),
-                            item.get('severity', ''),
-                            item.get('vector', ''),
-                            item.get('version', '3.1')
-                        ))
+                        cursor.execute(
+                            query,
+                            (
+                                item.get("cve_id"),
+                                item.get("score"),
+                                item.get("severity", ""),
+                                item.get("vector", ""),
+                                item.get("version", "3.1"),
+                            ),
+                        )
                     except Exception:
                         pass
         except Exception as e:
@@ -241,16 +253,19 @@ class NVDETL(BaseETL):
                 cursor = conn.cursor()
                 for item in batch:
                     try:
-                        cursor.execute(query, (
-                            item.get('cve_id'),
-                            item.get('vendor', ''),
-                            item.get('product', ''),
-                            item.get('version', ''),
-                            item.get('version_start', ''),
-                            item.get('version_end', ''),
-                            item.get('version_start_type'),
-                            item.get('version_end_type')
-                        ))
+                        cursor.execute(
+                            query,
+                            (
+                                item.get("cve_id"),
+                                item.get("vendor", ""),
+                                item.get("product", ""),
+                                item.get("version", ""),
+                                item.get("version_start", ""),
+                                item.get("version_end", ""),
+                                item.get("version_start_type"),
+                                item.get("version_end_type"),
+                            ),
+                        )
                     except Exception:
                         pass
         except Exception as e:

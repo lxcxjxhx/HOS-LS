@@ -1,15 +1,15 @@
-from pathlib import Path
-from typing import Dict, List, Optional, Any
-import json
-import re
 import importlib.util
-import sys
-import subprocess
-import tempfile
+import json
 import os
+import re
+import subprocess
+import sys
+import tempfile
+from pathlib import Path
+from typing import Any, Dict, List, Optional
 
 from .interfaces import ValidationResult, VulnContext
-from .method_storage import MethodStorage, MethodDefinition
+from .method_storage import MethodDefinition, MethodStorage
 
 
 class AIPOCGenerator:
@@ -21,71 +21,77 @@ class AIPOCGenerator:
     """
 
     VULN_TYPE_PATTERNS = {
-        'sql_injection': [
-            r'\$\{.*?\}',
+        "sql_injection": [
+            r"\$\{.*?\}",
             r'".*?"\s*\+',
-            r'\.createQuery\(',
-            r'\.createNativeQuery\(',
-            r'EntityWrapper',
+            r"\.createQuery\(",
+            r"\.createNativeQuery\(",
+            r"EntityWrapper",
         ],
-        'auth_bypass': [
-            r'@Secured\([',
-            r'@PermitAll',
-            r'permitAll\(\)',
-            r'hasRole\(',
-            r'hasAuthority\(',
+        "auth_bypass": [
+            r"@Secured\([",
+            r"@PermitAll",
+            r"permitAll\(\)",
+            r"hasRole\(",
+            r"hasAuthority\(",
         ],
-        'ssrf': [
-            r'RestTemplate',
-            r'WebClient',
-            r'URL\(',
-            r'HttpClient',
-            r'OkHttpClient',
+        "ssrf": [
+            r"RestTemplate",
+            r"WebClient",
+            r"URL\(",
+            r"HttpClient",
+            r"OkHttpClient",
         ],
-        'xss': [
-            r'\.innerHTML\s*=',
-            r'\.outerHTML\s*=',
-            r'\.write\(',
-            r'v-html',
-            r'dangerouslySetInnerHTML',
-            r'directive[:\s]*v-html',
-            r'\[innerHTML\]',
-            r'\$sce\.trustAsHtml',
-            r'bypassSecurityTrustHtml',
+        "xss": [
+            r"\.innerHTML\s*=",
+            r"\.outerHTML\s*=",
+            r"\.write\(",
+            r"v-html",
+            r"dangerouslySetInnerHTML",
+            r"directive[:\s]*v-html",
+            r"\[innerHTML\]",
+            r"\$sce\.trustAsHtml",
+            r"bypassSecurityTrustHtml",
         ],
-        'command_injection': [
-            r'Runtime\.exec\(',
-            r'ProcessBuilder',
-            r'system\(',
-            r'exec\(',
-            r'ProcessImpl',
-            r'java\.lang\.Process',
+        "command_injection": [
+            r"Runtime\.exec\(",
+            r"ProcessBuilder",
+            r"system\(",
+            r"exec\(",
+            r"ProcessImpl",
+            r"java\.lang\.Process",
         ],
-        'xxe': [
-            r'DocumentBuilder',
-            r'SAXParser',
-            r'XMLStreamReader',
-            r'javax\.xml\.parsers',
-            r'SAXBuilder',
-            r'XMLReader',
-            r'Digester',
-            r'Unmarshaller',
+        "xxe": [
+            r"DocumentBuilder",
+            r"SAXParser",
+            r"XMLStreamReader",
+            r"javax\.xml\.parsers",
+            r"SAXBuilder",
+            r"XMLReader",
+            r"Digester",
+            r"Unmarshaller",
         ],
-        'deserialization': [
-            r'ObjectInputStream',
-            r'ReadObject\(',
-            r'JSON\.parse\(',
-            r'jackson',
+        "deserialization": [
+            r"ObjectInputStream",
+            r"ReadObject\(",
+            r"JSON\.parse\(",
+            r"jackson",
         ],
-        'path_traversal': [
-            r'new File\(',
-            r'Paths\.get\(',
-            r'FileInputStream',
-            r'\.getRealPath\(',
+        "path_traversal": [
+            r"new File\(",
+            r"Paths\.get\(",
+            r"FileInputStream",
+            r"\.getRealPath\(",
         ],
     }
 
-    BASE_POC_TEMPLATE_PATH = Path(__file__).parent.parent.parent.parent / 'dynamic_code' / 'pocs' / 'templates' / 'base_poc_template.py'
+    BASE_POC_TEMPLATE_PATH = (
+        Path(__file__).parent.parent.parent.parent
+        / "dynamic_code"
+        / "pocs"
+        / "templates"
+        / "base_poc_template.py"
+    )
 
     def __init__(self, method_storage: MethodStorage, pocs_output_path: str):
         self.method_storage = method_storage
@@ -117,19 +123,16 @@ class AIPOCGenerator:
             name=f"{vuln_type.replace('_', ' ').title()} POC - {context.file_path}:{context.line_number}",
             vuln_type=vuln_type,
             pattern=pattern,
-            confidence_level='high',
-            validation={
-                'type': 'code_analysis',
-                'steps': validation_steps
-            },
+            confidence_level="high",
+            validation={"type": "code_analysis", "steps": validation_steps},
             poc_template=poc_code,
-            evidence_required=['code_snippet', 'file_path'],
+            evidence_required=["code_snippet", "file_path"],
             metadata={
-                'file_path': context.file_path,
-                'line_number': context.line_number,
-                'validator_name': validator_name,
-                'generated_by': 'AIPOCGenerator'
-            }
+                "file_path": context.file_path,
+                "line_number": context.line_number,
+                "validator_name": validator_name,
+                "generated_by": "AIPOCGenerator",
+            },
         )
 
         self.method_storage.save_method(method_id, method_def)
@@ -162,17 +165,11 @@ class AIPOCGenerator:
             name=f"泛化 {vuln_type.replace('_', ' ').title()} 验证",
             vuln_type=vuln_type,
             pattern=pattern,
-            confidence_level='medium',
-            validation={
-                'type': 'generalized',
-                'steps': validation_steps
-            },
+            confidence_level="medium",
+            validation={"type": "generalized", "steps": validation_steps},
             poc_template=poc_code,
             evidence_required=[],
-            metadata={
-                'is_generalized': True,
-                'generated_by': 'AIPOCGenerator'
-            }
+            metadata={"is_generalized": True, "generated_by": "AIPOCGenerator"},
         )
 
         self.method_storage.save_method(method_id, method_def)
@@ -193,62 +190,76 @@ class AIPOCGenerator:
 
         vuln_type = context.vuln_type
 
-        if vuln_type == 'sql_injection':
-            steps.extend([
-                f"1. 检查 {context.file_path}:{context.line_number} 处的代码片段",
-                "2. 提取 SQL 语句中的参数引用",
-                "3. 追踪参数来源（服务层调用链）",
-                "4. 确认参数是否来自用户输入",
-                "5. 检查是否有输入验证或参数化查询",
-                "6. 评估漏洞可利用性"
-            ])
-        elif vuln_type == 'auth_bypass':
-            steps.extend([
-                f"1. 检查 {context.file_path}:{context.line_number} 处的安全配置",
-                "2. 确认是否配置了适当的权限控制",
-                "3. 检查是否有遗漏的接口或路径",
-                "4. 验证认证和授权机制是否完整",
-                "5. 测试是否存在绕过可能"
-            ])
-        elif vuln_type == 'ssrf':
-            steps.extend([
-                f"1. 检查 {context.file_path}:{context.line_number} 处的 URL 处理",
-                "2. 确认 URL 来源是否可控",
-                "3. 检查是否有 URL 验证或域名白名单",
-                "4. 评估内网资源访问风险",
-                "5. 测试是否存在 DNS 重绑定绕过"
-            ])
-        elif vuln_type == 'command_injection':
-            steps.extend([
-                f"1. 检查 {context.file_path}:{context.line_number} 处的命令执行代码",
-                "2. 确认命令参数是否来自用户输入",
-                "3. 检查是否有输入验证或命令白名单",
-                "4. 评估系统命令执行风险",
-                "5. 测试是否存在命令注入绕过"
-            ])
-        elif vuln_type == 'xxe':
-            steps.extend([
-                f"1. 检查 {context.file_path}:{context.line_number} 处的 XML 解析器配置",
-                "2. 确认是否禁用了外部实体",
-                "3. 检查 XML 输入来源是否可信",
-                "4. 评估文件读取和内网探测风险",
-                "5. 测试是否存在 XXE 注入利用"
-            ])
-        elif vuln_type == 'xss':
-            steps.extend([
-                f"1. 检查 {context.file_path}:{context.line_number} 处的输出编码",
-                "2. 确认是否有输入验证或内容安全策略",
-                "3. 识别 XSS 上下文（HTML、JS、CSS、URL）",
-                "4. 评估会话劫持和钓鱼攻击风险",
-                "5. 测试是否存在 XSS 绕过"
-            ])
+        if vuln_type == "sql_injection":
+            steps.extend(
+                [
+                    f"1. 检查 {context.file_path}:{context.line_number} 处的代码片段",
+                    "2. 提取 SQL 语句中的参数引用",
+                    "3. 追踪参数来源（服务层调用链）",
+                    "4. 确认参数是否来自用户输入",
+                    "5. 检查是否有输入验证或参数化查询",
+                    "6. 评估漏洞可利用性",
+                ]
+            )
+        elif vuln_type == "auth_bypass":
+            steps.extend(
+                [
+                    f"1. 检查 {context.file_path}:{context.line_number} 处的安全配置",
+                    "2. 确认是否配置了适当的权限控制",
+                    "3. 检查是否有遗漏的接口或路径",
+                    "4. 验证认证和授权机制是否完整",
+                    "5. 测试是否存在绕过可能",
+                ]
+            )
+        elif vuln_type == "ssrf":
+            steps.extend(
+                [
+                    f"1. 检查 {context.file_path}:{context.line_number} 处的 URL 处理",
+                    "2. 确认 URL 来源是否可控",
+                    "3. 检查是否有 URL 验证或域名白名单",
+                    "4. 评估内网资源访问风险",
+                    "5. 测试是否存在 DNS 重绑定绕过",
+                ]
+            )
+        elif vuln_type == "command_injection":
+            steps.extend(
+                [
+                    f"1. 检查 {context.file_path}:{context.line_number} 处的命令执行代码",
+                    "2. 确认命令参数是否来自用户输入",
+                    "3. 检查是否有输入验证或命令白名单",
+                    "4. 评估系统命令执行风险",
+                    "5. 测试是否存在命令注入绕过",
+                ]
+            )
+        elif vuln_type == "xxe":
+            steps.extend(
+                [
+                    f"1. 检查 {context.file_path}:{context.line_number} 处的 XML 解析器配置",
+                    "2. 确认是否禁用了外部实体",
+                    "3. 检查 XML 输入来源是否可信",
+                    "4. 评估文件读取和内网探测风险",
+                    "5. 测试是否存在 XXE 注入利用",
+                ]
+            )
+        elif vuln_type == "xss":
+            steps.extend(
+                [
+                    f"1. 检查 {context.file_path}:{context.line_number} 处的输出编码",
+                    "2. 确认是否有输入验证或内容安全策略",
+                    "3. 识别 XSS 上下文（HTML、JS、CSS、URL）",
+                    "4. 评估会话劫持和钓鱼攻击风险",
+                    "5. 测试是否存在 XSS 绕过",
+                ]
+            )
         else:
-            steps.extend([
-                f"1. 检查 {context.file_path}:{context.line_number} 处的代码",
-                "2. 分析漏洞上下文和触发条件",
-                "3. 确定漏洞可利用性",
-                "4. 评估影响范围"
-            ])
+            steps.extend(
+                [
+                    f"1. 检查 {context.file_path}:{context.line_number} 处的代码",
+                    "2. 分析漏洞上下文和触发条件",
+                    "3. 确定漏洞可利用性",
+                    "4. 评估影响范围",
+                ]
+            )
 
         return steps
 
@@ -267,18 +278,18 @@ class AIPOCGenerator:
         if original_method is None:
             return None
 
-        adjustment_type = feedback.get('type', 'unknown')
-        details = feedback.get('details', '')
+        adjustment_type = feedback.get("type", "unknown")
+        details = feedback.get("details", "")
 
         new_method_id = f"{poc_method_id}_adjusted"
 
-        if adjustment_type == 'false_positive':
-            new_confidence = 'low'
-            new_validation_steps = original_method.validation.get('steps', [])
+        if adjustment_type == "false_positive":
+            new_confidence = "low"
+            new_validation_steps = original_method.validation.get("steps", [])
             new_validation_steps.append(f"人工复核标记为误报: {details}")
-        elif adjustment_type == 'missed_case':
+        elif adjustment_type == "missed_case":
             new_confidence = original_method.confidence_level
-            new_validation_steps = original_method.validation.get('steps', [])
+            new_validation_steps = original_method.validation.get("steps", [])
             new_validation_steps.append(f"补充验证步骤: {details}")
         else:
             new_method_id = poc_method_id
@@ -291,23 +302,25 @@ class AIPOCGenerator:
             pattern=original_method.pattern,
             confidence_level=new_confidence,
             validation={
-                'type': original_method.validation.get('type', 'adjusted'),
-                'steps': new_validation_steps
+                "type": original_method.validation.get("type", "adjusted"),
+                "steps": new_validation_steps,
             },
             poc_template=original_method.poc_template,
             evidence_required=original_method.evidence_required,
             metadata={
-                'original_method_id': poc_method_id,
-                'adjustment_type': adjustment_type,
-                'adjustment_details': details
-            }
+                "original_method_id": poc_method_id,
+                "adjustment_type": adjustment_type,
+                "adjustment_details": details,
+            },
         )
 
         self.method_storage.save_method(new_method_id, new_method_def)
 
         return new_method_id
 
-    def execute_poc(self, poc_method_id: str, target: str, params: Dict[str, Any] = None) -> Dict[str, Any]:
+    def execute_poc(
+        self, poc_method_id: str, target: str, params: Dict[str, Any] = None
+    ) -> Dict[str, Any]:
         """
         执行生成的 POC
 
@@ -321,7 +334,7 @@ class AIPOCGenerator:
         """
         method = self.method_storage.load_method(poc_method_id)
         if method is None:
-            return {'error': f'Method not found: {poc_method_id}'}
+            return {"error": f"Method not found: {poc_method_id}"}
 
         vuln_type = method.vuln_type
         poc_code = method.poc_template
@@ -334,13 +347,15 @@ class AIPOCGenerator:
             return result
         except Exception as e:
             return {
-                'error': str(e),
-                'executed': False,
-                'poc_method_id': poc_method_id,
-                'target': target
+                "error": str(e),
+                "executed": False,
+                "poc_method_id": poc_method_id,
+                "target": target,
             }
 
-    def _execute_poc_code(self, poc_code: str, vuln_type: str, target: str, params: Dict[str, Any]) -> Dict[str, Any]:
+    def _execute_poc_code(
+        self, poc_code: str, vuln_type: str, target: str, params: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """
         动态执行 POC 代码
 
@@ -357,24 +372,22 @@ class AIPOCGenerator:
         poc_class = poc_classes.get(vuln_type)
 
         if not poc_class:
-            return {'error': f'Unknown vulnerability type: {vuln_type}'}
+            return {"error": f"Unknown vulnerability type: {vuln_type}"}
 
-        context_data = {
-            'target': target,
-            'vuln_type': vuln_type,
-            'additional_params': params
-        }
+        context_data = {"target": target, "vuln_type": vuln_type, "additional_params": params}
 
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False, encoding='utf-8') as f:
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".py", delete=False, encoding="utf-8"
+        ) as f:
             f.write(poc_code)
             temp_file = f.name
 
         try:
             result = subprocess.run(
-                [sys.executable, temp_file, '--target', target, '--vuln-type', vuln_type],
+                [sys.executable, temp_file, "--target", target, "--vuln-type", vuln_type],
                 capture_output=True,
                 text=True,
-                timeout=60
+                timeout=60,
             )
 
             if result.returncode == 0:
@@ -382,20 +395,16 @@ class AIPOCGenerator:
                     return json.loads(result.stdout)
                 except json.JSONDecodeError:
                     return {
-                        'output': result.stdout,
-                        'executed': True,
-                        'returncode': result.returncode
+                        "output": result.stdout,
+                        "executed": True,
+                        "returncode": result.returncode,
                     }
             else:
-                return {
-                    'error': result.stderr,
-                    'executed': False,
-                    'returncode': result.returncode
-                }
+                return {"error": result.stderr, "executed": False, "returncode": result.returncode}
         except subprocess.TimeoutExpired:
-            return {'error': 'POC execution timeout', 'executed': False}
+            return {"error": "POC execution timeout", "executed": False}
         except Exception as e:
-            return {'error': str(e), 'executed': False}
+            return {"error": str(e), "executed": False}
         finally:
             if os.path.exists(temp_file):
                 os.unlink(temp_file)
@@ -414,25 +423,24 @@ class AIPOCGenerator:
             return {}
 
         spec = importlib.util.spec_from_file_location(
-            "base_poc_template",
-            self.BASE_POC_TEMPLATE_PATH
+            "base_poc_template", self.BASE_POC_TEMPLATE_PATH
         )
 
         if spec is None or spec.loader is None:
             return {}
 
         module = importlib.util.module_from_spec(spec)
-        sys.modules['base_poc_template'] = module
+        sys.modules["base_poc_template"] = module
         spec.loader.exec_module(module)
 
         self._poc_classes_cache = {
-            'sql_injection': module.SQLInjectionPOC,
-            'auth_bypass': module.AuthBypassPOC,
-            'ssrf': module.SSrfPOC,
-            'deserialization': module.DeserializationPOC,
-            'command_injection': getattr(module, 'CommandInjectionPOC', None),
-            'xxe': getattr(module, 'XXEPOC', None),
-            'xss': getattr(module, 'XSSPOC', None),
+            "sql_injection": module.SQLInjectionPOC,
+            "auth_bypass": module.AuthBypassPOC,
+            "ssrf": module.SSrfPOC,
+            "deserialization": module.DeserializationPOC,
+            "command_injection": getattr(module, "CommandInjectionPOC", None),
+            "xxe": getattr(module, "XXEPOC", None),
+            "xss": getattr(module, "XSSPOC", None),
         }
 
         return self._poc_classes_cache
@@ -440,7 +448,7 @@ class AIPOCGenerator:
     def _generate_method_id(self, context: VulnContext) -> str:
         """生成方法ID"""
         file_name = Path(context.file_path).stem
-        vuln_type = context.vuln_type.replace(' ', '_')
+        vuln_type = context.vuln_type.replace(" ", "_")
         return f"{vuln_type}_{file_name}_L{context.line_number}"
 
     def _detect_pattern(self, context: VulnContext) -> str:
@@ -459,71 +467,70 @@ class AIPOCGenerator:
     def _get_default_pattern(self, vuln_type: str) -> str:
         """获取漏洞类型的默认模式"""
         defaults = {
-            'sql_injection': r'\$\{.*?\}|".*?"\s*\+',
-            'auth_bypass': r'@Secured\(|@PermitAll',
-            'ssrf': r'RestTemplate|URL\(',
-            'xss': r'\.innerHTML\s*=',
-            'deserialization': r'ObjectInputStream',
-            'path_traversal': r'new File\(|Paths\.get\(',
-            'command_injection': r'Runtime\.exec\(|ProcessBuilder|system\(',
-            'xxe': r'DocumentBuilder|SAXParser|XMLStreamReader',
+            "sql_injection": r'\$\{.*?\}|".*?"\s*\+',
+            "auth_bypass": r"@Secured\(|@PermitAll",
+            "ssrf": r"RestTemplate|URL\(",
+            "xss": r"\.innerHTML\s*=",
+            "deserialization": r"ObjectInputStream",
+            "path_traversal": r"new File\(|Paths\.get\(",
+            "command_injection": r"Runtime\.exec\(|ProcessBuilder|system\(",
+            "xxe": r"DocumentBuilder|SAXParser|XMLStreamReader",
         }
-        return defaults.get(vuln_type, r'.*')
+        return defaults.get(vuln_type, r".*")
 
     def _generate_validation_steps(self, context: VulnContext, pattern: str) -> List[str]:
         """生成验证步骤"""
         vuln_type = context.vuln_type
 
         steps_map = {
-            'sql_injection': [
-                'extract_param_from_pattern',
-                'find_service_layer_callers',
-                'check_hardcoded_values',
-                'check_user_controllability',
-                'verify_input_validation'
+            "sql_injection": [
+                "extract_param_from_pattern",
+                "find_service_layer_callers",
+                "check_hardcoded_values",
+                "check_user_controllability",
+                "verify_input_validation",
             ],
-            'auth_bypass': [
-                'check_security_annotation',
-                'analyze_permission_config',
-                'test_endpoint_access',
-                'verify_auth_mechanism'
+            "auth_bypass": [
+                "check_security_annotation",
+                "analyze_permission_config",
+                "test_endpoint_access",
+                "verify_auth_mechanism",
             ],
-            'ssrf': [
-                'identify_url_source',
-                'check_url_validation',
-                'test_internal_resource_access',
-                'verify_dns_rebinding_protection'
+            "ssrf": [
+                "identify_url_source",
+                "check_url_validation",
+                "test_internal_resource_access",
+                "verify_dns_rebinding_protection",
             ],
-            'command_injection': [
-                'identify_command_source',
-                'extract_command_parameters',
-                'check_input_validation',
-                'verify_command_execution_context',
-                'test_command_injection_payload'
+            "command_injection": [
+                "identify_command_source",
+                "extract_command_parameters",
+                "check_input_validation",
+                "verify_command_execution_context",
+                "test_command_injection_payload",
             ],
-            'xxe': [
-                'identify_xml_parser_type',
-                'check_xml_feature_configuration',
-                'verify_external_entity_protection',
-                'test_xxe_payload',
-                'assess_impact_scope'
+            "xxe": [
+                "identify_xml_parser_type",
+                "check_xml_feature_configuration",
+                "verify_external_entity_protection",
+                "test_xxe_payload",
+                "assess_impact_scope",
             ],
-            'xss': [
-                'identify_sanitization_location',
-                'check_output_encoding',
-                'verify_content_security_policy',
-                'test_xss_payload',
-                'assess_impact_scope'
+            "xss": [
+                "identify_sanitization_location",
+                "check_output_encoding",
+                "verify_content_security_policy",
+                "test_xss_payload",
+                "assess_impact_scope",
             ],
         }
 
-        return steps_map.get(vuln_type, ['analyze_context', 'evaluate_exploitability'])
+        return steps_map.get(vuln_type, ["analyze_context", "evaluate_exploitability"])
 
     def _get_generalized_steps(self, vuln_type: str) -> List[str]:
         """获取泛化验证步骤"""
         return self._generate_validation_steps(
-            VulnContext('', 0, '', vuln_type, ''),
-            self._get_default_pattern(vuln_type)
+            VulnContext("", 0, "", vuln_type, ""), self._get_default_pattern(vuln_type)
         )
 
     def _extract_params_from_code(self, code_snippet: str, vuln_type: str) -> Dict[str, Any]:
@@ -539,23 +546,23 @@ class AIPOCGenerator:
         """
         params = {}
 
-        if vuln_type == 'sql_injection':
+        if vuln_type == "sql_injection":
             param_patterns = [
-                r'\$\{([^}]+)\}',
+                r"\$\{([^}]+)\}",
                 r'params?\s*[=:]\s*["\']([^"\']+)["\']',
                 r'param\[(["\'])([^\1]+)\1\]',
             ]
             for pattern in param_patterns:
                 matches = re.findall(pattern, code_snippet)
                 if matches:
-                    params['injection_params'] = matches
+                    params["injection_params"] = matches
 
-            if 'createQuery' in code_snippet:
-                params['query_type'] = 'jpql'
-            elif 'createNativeQuery' in code_snippet:
-                params['query_type'] = 'native'
+            if "createQuery" in code_snippet:
+                params["query_type"] = "jpql"
+            elif "createNativeQuery" in code_snippet:
+                params["query_type"] = "native"
 
-        elif vuln_type == 'ssrf':
+        elif vuln_type == "ssrf":
             url_param_patterns = [
                 r'url\s*[=:]\s*["\']([^"\']+)["\']',
                 r'url\[(["\'])([^\1]+)\1\]',
@@ -564,17 +571,17 @@ class AIPOCGenerator:
             for pattern in url_param_patterns:
                 matches = re.findall(pattern, code_snippet)
                 if matches:
-                    params['url_params'] = matches
+                    params["url_params"] = matches
 
-        elif vuln_type == 'deserialization':
-            if 'ObjectInputStream' in code_snippet:
-                params['serialization_type'] = 'java'
-            elif 'pickle' in code_snippet.lower():
-                params['serialization_type'] = 'python'
-            elif 'json_decode' in code_snippet or 'JSON.parse' in code_snippet:
-                params['serialization_type'] = 'json'
+        elif vuln_type == "deserialization":
+            if "ObjectInputStream" in code_snippet:
+                params["serialization_type"] = "java"
+            elif "pickle" in code_snippet.lower():
+                params["serialization_type"] = "python"
+            elif "json_decode" in code_snippet or "JSON.parse" in code_snippet:
+                params["serialization_type"] = "json"
 
-        elif vuln_type == 'command_injection':
+        elif vuln_type == "command_injection":
             cmd_param_patterns = [
                 r'(?:Runtime\.exec|ProcessBuilder|system)\s*\(\s*["\']([^"\']+)["\']',
                 r'cmd\s*[=:]\s*["\']([^"\']+)["\']',
@@ -584,18 +591,18 @@ class AIPOCGenerator:
             for pattern in cmd_param_patterns:
                 matches = re.findall(pattern, code_snippet)
                 if matches:
-                    params['command_param'] = matches[0] if matches else 'cmd'
+                    params["command_param"] = matches[0] if matches else "cmd"
 
-            if 'Runtime.exec' in code_snippet:
-                params['command_type'] = 'java_runtime'
-            elif 'ProcessBuilder' in code_snippet:
-                params['command_type'] = 'process_builder'
-            elif 'system(' in code_snippet:
-                params['command_type'] = 'system_call'
-            elif 'exec(' in code_snippet:
-                params['command_type'] = 'exec_call'
+            if "Runtime.exec" in code_snippet:
+                params["command_type"] = "java_runtime"
+            elif "ProcessBuilder" in code_snippet:
+                params["command_type"] = "process_builder"
+            elif "system(" in code_snippet:
+                params["command_type"] = "system_call"
+            elif "exec(" in code_snippet:
+                params["command_type"] = "exec_call"
 
-        elif vuln_type == 'xxe':
+        elif vuln_type == "xxe":
             xml_param_patterns = [
                 r'(?:DocumentBuilder|SAXParser|XMLStreamReader).*?\(\s*["\']([^"\']+)["\']',
                 r'xml\s*[=:]\s*["\']([^"\']+)["\']',
@@ -605,40 +612,40 @@ class AIPOCGenerator:
             for pattern in xml_param_patterns:
                 matches = re.findall(pattern, code_snippet)
                 if matches:
-                    params['xml_param'] = matches[0] if matches else 'data'
+                    params["xml_param"] = matches[0] if matches else "data"
 
-            if 'DocumentBuilder' in code_snippet:
-                params['xml_parser_type'] = 'document_builder'
-            elif 'SAXParser' in code_snippet:
-                params['xml_parser_type'] = 'sax_parser'
-            elif 'XMLStreamReader' in code_snippet:
-                params['xml_parser_type'] = 'stream_reader'
-            elif 'javax.xml.parsers' in code_snippet:
-                params['xml_parser_type'] = 'javax_xml'
+            if "DocumentBuilder" in code_snippet:
+                params["xml_parser_type"] = "document_builder"
+            elif "SAXParser" in code_snippet:
+                params["xml_parser_type"] = "sax_parser"
+            elif "XMLStreamReader" in code_snippet:
+                params["xml_parser_type"] = "stream_reader"
+            elif "javax.xml.parsers" in code_snippet:
+                params["xml_parser_type"] = "javax_xml"
 
-        elif vuln_type == 'xss':
+        elif vuln_type == "xss":
             xss_param_patterns = [
                 r'(?:innerHTML|outerHTML|write)\s*=\s*["\']([^"\']+)["\']',
                 r'v-html\s*=\s*["\']([^"\']+)["\']',
-                r'dangerouslySetInnerHTML\s*=\s*\{{[^}]+}}',
+                r"dangerouslySetInnerHTML\s*=\s*\{{[^}]+}}",
                 r'input\s*[=:]\s*["\']([^"\']+)["\']',
                 r'getParameter\(["\']([^"\']+)["\']\)',
             ]
             for pattern in xss_param_patterns:
                 matches = re.findall(pattern, code_snippet)
                 if matches:
-                    params['xss_param'] = matches[0] if matches else 'input'
+                    params["xss_param"] = matches[0] if matches else "input"
 
-            if 'dangerouslySetInnerHTML' in code_snippet:
-                params['xss_type'] = 'react'
-            elif 'v-html' in code_snippet:
-                params['xss_type'] = 'vue'
-            elif 'innerHTML' in code_snippet or 'outerHTML' in code_snippet:
-                params['xss_type'] = 'dom'
-            elif '$sce.trustAsHtml' in code_snippet or 'bypassSecurityTrustHtml' in code_snippet:
-                params['xss_type'] = 'angular'
+            if "dangerouslySetInnerHTML" in code_snippet:
+                params["xss_type"] = "react"
+            elif "v-html" in code_snippet:
+                params["xss_type"] = "vue"
+            elif "innerHTML" in code_snippet or "outerHTML" in code_snippet:
+                params["xss_type"] = "dom"
+            elif "$sce.trustAsHtml" in code_snippet or "bypassSecurityTrustHtml" in code_snippet:
+                params["xss_type"] = "angular"
             else:
-                params['xss_type'] = 'generic'
+                params["xss_type"] = "generic"
 
         return params
 
@@ -681,11 +688,17 @@ logger = logging.getLogger('POC')
 
 '''
 
-        if vuln_type == 'sql_injection':
-            param = extracted_params.get('injection_params', ['id'])[0] if extracted_params.get('injection_params') else 'id'
-            query_type = extracted_params.get('query_type', 'unknown')
+        if vuln_type == "sql_injection":
+            param = (
+                extracted_params.get("injection_params", ["id"])[0]
+                if extracted_params.get("injection_params")
+                else "id"
+            )
+            query_type = extracted_params.get("query_type", "unknown")
 
-            return base_imports + f'''
+            return (
+                base_imports
+                + f"""
 def main():
     target = sys.argv[1] if len(sys.argv) > 1 else 'http://localhost:8080/api/endpoint'
 
@@ -707,9 +720,12 @@ def main():
 
 if __name__ == '__main__':
     sys.exit(main())
-'''
-        elif vuln_type == 'auth_bypass':
-            return base_imports + f'''
+"""
+            )
+        elif vuln_type == "auth_bypass":
+            return (
+                base_imports
+                + f"""
 def main():
     target = sys.argv[1] if len(sys.argv) > 1 else 'http://localhost:8080/api/endpoint'
 
@@ -730,12 +746,15 @@ def main():
 
 if __name__ == '__main__':
     sys.exit(main())
-'''
-        elif vuln_type == 'ssrf':
-            url_params = extracted_params.get('url_params', ['url'])
-            param = url_params[0] if url_params else 'url'
+"""
+            )
+        elif vuln_type == "ssrf":
+            url_params = extracted_params.get("url_params", ["url"])
+            param = url_params[0] if url_params else "url"
 
-            return base_imports + f'''
+            return (
+                base_imports
+                + f"""
 def main():
     target = sys.argv[1] if len(sys.argv) > 1 else 'http://localhost:8080/api/fetch'
 
@@ -757,12 +776,15 @@ def main():
 
 if __name__ == '__main__':
     sys.exit(main())
-'''
-        elif vuln_type == 'deserialization':
-            ser_type = extracted_params.get('serialization_type', 'java')
-            param = 'data'
+"""
+            )
+        elif vuln_type == "deserialization":
+            ser_type = extracted_params.get("serialization_type", "java")
+            param = "data"
 
-            return base_imports + f'''
+            return (
+                base_imports
+                + f"""
 def main():
     target = sys.argv[1] if len(sys.argv) > 1 else 'http://localhost:8080/api/deserialize'
 
@@ -784,12 +806,15 @@ def main():
 
 if __name__ == '__main__':
     sys.exit(main())
-'''
-        elif vuln_type == 'command_injection':
-            cmd_type = extracted_params.get('command_type', 'unknown')
-            param = extracted_params.get('command_param', 'cmd')
+"""
+            )
+        elif vuln_type == "command_injection":
+            cmd_type = extracted_params.get("command_type", "unknown")
+            param = extracted_params.get("command_param", "cmd")
 
-            return base_imports + f'''
+            return (
+                base_imports
+                + f"""
 def main():
     target = sys.argv[1] if len(sys.argv) > 1 else 'http://localhost:8080/api/exec'
 
@@ -811,12 +836,15 @@ def main():
 
 if __name__ == '__main__':
     sys.exit(main())
-'''
-        elif vuln_type == 'xxe':
-            xml_type = extracted_params.get('xml_parser_type', 'unknown')
-            param = extracted_params.get('xml_param', 'data')
+"""
+            )
+        elif vuln_type == "xxe":
+            xml_type = extracted_params.get("xml_parser_type", "unknown")
+            param = extracted_params.get("xml_param", "data")
 
-            return base_imports + f'''
+            return (
+                base_imports
+                + f"""
 def main():
     target = sys.argv[1] if len(sys.argv) > 1 else 'http://localhost:8080/api/xml'
 
@@ -838,12 +866,15 @@ def main():
 
 if __name__ == '__main__':
     sys.exit(main())
-'''
-        elif vuln_type == 'xss':
-            xss_type = extracted_params.get('xss_type', 'unknown')
-            param = extracted_params.get('xss_param', 'input')
+"""
+            )
+        elif vuln_type == "xss":
+            xss_type = extracted_params.get("xss_type", "unknown")
+            param = extracted_params.get("xss_param", "input")
 
-            return base_imports + f'''
+            return (
+                base_imports
+                + f"""
 def main():
     target = sys.argv[1] if len(sys.argv) > 1 else 'http://localhost:8080/api/input'
 
@@ -865,9 +896,12 @@ def main():
 
 if __name__ == '__main__':
     sys.exit(main())
-'''
-        elif vuln_type == 'command_injection':
-            return base_imports + '''
+"""
+            )
+        elif vuln_type == "command_injection":
+            return (
+                base_imports
+                + """
 def main():
     target = sys.argv[1] if len(sys.argv) > 1 else 'http://localhost:8080/api/exec'
     param = sys.argv[2] if len(sys.argv) > 2 else 'cmd'
@@ -890,9 +924,12 @@ def main():
 
 if __name__ == '__main__':
     sys.exit(main())
-'''
-        elif vuln_type == 'xxe':
-            return base_imports + '''
+"""
+            )
+        elif vuln_type == "xxe":
+            return (
+                base_imports
+                + """
 def main():
     target = sys.argv[1] if len(sys.argv) > 1 else 'http://localhost:8080/api/xml'
     param = sys.argv[2] if len(sys.argv) > 2 else 'data'
@@ -915,9 +952,12 @@ def main():
 
 if __name__ == '__main__':
     sys.exit(main())
-'''
-        elif vuln_type == 'xss':
-            return base_imports + '''
+"""
+            )
+        elif vuln_type == "xss":
+            return (
+                base_imports
+                + """
 def main():
     target = sys.argv[1] if len(sys.argv) > 1 else 'http://localhost:8080/api/input'
     param = sys.argv[2] if len(sys.argv) > 2 else 'input'
@@ -940,9 +980,12 @@ def main():
 
 if __name__ == '__main__':
     sys.exit(main())
-'''
+"""
+            )
         else:
-            return base_imports + f'''
+            return (
+                base_imports
+                + f"""
 def main():
     target = sys.argv[1] if len(sys.argv) > 1 else 'http://localhost:8080'
 
@@ -967,7 +1010,8 @@ def main():
 
 if __name__ == '__main__':
     sys.exit(main())
-'''
+"""
+            )
 
     def _generate_generalized_poc_code(self, vuln_type: str, pattern: str) -> str:
         """
@@ -1002,8 +1046,10 @@ logger = logging.getLogger('POC')
 
 '''
 
-        if vuln_type == 'sql_injection':
-            return base_imports + '''
+        if vuln_type == "sql_injection":
+            return (
+                base_imports
+                + """
 def main():
     target = sys.argv[1] if len(sys.argv) > 1 else 'http://localhost:8080/api/query'
     param = sys.argv[2] if len(sys.argv) > 2 else 'q'
@@ -1026,9 +1072,12 @@ def main():
 
 if __name__ == '__main__':
     sys.exit(main())
-'''
-        elif vuln_type == 'auth_bypass':
-            return base_imports + '''
+"""
+            )
+        elif vuln_type == "auth_bypass":
+            return (
+                base_imports
+                + """
 def main():
     target = sys.argv[1] if len(sys.argv) > 1 else 'http://localhost:8080/api/protected'
 
@@ -1050,9 +1099,12 @@ def main():
 
 if __name__ == '__main__':
     sys.exit(main())
-'''
-        elif vuln_type == 'ssrf':
-            return base_imports + '''
+"""
+            )
+        elif vuln_type == "ssrf":
+            return (
+                base_imports
+                + """
 def main():
     target = sys.argv[1] if len(sys.argv) > 1 else 'http://localhost:8080/api/fetch'
     param = sys.argv[2] if len(sys.argv) > 2 else 'url'
@@ -1075,9 +1127,12 @@ def main():
 
 if __name__ == '__main__':
     sys.exit(main())
-'''
-        elif vuln_type == 'deserialization':
-            return base_imports + '''
+"""
+            )
+        elif vuln_type == "deserialization":
+            return (
+                base_imports
+                + """
 def main():
     target = sys.argv[1] if len(sys.argv) > 1 else 'http://localhost:8080/api/deserialize'
     param = sys.argv[2] if len(sys.argv) > 2 else 'data'
@@ -1100,9 +1155,12 @@ def main():
 
 if __name__ == '__main__':
     sys.exit(main())
-'''
+"""
+            )
         else:
-            return base_imports + f'''
+            return (
+                base_imports
+                + f"""
 def main():
     target = sys.argv[1] if len(sys.argv) > 1 else 'http://localhost:8080'
 
@@ -1129,7 +1187,8 @@ def main():
 
 if __name__ == '__main__':
     sys.exit(main())
-'''
+"""
+            )
 
     def _save_poc_file(self, method_id: str, poc_code: str, context: VulnContext):
         """保存 POC 文件"""
@@ -1139,7 +1198,7 @@ if __name__ == '__main__':
 
         poc_file = type_dir / f"{method_id}.py"
 
-        with open(poc_file, 'w', encoding='utf-8') as f:
+        with open(poc_file, "w", encoding="utf-8") as f:
             f.write(poc_code)
 
     def list_generated_pocs(self, vuln_type: str = None) -> List[Dict[str, str]]:
@@ -1158,20 +1217,24 @@ if __name__ == '__main__':
             type_dir = self.pocs_output_path / vuln_type
             if type_dir.exists():
                 for poc_file in type_dir.glob("*.py"):
-                    pocs.append({
-                        'method_id': poc_file.stem,
-                        'file_path': str(poc_file),
-                        'vuln_type': vuln_type
-                    })
+                    pocs.append(
+                        {
+                            "method_id": poc_file.stem,
+                            "file_path": str(poc_file),
+                            "vuln_type": vuln_type,
+                        }
+                    )
         else:
             for type_dir in self.pocs_output_path.iterdir():
                 if type_dir.is_dir():
                     for poc_file in type_dir.glob("*.py"):
-                        pocs.append({
-                            'method_id': poc_file.stem,
-                            'file_path': str(poc_file),
-                            'vuln_type': type_dir.name
-                        })
+                        pocs.append(
+                            {
+                                "method_id": poc_file.stem,
+                                "file_path": str(poc_file),
+                                "vuln_type": type_dir.name,
+                            }
+                        )
 
         return pocs
 
@@ -1204,14 +1267,14 @@ if __name__ == '__main__':
         """
         method = self.method_storage.load_method(poc_method_id)
         if method is None:
-            return {'error': f'Method not found: {poc_method_id}'}
+            return {"error": f"Method not found: {poc_method_id}"}
 
         vuln_type = method.vuln_type
         poc_classes = self._load_poc_classes()
         poc_class = poc_classes.get(vuln_type)
 
         if not poc_class:
-            return {'error': f'Unknown vulnerability type: {vuln_type}'}
+            return {"error": f"Unknown vulnerability type: {vuln_type}"}
 
         try:
             from base_poc_template import POCContext as BasePOCContext
@@ -1219,26 +1282,26 @@ if __name__ == '__main__':
             context = BasePOCContext(
                 target=target,
                 vuln_type=vuln_type,
-                file_path=method.metadata.get('file_path', ''),
-                line_number=method.metadata.get('line_number', 0),
-                code_snippet='',
-                additional_params=kwargs
+                file_path=method.metadata.get("file_path", ""),
+                line_number=method.metadata.get("line_number", 0),
+                code_snippet="",
+                additional_params=kwargs,
             )
 
-            param = kwargs.get('param')
+            param = kwargs.get("param")
             poc = poc_class(context, param=param)
             result = poc.verify()
 
             return {
-                'executed': True,
-                'poc_method_id': poc_method_id,
-                'target': target,
-                'result': result
+                "executed": True,
+                "poc_method_id": poc_method_id,
+                "target": target,
+                "result": result,
             }
         except Exception as e:
             return {
-                'error': str(e),
-                'executed': False,
-                'poc_method_id': poc_method_id,
-                'target': target
+                "error": str(e),
+                "executed": False,
+                "poc_method_id": poc_method_id,
+                "target": target,
             }

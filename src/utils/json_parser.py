@@ -84,7 +84,7 @@ class SmartJSONParser:
         content = re.sub(r"```", "", content)
 
         # 移除行号
-        content = re.sub(r'^\s*\d+\s+', "", content, flags=re.MULTILINE)
+        content = re.sub(r"^\s*\d+\s+", "", content, flags=re.MULTILINE)
 
         # 移除多余空白
         content = content.strip()

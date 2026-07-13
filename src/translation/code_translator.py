@@ -1,5 +1,5 @@
-from typing import Dict, List, Optional, Any
 import re
+from typing import Any, Dict, List, Optional
 
 
 class CodeTranslator:
@@ -74,23 +74,23 @@ class CodeTranslator:
                 "description": "System.out.println to print",
             },
             {
-                "pattern": r'ArrayList<(\w+)>\s+(\w+)\s*=\s*new\s+ArrayList<>\(\)',
-                "replacement": r'\2: list[\1] = []',
+                "pattern": r"ArrayList<(\w+)>\s+(\w+)\s*=\s*new\s+ArrayList<>\(\)",
+                "replacement": r"\2: list[\1] = []",
                 "description": "ArrayList declaration",
             },
             {
-                "pattern": r'HashMap<(\w+),\s*(\w+)>\s*(\w+)\s*=\s*new\s+HashMap<>\(\)',
-                "replacement": r'\3: dict[\1, \2] = {}',
+                "pattern": r"HashMap<(\w+),\s*(\w+)>\s*(\w+)\s*=\s*new\s+HashMap<>\(\)",
+                "replacement": r"\3: dict[\1, \2] = {}",
                 "description": "HashMap declaration",
             },
             {
-                "pattern": r'(\w+)\.forEach\(([\w]+)\s*->\s*(.+)\)',
-                "replacement": r'for \2 in \1: \3',
+                "pattern": r"(\w+)\.forEach\(([\w]+)\s*->\s*(.+)\)",
+                "replacement": r"for \2 in \1: \3",
                 "description": "forEach lambda to for loop",
             },
             {
-                "pattern": r'if\s*\(([^)]+)\s*instanceof\s+(\w+)\)',
-                "replacement": r'if isinstance(\1, \2)',
+                "pattern": r"if\s*\(([^)]+)\s*instanceof\s+(\w+)\)",
+                "replacement": r"if isinstance(\1, \2)",
                 "description": "instanceof to isinstance",
             },
             {
@@ -111,18 +111,18 @@ class CodeTranslator:
                 "description": "fmt.Println to print",
             },
             {
-                "pattern": r'if\s+err\s*!=\s*nil\s*\{[^}]*\}',
-                "replacement": r'try: ... except Exception as e:',
+                "pattern": r"if\s+err\s*!=\s*nil\s*\{[^}]*\}",
+                "replacement": r"try: ... except Exception as e:",
                 "description": "error handling pattern",
             },
             {
-                "pattern": r'make\(\[\](\w+),\s*(\d+)\)',
-                "replacement": r'[None] * \2  # or list comprehension',
+                "pattern": r"make\(\[\](\w+),\s*(\d+)\)",
+                "replacement": r"[None] * \2  # or list comprehension",
                 "description": "make slice to list",
             },
             {
-                "pattern": r'map\[(\w+)\]\s*(\w+)\s*\{\}',
-                "replacement": r'dict[\1, \2] = {}',
+                "pattern": r"map\[(\w+)\]\s*(\w+)\s*\{\}",
+                "replacement": r"dict[\1, \2] = {}",
                 "description": "map declaration",
             },
         ],
@@ -133,23 +133,23 @@ class CodeTranslator:
                 "description": "cout to print",
             },
             {
-                "pattern": r'std::cin\s*>>\s*(\w+)',
-                "replacement": r'\1 = input()',
+                "pattern": r"std::cin\s*>>\s*(\w+)",
+                "replacement": r"\1 = input()",
                 "description": "cin to input",
             },
             {
-                "pattern": r'std::vector<(\w+)>',
-                "replacement": r'list[\1]',
+                "pattern": r"std::vector<(\w+)>",
+                "replacement": r"list[\1]",
                 "description": "vector to list",
             },
             {
-                "pattern": r'std::map<(\w+),\s*(\w+)>',
-                "replacement": r'dict[\1, \2]',
+                "pattern": r"std::map<(\w+),\s*(\w+)>",
+                "replacement": r"dict[\1, \2]",
                 "description": "map to dict",
             },
             {
-                "pattern": r'for\s*\(int\s+(\w+)\s*=\s*0;\s*\1\s*<\s*(\d+);\s*\1\+\+\)',
-                "replacement": r'for \1 in range(\2)',
+                "pattern": r"for\s*\(int\s+(\w+)\s*=\s*0;\s*\1\s*<\s*(\d+);\s*\1\+\+\)",
+                "replacement": r"for \1 in range(\2)",
                 "description": "for loop to range",
             },
         ],
@@ -166,22 +166,22 @@ class CodeTranslator:
             },
             {
                 "pattern": r'require\("([^"]+)"\)',
-                "replacement": r'import \1',
+                "replacement": r"import \1",
                 "description": "require to import",
             },
             {
-                "pattern": r'=>\s*\{([^}]+)\}',
-                "replacement": r'def \1:',
+                "pattern": r"=>\s*\{([^}]+)\}",
+                "replacement": r"def \1:",
                 "description": "arrow function to def",
             },
             {
-                "pattern": r'\.then\(([\w]+)\s*=>\s*(.+)\)',
-                "replacement": r'# async: await \1 \2',
+                "pattern": r"\.then\(([\w]+)\s*=>\s*(.+)\)",
+                "replacement": r"# async: await \1 \2",
                 "description": "promise then to await",
             },
             {
-                "pattern": r'async\s+function\s+(\w+)\(([^)]*)\)\s*\{',
-                "replacement": r'async def \1(\2):',
+                "pattern": r"async\s+function\s+(\w+)\(([^)]*)\)\s*\{",
+                "replacement": r"async def \1(\2):",
                 "description": "async function to async def",
             },
         ],
@@ -197,13 +197,13 @@ class CodeTranslator:
                 "description": "fetch to requests",
             },
             {
-                "pattern": r'const\s+(\w+):\s*(\w+)\s*=\s*(.+)',
-                "replacement": r'\1: \2 = \3',
+                "pattern": r"const\s+(\w+):\s*(\w+)\s*=\s*(.+)",
+                "replacement": r"\1: \2 = \3",
                 "description": "const declaration",
             },
             {
-                "pattern": r'interface\s+(\w+)\s*\{([^}]+)\}',
-                "replacement": r'@dataclass\nclass \1:\n    \2',
+                "pattern": r"interface\s+(\w+)\s*\{([^}]+)\}",
+                "replacement": r"@dataclass\nclass \1:\n    \2",
                 "description": "interface to dataclass",
             },
             {
@@ -232,71 +232,87 @@ class CodeTranslator:
         lang_lower = source_lang.lower()
 
         if lang_lower == "java":
-            deps = re.findall(r'(?:import|import\s+static)\s+([\w.]+);', code)
+            deps = re.findall(r"(?:import|import\s+static)\s+([\w.]+);", code)
             for dep in deps:
                 mapping = self.map_to_python_alternative(dep)
-                dependencies.append({
-                    "original": dep,
-                    "python_alternative": mapping,
-                    "requires_ai": mapping is None,
-                })
+                dependencies.append(
+                    {
+                        "original": dep,
+                        "python_alternative": mapping,
+                        "requires_ai": mapping is None,
+                    }
+                )
             exec_matches = re.findall(r'Runtime\.getRuntime\(\)\.exec\("([^"]+)"\)', code)
             for match in exec_matches:
-                dependencies.append({
-                    "original": f"Runtime.exec('{match}')",
-                    "python_alternative": "subprocess",
-                    "requires_ai": False,
-                })
-            http_clients = re.findall(r'HttpClient\.(?:newHttpClient|get\(\))', code)
+                dependencies.append(
+                    {
+                        "original": f"Runtime.exec('{match}')",
+                        "python_alternative": "subprocess",
+                        "requires_ai": False,
+                    }
+                )
+            http_clients = re.findall(r"HttpClient\.(?:newHttpClient|get\(\))", code)
             for _ in http_clients:
-                dependencies.append({
-                    "original": "HttpClient",
-                    "python_alternative": "requests",
-                    "requires_ai": False,
-                })
+                dependencies.append(
+                    {
+                        "original": "HttpClient",
+                        "python_alternative": "requests",
+                        "requires_ai": False,
+                    }
+                )
 
         elif lang_lower == "go":
             deps = re.findall(r'(?:import|")([\w/]+)(?:"|)', code)
-            go_imports = re.findall(r'import\s*\(\s*([\s\S]*?)\s*\)', code)
+            go_imports = re.findall(r"import\s*\(\s*([\s\S]*?)\s*\)", code)
             if go_imports:
                 for import_block in go_imports:
                     deps.extend(re.findall(r'"([^"]+)"', import_block))
             for dep in set(deps):
                 mapping = self.map_to_python_alternative(dep)
                 if mapping:
-                    dependencies.append({
-                        "original": dep,
-                        "python_alternative": mapping,
-                        "requires_ai": False,
-                    })
+                    dependencies.append(
+                        {
+                            "original": dep,
+                            "python_alternative": mapping,
+                            "requires_ai": False,
+                        }
+                    )
 
         elif lang_lower == "cpp":
-            includes = re.findall(r'#include\s*<([^>]+)>', code)
+            includes = re.findall(r"#include\s*<([^>]+)>", code)
             for inc in includes:
                 mapping = self.map_to_python_alternative(f"<{inc}>")
-                dependencies.append({
-                    "original": f"<{inc}>",
-                    "python_alternative": mapping,
-                    "requires_ai": mapping is None,
-                })
+                dependencies.append(
+                    {
+                        "original": f"<{inc}>",
+                        "python_alternative": mapping,
+                        "requires_ai": mapping is None,
+                    }
+                )
 
         elif lang_lower in ["javascript", "typescript"]:
             requires = re.findall(r'require\s*\(\s*"([^"]+)"\s*\)', code)
-            imports = re.findall(r'import\s+(?:{\s*)?([\w]+)(?:\s*,?\s*{[^}]*})?\s*from\s+"([^"]+)"', code)
+            imports = re.findall(
+                r'import\s+(?:{\s*)?([\w]+)(?:\s*,?\s*{[^}]*})?\s*from\s+"([^"]+)"', code
+            )
             for req in requires:
                 mapping = self.map_to_python_alternative(req)
-                dependencies.append({
-                    "original": f"require('{req}')",
-                    "python_alternative": mapping,
-                    "requires_ai": mapping is None,
-                })
+                dependencies.append(
+                    {
+                        "original": f"require('{req}')",
+                        "python_alternative": mapping,
+                        "requires_ai": mapping is None,
+                    }
+                )
             for imp, mod in imports:
                 mapping = self.map_to_python_alternative(mod)
-                dependencies.append({
-                    "original": f"import {imp} from '{mod}'",
-                    "python_alternative": mapping,
-                    "requires_ai": mapping is None,
-                })
+                dependencies.append(
+                    {
+                        "original": f"import {imp} from '{mod}'",
+                        "python_alternative": mapping,
+                        "requires_ai": mapping is None,
+                    }
+                )
 
         return dependencies
 
@@ -327,7 +343,9 @@ class CodeTranslator:
         if lang_lower == "java":
             if "Runtime.getRuntime().exec" in code:
                 analysis["detected_patterns"].append("command-execution")
-                analysis["suggestions"].append("Use subprocess with shell=False for safer execution")
+                analysis["suggestions"].append(
+                    "Use subprocess with shell=False for safer execution"
+                )
             if "HttpClient" in code or "HttpURLConnection" in code:
                 analysis["detected_patterns"].append("http-client")
                 analysis["suggestions"].append("Convert to requests library")
@@ -342,7 +360,9 @@ class CodeTranslator:
         elif lang_lower == "go":
             if "exec.Command" in code:
                 analysis["detected_patterns"].append("command-execution")
-                analysis["suggestions"].append("Use subprocess module with proper argument handling")
+                analysis["suggestions"].append(
+                    "Use subprocess module with proper argument handling"
+                )
             if "html/template" in code:
                 analysis["detected_patterns"].append("template-rendering")
             if "database/sql" in code:
@@ -375,7 +395,9 @@ class CodeTranslator:
             analysis["requires_ai_assistance"] = True
 
         if analysis["requires_ai_assistance"]:
-            analysis["suggestions"].append("This code requires AI-assisted translation for accurate conversion")
+            analysis["suggestions"].append(
+                "This code requires AI-assisted translation for accurate conversion"
+            )
 
         return analysis
 

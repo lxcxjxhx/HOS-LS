@@ -4,8 +4,8 @@
 """
 
 from abc import ABC, abstractmethod
-from typing import Dict, List, Optional, Any
 from pathlib import Path
+from typing import Any, Dict, List, Optional
 
 from src.ai.pure_ai.rag.code_embedder import EmbedConfig
 
@@ -131,8 +131,8 @@ class VectorStoreFactory:
     """
 
     _IMPLEMENTATIONS = {
-        'numpy': 'src.storage.vector_store.VectorStore',
-        'faiss': 'src.storage.faiss_vector_store.FAISSVectorStore',
+        "numpy": "src.storage.vector_store.VectorStore",
+        "faiss": "src.storage.faiss_vector_store.FAISSVectorStore",
     }
 
     _instance_cache: Dict[str, VectorStoreBase] = {}
@@ -140,12 +140,12 @@ class VectorStoreFactory:
     @classmethod
     def create(
         cls,
-        implementation: str = 'numpy',
+        implementation: str = "numpy",
         storage_path: Optional[Path] = None,
         model_name: Optional[str] = None,
         custom_model_path: Optional[str] = None,
         embed_config: Optional[EmbedConfig] = None,
-        neo4j_config: Optional[Dict] = None
+        neo4j_config: Optional[Dict] = None,
     ) -> VectorStoreBase:
         """创建向量存储实例
 
@@ -173,19 +173,19 @@ class VectorStoreFactory:
         if cache_key in cls._instance_cache:
             return cls._instance_cache[cache_key]
 
-        if implementation == 'numpy':
+        if implementation == "numpy":
             from src.ai.pure_ai.rag.vector_store import VectorStore
+
             instance = VectorStore(
                 storage_path=storage_path,
                 model_name=model_name,
-                custom_model_path=custom_model_path
+                custom_model_path=custom_model_path,
             )
-        elif implementation == 'faiss':
+        elif implementation == "faiss":
             from src.ai.pure_ai.rag.faiss_vector_store import FAISSVectorStore
+
             instance = FAISSVectorStore(
-                storage_path=storage_path,
-                embed_config=embed_config,
-                neo4j_config=neo4j_config
+                storage_path=storage_path, embed_config=embed_config, neo4j_config=neo4j_config
             )
 
         cls._instance_cache[cache_key] = instance
@@ -193,10 +193,7 @@ class VectorStoreFactory:
 
     @classmethod
     def create_auto(
-        cls,
-        storage_path: Path,
-        prefer_faiss: bool = True,
-        **kwargs
+        cls, storage_path: Path, prefer_faiss: bool = True, **kwargs
     ) -> VectorStoreBase:
         """自动选择最佳实现
 
@@ -211,11 +208,12 @@ class VectorStoreFactory:
         if prefer_faiss:
             try:
                 import faiss
-                return cls.create('faiss', storage_path=storage_path, **kwargs)
+
+                return cls.create("faiss", storage_path=storage_path, **kwargs)
             except ImportError:
                 pass
 
-        return cls.create('numpy', storage_path=storage_path, **kwargs)
+        return cls.create("numpy", storage_path=storage_path, **kwargs)
 
     @classmethod
     def register_implementation(cls, name: str, class_path: str) -> None:
@@ -242,11 +240,7 @@ class VectorStoreFactory:
         return list(cls._IMPLEMENTATIONS.keys())
 
 
-def get_vector_store(
-    storage_path: Path,
-    use_faiss: bool = True,
-    **kwargs
-) -> VectorStoreBase:
+def get_vector_store(storage_path: Path, use_faiss: bool = True, **kwargs) -> VectorStoreBase:
     """获取向量存储实例的便捷函数
 
     Args:
@@ -258,7 +252,5 @@ def get_vector_store(
         向量存储实例
     """
     return VectorStoreFactory.create_auto(
-        storage_path=storage_path,
-        prefer_faiss=use_faiss,
-        **kwargs
+        storage_path=storage_path, prefer_faiss=use_faiss, **kwargs
     )

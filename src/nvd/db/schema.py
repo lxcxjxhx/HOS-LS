@@ -1,13 +1,17 @@
 from dataclasses import dataclass
 from typing import List, Optional
+
 from .connection import NVDConnection
+
 
 @dataclass
 class TableSchema:
     """表结构定义"""
+
     name: str
     create_sql: str
     indexes: List[str] = None
+
 
 class NVDSche:
     """NVD漏洞数据库Schema管理器"""
@@ -240,19 +244,14 @@ class NVDSche:
                 port=self.conn.config.port,
                 user=self.conn.config.user,
                 password=self.conn.config.password,
-                database='postgres'
+                database="postgres",
             )
             conn.autocommit = True
             cursor = conn.cursor()
 
-            cursor.execute(
-                "SELECT 1 FROM pg_database WHERE datname = %s",
-                (database_name,)
-            )
+            cursor.execute("SELECT 1 FROM pg_database WHERE datname = %s", (database_name,))
             if not cursor.fetchone():
-                cursor.execute(sql.SQL("CREATE DATABASE {}").format(
-                    sql.Identifier(database_name)
-                ))
+                cursor.execute(sql.SQL("CREATE DATABASE {}").format(sql.Identifier(database_name)))
                 cursor.close()
                 conn.close()
                 return True
@@ -272,7 +271,8 @@ class NVDSche:
     def drop_all(self) -> None:
         """删除所有表和视图（谨慎使用）"""
         with self.conn.get_cursor() as cursor:
-            cursor.execute("""
+            cursor.execute(
+                """
                 DROP TABLE IF EXISTS cve CASCADE;
                 DROP TABLE IF EXISTS cvss CASCADE;
                 DROP TABLE IF EXISTS cpe CASCADE;
@@ -285,4 +285,5 @@ class NVDSche:
                 DROP TABLE IF EXISTS etl_records CASCADE;
                 DROP TABLE IF EXISTS etl_progress CASCADE;
                 DROP MATERIALIZED VIEW IF EXISTS cve_summary CASCADE;
-            """)
+            """
+            )

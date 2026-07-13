@@ -3,69 +3,80 @@
 HOS-LS 的命令行入口。
 """
 
-import sys
 import asyncio
 import os
+import sys
 import warnings
-from pathlib import Path
-from typing import Optional, List, Dict, Any
 from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
 from queue import Queue
+from typing import Any, Dict, List, Optional
 
 import click
 from rich.console import Console
-from rich.panel import Panel
-from rich.table import Table
 from rich.live import Live
-from rich.progress import Progress, SpinnerColumn, BarColumn, TextColumn
+from rich.panel import Panel
+from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn
+from rich.table import Table
 
 warnings.filterwarnings("ignore", message="Failed to find CUDA.")
-warnings.filterwarnings("ignore", category=RuntimeWarning, message="Redirects are currently not supported in Windows or MacOs.")
-warnings.filterwarnings("ignore", category=RuntimeWarning, message="'src.cli.main' found in sys.modules after import of package 'src.cli'")
+warnings.filterwarnings(
+    "ignore",
+    category=RuntimeWarning,
+    message="Redirects are currently not supported in Windows or MacOs.",
+)
+warnings.filterwarnings(
+    "ignore",
+    category=RuntimeWarning,
+    message="'src.cli.main' found in sys.modules after import of package 'src.cli'",
+)
 warnings.filterwarnings("ignore", message=".*cpp extensions.*")
 warnings.filterwarnings("ignore", message="Skipping import of cpp extensions.*")
 
 os.environ["PYTHONWARNINGS"] = "ignore"
 
+from pydantic import BaseModel
+
 from src import __version__
 from src.core.config import Config, ConfigManager
-from pydantic import BaseModel
 
 console = Console(emoji=False, force_terminal=True)
 
 
 class AsyncWorker:
     """异步Worker类，用于处理后台任务"""
-    
+
     def __init__(self, max_workers: int = 4):
         self.executor = ThreadPoolExecutor(max_workers=max_workers)
         self.queue = Queue()
         self.running = False
-    
+
     def start(self):
         """启动Worker"""
         self.running = True
+
         # 在单独的线程中运行事件循环
         def run_event_loop():
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
             loop.create_task(self._process_queue())
             loop.run_forever()
-        
+
         import threading
+
         thread = threading.Thread(target=run_event_loop)
         thread.daemon = True
         thread.start()
-    
+
     def stop(self):
         """停止Worker"""
         self.running = False
         self.executor.shutdown()
-    
+
     def add_task(self, task, *args, **kwargs):
         """添加任务到队列"""
         self.queue.put((task, args, kwargs))
-    
+
     async def _process_queue(self):
         """处理队列中的任务"""
         while self.running:
@@ -82,43 +93,41 @@ class AsyncWorker:
 
 def print_banner() -> None:
     """打印欢迎横幅"""
-    console.print(Panel(
-        "[bold]HOS-LS[/bold] · AI Code Security Scanner\n"
-        "[dim]Multi-Agent · Semantic Analysis · Risk Detection[/dim]",
-        border_style="dim",
-    ))
+    console.print(
+        Panel(
+            "[bold]HOS-LS[/bold] · AI Code Security Scanner\n"
+            "[dim]Multi-Agent · Semantic Analysis · Risk Detection[/dim]",
+            border_style="dim",
+        )
+    )
 
 
 def show_scan_progress() -> None:
     """显示流式扫描进度"""
-    from rich.table import Table
     import time
-    
-    steps = [
-        "Parsing AST",
-        "Building Graph",
-        "Running Agents",
-        "Risk Analysis"
-    ]
-    
+
+    from rich.table import Table
+
+    steps = ["Parsing AST", "Building Graph", "Running Agents", "Risk Analysis"]
+
     with Live(refresh_per_second=4) as live:
         for i, step in enumerate(steps):
             # 创建新表格
             table = Table()
             table.add_column("Step")
             table.add_column("Status")
-            
+
             # 添加已完成的步骤
             for j in range(i):
                 table.add_row(steps[j], "[green]Done")
-            
+
             # 添加当前步骤
             table.add_row(step, "[yellow]Running...")
-            
+
             # 更新显示
             live.update(table)
             time.sleep(0.8)
-        
+
         # 显示最终完成状态
         final_table = Table()
         final_table.add_column("Step")
@@ -131,16 +140,16 @@ def show_scan_progress() -> None:
 def show_agent_status() -> None:
     """显示 Agent 状态"""
     from rich.table import Table
-    
+
     table = Table(title="Agents")
-    
+
     table.add_column("Agent")
     table.add_column("Status")
-    
+
     table.add_row("Semantic Analyzer", "[OK]")
     table.add_row("Vulnerability Agent", "[!]")
     table.add_row("Dependency Scanner", "[OK]")
-    
+
     console.print(table)
 
 
@@ -152,12 +161,7 @@ def show_risk_bar(percentage: float) -> None:
 
 
 def _integrate_poc(
-    config: Config,
-    result,
-    target: str,
-    generate_poc: bool,
-    run_poc: bool,
-    poc_only: bool
+    config: Config, result, target: str, generate_poc: bool, run_poc: bool, poc_only: bool
 ) -> None:
     """集成 POC 生成和执行到扫描流程
 
@@ -182,22 +186,22 @@ def _integrate_poc(
                 console.print("[bold cyan][POC] 仅生成 POC 模式[/bold cyan]")
 
             poc_results = poc_integration.generate_pocs_for_findings([], target)
-            if hasattr(result, 'metadata') and result.metadata is not None:
-                result.metadata['poc_results'] = poc_results
+            if hasattr(result, "metadata") and result.metadata is not None:
+                result.metadata["poc_results"] = poc_results
             elif isinstance(result, dict):
-                if 'metadata' not in result:
-                    result['metadata'] = {}
-                result['metadata']['poc_results'] = poc_results
+                if "metadata" not in result:
+                    result["metadata"] = {}
+                result["metadata"]["poc_results"] = poc_results
 
             if not config.quiet:
                 console.print(f"[green][POC] 生成了 {poc_results['generated']} 个 POC[/green]")
             return
 
         findings = []
-        if hasattr(result, 'findings'):
+        if hasattr(result, "findings"):
             findings = result.findings
-        elif isinstance(result, dict) and 'findings' in result:
-            findings = result.get('findings', [])
+        elif isinstance(result, dict) and "findings" in result:
+            findings = result.get("findings", [])
 
         if not findings:
             if not config.quiet:
@@ -223,14 +227,16 @@ def _integrate_poc(
             poc_results["vulnerable"] = exec_results.get("vulnerable", 0)
             poc_results["details"] = exec_results.get("details", [])
             if not config.quiet:
-                console.print(f"[green][POC] 执行了 {exec_results['executed']} 个 POC，发现 {exec_results.get('vulnerable', 0)} 个漏洞[/green]")
+                console.print(
+                    f"[green][POC] 执行了 {exec_results['executed']} 个 POC，发现 {exec_results.get('vulnerable', 0)} 个漏洞[/green]"
+                )
 
-        if hasattr(result, 'metadata') and result.metadata is not None:
-            result.metadata['poc_results'] = poc_results
+        if hasattr(result, "metadata") and result.metadata is not None:
+            result.metadata["poc_results"] = poc_results
         elif isinstance(result, dict):
-            if 'metadata' not in result:
-                result['metadata'] = {}
-            result['metadata']['poc_results'] = poc_results
+            if "metadata" not in result:
+                result["metadata"] = {}
+            result["metadata"]["poc_results"] = poc_results
 
     except ImportError as e:
         if not config.quiet:
@@ -270,15 +276,24 @@ def cli(ctx: click.Context, config: Optional[str], verbose: bool, quiet: bool, d
 
 @cli.command()
 @click.argument("target", required=False, default=".", type=click.Path(exists=True))
-@click.option("--format", "-f", "output_format", default="html", help="输出格式 (html, markdown, json, sarif)")
+@click.option(
+    "--format", "-f", "output_format", default="html", help="输出格式 (html, markdown, json, sarif)"
+)
 @click.option("--output", "-o", help="输出文件路径")
 @click.option("--ruleset", "-r", help="规则集")
 @click.option("--diff", is_flag=True, help="扫描 Git 差异")
 @click.option("--workers", "-w", type=int, default=4, help="工作线程数")
 @click.option("--ai", is_flag=True, help="启用 AI 分析")
 @click.option("--pure-ai", is_flag=True, help="启用纯AI深度语义解析模式，只执行AI分析和报告导出")
-@click.option("--mode", "-m", type=click.Choice(["auto", "pure-ai", "fast", "deep", "stealth", "vuln-lab"], case_sensitive=False), 
-              default="auto", help="扫描模式: auto(自动), pure-ai(纯AI), fast(快速), deep(深度), stealth(隐蔽), vuln-lab(靶场对抗)")
+@click.option(
+    "--mode",
+    "-m",
+    type=click.Choice(
+        ["auto", "pure-ai", "fast", "deep", "stealth", "vuln-lab"], case_sensitive=False
+    ),
+    default="auto",
+    help="扫描模式: auto(自动), pure-ai(纯AI), fast(快速), deep(深度), stealth(隐蔽), vuln-lab(靶场对抗)",
+)
 @click.option("--ai-provider", help="AI 提供商 (anthropic, openai, deepseek, local)")
 @click.option("--ai-model", help="AI 模型 (如 deepseek-chat, deepseek-reasoner)")
 @click.option("--incremental", is_flag=True, help="启用增量扫描")
@@ -296,34 +311,81 @@ def cli(ctx: click.Context, config: Optional[str], verbose: bool, quiet: bool, d
 @click.option("--tool-chain", help="指定工具链，用逗号分隔 (semgrep,trivy,gitleaks,code_vuln_scanner)")
 @click.option("--skip-data-update", is_flag=True, help="跳过数据更新检查")
 @click.option("--sandbox", is_flag=True, help="启用沙盒动态验证（实验性）")
-@click.option("--language", "-l", type=click.Choice(["zh", "en"], case_sensitive=False),
-              default=None, help="界面语言: zh(中文), en(英文)，默认跟随配置文件")
-@click.option("--audit-mode", type=click.Choice(["static", "dynamic", "hybrid"]),
-              default="hybrid", help="审计模式: static(静态), dynamic(动态), hybrid(混合)")
+@click.option(
+    "--language",
+    "-l",
+    type=click.Choice(["zh", "en"], case_sensitive=False),
+    default=None,
+    help="界面语言: zh(中文), en(英文)，默认跟随配置文件",
+)
+@click.option(
+    "--audit-mode",
+    type=click.Choice(["static", "dynamic", "hybrid"]),
+    default="hybrid",
+    help="审计模式: static(静态), dynamic(动态), hybrid(混合)",
+)
 @click.option("--static-only", is_flag=True, help="仅执行静态分析，不进行动态验证")
 @click.option("--dynamic-only", is_flag=True, help="仅执行AI红队POC动态测试，不进行静态扫描")
 @click.option("--generate-poc", is_flag=True, help="为扫描发现生成 POC 脚本")
 @click.option("--run-poc", is_flag=True, help="执行 POC 验证")
 @click.option("--poc-only", is_flag=True, help="仅生成 POC，不执行扫描（与 --dynamic-only 配合使用）")
-@click.option("--min-confidence", type=click.Choice(["HIGH", "MEDIUM", "LOW", "ALL"]), default="HIGH", help="最低置信度过滤 (默认: HIGH)")
+@click.option(
+    "--min-confidence",
+    type=click.Choice(["HIGH", "MEDIUM", "LOW", "ALL"]),
+    default="HIGH",
+    help="最低置信度过滤 (默认: HIGH)",
+)
 @click.option("--scan-ports", is_flag=True, help="启用API端口配置扫描，提前发现端口配置和生成模式")
 @click.option("--ports-only", is_flag=True, help="仅执行端口扫描，不进行漏洞扫描")
-@click.option("--port-range", type=str, default="1-65535", help="端口扫描范围，格式: start-end (默认: 1-65535)")
-@click.option("--priority", type=click.Choice(["api-first", "security-first", "performance-first", "full-scan", "custom"], case_sensitive=False),
-              default="full-scan", help="扫描优先级策略: api-first(API优先), security-first(安全优先), performance-first(性能优先), full-scan(全面扫描), custom(自定义)")
+@click.option(
+    "--port-range",
+    type=str,
+    default="1-65535",
+    help="端口扫描范围，格式: start-end (默认: 1-65535)",
+)
+@click.option(
+    "--priority",
+    type=click.Choice(
+        ["api-first", "security-first", "performance-first", "full-scan", "custom"],
+        case_sensitive=False,
+    ),
+    default="full-scan",
+    help="扫描优先级策略: api-first(API优先), security-first(安全优先), performance-first(性能优先), full-scan(全面扫描), custom(自定义)",
+)
 @click.option("--priority-rules", type=click.Path(exists=True), help="自定义优先级规则文件路径 (YAML/JSON)")
-@click.option("--report-category", type=click.Choice(["all", "port-related", "general-static", "special-scan", "api-security", "auth-security", "data-protection", "config-security"], case_sensitive=False),
-              default="all", help="报告分类过滤: all(全部), port-related(端口相关), general-static(一般静态), special-scan(特别扫描), api-security(API安全), auth-security(认证安全), data-protection(数据保护), config-security(配置安全)")
-@click.option("--remote", is_flag=True, help='启用远程扫描模式')
-@click.option("--remote-type", type=click.Choice(["ssh", "http", "serial"], case_sensitive=False), default="ssh", help='远程连接类型')
-@click.option("--remote-host", help='远程主机地址')
-@click.option("--remote-port", type=int, help='远程端口')
-@click.option("--remote-username", help='远程用户名(SSH)')
-@click.option("--remote-password", help='远程密码(SSH)')
-@click.option("--remote-key", help='SSH私钥路径')
-@click.option("--remote-path", help='远程扫描路径')
-@click.option("--serial-baudrate", type=int, default=115200, help='串口波特率')
-@click.option("--serial-port", help='串口端口(如 COM1)')
+@click.option(
+    "--report-category",
+    type=click.Choice(
+        [
+            "all",
+            "port-related",
+            "general-static",
+            "special-scan",
+            "api-security",
+            "auth-security",
+            "data-protection",
+            "config-security",
+        ],
+        case_sensitive=False,
+    ),
+    default="all",
+    help="报告分类过滤: all(全部), port-related(端口相关), general-static(一般静态), special-scan(特别扫描), api-security(API安全), auth-security(认证安全), data-protection(数据保护), config-security(配置安全)",
+)
+@click.option("--remote", is_flag=True, help="启用远程扫描模式")
+@click.option(
+    "--remote-type",
+    type=click.Choice(["ssh", "http", "serial"], case_sensitive=False),
+    default="ssh",
+    help="远程连接类型",
+)
+@click.option("--remote-host", help="远程主机地址")
+@click.option("--remote-port", type=int, help="远程端口")
+@click.option("--remote-username", help="远程用户名(SSH)")
+@click.option("--remote-password", help="远程密码(SSH)")
+@click.option("--remote-key", help="SSH私钥路径")
+@click.option("--remote-path", help="远程扫描路径")
+@click.option("--serial-baudrate", type=int, default=115200, help="串口波特率")
+@click.option("--serial-port", help="串口端口(如 COM1)")
 @click.pass_context
 def scan(
     ctx: click.Context,
@@ -395,11 +457,11 @@ def scan(
     if pure_ai:
         # 设置环境变量
         os.environ["HOS_LS_MODE"] = "PURE_AI"
-        
+
         if not config.quiet:
             print_banner()
             console.print("[bold green][LOCK] 纯AI模式已激活，隔离运行时环境...[/bold green]")
-        
+
         # 纯AI模式配置
         config.scan.max_workers = workers
         config.scan.incremental = incremental
@@ -416,6 +478,7 @@ def scan(
             config.ai.modules = {}
         if "pure_ai" not in config.ai.modules:
             from src.core.config import AIModuleConfig
+
             config.ai.modules["pure_ai"] = AIModuleConfig()
         config.ai.modules["pure_ai"].provider = "deepseek"
         config.ai.modules["pure_ai"].model = "deepseek-v4-flash"
@@ -449,14 +512,14 @@ def scan(
         # 测试模式
         if test > 0:
             config.test_mode = True
-            config.__dict__['test_file_count'] = test
+            config.__dict__["test_file_count"] = test
             if not config.quiet:
                 console.print(f"[bold yellow][!] 测试模式已启用，只扫描前{test}个优先级最高的文件[/bold yellow]")
         elif test == 0:
             config.test_mode = False
         else:
             config.test_mode = True
-            config.__dict__['test_file_count'] = 10
+            config.__dict__["test_file_count"] = 10
             if not config.quiet:
                 console.print("[bold yellow][!] 测试模式已启用，只扫描前10个优先级最高的文件[/bold yellow]")
 
@@ -475,7 +538,7 @@ def scan(
 
         # 沙盒配置
         if sandbox or static_only or dynamic_only or audit_mode != "hybrid":
-            from src.core.config import SandboxConfig, AuditMode
+            from src.core.config import AuditMode, SandboxConfig
 
             # 参数优先级: --static-only > --dynamic-only > --audit-mode
             if static_only:
@@ -490,7 +553,9 @@ def scan(
                 mode = AuditMode(audit_mode)
                 if not config.quiet:
                     mode_display = {"static": "STATIC", "dynamic": "DYNAMIC", "hybrid": "HYBRID"}
-                    console.print(f"[bold yellow][!] 审计模式: {mode_display.get(audit_mode, audit_mode.upper())}[/bold yellow]")
+                    console.print(
+                        f"[bold yellow][!] 审计模式: {mode_display.get(audit_mode, audit_mode.upper())}[/bold yellow]"
+                    )
 
             sandbox_cfg = SandboxConfig(enabled=True, mode=mode)
             config.sandbox = sandbox_cfg
@@ -507,16 +572,16 @@ def scan(
                     conditions.append(f"max-files={max_files}")
                 cond_str = ", ".join(conditions) if conditions else "none"
                 console.print(f"[bold yellow][!] 截断模式已启用，条件: {cond_str}[/bold yellow]")
-        
+
         # 导入纯AI扫描器
         from src.core.scanner import create_scanner
-        
+
         # 执行纯AI扫描
         try:
             # 显示扫描进度
             if not config.quiet:
                 show_scan_progress()
-            
+
             # 检查是否启用远程扫描模式
             remote_config = None
             if remote:
@@ -525,27 +590,29 @@ def scan(
                     sys.exit(1)
 
                 remote_config = {
-                    'type': remote_type,
-                    'host': remote_host,
-                    'port': remote_port,
-                    'username': remote_username,
-                    'password': remote_password,
-                    'key_path': remote_key,
-                    'remote_path': remote_path or '/',
+                    "type": remote_type,
+                    "host": remote_host,
+                    "port": remote_port,
+                    "username": remote_username,
+                    "password": remote_password,
+                    "key_path": remote_key,
+                    "remote_path": remote_path or "/",
                 }
 
-                if remote_type == 'serial':
-                    remote_config['port'] = serial_port
-                    remote_config['baudrate'] = serial_baudrate
-                elif remote_type == 'ssh':
-                    remote_config['port'] = remote_port or 22
-                    remote_config['key_path'] = remote_key
-                elif remote_type == 'http':
-                    remote_config['port'] = remote_port or 80
-                    remote_config['use_ssl'] = remote_type == 'https'
+                if remote_type == "serial":
+                    remote_config["port"] = serial_port
+                    remote_config["baudrate"] = serial_baudrate
+                elif remote_type == "ssh":
+                    remote_config["port"] = remote_port or 22
+                    remote_config["key_path"] = remote_key
+                elif remote_type == "http":
+                    remote_config["port"] = remote_port or 80
+                    remote_config["use_ssl"] = remote_type == "https"
 
                 if not config.quiet:
-                    console.print(f"[bold cyan][REMOTE] 远程扫描模式: {remote_type}://{remote_host}:{remote_config.get('port', 'default')}[/bold cyan]")
+                    console.print(
+                        f"[bold cyan][REMOTE] 远程扫描模式: {remote_type}://{remote_host}:{remote_config.get('port', 'default')}[/bold cyan]"
+                    )
 
                 scanner = create_scanner(config, remote_config)
             else:
@@ -562,6 +629,7 @@ def scan(
             # 生成报告
             if not output:
                 from datetime import datetime
+
                 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
                 output = f"scan_report_{timestamp}.html"
                 console.print(f"[bold yellow][WARNING] 未指定输出路径，使用默认: {output}[/bold yellow]")
@@ -593,7 +661,7 @@ def scan(
         config.scan_mode = mode
     elif pure_ai:
         config.scan_mode = "pure-ai"
-    
+
     if ai_provider:
         config.ai.provider = ai_provider
 
@@ -602,7 +670,7 @@ def scan(
 
     if tool_chain:
         config.tools_enabled = True
-        config.tool_chain = [t.strip() for t in tool_chain.split(',') if t.strip()]
+        config.tool_chain = [t.strip() for t in tool_chain.split(",") if t.strip()]
         console.print(f"[bold cyan]🔧 工具链已启用: {config.tool_chain}[/bold cyan]")
 
     # 端口扫描配置
@@ -634,14 +702,14 @@ def scan(
     # 测试模式
     if test > 0:
         config.test_mode = True
-        config.__dict__['test_file_count'] = test
+        config.__dict__["test_file_count"] = test
         if not config.quiet:
             console.print(f"[bold yellow][!] 测试模式已启用，只扫描前{test}个优先级最高的文件[/bold yellow]")
     elif test == 0:
         config.test_mode = False
     else:
         config.test_mode = True
-        config.__dict__['test_file_count'] = 10
+        config.__dict__["test_file_count"] = 10
         if not config.quiet:
             console.print("[bold yellow][!] 测试模式已启用，只扫描前10个优先级最高的文件[/bold yellow]")
 
@@ -650,10 +718,11 @@ def scan(
         if langgraph:
             # 使用 LangGraph 多Agent流程
             from src.core.langgraph_flow import analyze_code
+
             # 读取目标文件内容
             target_path = Path(target)
             if target_path.is_file():
-                with open(target_path, 'r', encoding='utf-8') as f:
+                with open(target_path, "r", encoding="utf-8") as f:
                     code = f.read()
             else:
                 code = f"目录扫描: {target}"
@@ -662,32 +731,35 @@ def scan(
             # 显示结果
             if not config.quiet:
                 console.print(Panel("[bold]LangGraph 多Agent分析结果[/bold]"))
-                if 'final_report' in result:
-                    report = result['final_report']
+                if "final_report" in result:
+                    report = result["final_report"]
                     console.print(f"[green]分析状态: {report.get('quality', 'unknown')}[/green]")
                     console.print(f"[green]迭代次数: {report.get('iteration', 0)}[/green]")
-                    console.print(f"[green]CVE候选数量: {len(report.get('cve_candidates', []))}[/green]")
+                    console.print(
+                        f"[green]CVE候选数量: {len(report.get('cve_candidates', []))}[/green]"
+                    )
                     console.print(f"[green]攻击链长度: {len(report.get('attack_chain', {}))}[/green]")
                     console.print("[bold]分析结果:[/bold]")
-                    console.print(report.get('analysis', ''))
-                    if 'fix_suggestions' in report:
+                    console.print(report.get("analysis", ""))
+                    if "fix_suggestions" in report:
                         console.print("[bold]修复建议:[/bold]")
-                        console.print(report.get('fix_suggestions', ''))
+                        console.print(report.get("fix_suggestions", ""))
                 else:
                     console.print(f"[red]分析失败: {result.get('error', '未知错误')}[/red]")
             # 生成报告
             if output:
                 import json
-                with open(output, 'w', encoding='utf-8') as f:
+
+                with open(output, "w", encoding="utf-8") as f:
                     json.dump(result, f, ensure_ascii=False, indent=2)
                 console.print(f"[bold green]报告已生成: {output}[/bold green]")
             # 根据结果设置退出码
-            if result.get('final_report', {}).get('quality') != 'pass':
+            if result.get("final_report", {}).get("quality") != "pass":
                 sys.exit(1)
         else:
             # 使用传统扫描器
             from src.core.scanner import create_scanner
-            
+
             # 显示扫描进度
             if not config.quiet:
                 show_scan_progress()
@@ -700,27 +772,29 @@ def scan(
                     sys.exit(1)
 
                 remote_config = {
-                    'type': remote_type,
-                    'host': remote_host,
-                    'port': remote_port,
-                    'username': remote_username,
-                    'password': remote_password,
-                    'key_path': remote_key,
-                    'remote_path': remote_path or '/',
+                    "type": remote_type,
+                    "host": remote_host,
+                    "port": remote_port,
+                    "username": remote_username,
+                    "password": remote_password,
+                    "key_path": remote_key,
+                    "remote_path": remote_path or "/",
                 }
 
-                if remote_type == 'serial':
-                    remote_config['port'] = serial_port
-                    remote_config['baudrate'] = serial_baudrate
-                elif remote_type == 'ssh':
-                    remote_config['port'] = remote_port or 22
-                    remote_config['key_path'] = remote_key
-                elif remote_type == 'http':
-                    remote_config['port'] = remote_port or 80
-                    remote_config['use_ssl'] = remote_type == 'https'
+                if remote_type == "serial":
+                    remote_config["port"] = serial_port
+                    remote_config["baudrate"] = serial_baudrate
+                elif remote_type == "ssh":
+                    remote_config["port"] = remote_port or 22
+                    remote_config["key_path"] = remote_key
+                elif remote_type == "http":
+                    remote_config["port"] = remote_port or 80
+                    remote_config["use_ssl"] = remote_type == "https"
 
                 if not config.quiet:
-                    console.print(f"[bold cyan][REMOTE] 远程扫描模式: {remote_type}://{remote_host}:{remote_config.get('port', 'default')}[/bold cyan]")
+                    console.print(
+                        f"[bold cyan][REMOTE] 远程扫描模式: {remote_type}://{remote_host}:{remote_config.get('port', 'default')}[/bold cyan]"
+                    )
 
                 scanner = create_scanner(config, remote_config)
             else:
@@ -737,6 +811,7 @@ def scan(
             # 生成报告
             if not output:
                 from datetime import datetime
+
                 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
                 output = f"scan_report_{timestamp}.html"
                 console.print(f"[bold yellow][WARNING] 未指定输出路径，使用默认: {output}[/bold yellow]")
@@ -751,8 +826,22 @@ def scan(
 
 
 @cli.command()
-@click.option("--export", "-e", type=click.Choice(["yaml", "json"], case_sensitive=False), default=None, help="导出配置为指定格式")
-@click.option("--import", "-i", "--input", "import_file", type=click.Path(exists=True), default=None, help="从文件导入配置")
+@click.option(
+    "--export",
+    "-e",
+    type=click.Choice(["yaml", "json"], case_sensitive=False),
+    default=None,
+    help="导出配置为指定格式",
+)
+@click.option(
+    "--import",
+    "-i",
+    "--input",
+    "import_file",
+    type=click.Path(exists=True),
+    default=None,
+    help="从文件导入配置",
+)
 @click.option("--output", "-o", type=click.Path(), default=None, help="导出文件路径")
 @click.pass_context
 def config(ctx: click.Context, export: str, import_file: str, output: str) -> None:
@@ -761,13 +850,15 @@ def config(ctx: click.Context, export: str, import_file: str, output: str) -> No
 
     # 处理导入
     if import_file:
-        if import_file.endswith('.yaml') or import_file.endswith('.yml'):
+        if import_file.endswith(".yaml") or import_file.endswith(".yml"):
             import yaml
-            with open(import_file, 'r', encoding='utf-8') as f:
+
+            with open(import_file, "r", encoding="utf-8") as f:
                 imported_config = yaml.safe_load(f)
-        elif import_file.endswith('.json'):
+        elif import_file.endswith(".json"):
             import json
-            with open(import_file, 'r', encoding='utf-8') as f:
+
+            with open(import_file, "r", encoding="utf-8") as f:
                 imported_config = json.load(f)
         else:
             console.print(f"[red]不支持的文件格式，请使用 .yaml/.yml 或 .json 文件[/red]")
@@ -788,20 +879,22 @@ def config(ctx: click.Context, export: str, import_file: str, output: str) -> No
     if export:
         if export == "yaml":
             import yaml
+
             config_dict = _config_to_dict(cfg)
             yaml_content = yaml.dump(config_dict, allow_unicode=True, default_flow_style=False)
             if output:
-                with open(output, 'w', encoding='utf-8') as f:
+                with open(output, "w", encoding="utf-8") as f:
                     f.write(yaml_content)
                 console.print(f"[green]配置已导出到: {output}[/green]")
             else:
                 console.print(yaml_content)
         elif export == "json":
             import json
+
             config_dict = _config_to_dict(cfg)
             json_content = json.dumps(config_dict, ensure_ascii=False, indent=2)
             if output:
-                with open(output, 'w', encoding='utf-8') as f:
+                with open(output, "w", encoding="utf-8") as f:
                     f.write(json_content)
                 console.print(f"[green]配置已导出到: {output}[/green]")
             else:
@@ -822,7 +915,9 @@ def config(ctx: click.Context, export: str, import_file: str, output: str) -> No
     table.add_row("测试模式 (test_mode)", str(cfg.test_mode), "False", "测试模式")
     table.add_row("纯AI模式 (pure_ai)", str(cfg.pure_ai), "False", "使用纯AI深度分析")
     table.add_row("扫描模式 (scan_mode)", cfg.scan_mode, "auto", "扫描模式")
-    table.add_row("过滤幻觉 (filter_hallucinations)", str(cfg.filter_hallucinations), "True", "过滤AI幻觉发现")
+    table.add_row(
+        "过滤幻觉 (filter_hallucinations)", str(cfg.filter_hallucinations), "True", "过滤AI幻觉发现"
+    )
     table.add_row("界面语言 (language)", cfg.language, "zh", "zh=中文, en=英文")
     table.add_row("从断点恢复 (resume)", str(cfg.resume), "False", "从中断处继续扫描")
     table.add_row("截断输出 (truncate_output)", str(cfg.truncate_output), "False", "达到条件后停止")
@@ -831,80 +926,153 @@ def config(ctx: click.Context, export: str, import_file: str, output: str) -> No
     console.print(table)
     console.print()
 
-    _print_config_table("AI 配置", [
-        ("提供商 (provider)", cfg.ai.provider, "deepseek", "AI服务提供商"),
-        ("模型 (model)", cfg.ai.model, "deepseek-v4-flash", "AI模型"),
-        ("API Key", mask_api_key(cfg.ai.api_key), "-", "API密钥"),
-        ("最大Token (max_tokens)", str(cfg.ai.max_tokens), "4096", "单次请求最大Token数"),
-        ("温度参数 (temperature)", str(cfg.ai.temperature), "0.1", "生成随机性，0-1"),
-        ("超时 (timeout)", str(cfg.ai.timeout), "60", "请求超时秒数"),
-    ])
+    _print_config_table(
+        "AI 配置",
+        [
+            ("提供商 (provider)", cfg.ai.provider, "deepseek", "AI服务提供商"),
+            ("模型 (model)", cfg.ai.model, "deepseek-v4-flash", "AI模型"),
+            ("API Key", mask_api_key(cfg.ai.api_key), "-", "API密钥"),
+            ("最大Token (max_tokens)", str(cfg.ai.max_tokens), "4096", "单次请求最大Token数"),
+            ("温度参数 (temperature)", str(cfg.ai.temperature), "0.1", "生成随机性，0-1"),
+            ("超时 (timeout)", str(cfg.ai.timeout), "60", "请求超时秒数"),
+        ],
+    )
 
-    _print_config_table("AI - 阿里云配置", [
-        ("启用", str(cfg.ai.aliyun.enabled), "False", "是否启用阿里云API"),
-        ("API Key", mask_api_key(cfg.ai.aliyun.api_key), "-", "阿里云API密钥"),
-        ("模型", cfg.ai.aliyun.model, "qwen3-coder-next", "阿里云模型"),
-    ])
+    _print_config_table(
+        "AI - 阿里云配置",
+        [
+            ("启用", str(cfg.ai.aliyun.enabled), "False", "是否启用阿里云API"),
+            ("API Key", mask_api_key(cfg.ai.aliyun.api_key), "-", "阿里云API密钥"),
+            ("模型", cfg.ai.aliyun.model, "qwen3-coder-next", "阿里云模型"),
+        ],
+    )
 
-    _print_config_table("AI - 模块配置 (pure_ai)", [
-        ("启用", str(cfg.ai.modules.get("pure_ai", {}).get("enabled", True) if cfg.ai.modules else True), "True", "纯AI模块启用"),
-        ("模型", cfg.ai.modules.get("pure_ai", {}).get("model", "deepseek-v4-flash") if cfg.ai.modules else "deepseek-v4-flash", "deepseek-v4-flash", "pure_ai专用模型"),
-        ("提供商", cfg.ai.modules.get("pure_ai", {}).get("provider", "deepseek") if cfg.ai.modules else "deepseek", "deepseek", "pure_ai专用提供商"),
-    ])
+    _print_config_table(
+        "AI - 模块配置 (pure_ai)",
+        [
+            (
+                "启用",
+                str(
+                    cfg.ai.modules.get("pure_ai", {}).get("enabled", True)
+                    if cfg.ai.modules
+                    else True
+                ),
+                "True",
+                "纯AI模块启用",
+            ),
+            (
+                "模型",
+                (
+                    cfg.ai.modules.get("pure_ai", {}).get("model", "deepseek-v4-flash")
+                    if cfg.ai.modules
+                    else "deepseek-v4-flash"
+                ),
+                "deepseek-v4-flash",
+                "pure_ai专用模型",
+            ),
+            (
+                "提供商",
+                (
+                    cfg.ai.modules.get("pure_ai", {}).get("provider", "deepseek")
+                    if cfg.ai.modules
+                    else "deepseek"
+                ),
+                "deepseek",
+                "pure_ai专用提供商",
+            ),
+        ],
+    )
 
-    _print_config_table("AI - RAG配置", [
-        ("启用", str(cfg.ai.rag.enabled), "True", "RAG检索启用"),
-        ("嵌入模型", cfg.ai.rag.embedding_model, "Qwen/Qwen3-Embedding-0.6B", "嵌入模型"),
-        ("重排模型", cfg.ai.rag.rerank_model, "BAAI/bge-reranker-large", "重排模型"),
-    ])
+    _print_config_table(
+        "AI - RAG配置",
+        [
+            ("启用", str(cfg.ai.rag.enabled), "True", "RAG检索启用"),
+            ("嵌入模型", cfg.ai.rag.embedding_model, "Qwen/Qwen3-Embedding-0.6B", "嵌入模型"),
+            ("重排模型", cfg.ai.rag.rerank_model, "BAAI/bge-reranker-large", "重排模型"),
+        ],
+    )
 
-    _print_config_table("扫描配置", [
-        ("最大工作线程 (max_workers)", str(cfg.scan.max_workers), "4", "并行扫描线程数"),
-        ("增量扫描 (incremental)", str(cfg.scan.incremental), "True", "增量扫描"),
-        ("缓存启用 (cache_enabled)", str(cfg.scan.cache_enabled), "True", "启用扫描缓存"),
-    ])
+    _print_config_table(
+        "扫描配置",
+        [
+            ("最大工作线程 (max_workers)", str(cfg.scan.max_workers), "4", "并行扫描线程数"),
+            ("增量扫描 (incremental)", str(cfg.scan.incremental), "True", "增量扫描"),
+            ("缓存启用 (cache_enabled)", str(cfg.scan.cache_enabled), "True", "启用扫描缓存"),
+        ],
+    )
 
-    _print_config_table("规则配置", [
-        ("规则集 (ruleset)", cfg.rules.ruleset, "default", "使用的规则集"),
-        ("自定义规则数", str(len(cfg.rules.custom_rules)), "0", "自定义规则数量"),
-        ("排除路径数", str(len(cfg.rules.exclude_paths)), "0", "排除的路径数量"),
-    ])
+    _print_config_table(
+        "规则配置",
+        [
+            ("规则集 (ruleset)", cfg.rules.ruleset, "default", "使用的规则集"),
+            ("自定义规则数", str(len(cfg.rules.custom_rules)), "0", "自定义规则数量"),
+            ("排除路径数", str(len(cfg.rules.exclude_paths)), "0", "排除的路径数量"),
+        ],
+    )
 
-    _print_config_table("报告配置", [
-        ("格式 (format)", cfg.report.format, "html", "报告格式"),
-        ("输出路径 (output)", cfg.report.output or "(未设置)", "", "报告输出路径"),
-        ("包含代码片段", str(cfg.report.include_snippets), "True", "报告中包含代码片段"),
-        ("包含修复建议", str(cfg.report.include_fix_suggestions), "True", "报告中包含修复建议"),
-    ])
+    _print_config_table(
+        "报告配置",
+        [
+            ("格式 (format)", cfg.report.format, "html", "报告格式"),
+            ("输出路径 (output)", cfg.report.output or "(未设置)", "", "报告输出路径"),
+            ("包含代码片段", str(cfg.report.include_snippets), "True", "报告中包含代码片段"),
+            ("包含修复建议", str(cfg.report.include_fix_suggestions), "True", "报告中包含修复建议"),
+        ],
+    )
 
-    _print_config_table("工具配置", [
-        ("工具链启用", str(cfg.tools.enabled), "True", "是否启用工具链"),
-        ("Semgrep启用", str(cfg.tools.semgrep.enabled), "True", "Semgrep扫描启用"),
-        ("Trivy启用", str(cfg.tools.trivy.enabled), "True", "Trivy扫描启用"),
-        ("Gitleaks启用", str(cfg.tools.gitleaks.enabled), "True", "Gitleaks扫描启用"),
-    ])
+    _print_config_table(
+        "工具配置",
+        [
+            ("工具链启用", str(cfg.tools.enabled), "True", "是否启用工具链"),
+            ("Semgrep启用", str(cfg.tools.semgrep.enabled), "True", "Semgrep扫描启用"),
+            ("Trivy启用", str(cfg.tools.trivy.enabled), "True", "Trivy扫描启用"),
+            ("Gitleaks启用", str(cfg.tools.gitleaks.enabled), "True", "Gitleaks扫描启用"),
+        ],
+    )
 
-    _print_config_table("验证配置", [
-        ("自动验证HIGH漏洞", str(cfg.validation.auto_validate_high), "True", "自动验证高置信度漏洞"),
-        ("自动验证MEDIUM漏洞", str(cfg.validation.auto_validate_medium), "False", "自动验证中置信度漏洞"),
-        ("最小置信度阈值", str(cfg.validation.min_confidence_threshold), "0.7", "置信度阈值"),
-        ("行号偏差容忍度", str(cfg.validation.line_number_tolerance), "5", "行号偏差容忍行数"),
-    ])
+    _print_config_table(
+        "验证配置",
+        [
+            (
+                "自动验证HIGH漏洞",
+                str(cfg.validation.auto_validate_high),
+                "True",
+                "自动验证高置信度漏洞",
+            ),
+            (
+                "自动验证MEDIUM漏洞",
+                str(cfg.validation.auto_validate_medium),
+                "False",
+                "自动验证中置信度漏洞",
+            ),
+            ("最小置信度阈值", str(cfg.validation.min_confidence_threshold), "0.7", "置信度阈值"),
+            ("行号偏差容忍度", str(cfg.validation.line_number_tolerance), "5", "行号偏差容忍行数"),
+        ],
+    )
 
-    _print_config_table("优先级配置", [
-        ("CVSS权重", str(cfg.priority.weights.cvss), "0.40", "CVSS评分权重"),
-        ("可利用性权重", str(cfg.priority.weights.exploitability), "0.35", "可利用性权重"),
-        ("可达性权重", str(cfg.priority.weights.reachability), "0.25", "可达性权重"),
-    ])
+    _print_config_table(
+        "优先级配置",
+        [
+            ("CVSS权重", str(cfg.priority.weights.cvss), "0.40", "CVSS评分权重"),
+            ("可利用性权重", str(cfg.priority.weights.exploitability), "0.35", "可利用性权重"),
+            ("可达性权重", str(cfg.priority.weights.reachability), "0.25", "可达性权重"),
+        ],
+    )
 
-    _print_config_table("沙盒配置", [
-        ("启用 (enabled)", str(cfg.sandbox.enabled), "False", "沙盒动态验证"),
-        ("超时 (timeout)", str(cfg.sandbox.timeout), "30", "沙盒执行超时秒数"),
-    ])
+    _print_config_table(
+        "沙盒配置",
+        [
+            ("启用 (enabled)", str(cfg.sandbox.enabled), "False", "沙盒动态验证"),
+            ("超时 (timeout)", str(cfg.sandbox.timeout), "30", "沙盒执行超时秒数"),
+        ],
+    )
 
-    _print_config_table("国际化配置", [
-        ("语言 (language)", cfg.language, "zh", "界面语言: zh=中文, en=英文"),
-    ])
+    _print_config_table(
+        "国际化配置",
+        [
+            ("语言 (language)", cfg.language, "zh", "界面语言: zh=中文, en=英文"),
+        ],
+    )
 
     console.print("[dim]提示: 使用 --export yaml|json [-o output] 导出配置[/dim]")
 
@@ -1048,7 +1216,16 @@ def _apply_imported_config(cfg: Config, imported: dict) -> None:
 
     console.print("[cyan]已应用的配置项:[/cyan]")
     for key in imported.keys():
-        if key not in ("ai", "scan", "validation", "sandbox", "rules", "report", "tools", "priority"):
+        if key not in (
+            "ai",
+            "scan",
+            "validation",
+            "sandbox",
+            "rules",
+            "report",
+            "tools",
+            "priority",
+        ):
             console.print(f"  - {key}")
 
 
@@ -1087,30 +1264,31 @@ def panel(ctx: click.Context) -> None:
         config_panel = ConfigPanel(config_dict)
 
         def get_key():
-            if os.name == 'nt':
+            if os.name == "nt":
                 import msvcrt
+
                 char = msvcrt.getch()
-                if char == b'\xe0':
+                if char == b"\xe0":
                     char = msvcrt.getch()
-                    if char == b'H':
+                    if char == b"H":
                         return "up"
-                    elif char == b'P':
+                    elif char == b"P":
                         return "down"
-                    elif char == b'M':
+                    elif char == b"M":
                         return "right"
-                    elif char == b'K':
+                    elif char == b"K":
                         return "left"
-                elif char == b'\r':
+                elif char == b"\r":
                     return "enter"
-                elif char == b' ':
+                elif char == b" ":
                     return "space"
-                elif char == b'\x08':
+                elif char == b"\x08":
                     return "backspace"
-                elif char == b'\x1b':
+                elif char == b"\x1b":
                     return "esc"
-                elif char == b'\t':
+                elif char == b"\t":
                     return "tab"
-                elif char in (b'q', b'Q'):
+                elif char in (b"q", b"Q"):
                     return "quit"
             return None
 
@@ -1141,7 +1319,7 @@ def serial(ctx: click.Context) -> None:
     - 通信日志记录
     """
     try:
-        from .serial_port import SerialPortPanel, SerialManager
+        from .serial_port import SerialManager, SerialPortPanel
 
         if not SerialManager.is_available():
             console.print("[red]错误: pyserial 库未安装[/red]")
@@ -1168,15 +1346,17 @@ def chat(ctx: click.Context) -> None:
     config: Config = ctx.obj["config"]
 
     if not config.quiet:
-        console.print(Panel(
-            "[bold]HOS-LS 安全对话中心[/bold]\n"
-            "[dim]自然语言交互 · Multi-Agent · 智能分析[/dim]",
-            border_style="cyan",
-        ))
+        console.print(
+            Panel(
+                "[bold]HOS-LS 安全对话中心[/bold]\n" "[dim]自然语言交互 · Multi-Agent · 智能分析[/dim]",
+                border_style="cyan",
+            )
+        )
         console.print("[dim]输入 /help 查看可用命令[/dim]\n")
 
     try:
         from src.core.chat.main import run_chat
+
         asyncio.run(run_chat(config))
     except ImportError as e:
         console.print(f"[bold red]对话功能不可用: {e}[/bold red]")
@@ -1268,7 +1448,11 @@ def rules(ctx: click.Context) -> None:
 
     stats = registry.get_statistics()
 
-    console.print(Panel(f"[bold]规则统计[/bold]\n总计: {stats['total']}, 启用: {stats['enabled']}, 禁用: {stats['disabled']}"))
+    console.print(
+        Panel(
+            f"[bold]规则统计[/bold]\n总计: {stats['total']}, 启用: {stats['enabled']}, 禁用: {stats['disabled']}"
+        )
+    )
 
     if stats["by_category"]:
         table = Table(title="按类别统计")
@@ -1306,18 +1490,34 @@ def nvd() -> None:
 
 
 @nvd.command()
-@click.option("--zip", "-z", type=click.Path(), default="nvd-json-data-feeds-main.zip", help="NVD压缩包路径 (默认: nvd-json-data-feeds-main.zip)")
-@click.option("--dir", "-d", type=click.Path(exists=True, file_okay=False, dir_okay=True), help="NVD数据目录路径")
+@click.option(
+    "--zip",
+    "-z",
+    type=click.Path(),
+    default="nvd-json-data-feeds-main.zip",
+    help="NVD压缩包路径 (默认: nvd-json-data-feeds-main.zip)",
+)
+@click.option(
+    "--dir",
+    "-d",
+    type=click.Path(exists=True, file_okay=False, dir_okay=True),
+    help="NVD数据目录路径",
+)
 @click.option("--limit", "-l", type=int, default=None, help="限制处理的文件数量 (用于测试)")
 @click.option("--no-rag", is_flag=True, help="不导入到RAG库，仅解析")
 @click.option("--batch-size", "-b", type=int, default=1000, help="批量处理大小 (默认: 1000)")
 @click.option("--resume", type=int, default=0, help="从指定文件开始续传")
-@click.option("--model", "-m", default="Qwen/Qwen3-Embedding-0.6B", help="嵌入模型名称 (默认: Qwen/Qwen3-Embedding-0.6B)")
+@click.option(
+    "--model",
+    "-m",
+    default="Qwen/Qwen3-Embedding-0.6B",
+    help="嵌入模型名称 (默认: Qwen/Qwen3-Embedding-0.6B)",
+)
 @click.pass_context
 def update(ctx, zip, dir, limit, no_rag, batch_size, resume, model) -> None:
     """更新NVD漏洞库，解压并同步到本地RAG库"""
     config: Config = ctx.obj["config"]
-    
+
     # 自动检测 temp_data 目录
     temp_data_base = Path(r"c:\1AAA_PROJECT\HOS\HOS-LS\All Vulnerabilities\temp_data")
     nvd_data_dir = temp_data_base / "nvd-json-data-feeds"
@@ -1334,7 +1534,9 @@ def update(ctx, zip, dir, limit, no_rag, batch_size, resume, model) -> None:
                 input_path = preloader_zip
                 console.print(f"[bold green]使用预下载的压缩包: {input_path}[/bold green]")
             else:
-                console.print("[bold yellow]未检测到数据源，请先执行 'hos-ls data-preload run' 下载数据[/bold yellow]")
+                console.print(
+                    "[bold yellow]未检测到数据源，请先执行 'hos-ls data-preload run' 下载数据[/bold yellow]"
+                )
                 console.print(f"[dim]或者使用 --dir 参数指定数据目录[/dim]")
                 console.print(f"[dim]或者使用 --zip 参数指定压缩包路径[/dim]")
                 return
@@ -1355,22 +1557,23 @@ def update(ctx, zip, dir, limit, no_rag, batch_size, resume, model) -> None:
                 console.print(f"请确保文件存在于: {input_path.absolute()}")
                 return
         console.print(f"[bold green]使用压缩包导入: {input_path}[/bold green]")
-    
+
     rag_base = None
     if not no_rag:
         try:
             from src.storage.rag_knowledge_base import get_rag_knowledge_base
+
             rag_base = get_rag_knowledge_base(model_name=model)
             console.print(f"[bold green]已连接到RAG知识库，使用模型: {model}[/bold green]")
         except Exception as e:
             console.print(f"[bold yellow]警告: 无法初始化RAG知识库: {e}[/bold yellow]")
             console.print("[bold yellow]将仅解析数据，不导入RAG[/bold yellow]")
-    
+
     # 导入run_update
     from src.integration.nvd_update import run_update
-    
+
     console.print("[bold blue]开始更新NVD漏洞库...[/bold blue]")
-    
+
     # 三阶段进度条
     with Progress(
         SpinnerColumn(),
@@ -1378,21 +1581,21 @@ def update(ctx, zip, dir, limit, no_rag, batch_size, resume, model) -> None:
         TextColumn("[progress.description]{task.description}"),
         TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
         TextColumn("[progress.completed]{task.completed}/{task.total}"),
-        console=console
+        console=console,
     ) as progress:
         # 第一阶段：解压和解析
         phase1 = progress.add_task("[cyan]1/3: 解压和解析数据...", total=100)
-        
+
         # 第二阶段：嵌入生成
         phase2 = progress.add_task("[green]2/3: 生成嵌入向量...", total=100)
-        
+
         # 第三阶段：图构建
         phase3 = progress.add_task("[blue]3/3: 构建知识图谱...", total=100)
-        
+
         # 创建异步Worker
         worker = AsyncWorker(max_workers=4)
         worker.start()
-        
+
         try:
             # 包装run_update函数以支持进度更新
             def progress_callback(phase: str, current: int, total: int):
@@ -1402,7 +1605,7 @@ def update(ctx, zip, dir, limit, no_rag, batch_size, resume, model) -> None:
                     progress.update(phase2, completed=current, total=total)
                 elif phase == "graph":
                     progress.update(phase3, completed=current, total=total)
-            
+
             stats = run_update(
                 str(input_path),
                 rag_base=rag_base,
@@ -1410,17 +1613,17 @@ def update(ctx, zip, dir, limit, no_rag, batch_size, resume, model) -> None:
                 batch_size=batch_size,
                 resume_from=resume,
                 progress_callback=progress_callback,
-                model_name=model
+                model_name=model,
             )
-            
+
             # 完成所有进度
             progress.update(phase1, completed=100, total=100)
             progress.update(phase2, completed=100, total=100)
             progress.update(phase3, completed=100, total=100)
-            
+
         finally:
             worker.stop()
-    
+
     console.print("\n" + "=" * 60)
     console.print("[bold]统计摘要[/bold]")
     console.print("=" * 60)
@@ -1433,21 +1636,21 @@ def update(ctx, zip, dir, limit, no_rag, batch_size, resume, model) -> None:
 def show_checkpoint(ctx) -> None:
     """显示当前断点状态"""
     import json
-    from pathlib import Path
     from datetime import datetime
-    
+    from pathlib import Path
+
     checkpoint_path = Path("nvd_update_checkpoint.json")
-    
+
     if not checkpoint_path.exists():
         console.print("[bold yellow]未找到断点文件[/bold yellow]")
         return
-    
+
     try:
         with open(checkpoint_path, "r", encoding="utf-8") as f:
             checkpoint = json.load(f)
-        
+
         console.print(Panel("[bold blue]断点信息[/bold blue]"))
-        
+
         version = checkpoint.get("version", "1.0")
         last_processed = checkpoint.get("last_processed", 0)
         temp_dir = checkpoint.get("temp_dir")
@@ -1456,11 +1659,11 @@ def show_checkpoint(ctx) -> None:
         stats_checkpoint = checkpoint.get("stats", {})
         stage_progress = checkpoint.get("stage_progress", {})
         timestamp = checkpoint.get("timestamp")
-        
+
         table = Table(title="断点详情")
         table.add_column("项目", style="cyan")
         table.add_column("值", style="green")
-        
+
         table.add_row("版本", version)
         table.add_row("上次处理到文件", str(last_processed))
         table.add_row("当前阶段", current_stage)
@@ -1473,9 +1676,9 @@ def show_checkpoint(ctx) -> None:
                 table.add_row("保存时间", dt.strftime("%Y-%m-%d %H:%M:%S"))
             except:
                 table.add_row("保存时间", timestamp)
-        
+
         console.print(table)
-        
+
         if stats_checkpoint:
             console.print("\n[bold]统计信息:[/bold]")
             stats_table = Table()
@@ -1484,31 +1687,32 @@ def show_checkpoint(ctx) -> None:
             for key, value in stats_checkpoint.items():
                 stats_table.add_row(str(key), str(value))
             console.print(stats_table)
-        
+
         if stage_progress:
             console.print("\n[bold]阶段进度:[/bold]")
             progress_table = Table()
             progress_table.add_column("阶段", style="cyan")
             progress_table.add_column("状态", style="green")
             progress_table.add_column("进度", style="yellow")
-            
+
             stage_names = {"extract": "解压", "embed": "嵌入", "graph": "图谱构建"}
-            
+
             for stage, info in stage_progress.items():
                 stage_name = stage_names.get(stage, stage)
                 done = info.get("done", False)
                 progress = info.get("progress", 0)
-                
+
                 status = "✅ 完成" if done else "⏳ 进行中"
                 progress_str = str(progress) if progress else "-"
-                
+
                 progress_table.add_row(stage_name, status, progress_str)
-            
+
             console.print(progress_table)
-        
+
     except Exception as e:
         console.print(f"[bold red]读取断点文件失败: {e}[/bold red]")
         import traceback
+
         traceback.print_exc()
 
 
@@ -1517,45 +1721,45 @@ def show_checkpoint(ctx) -> None:
 @click.pass_context
 def clean_checkpoints(ctx, force) -> None:
     """清理断点残留文件"""
-    from pathlib import Path
     import shutil
-    
+    from pathlib import Path
+
     files_to_clean = [
         "nvd_update_checkpoint.json",
         "nvd_batch_checkpoint.json",
-        "nvd_batch_checkpoint.txt"
+        "nvd_batch_checkpoint.txt",
     ]
-    
+
     temp_dir_pattern = "nvd_update_*"
-    
+
     console.print(Panel("[bold red]清理断点残留文件[/bold red]"))
-    
+
     # 查找需要清理的文件
     found_files = []
     for filename in files_to_clean:
         file_path = Path(filename)
         if file_path.exists():
             found_files.append(file_path)
-    
+
     # 查找临时目录
     found_dirs = []
     for item in Path(".").iterdir():
         if item.is_dir() and item.name.startswith("nvd_update_"):
             found_dirs.append(item)
-    
+
     if not found_files and not found_dirs:
         console.print("[bold green]没有发现断点残留文件[/bold green]")
         return
-    
+
     # 显示将要清理的内容
     console.print("\n[bold]发现以下文件/目录将被清理:[/bold]")
-    
+
     if found_files:
         console.print("\n[cyan]文件:[/cyan]")
         for file_path in found_files:
             size = file_path.stat().st_size
             console.print(f"  - {file_path.name} ({size} bytes)")
-    
+
     if found_dirs:
         console.print("\n[cyan]临时目录:[/cyan]")
         for dir_path in found_dirs:
@@ -1566,24 +1770,25 @@ def clean_checkpoints(ctx, force) -> None:
                     dir_size += f.stat().st_size
             size_mb = dir_size / (1024 * 1024)
             console.print(f"  - {dir_path.name} ({size_mb:.2f} MB)")
-    
+
     # 确认删除
     if not force:
         console.print()
         try:
             import click
+
             if not click.confirm("确定要清理以上文件/目录吗？", default=False):
                 console.print("[yellow]已取消清理[/yellow]")
                 return
         except Exception as e:
             console.print(f"[yellow]无法获取确认，使用 --force 参数强制清理: {e}[/yellow]")
             return
-    
+
     # 执行清理
     console.print("\n[bold]开始清理...[/bold]")
-    
+
     deleted_count = 0
-    
+
     # 删除文件
     for file_path in found_files:
         try:
@@ -1592,7 +1797,7 @@ def clean_checkpoints(ctx, force) -> None:
             deleted_count += 1
         except Exception as e:
             console.print(f"  [red][FAIL][/red] 删除失败: {file_path.name} - {e}")
-    
+
     # 删除目录
     for dir_path in found_dirs:
         try:
@@ -1604,7 +1809,7 @@ def clean_checkpoints(ctx, force) -> None:
                 console.print(f"  [yellow][WARN][/yellow] 目录可能未完全删除: {dir_path.name}")
         except Exception as e:
             console.print(f"  [red][FAIL][/red] 删除失败: {dir_path.name} - {e}")
-    
+
     console.print(f"\n[bold green]清理完成！共删除 {deleted_count} 项[/bold green]")
 
 
@@ -1626,7 +1831,9 @@ def data_preload() -> None:
 @click.option("--source", "-s", help="指定单个数据源")
 @click.option("--check-only", is_flag=True, help="仅检查状态，不执行下载")
 @click.pass_context
-def data_preload_run(ctx: click.Context, incremental: bool, force: bool, source: Optional[str], check_only: bool) -> None:
+def data_preload_run(
+    ctx: click.Context, incremental: bool, force: bool, source: Optional[str], check_only: bool
+) -> None:
     """执行完整数据预加载"""
     config: Config = ctx.obj["config"]
 
@@ -1643,7 +1850,7 @@ def data_preload_run(ctx: click.Context, incremental: bool, force: bool, source:
         preloader = DataPreloader(
             sources_file=Path(config.data_preload.sources_file),
             temp_zip_dir=Path(config.data_preload.temp_zip_dir),
-            temp_data_dir=Path(config.data_preload.temp_data_dir)
+            temp_data_dir=Path(config.data_preload.temp_data_dir),
         )
 
         if check_only:
@@ -1660,9 +1867,7 @@ def data_preload_run(ctx: click.Context, incremental: bool, force: bool, source:
         console.print(f"[dim]force={force}, incremental={incremental}[/dim]\n")
 
         results = preloader.download_all(
-            parallel=not incremental,
-            force=force,
-            source_filter=source
+            parallel=not incremental, force=force, source_filter=source
         )
 
         success_count = sum(1 for v in results.values() if v)
@@ -1681,6 +1886,7 @@ def data_preload_run(ctx: click.Context, incremental: bool, force: bool, source:
     except Exception as e:
         console.print(f"[bold red]预加载失败: {e}[/bold red]")
         import traceback
+
         traceback.print_exc()
         sys.exit(1)
 
@@ -1712,7 +1918,11 @@ def _show_check_status(preloader: "DataPreloader", source_filter: Optional[str] 
         if src_info.get("zip_exists"):
             size = src_info.get("zip_size", 0)
             if size:
-                size_str = f"{size / 1024 / 1024:.2f} MB" if size > 1024 * 1024 else f"{size / 1024:.2f} KB"
+                size_str = (
+                    f"{size / 1024 / 1024:.2f} MB"
+                    if size > 1024 * 1024
+                    else f"{size / 1024:.2f} KB"
+                )
                 reason = f"{reason} ({size_str})"
 
         status_icon = "[green]✓ 跳过[/green]" if not needs_dl else "[yellow]↓ 需下载[/yellow]"
@@ -1746,7 +1956,7 @@ def data_preload_status(ctx: click.Context) -> None:
         preloader = DataPreloader(
             sources_file=Path(config.data_preload.sources_file),
             temp_zip_dir=Path(config.data_preload.temp_zip_dir),
-            temp_data_dir=Path(config.data_preload.temp_data_dir)
+            temp_data_dir=Path(config.data_preload.temp_data_dir),
         )
         sources_status = preloader.get_download_status()
 
@@ -1768,7 +1978,11 @@ def data_preload_status(ctx: click.Context) -> None:
             downloaded_at = record.get("downloaded_at", "从未下载")
 
             if isinstance(file_size, int):
-                size_str = f"{file_size / 1024 / 1024:.2f} MB" if file_size > 1024 * 1024 else f"{file_size / 1024:.2f} KB"
+                size_str = (
+                    f"{file_size / 1024 / 1024:.2f} MB"
+                    if file_size > 1024 * 1024
+                    else f"{file_size / 1024:.2f} KB"
+                )
             else:
                 size_str = str(file_size)
 
@@ -1777,13 +1991,16 @@ def data_preload_status(ctx: click.Context) -> None:
         console.print(table)
 
         stats = preloader.get_statistics()
-        console.print(f"\n[cyan]统计: 配置数据源 {stats.get('configured_sources', 0)}, "
-                     f"已下载 ZIP {stats.get('downloaded_zips', 0)}, "
-                     f"已解压目录 {stats.get('extracted_dirs', 0)}[/cyan]")
+        console.print(
+            f"\n[cyan]统计: 配置数据源 {stats.get('configured_sources', 0)}, "
+            f"已下载 ZIP {stats.get('downloaded_zips', 0)}, "
+            f"已解压目录 {stats.get('extracted_dirs', 0)}[/cyan]"
+        )
 
     except Exception as e:
         console.print(f"[bold red]获取状态失败: {e}[/bold red]")
         import traceback
+
         traceback.print_exc()
         sys.exit(1)
 
@@ -1806,7 +2023,7 @@ def data_preload_clean(ctx: click.Context, force: bool) -> None:
         preloader = DataPreloader(
             sources_file=Path(config.data_preload.sources_file),
             temp_zip_dir=Path(config.data_preload.temp_zip_dir),
-            temp_data_dir=Path(config.data_preload.temp_data_dir)
+            temp_data_dir=Path(config.data_preload.temp_data_dir),
         )
 
         zip_dir = preloader.temp_zip_dir
@@ -1814,7 +2031,7 @@ def data_preload_clean(ctx: click.Context, force: bool) -> None:
             console.print("[bold green]没有缓存数据需要清理[/bold green]")
             return
 
-        zip_files = list(zip_dir.glob('*.zip'))
+        zip_files = list(zip_dir.glob("*.zip"))
         if not zip_files:
             console.print("[bold green]没有 ZIP 文件需要清理[/bold green]")
             return
@@ -1828,6 +2045,7 @@ def data_preload_clean(ctx: click.Context, force: bool) -> None:
         if not force:
             try:
                 import click
+
                 if not click.confirm("确定要清理所有 ZIP 缓存文件吗？", default=False):
                     console.print("[yellow]已取消清理[/yellow]")
                     return
@@ -1842,12 +2060,18 @@ def data_preload_clean(ctx: click.Context, force: bool) -> None:
     except Exception as e:
         console.print(f"[bold red]清理失败: {e}[/bold red]")
         import traceback
+
         traceback.print_exc()
         sys.exit(1)
 
 
 @model.command()
-@click.option("--model", "-m", default="Qwen/Qwen3-Embedding-0.6B", help="模型名称 (默认: Qwen/Qwen3-Embedding-0.6B)")
+@click.option(
+    "--model",
+    "-m",
+    default="Qwen/Qwen3-Embedding-0.6B",
+    help="模型名称 (默认: Qwen/Qwen3-Embedding-0.6B)",
+)
 @click.option("--output", "-o", type=click.Path(), help="输出目录")
 @click.option("--force", is_flag=True, help="强制覆盖现有模型")
 @click.option("--token", "-t", required=True, help="Hugging Face 登录 token")
@@ -1855,54 +2079,53 @@ def data_preload_clean(ctx: click.Context, force: bool) -> None:
 def download(ctx, model, output, force, token) -> None:
     """下载模型"""
     config: Config = ctx.obj["config"]
-    
+
     console.print(f"[bold blue]开始下载模型: {model}[/bold blue]")
-    
+
     # 设置输出目录
     if not output:
         # 默认保存到模型缓存目录，为每个模型创建独立的子目录
         from pathlib import Path
+
         model_cache = Path.home() / ".cache" / "huggingface" / "hub"
         # 为模型创建标准的 Hugging Face 目录结构
         model_dir_name = f"models--{model.replace('/', '--')}"
         output = model_cache / model_dir_name
     else:
         output = Path(output)
-    
+
     output.mkdir(parents=True, exist_ok=True)
     console.print(f"[info]模型将保存到: {output}[/info]")
-    
+
     # 下载模型
     try:
         from huggingface_hub import snapshot_download
-        
+
         # 显示下载进度
         with Progress(
             SpinnerColumn(),
             BarColumn(),
             TextColumn("[progress.description]{task.description}"),
             TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
-            console=console
+            console=console,
         ) as progress:
             task = progress.add_task("[cyan]下载模型...", total=100)
-            
+
             # 下载模型
             console.print("[info]开始下载，这可能需要几分钟时间...[/info]")
             result = snapshot_download(
-                repo_id=model,
-                local_dir=output,
-                force_download=force,
-                token=token
+                repo_id=model, local_dir=output, force_download=force, token=token
             )
-            
+
             progress.update(task, completed=100)
-        
+
         console.print(f"[bold green]模型下载成功: {model}[/bold green]")
         console.print(f"[info]模型保存位置: {result}[/info]")
-        
+
     except Exception as e:
         console.print(f"[bold red]下载失败: {e}[/bold red]")
         import traceback
+
         traceback.print_exc()
         sys.exit(1)
 
@@ -1952,13 +2175,21 @@ def _display_result(result) -> None:
     show_risk_bar(risk_percentage)
 
     # AI 扫描结果免责声明
-    console.print("\n[yellow italic][!] 注意：AI 扫描结果具有概率性，多次扫描结果可能有适度波动（±1-2 个风险点是正常现象）[/yellow italic]")
+    console.print(
+        "\n[yellow italic][!] 注意：AI 扫描结果具有概率性，多次扫描结果可能有适度波动（±1-2 个风险点是正常现象）[/yellow italic]"
+    )
 
     # 显示详细发现
     if result.findings:
         console.print("\n[bold]发现问题:[/bold]")
         for i, finding in enumerate(result.findings[:10], 1):  # 只显示前10个
-            severity_color = "red" if finding.severity.value in ["critical", "high"] else "yellow" if finding.severity.value == "medium" else "blue"
+            severity_color = (
+                "red"
+                if finding.severity.value in ["critical", "high"]
+                else "yellow"
+                if finding.severity.value == "medium"
+                else "blue"
+            )
             # 清理消息，去除多余的空格和换行
             message = finding.message.strip()
             # 限制每行长度，确保格式整洁
@@ -1991,7 +2222,13 @@ def _display_result(result) -> None:
             console.print(f"... 还有 {len(result.findings) - 10} 个问题")
             console.print("\n[bold]继续显示剩余问题:[/bold]")
             for i, finding in enumerate(result.findings[10:], 11):
-                severity_color = "red" if finding.severity.value in ["critical", "high"] else "yellow" if finding.severity.value == "medium" else "blue"
+                severity_color = (
+                    "red"
+                    if finding.severity.value in ["critical", "high"]
+                    else "yellow"
+                    if finding.severity.value == "medium"
+                    else "blue"
+                )
                 message = finding.message.strip()
                 if len(message) > 80:
                     lines = []
@@ -2019,18 +2256,26 @@ def _display_result(result) -> None:
             console.print(f"\n[dim]共 {len(result.findings)} 个问题，已全部显示[/dim]")
 
     # 显示攻击链分析结果
-    if hasattr(result, 'metadata') and 'local_attack_chain' in result.metadata:
-        attack_chain_data = result.metadata['local_attack_chain']
-        if attack_chain_data.get('critical_chains'):
+    if hasattr(result, "metadata") and "local_attack_chain" in result.metadata:
+        attack_chain_data = result.metadata["local_attack_chain"]
+        if attack_chain_data.get("critical_chains"):
             console.print("\n[bold cyan]🔗 攻击链分析:[/bold cyan]")
             console.print(f"[dim]{attack_chain_data.get('summary', '')}[/dim]")
-            
-            for i, chain in enumerate(attack_chain_data['critical_chains'][:3], 1):
-                risk_color = "red" if chain['risk_level'] == "high" else "yellow" if chain['risk_level'] == "medium" else "blue"
-                console.print(f"\n{i}. [{risk_color}]攻击路径 (风险: {chain['risk_level']})[/{risk_color}]")
+
+            for i, chain in enumerate(attack_chain_data["critical_chains"][:3], 1):
+                risk_color = (
+                    "red"
+                    if chain["risk_level"] == "high"
+                    else "yellow"
+                    if chain["risk_level"] == "medium"
+                    else "blue"
+                )
+                console.print(
+                    f"\n{i}. [{risk_color}]攻击路径 (风险: {chain['risk_level']})[/{risk_color}]"
+                )
                 console.print(f"   路径: {chain['description']}")
                 console.print("   步骤:")
-                for step in chain['steps']:
+                for step in chain["steps"]:
                     console.print(f"     - {step['description']}")
                 console.print(f"   状态: {chain['status']}")
 
@@ -2038,20 +2283,23 @@ def _display_result(result) -> None:
 def _generate_report(result, output: str, format: str, config=None) -> None:
     """生成报告"""
     # 导入报告生成器
-    from src.reporting.generator import ReportGenerator
     from pathlib import Path
+
+    from src.reporting.generator import ReportGenerator
 
     try:
         # 检查是否有扫描状态文件
         from src.utils.cache_manager import get_cache_manager
+
         cache_manager = get_cache_manager()
-        state_file = cache_manager.get_path('scan_state', 'scan_state.json')
+        state_file = cache_manager.get_path("scan_state", "scan_state.json")
         scan_state_info = None
         is_truncated = False
         truncation_reason = None
 
         if state_file.exists():
             from src.core.scan_state import ScanState
+
             state = ScanState.load(str(state_file))
             if state:
                 scan_state_info = state.get_progress()
@@ -2059,16 +2307,16 @@ def _generate_report(result, output: str, format: str, config=None) -> None:
                 truncation_reason = state.truncation_reason
 
         # 将截断信息添加到结果中（处理 ScanResult 对象和字典两种情况）
-        if hasattr(result, 'metadata') and result.metadata is not None:
-            result.metadata['scan_state'] = scan_state_info
-            result.metadata['truncated'] = is_truncated
-            result.metadata['truncation_reason'] = truncation_reason
+        if hasattr(result, "metadata") and result.metadata is not None:
+            result.metadata["scan_state"] = scan_state_info
+            result.metadata["truncated"] = is_truncated
+            result.metadata["truncation_reason"] = truncation_reason
         elif isinstance(result, dict):
-            if 'metadata' not in result:
-                result['metadata'] = {}
-            result['metadata']['scan_state'] = scan_state_info
-            result['metadata']['truncated'] = is_truncated
-            result['metadata']['truncation_reason'] = truncation_reason
+            if "metadata" not in result:
+                result["metadata"] = {}
+            result["metadata"]["scan_state"] = scan_state_info
+            result["metadata"]["truncated"] = is_truncated
+            result["metadata"]["truncation_reason"] = truncation_reason
 
         generator = ReportGenerator(config)
         report_path = generator.generate([result], output, format)
@@ -2076,11 +2324,16 @@ def _generate_report(result, output: str, format: str, config=None) -> None:
 
         # 如果扫描被截断，显示提示
         if is_truncated and scan_state_info:
-            console.print(f"[bold yellow][!] 警告: 扫描已被截断 ({truncation_reason})，报告仅包含部分结果[/bold yellow]")
-            console.print(f"[yellow]  已完成: {scan_state_info['completed']}/{scan_state_info['total']} 文件[/yellow]")
+            console.print(
+                f"[bold yellow][!] 警告: 扫描已被截断 ({truncation_reason})，报告仅包含部分结果[/bold yellow]"
+            )
+            console.print(
+                f"[yellow]  已完成: {scan_state_info['completed']}/{scan_state_info['total']} 文件[/yellow]"
+            )
     except Exception as e:
         console.print(f"[bold red]报告生成失败: {e}[/bold red]")
         import traceback
+
         traceback.print_exc()
 
 
@@ -2091,6 +2344,7 @@ def _check_data_preload_status(config: Config) -> None:
         config: 配置对象
     """
     from datetime import datetime, timedelta
+
     from src.integration.data_preloader import DataPreloader
 
     db_path = Path(config.nvd.database_path)
@@ -2106,7 +2360,7 @@ def _check_data_preload_status(config: Config) -> None:
                     temp_zip_dir=Path(config.data_preload.temp_zip_dir),
                     temp_data_dir=Path(config.data_preload.temp_data_dir),
                     skip_on_checksum_match=config.data_preload.skip_on_checksum_match,
-                    merge_strategy=config.data_preload.merge_strategy
+                    merge_strategy=config.data_preload.merge_strategy,
                 )
                 preloader.download_all(parallel=True)
                 console.print("[bold green]数据预加载完成[/bold green]")
@@ -2124,7 +2378,7 @@ def _check_data_preload_status(config: Config) -> None:
             temp_zip_dir=Path(config.data_preload.temp_zip_dir),
             temp_data_dir=Path(config.data_preload.temp_data_dir),
             skip_on_checksum_match=config.data_preload.skip_on_checksum_match,
-            merge_strategy=config.data_preload.merge_strategy
+            merge_strategy=config.data_preload.merge_strategy,
         )
         sources_status = preloader.get_download_status()
 
@@ -2141,8 +2395,12 @@ def _check_data_preload_status(config: Config) -> None:
 
                     if downloaded_at < threshold_date:
                         days_since_update = (datetime.now() - downloaded_at).days
-                        console.print(f"[bold yellow]警告: NVD 数据已超过 {days_since_update} 天未更新[/bold yellow]")
-                        console.print(f"[yellow]最后更新时间: {downloaded_at.strftime('%Y-%m-%d %H:%M:%S')}[/yellow]")
+                        console.print(
+                            f"[bold yellow]警告: NVD 数据已超过 {days_since_update} 天未更新[/bold yellow]"
+                        )
+                        console.print(
+                            f"[yellow]最后更新时间: {downloaded_at.strftime('%Y-%m-%d %H:%M:%S')}[/yellow]"
+                        )
                         console.print(f"[yellow]建议在 {threshold_days} 天内更新数据[/yellow]")
                         if click.confirm("是否执行数据预加载更新?", default=False):
                             console.print("[bold cyan]开始执行数据预加载...[/bold cyan]")
@@ -2162,10 +2420,17 @@ def _check_data_preload_status(config: Config) -> None:
 
 
 @cli.command()
-@click.argument('cache_file', type=click.Path(exists=True))
-@click.option('-o', '--output', 'output_file', default=None, help='输出报告路径')
-@click.option('-f', '--format', 'report_format', default='html', type=click.Choice(['html', 'json', 'markdown']), help='报告格式')
-@click.option('--show-progress', is_flag=True, default=False, help='显示扫描进度')
+@click.argument("cache_file", type=click.Path(exists=True))
+@click.option("-o", "--output", "output_file", default=None, help="输出报告路径")
+@click.option(
+    "-f",
+    "--format",
+    "report_format",
+    default="html",
+    type=click.Choice(["html", "json", "markdown"]),
+    help="报告格式",
+)
+@click.option("--show-progress", is_flag=True, default=False, help="显示扫描进度")
 def import_scan(cache_file: str, output_file: str, report_format: str, show_progress: bool) -> None:
     """从扫描缓存导入结果并生成报告
 
@@ -2179,8 +2444,9 @@ def import_scan(cache_file: str, output_file: str, report_format: str, show_prog
         hos-ls import /path/to/cache.json --format json
     """
     from dataclasses import asdict
+
+    from src.core.engine import Finding, Location, ScanResult, ScanStatus, Severity
     from src.core.scan_cache import get_scan_cache_manager
-    from src.core.engine import ScanResult, Finding, Location, Severity, ScanStatus
     from src.reporting.generator import ReportGenerator
 
     console.print(f"[bold cyan]正在导入扫描缓存: {cache_file}[/bold cyan]")
@@ -2195,7 +2461,9 @@ def import_scan(cache_file: str, output_file: str, report_format: str, show_prog
     console.print(f"[green]会话ID: {session.session_id}[/green]")
     console.print(f"[green]目标: {session.target}[/green]")
     console.print(f"[green]开始时间: {session.start_time}[/green]")
-    console.print(f"[green]已完成文件: {session.progress.completed_files}/{session.progress.total_files}[/green]")
+    console.print(
+        f"[green]已完成文件: {session.progress.completed_files}/{session.progress.total_files}[/green]"
+    )
     console.print(f"[green]发现漏洞: {len(session.results)}[/green]")
 
     if session.progress.completed_files == 0:
@@ -2204,40 +2472,102 @@ def import_scan(cache_file: str, output_file: str, report_format: str, show_prog
 
     findings = []
     for result in session.results:
-        result_dict = result if isinstance(result, dict) else asdict(result) if hasattr(result, '__dataclass_fields__') else {}
-        file_path = result.get('file_path', '') if isinstance(result, dict) else getattr(result, 'file_path', '')
-        
-        for vuln in result_dict.get('vulnerabilities', []):
+        result_dict = (
+            result
+            if isinstance(result, dict)
+            else asdict(result)
+            if hasattr(result, "__dataclass_fields__")
+            else {}
+        )
+        file_path = (
+            result.get("file_path", "")
+            if isinstance(result, dict)
+            else getattr(result, "file_path", "")
+        )
+
+        for vuln in result_dict.get("vulnerabilities", []):
             try:
-                location_dict = vuln.get('location', {}) if isinstance(vuln, dict) else {}
+                location_dict = vuln.get("location", {}) if isinstance(vuln, dict) else {}
                 location = Location(
-                    file=str(location_dict.get('file', file_path)),
-                    line=location_dict.get('line', 0),
-                    column=location_dict.get('column', 0),
-                    end_line=location_dict.get('end_line', 0),
-                    end_column=location_dict.get('end_column', 0)
+                    file=str(location_dict.get("file", file_path)),
+                    line=location_dict.get("line", 0),
+                    column=location_dict.get("column", 0),
+                    end_line=location_dict.get("end_line", 0),
+                    end_column=location_dict.get("end_column", 0),
                 )
-                
-                severity_str = vuln.get('severity', 'info') if isinstance(vuln, dict) else getattr(vuln, 'severity', 'info')
+
+                severity_str = (
+                    vuln.get("severity", "info")
+                    if isinstance(vuln, dict)
+                    else getattr(vuln, "severity", "info")
+                )
                 if isinstance(severity_str, str):
-                    severity_str = severity_str.upper() if severity_str.upper() in ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW', 'INFO'] else severity_str.lower()
-                    severity_str = severity_str.capitalize() if severity_str.lower() in ['critical', 'high', 'medium', 'low', 'info'] else 'Info'
-                    severity = Severity(severity_str.lower()) if severity_str.lower() in ['critical', 'high', 'medium', 'low', 'info'] else Severity.INFO
+                    severity_str = (
+                        severity_str.upper()
+                        if severity_str.upper() in ["CRITICAL", "HIGH", "MEDIUM", "LOW", "INFO"]
+                        else severity_str.lower()
+                    )
+                    severity_str = (
+                        severity_str.capitalize()
+                        if severity_str.lower() in ["critical", "high", "medium", "low", "info"]
+                        else "Info"
+                    )
+                    severity = (
+                        Severity(severity_str.lower())
+                        if severity_str.lower() in ["critical", "high", "medium", "low", "info"]
+                        else Severity.INFO
+                    )
                 else:
                     severity = Severity.INFO
-                
+
                 finding = Finding(
-                    rule_id=vuln.get('rule_id', 'UNKNOWN') if isinstance(vuln, dict) else getattr(vuln, 'rule_id', 'UNKNOWN'),
-                    rule_name=vuln.get('rule_name', vuln.get('title', 'Unknown')) if isinstance(vuln, dict) else getattr(vuln, 'rule_name', getattr(vuln, 'title', 'Unknown')),
-                    description=vuln.get('description', '') if isinstance(vuln, dict) else getattr(vuln, 'description', ''),
+                    rule_id=(
+                        vuln.get("rule_id", "UNKNOWN")
+                        if isinstance(vuln, dict)
+                        else getattr(vuln, "rule_id", "UNKNOWN")
+                    ),
+                    rule_name=(
+                        vuln.get("rule_name", vuln.get("title", "Unknown"))
+                        if isinstance(vuln, dict)
+                        else getattr(vuln, "rule_name", getattr(vuln, "title", "Unknown"))
+                    ),
+                    description=(
+                        vuln.get("description", "")
+                        if isinstance(vuln, dict)
+                        else getattr(vuln, "description", "")
+                    ),
                     severity=severity,
                     location=location,
-                    confidence=vuln.get('confidence', 0.5) if isinstance(vuln, dict) else getattr(vuln, 'confidence', 0.5),
-                    message=vuln.get('message', vuln.get('description', '')) if isinstance(vuln, dict) else getattr(vuln, 'message', getattr(vuln, 'description', '')),
-                    code_snippet=vuln.get('code_snippet', '') if isinstance(vuln, dict) else getattr(vuln, 'code_snippet', ''),
-                    fix_suggestion=vuln.get('fix_suggestion', '') if isinstance(vuln, dict) else getattr(vuln, 'fix_suggestion', ''),
-                    metadata=vuln.get('metadata', {}) if isinstance(vuln, dict) else getattr(vuln, 'metadata', {}),
-                    references=vuln.get('references', []) if isinstance(vuln, dict) else getattr(vuln, 'references', [])
+                    confidence=(
+                        vuln.get("confidence", 0.5)
+                        if isinstance(vuln, dict)
+                        else getattr(vuln, "confidence", 0.5)
+                    ),
+                    message=(
+                        vuln.get("message", vuln.get("description", ""))
+                        if isinstance(vuln, dict)
+                        else getattr(vuln, "message", getattr(vuln, "description", ""))
+                    ),
+                    code_snippet=(
+                        vuln.get("code_snippet", "")
+                        if isinstance(vuln, dict)
+                        else getattr(vuln, "code_snippet", "")
+                    ),
+                    fix_suggestion=(
+                        vuln.get("fix_suggestion", "")
+                        if isinstance(vuln, dict)
+                        else getattr(vuln, "fix_suggestion", "")
+                    ),
+                    metadata=(
+                        vuln.get("metadata", {})
+                        if isinstance(vuln, dict)
+                        else getattr(vuln, "metadata", {})
+                    ),
+                    references=(
+                        vuln.get("references", [])
+                        if isinstance(vuln, dict)
+                        else getattr(vuln, "references", [])
+                    ),
                 )
                 findings.append(finding)
             except Exception as e:
@@ -2247,29 +2577,38 @@ def import_scan(cache_file: str, output_file: str, report_format: str, show_prog
     console.print(f"[green]共 {len(findings)} 个漏洞[/green]")
 
     if output_file is None:
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         output_file = f"report_{session.session_id}_{timestamp}.{report_format}"
 
     metadata = {
-        'target': session.target,
-        'scan_type': 'imported',
-        'session_id': session.session_id,
-        'start_time': session.start_time,
-        'end_time': session.last_update,
-        'total_files': session.progress.total_files,
-        'completed_files': session.progress.completed_files,
-        'total_vulnerabilities': len(findings),
-        'truncated': session.progress.completed_files < session.progress.total_files,
-        'truncation_reason': 'partial_scan' if session.progress.completed_files < session.progress.total_files else None
+        "target": session.target,
+        "scan_type": "imported",
+        "session_id": session.session_id,
+        "start_time": session.start_time,
+        "end_time": session.last_update,
+        "total_files": session.progress.total_files,
+        "completed_files": session.progress.completed_files,
+        "total_vulnerabilities": len(findings),
+        "truncated": session.progress.completed_files < session.progress.total_files,
+        "truncation_reason": (
+            "partial_scan"
+            if session.progress.completed_files < session.progress.total_files
+            else None
+        ),
     }
 
     from datetime import datetime as dt
+
     scan_result = ScanResult(
         target=session.target,
         status=ScanStatus.COMPLETED,
-        start_time=dt.fromisoformat(session.start_time) if isinstance(session.start_time, str) else session.start_time,
+        start_time=(
+            dt.fromisoformat(session.start_time)
+            if isinstance(session.start_time, str)
+            else session.start_time
+        ),
         findings=findings,
-        metadata=metadata
+        metadata=metadata,
     )
 
     generator = ReportGenerator()
@@ -2278,100 +2617,114 @@ def import_scan(cache_file: str, output_file: str, report_format: str, show_prog
         console.print(f"[bold green]报告已生成: {report_path}[/bold green]")
 
         if session.progress.completed_files < session.progress.total_files:
-            console.print(f"[bold yellow]注意: 此为部分扫描报告 ({session.progress.completed_files}/{session.progress.total_files})[/bold yellow]")
-            console.print(f"[yellow]如需完成扫描，请运行: hos-ls scan {session.target} --resume --session-id {session.session_id}[/yellow]")
+            console.print(
+                f"[bold yellow]注意: 此为部分扫描报告 ({session.progress.completed_files}/{session.progress.total_files})[/bold yellow]"
+            )
+            console.print(
+                f"[yellow]如需完成扫描，请运行: hos-ls scan {session.target} --resume --session-id {session.session_id}[/yellow]"
+            )
     except Exception as e:
         console.print(f"[bold red]报告生成失败: {e}[/bold red]")
         import traceback
+
         traceback.print_exc()
 
 
 @cli.command()
-@click.argument('log_file', type=click.Path(exists=True))
-@click.option('-s', '--speed', default=1.0, help='重放速度倍数 (0.5=半速, 2.0=2倍速)')
-@click.option('-c', '--color/--no-color', default=True, help='是否启用彩色输出')
+@click.argument("log_file", type=click.Path(exists=True))
+@click.option("-s", "--speed", default=1.0, help="重放速度倍数 (0.5=半速, 2.0=2倍速)")
+@click.option("-c", "--color/--no-color", default=True, help="是否启用彩色输出")
 def replay(log_file: str, speed: float, color: bool) -> None:
     """重放扫描日志文件，便于演示
-    
+
     示例:
         hos-ls replay scan.log
         hos-ls replay scan.log --speed 2.0
         hos-ls replay scan.log --no-color
     """
-    import time
     import re
+    import time
     from pathlib import Path
-    
+
     log_path = Path(log_file)
     if not log_path.exists():
         console.print(f"[bold red]错误: 日志文件不存在: {log_file}[/bold red]")
         return
-    
+
     console.print(f"[bold cyan]重放日志: {log_path.name}[/bold cyan]")
     console.print(f"[dim]速度: {speed}x[/dim]")
     console.print("-" * 60)
-    
-    ANSI_ESCAPE = re.compile(r'\x1b\[[0-9;]*m')
-    
-    PROGRESS_PATTERN = re.compile(r'[⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏]')
-    
+
+    ANSI_ESCAPE = re.compile(r"\x1b\[[0-9;]*m")
+
+    PROGRESS_PATTERN = re.compile(r"[⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏]")
+
     try:
-        with open(log_path, 'r', encoding='utf-8', errors='replace') as f:
+        with open(log_path, "r", encoding="utf-8", errors="replace") as f:
             lines = f.readlines()
-        
+
         last_line_was_progress = False
-        
+
         for line in lines:
-            line = line.rstrip('\n\r')
-            
+            line = line.rstrip("\n\r")
+
             is_progress = bool(PROGRESS_PATTERN.search(line))
-            
+
             if is_progress:
                 if last_line_was_progress:
-                    sys.stdout.write('\r' + ' ' * 100 + '\r')
-                sys.stdout.write('\r' + line)
+                    sys.stdout.write("\r" + " " * 100 + "\r")
+                sys.stdout.write("\r" + line)
                 sys.stdout.flush()
                 last_line_was_progress = True
                 time.sleep(0.05 / speed)
             else:
                 if last_line_was_progress:
-                    sys.stdout.write('\r' + ' ' * 100 + '\r')
-                    sys.stdout.write('\n')
+                    sys.stdout.write("\r" + " " * 100 + "\r")
+                    sys.stdout.write("\n")
                     last_line_was_progress = False
-                
+
                 if color:
                     colored_line = line
-                    colored_line = re.sub(r'\[DEBUG\]', '[dim cyan][DEBUG][/dim cyan]', colored_line)
-                    colored_line = re.sub(r'\[INFO\]', '[cyan][INFO][/cyan]', colored_line)
-                    colored_line = re.sub(r'\[WARN\]', '[bold yellow][WARN][/bold yellow]', colored_line)
-                    colored_line = re.sub(r'\[ERROR\]', '[bold red][ERROR][/bold red]', colored_line)
-                    colored_line = re.sub(r'\[OK\]', '[bold green][OK][/bold green]', colored_line)
-                    colored_line = re.sub(r'\[CRITICAL\]', '[bold red blink][CRITICAL][/bold red blink]', colored_line)
-                    colored_line = re.sub(r'\[TOKEN\]', '[magenta][TOKEN][/magenta]', colored_line)
-                    colored_line = re.sub(r'\[CACHE\]', '[blue][CACHE][/blue]', colored_line)
-                    colored_line = re.sub(r'\[PURE-AI\]', '[green][PURE-AI][/green]', colored_line)
-                    
+                    colored_line = re.sub(
+                        r"\[DEBUG\]", "[dim cyan][DEBUG][/dim cyan]", colored_line
+                    )
+                    colored_line = re.sub(r"\[INFO\]", "[cyan][INFO][/cyan]", colored_line)
+                    colored_line = re.sub(
+                        r"\[WARN\]", "[bold yellow][WARN][/bold yellow]", colored_line
+                    )
+                    colored_line = re.sub(
+                        r"\[ERROR\]", "[bold red][ERROR][/bold red]", colored_line
+                    )
+                    colored_line = re.sub(r"\[OK\]", "[bold green][OK][/bold green]", colored_line)
+                    colored_line = re.sub(
+                        r"\[CRITICAL\]", "[bold red blink][CRITICAL][/bold red blink]", colored_line
+                    )
+                    colored_line = re.sub(r"\[TOKEN\]", "[magenta][TOKEN][/magenta]", colored_line)
+                    colored_line = re.sub(r"\[CACHE\]", "[blue][CACHE][/blue]", colored_line)
+                    colored_line = re.sub(r"\[PURE-AI\]", "[green][PURE-AI][/green]", colored_line)
+
                     if colored_line != line:
                         console.print(colored_line)
                     else:
                         print(line)
                 else:
-                    clean_line = ANSI_ESCAPE.sub('', line)
+                    clean_line = ANSI_ESCAPE.sub("", line)
                     print(clean_line)
-                
+
                 time.sleep(0.02 / speed)
-        
+
         if last_line_was_progress:
-            sys.stdout.write('\n')
-        
+            sys.stdout.write("\n")
+
         console.print("-" * 60)
         console.print(f"[bold green]日志重放完成[/bold green]")
-        
+
     except KeyboardInterrupt:
         console.print("\n[yellow]重放已中断[/yellow]")
     except Exception as e:
         console.print(f"[bold red]重放失败: {e}[/bold red]")
         import traceback
+
         traceback.print_exc()
 
 

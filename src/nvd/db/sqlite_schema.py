@@ -1,5 +1,7 @@
 from typing import List, Optional
+
 from .sqlite_connection import SQLiteConnection
+
 
 class SQLiteSche:
     """SQLite漏洞数据库Schema管理器"""
@@ -218,7 +220,8 @@ class SQLiteSche:
     def drop_all(self) -> None:
         """删除所有表和视图（谨慎使用）"""
         with self.conn.get_cursor() as cursor:
-            cursor.execute("""
+            cursor.execute(
+                """
                 DROP TABLE IF EXISTS cve;
                 DROP TABLE IF EXISTS cvss;
                 DROP TABLE IF EXISTS cpe;
@@ -229,7 +232,8 @@ class SQLiteSche:
                 DROP TABLE IF EXISTS poc;
                 DROP TABLE IF EXISTS etl_records;
                 DROP TABLE IF EXISTS etl_progress;
-            """)
+            """
+            )
 
     def init_schema(self) -> None:
         """初始化数据库Schema"""
@@ -238,7 +242,7 @@ class SQLiteSche:
     def get_stats(self) -> dict:
         """获取数据库统计信息"""
         stats = {}
-        tables = ['cve', 'cvss', 'cpe', 'cwe', 'cve_cwe', 'kev', 'exploit', 'poc']
+        tables = ["cve", "cvss", "cpe", "cwe", "cve_cwe", "kev", "exploit", "poc"]
 
         with self.conn.get_cursor() as cursor:
             for table in tables:

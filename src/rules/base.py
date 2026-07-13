@@ -20,7 +20,13 @@ class RuleSeverity(Enum):
     INFO = "info"
 
     def __lt__(self, other: "RuleSeverity") -> bool:
-        order = [RuleSeverity.INFO, RuleSeverity.LOW, RuleSeverity.MEDIUM, RuleSeverity.HIGH, RuleSeverity.CRITICAL]
+        order = [
+            RuleSeverity.INFO,
+            RuleSeverity.LOW,
+            RuleSeverity.MEDIUM,
+            RuleSeverity.HIGH,
+            RuleSeverity.CRITICAL,
+        ]
         return order.index(self) < order.index(other)
 
     def __le__(self, other: "RuleSeverity") -> bool:
@@ -143,6 +149,7 @@ class RuleDefinition:
 
     用于 JSON 驱动的规则配置，包含 source/sink/sanitizer 模式匹配。
     """
+
     id: str
     cwe: str
     name: str

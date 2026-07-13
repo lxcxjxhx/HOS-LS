@@ -1,17 +1,20 @@
 import json
 import re
-from pathlib import Path
 from datetime import datetime
-from typing import Optional, List, Dict, Any
+from pathlib import Path
+from typing import Any, Dict, List, Optional
+
 from tqdm import tqdm
+
 from .base import BaseETL
+
 
 class CVEETL(BaseETL):
     """CVE数据ETL处理器 - 适配CVE 5.0单文件格式"""
 
     ETL_NAME = "cve"
 
-    CVE_PATTERN = re.compile(r'CVE-\d{4}-\d{4,}')
+    CVE_PATTERN = re.compile(r"CVE-\d{4}-\d{4,}")
 
     def __init__(self, connection=None):
         super().__init__(connection)
@@ -30,12 +33,12 @@ class CVEETL(BaseETL):
     def process(self, data_path: str) -> bool:
         """处理CVE数据"""
         base_path = Path(data_path)
-        cves_dir = base_path / 'cves'
+        cves_dir = base_path / "cves"
 
         if not cves_dir.exists():
             cves_dir = base_path
 
-        json_files = list(cves_dir.glob('**/CVE-*.json'))
+        json_files = list(cves_dir.glob("**/CVE-*.json"))
 
         if not json_files:
             print(f"╔══════════════════════════════════════════════════════════════╗")
@@ -91,7 +94,7 @@ class CVEETL(BaseETL):
     def _process_single_file_fast(self, json_file: Path) -> Optional[Dict]:
         """快速处理单个CVE JSON文件"""
         try:
-            with open(json_file, 'r', encoding='utf-8') as f:
+            with open(json_file, "r", encoding="utf-8") as f:
                 data = json.load(f)
             return self._extract_cve_data(data)
         except:
@@ -100,30 +103,30 @@ class CVEETL(BaseETL):
     def _extract_cve_data(self, data: Dict) -> Optional[Dict]:
         """从CVE 5.0 JSON提取数据"""
         try:
-            cve_id = data.get('cveMetadata', {}).get('cveId')
+            cve_id = data.get("cveMetadata", {}).get("cveId")
             if not cve_id or not self.CVE_PATTERN.match(cve_id):
                 return None
 
-            descriptions = data.get('containers', {}).get('cna', {}).get('descriptions', [])
-            description = ''
+            descriptions = data.get("containers", {}).get("cna", {}).get("descriptions", [])
+            description = ""
             for desc in descriptions:
-                if desc.get('lang') == 'en':
-                    description = desc.get('value', '')
+                if desc.get("lang") == "en":
+                    description = desc.get("value", "")
                     break
             if not description and descriptions:
-                description = descriptions[0].get('value', '')
+                description = descriptions[0].get("value", "")
 
-            published_date_str = data.get('cveMetadata', {}).get('datePublished', '')
-            last_modified_str = data.get('cveMetadata', {}).get('dateUpdated', '')
+            published_date_str = data.get("cveMetadata", {}).get("datePublished", "")
+            last_modified_str = data.get("cveMetadata", {}).get("dateUpdated", "")
 
             published_date = self._parse_date(published_date_str)
             last_modified = self._parse_date(last_modified_str)
 
             return {
-                'cve_id': cve_id,
-                'description': description,
-                'published_date': published_date,
-                'last_modified': last_modified
+                "cve_id": cve_id,
+                "description": description,
+                "published_date": published_date,
+                "last_modified": last_modified,
             }
         except Exception:
             return None
@@ -133,7 +136,7 @@ class CVEETL(BaseETL):
         if not date_str:
             return None
         try:
-            return datetime.fromisoformat(date_str.replace('Z', '+00:00'))
+            return datetime.fromisoformat(date_str.replace("Z", "+00:00"))
         except:
             return None
 
@@ -153,12 +156,15 @@ class CVEETL(BaseETL):
                 cursor = conn.cursor()
                 for item in batch:
                     try:
-                        cursor.execute(query, (
-                            item.get('cve_id'),
-                            item.get('description', ''),
-                            item.get('published_date'),
-                            item.get('last_modified')
-                        ))
+                        cursor.execute(
+                            query,
+                            (
+                                item.get("cve_id"),
+                                item.get("description", ""),
+                                item.get("published_date"),
+                                item.get("last_modified"),
+                            ),
+                        )
                         count += 1
                     except Exception:
                         pass

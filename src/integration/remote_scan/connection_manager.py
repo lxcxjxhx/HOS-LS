@@ -4,13 +4,14 @@
 """
 
 from abc import ABC, abstractmethod
-from typing import Optional, Dict, Any
 from dataclasses import dataclass
 from enum import Enum
+from typing import Any, Dict, Optional
 
 
 class ConnectionState(Enum):
     """连接状态"""
+
     DISCONNECTED = "disconnected"
     CONNECTING = "connecting"
     CONNECTED = "connected"
@@ -20,6 +21,7 @@ class ConnectionState(Enum):
 @dataclass
 class NetworkConnection:
     """网络连接配置"""
+
     host: str
     port: int
     username: Optional[str] = None
@@ -30,6 +32,7 @@ class NetworkConnection:
 @dataclass
 class SerialConnection:
     """串口连接配置"""
+
     port: str
     baudrate: int = 115200
     bytesize: int = 8

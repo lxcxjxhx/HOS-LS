@@ -101,16 +101,10 @@ class CSTAnalyzer(BaseAnalyzer):
 
         except cst.ParserSyntaxError as e:
             result.status = AnalysisStatus.FAILED
-            result.add_error(self.create_error(
-                error_type="syntax_error",
-                message=f"语法错误: {e}"
-            ))
+            result.add_error(self.create_error(error_type="syntax_error", message=f"语法错误: {e}"))
         except Exception as e:
             result.status = AnalysisStatus.FAILED
-            result.add_error(self.create_error(
-                error_type="analysis_failed",
-                message=str(e)
-            ))
+            result.add_error(self.create_error(error_type="analysis_failed", message=str(e)))
 
         return result
 
@@ -220,7 +214,16 @@ class CSTAnalyzer(BaseAnalyzer):
                 result.add_issue(issue)
 
         # 检查是否导入了危险模块
-        dangerous_modules = ["os", "subprocess", "eval", "exec", "pickle", "marshal", "shelve", "ctypes"]
+        dangerous_modules = [
+            "os",
+            "subprocess",
+            "eval",
+            "exec",
+            "pickle",
+            "marshal",
+            "shelve",
+            "ctypes",
+        ]
         for name in node.names:
             if isinstance(name.name, cst.Name):
                 module_name = name.name.value
@@ -836,7 +839,7 @@ class CSTAnalyzer(BaseAnalyzer):
         for arg in node.args:
             if isinstance(arg, cst.Arg):
                 arg_code = arg.value.code
-                if "+" in arg_code or "f\"" in arg_code or ".format" in arg_code:
+                if "+" in arg_code or 'f"' in arg_code or ".format" in arg_code:
                     position = self._get_position(wrapper, node)
                     issue = self.create_issue(
                         rule_id="CST-SQL-INJECTION",
@@ -885,9 +888,7 @@ class CSTAnalyzer(BaseAnalyzer):
             parts.insert(0, current)
         return parts
 
-    def _get_position(
-        self, wrapper: cst.MetadataWrapper, node: CSTNode
-    ):
+    def _get_position(self, wrapper: cst.MetadataWrapper, node: CSTNode):
         """获取节点位置
 
         Args:
@@ -918,9 +919,7 @@ class CSTAnalyzer(BaseAnalyzer):
                             return True
         return False
 
-    def transform_code(
-        self, content: str, transformer: cst.CSTTransformer
-    ) -> str:
+    def transform_code(self, content: str, transformer: cst.CSTTransformer) -> str:
         """转换代码
 
         Args:
@@ -954,25 +953,24 @@ class CSTAnalyzer(BaseAnalyzer):
             标准化的输出列表
         """
         output = []
-        
+
         for issue in result.issues:
-            output.append({
-                "type": "finding",
-                "rule_id": issue.rule_id,
-                "message": issue.message,
-                "severity": issue.severity,
-                "confidence": issue.confidence,
-                "location": {
-                    "file": result.context.file_path,
-                    "line": issue.line,
-                    "column": issue.column
-                },
-                "evidence": [f"CST: {issue.message}"],
-                "source_agent": "CST-Agent",
-                "metadata": {
-                    "cwe_id": issue.cwe_id,
-                    "owasp_category": issue.owasp_category
+            output.append(
+                {
+                    "type": "finding",
+                    "rule_id": issue.rule_id,
+                    "message": issue.message,
+                    "severity": issue.severity,
+                    "confidence": issue.confidence,
+                    "location": {
+                        "file": result.context.file_path,
+                        "line": issue.line,
+                        "column": issue.column,
+                    },
+                    "evidence": [f"CST: {issue.message}"],
+                    "source_agent": "CST-Agent",
+                    "metadata": {"cwe_id": issue.cwe_id, "owasp_category": issue.owasp_category},
                 }
-            })
-        
+            )
+
         return output

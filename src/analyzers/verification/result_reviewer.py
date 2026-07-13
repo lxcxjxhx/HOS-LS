@@ -1,20 +1,21 @@
-from pathlib import Path
-from typing import Dict, List, Optional, Any
 import json
-import yaml
 import logging
 import subprocess
 import threading
-from datetime import datetime
 from concurrent.futures import TimeoutError
+from datetime import datetime
+from pathlib import Path
+from typing import Any, Dict, List, Optional
 
-from .interfaces import ValidationResult, VulnContext
-from .dynamic_loader import DynamicLoader
-from .method_storage import MethodStorage, MethodDefinition
-from .poc_generator import AIPOCGenerator
+import yaml
+
 from .config_loader import ConfigLoader
-from .sandbox_manager import SandboxEnvironmentManager
+from .dynamic_loader import DynamicLoader
+from .interfaces import ValidationResult, VulnContext
+from .method_storage import MethodDefinition, MethodStorage
+from .poc_generator import AIPOCGenerator
 from .sandbox_integration import SandboxIntegration, create_sandbox_integration
+from .sandbox_manager import SandboxEnvironmentManager
 
 logger = logging.getLogger(__name__)
 
@@ -31,21 +32,15 @@ class ResultReviewer:
     - AI 辅助验证（当验证器不确定时）
     """
 
-    def __init__(
-        self,
-        project_root: str,
-        dynamic_code_path: str,
-        config_path: str
-    ):
+    def __init__(self, project_root: str, dynamic_code_path: str, config_path: str):
         self.project_root = Path(project_root)
         self.dynamic_code_path = Path(dynamic_code_path)
 
         self.config_loader = ConfigLoader(config_path)
         self.dynamic_loader = DynamicLoader(str(self.dynamic_code_path))
-        self.method_storage = MethodStorage(str(self.dynamic_code_path / 'methods'))
+        self.method_storage = MethodStorage(str(self.dynamic_code_path / "methods"))
         self.poc_generator = AIPOCGenerator(
-            self.method_storage,
-            str(self.dynamic_code_path / 'pocs' / 'generated')
+            self.method_storage, str(self.dynamic_code_path / "pocs" / "generated")
         )
 
         self.scan_report: Dict[str, Any] = {}
@@ -64,16 +59,18 @@ class ResultReviewer:
         """加载沙箱配置"""
         try:
             config = self.config_loader.get_config()
-            global_config = config.get('global', {})
+            global_config = config.get("global", {})
 
             sandbox_config = {
-                'sandbox_enabled': global_config.get('sandbox_enabled', False),
-                'sandbox_root': global_config.get('sandbox_root', 'temp/sandboxes'),
-                'auto_cleanup': global_config.get('auto_cleanup', True),
+                "sandbox_enabled": global_config.get("sandbox_enabled", False),
+                "sandbox_root": global_config.get("sandbox_root", "temp/sandboxes"),
+                "auto_cleanup": global_config.get("auto_cleanup", True),
             }
 
             self._sandbox_integration = create_sandbox_integration(sandbox_config)
-            logger.info(f"Sandbox integration initialized: enabled={sandbox_config['sandbox_enabled']}")
+            logger.info(
+                f"Sandbox integration initialized: enabled={sandbox_config['sandbox_enabled']}"
+            )
 
         except Exception as e:
             logger.warning(f"Failed to load sandbox config: {e}")
@@ -83,9 +80,9 @@ class ResultReviewer:
         """加载 AI 配置"""
         try:
             config = self.config_loader.get_config()
-            global_config = config.get('global', {})
-            self.ai_enabled = global_config.get('ai_verification_enabled', False)
-            self.ai_fallback_threshold = global_config.get('ai_fallback_threshold', 0.6)
+            global_config = config.get("global", {})
+            self.ai_enabled = global_config.get("ai_verification_enabled", False)
+            self.ai_fallback_threshold = global_config.get("ai_fallback_threshold", 0.6)
         except Exception as e:
             print(f"Failed to load AI config: {e}")
             self.ai_enabled = False
@@ -107,11 +104,11 @@ class ResultReviewer:
             return False
 
         try:
-            if report_path.suffix == '.json':
-                with open(report_path, 'r', encoding='utf-8') as f:
+            if report_path.suffix == ".json":
+                with open(report_path, "r", encoding="utf-8") as f:
                     self.scan_report = json.load(f)
-            elif report_path.suffix in ['.yaml', '.yml']:
-                with open(report_path, 'r', encoding='utf-8') as f:
+            elif report_path.suffix in [".yaml", ".yml"]:
+                with open(report_path, "r", encoding="utf-8") as f:
                     self.scan_report = yaml.safe_load(f)
             else:
                 print(f"Unsupported report format: {report_path.suffix}")
@@ -139,10 +136,10 @@ class ResultReviewer:
         Returns:
             发现列表
         """
-        if 'findings' in self.scan_report:
-            return self.scan_report['findings']
-        elif 'vulnerabilities' in self.scan_report:
-            return self.scan_report['vulnerabilities']
+        if "findings" in self.scan_report:
+            return self.scan_report["findings"]
+        elif "vulnerabilities" in self.scan_report:
+            return self.scan_report["vulnerabilities"]
         else:
             return []
 
@@ -168,7 +165,7 @@ class ResultReviewer:
         findings: List[Dict[str, Any]] = None,
         vuln_type: str = None,
         use_ai_fallback: bool = True,
-        use_sandbox: bool = False
+        use_sandbox: bool = False,
     ) -> List[Dict[str, Any]]:
         """
         执行验证
@@ -194,7 +191,9 @@ class ResultReviewer:
 
         if use_sandbox and self._sandbox_integration and self._sandbox_integration.enabled:
             try:
-                sandbox_path_for_scan = self._sandbox_integration.copy_project_to_sandbox(str(self.project_root))
+                sandbox_path_for_scan = self._sandbox_integration.copy_project_to_sandbox(
+                    str(self.project_root)
+                )
                 project_root_for_validation = sandbox_path_for_scan
                 logger.info(f"Verification will use sandbox path: {sandbox_path_for_scan}")
             except Exception as e:
@@ -203,11 +202,11 @@ class ResultReviewer:
 
         try:
             for finding in findings:
-                finding_id = finding.get('id', finding.get('finding_id', ''))
-                file_path = finding.get('file_path', finding.get('path', ''))
-                line_number = finding.get('line_number', finding.get('line', 0))
-                code_snippet = finding.get('code_snippet', finding.get('snippet', ''))
-                finding_vuln_type = finding.get('vuln_type', finding.get('type', ''))
+                finding_id = finding.get("id", finding.get("finding_id", ""))
+                file_path = finding.get("file_path", finding.get("path", ""))
+                line_number = finding.get("line_number", finding.get("line", 0))
+                code_snippet = finding.get("code_snippet", finding.get("snippet", ""))
+                finding_vuln_type = finding.get("vuln_type", finding.get("type", ""))
 
                 context = VulnContext(
                     file_path=str(file_path),
@@ -216,28 +215,30 @@ class ResultReviewer:
                     vuln_type=str(finding_vuln_type),
                     project_root=project_root_for_validation,
                     finding_id=str(finding_id),
-                    metadata=finding
+                    metadata=finding,
                 )
 
                 result = self._verify_finding(context, validators, finding, use_ai_fallback)
 
-                self.verification_results.append({
-                    'finding_id': finding_id,
-                    'file_path': file_path,
-                    'line_number': line_number,
-                    'vuln_type': finding_vuln_type,
-                    'is_valid': result.is_valid,
-                    'is_false_positive': result.is_false_positive,
-                    'confidence': result.confidence,
-                    'reason': result.reason,
-                    'evidence': result.evidence,
-                    'poc_script': result.poc_script,
-                    'verification_steps': result.verification_steps,
-                    'ai_assisted': getattr(result, 'ai_assisted', False),
-                    'poc_executed': getattr(result, 'poc_executed', False),
-                    'poc_result': getattr(result, 'poc_result', None),
-                    'sandbox_path': sandbox_path_for_scan if sandbox_path_for_scan else None
-                })
+                self.verification_results.append(
+                    {
+                        "finding_id": finding_id,
+                        "file_path": file_path,
+                        "line_number": line_number,
+                        "vuln_type": finding_vuln_type,
+                        "is_valid": result.is_valid,
+                        "is_false_positive": result.is_false_positive,
+                        "confidence": result.confidence,
+                        "reason": result.reason,
+                        "evidence": result.evidence,
+                        "poc_script": result.poc_script,
+                        "verification_steps": result.verification_steps,
+                        "ai_assisted": getattr(result, "ai_assisted", False),
+                        "poc_executed": getattr(result, "poc_executed", False),
+                        "poc_result": getattr(result, "poc_result", None),
+                        "sandbox_path": sandbox_path_for_scan if sandbox_path_for_scan else None,
+                    }
+                )
 
         finally:
             if sandbox_path_for_scan and self._sandbox_integration:
@@ -254,7 +255,7 @@ class ResultReviewer:
         context: VulnContext,
         validators: List[Any],
         finding: Dict[str, Any],
-        use_ai_fallback: bool = True
+        use_ai_fallback: bool = True,
     ) -> ValidationResult:
         """
         验证单个发现
@@ -268,10 +269,7 @@ class ResultReviewer:
         Returns:
             验证结果
         """
-        applicable_validators = [
-            v for v in validators
-            if v.check_applicability(context)
-        ]
+        applicable_validators = [v for v in validators if v.check_applicability(context)]
 
         if not applicable_validators:
             if use_ai_fallback and self.ai_enabled:
@@ -281,7 +279,7 @@ class ResultReviewer:
                 is_false_positive=None,
                 confidence=0.5,
                 reason="没有适用的验证器，需人工复核",
-                evidence={'finding': finding}
+                evidence={"finding": finding},
             )
 
         best_result = None
@@ -310,7 +308,7 @@ class ResultReviewer:
                 is_false_positive=None,
                 confidence=0.5,
                 reason="所有验证器执行失败，需人工复核",
-                evidence={'finding': finding}
+                evidence={"finding": finding},
             )
 
         if best_result.is_valid is None and best_result.confidence < self.ai_fallback_threshold:
@@ -322,10 +320,7 @@ class ResultReviewer:
         return best_result
 
     def verify_with_ai(
-        self,
-        context: VulnContext,
-        finding: Dict[str, Any],
-        fallback_reason: str
+        self, context: VulnContext, finding: Dict[str, Any], fallback_reason: str
     ) -> ValidationResult:
         """
         使用 AI 辅助验证
@@ -367,9 +362,9 @@ class ResultReviewer:
                 model="gpt-3.5-turbo",
                 messages=[
                     {"role": "system", "content": "You are a professional security researcher."},
-                    {"role": "user", "content": prompt}
+                    {"role": "user", "content": prompt},
                 ],
-                temperature=0.1
+                temperature=0.1,
             )
 
             ai_response = response.choices[0].message.content
@@ -391,7 +386,7 @@ class ResultReviewer:
                 is_false_positive=is_false_positive,
                 confidence=confidence,
                 reason=f"[AI辅助] {ai_response}",
-                evidence={'fallback_reason': fallback_reason, 'ai_response': ai_response}
+                evidence={"fallback_reason": fallback_reason, "ai_response": ai_response},
             )
             result.ai_assisted = True
 
@@ -407,13 +402,11 @@ class ResultReviewer:
             is_false_positive=None,
             confidence=0.5,
             reason=f"AI验证失败(fallback_reason: {fallback_reason})，需人工复核",
-            evidence={'fallback_reason': fallback_reason}
+            evidence={"fallback_reason": fallback_reason},
         )
 
     def generate_final_report(
-        self,
-        output_path: str = None,
-        include_poc: bool = True
+        self, output_path: str = None, include_poc: bool = True
     ) -> Dict[str, Any]:
         """
         生成最终验证报告
@@ -425,39 +418,41 @@ class ResultReviewer:
         Returns:
             最终报告字典
         """
-        verified_count = sum(1 for r in self.verification_results if r['is_valid'] is True)
-        false_positive_count = sum(1 for r in self.verification_results if r['is_false_positive'] is True)
-        uncertain_count = sum(1 for r in self.verification_results if r['is_valid'] is None)
-        ai_assisted_count = sum(1 for r in self.verification_results if r.get('ai_assisted', False))
+        verified_count = sum(1 for r in self.verification_results if r["is_valid"] is True)
+        false_positive_count = sum(
+            1 for r in self.verification_results if r["is_false_positive"] is True
+        )
+        uncertain_count = sum(1 for r in self.verification_results if r["is_valid"] is None)
+        ai_assisted_count = sum(1 for r in self.verification_results if r.get("ai_assisted", False))
 
         final_report = {
-            'scan_info': self.scan_report.get('scan_info', {}),
-            'verification_summary': {
-                'total_findings': len(self.verification_results),
-                'verified': verified_count,
-                'false_positives': false_positive_count,
-                'uncertain': uncertain_count,
-                'ai_assisted': ai_assisted_count,
-                'verification_time': datetime.now().isoformat(),
+            "scan_info": self.scan_report.get("scan_info", {}),
+            "verification_summary": {
+                "total_findings": len(self.verification_results),
+                "verified": verified_count,
+                "false_positives": false_positive_count,
+                "uncertain": uncertain_count,
+                "ai_assisted": ai_assisted_count,
+                "verification_time": datetime.now().isoformat(),
             },
-            'verification_results': self.verification_results,
-            'config': {
-                'verification_enabled': self.config_loader.is_verification_enabled(),
-                'ai_verification_enabled': self.ai_enabled,
-                'ai_fallback_threshold': self.ai_fallback_threshold,
-                'dynamic_code_path': str(self.dynamic_code_path),
-            }
+            "verification_results": self.verification_results,
+            "config": {
+                "verification_enabled": self.config_loader.is_verification_enabled(),
+                "ai_verification_enabled": self.ai_enabled,
+                "ai_fallback_threshold": self.ai_fallback_threshold,
+                "dynamic_code_path": str(self.dynamic_code_path),
+            },
         }
 
         if include_poc:
             pocs = self.poc_generator.list_generated_pocs()
-            final_report['generated_pocs'] = pocs
+            final_report["generated_pocs"] = pocs
 
         if output_path:
             output_path = Path(output_path)
             output_path.parent.mkdir(parents=True, exist_ok=True)
 
-            with open(output_path, 'w', encoding='utf-8') as f:
+            with open(output_path, "w", encoding="utf-8") as f:
                 json.dump(final_report, f, ensure_ascii=False, indent=2)
 
         return final_report
@@ -479,41 +474,51 @@ class ResultReviewer:
             "",
         ]
 
-        verified_count = sum(1 for r in self.verification_results if r['is_valid'] is True)
-        false_positive_count = sum(1 for r in self.verification_results if r['is_false_positive'] is True)
-        uncertain_count = sum(1 for r in self.verification_results if r['is_valid'] is None)
-        ai_assisted_count = sum(1 for r in self.verification_results if r.get('ai_assisted', False))
+        verified_count = sum(1 for r in self.verification_results if r["is_valid"] is True)
+        false_positive_count = sum(
+            1 for r in self.verification_results if r["is_false_positive"] is True
+        )
+        uncertain_count = sum(1 for r in self.verification_results if r["is_valid"] is None)
+        ai_assisted_count = sum(1 for r in self.verification_results if r.get("ai_assisted", False))
 
-        md_lines.extend([
-            f"- 总发现数: {len(self.verification_results)}",
-            f"- 确认漏洞: {verified_count}",
-            f"- 误报: {false_positive_count}",
-            f"- 待复核: {uncertain_count}",
-            f"- AI辅助: {ai_assisted_count}",
-            "",
-            "## 验证结果详情",
-            "",
-        ])
+        md_lines.extend(
+            [
+                f"- 总发现数: {len(self.verification_results)}",
+                f"- 确认漏洞: {verified_count}",
+                f"- 误报: {false_positive_count}",
+                f"- 待复核: {uncertain_count}",
+                f"- AI辅助: {ai_assisted_count}",
+                "",
+                "## 验证结果详情",
+                "",
+            ]
+        )
 
         for result in self.verification_results:
-            status = "✅ 确认" if result['is_valid'] else ("❌ 误报" if result['is_false_positive'] else "⚠️ 待复核")
-            ai_tag = " [AI]" if result.get('ai_assisted', False) else ""
-            md_lines.extend([
-                f"### {result['finding_id']} - {result['vuln_type']}{ai_tag}",
-                "",
-                f"- **状态**: {status}",
-                f"- **文件**: {result['file_path']}:{result['line_number']}",
-                f"- **置信度**: {result['confidence']:.2f}",
-                f"- **原因**: {result['reason']}",
-                "",
-            ])
+            status = (
+                "✅ 确认"
+                if result["is_valid"]
+                else ("❌ 误报" if result["is_false_positive"] else "⚠️ 待复核")
+            )
+            ai_tag = " [AI]" if result.get("ai_assisted", False) else ""
+            md_lines.extend(
+                [
+                    f"### {result['finding_id']} - {result['vuln_type']}{ai_tag}",
+                    "",
+                    f"- **状态**: {status}",
+                    f"- **文件**: {result['file_path']}:{result['line_number']}",
+                    f"- **置信度**: {result['confidence']:.2f}",
+                    f"- **原因**: {result['reason']}",
+                    "",
+                ]
+            )
 
         md_content = "\n".join(md_lines)
 
         if output_path:
             output_path = Path(output_path)
             output_path.parent.mkdir(parents=True, exist_ok=True)
-            with open(output_path, 'w', encoding='utf-8') as f:
+            with open(output_path, "w", encoding="utf-8") as f:
                 f.write(md_content)
 
         return md_content
@@ -525,10 +530,7 @@ class ResultReviewer:
         Returns:
             误报列表
         """
-        return [
-            r for r in self.verification_results
-            if r.get('is_false_positive') is True
-        ]
+        return [r for r in self.verification_results if r.get("is_false_positive") is True]
 
     def get_verified_vulnerabilities(self) -> List[Dict[str, Any]]:
         """
@@ -537,10 +539,7 @@ class ResultReviewer:
         Returns:
             确认的漏洞列表
         """
-        return [
-            r for r in self.verification_results
-            if r.get('is_valid') is True
-        ]
+        return [r for r in self.verification_results if r.get("is_valid") is True]
 
     def get_uncertain_findings(self) -> List[Dict[str, Any]]:
         """
@@ -549,15 +548,10 @@ class ResultReviewer:
         Returns:
             待复核的发现列表
         """
-        return [
-            r for r in self.verification_results
-            if r.get('is_valid') is None
-        ]
+        return [r for r in self.verification_results if r.get("is_valid") is None]
 
     def run_poc_feedback(
-        self,
-        context: VulnContext,
-        finding: Dict[str, Any]
+        self, context: VulnContext, finding: Dict[str, Any]
     ) -> Optional[ValidationResult]:
         """
         执行 POC 反馈机制
@@ -579,11 +573,11 @@ class ResultReviewer:
 
         if finding_id in self._poc_execution_history:
             exec_history = self._poc_execution_history[finding_id]
-            if any(h.get('executed', False) for h in exec_history):
+            if any(h.get("executed", False) for h in exec_history):
                 logger.info(f"POC already executed for {finding_id}, skipping")
                 return None
 
-        poc_method_id = finding.get('poc_script')
+        poc_method_id = finding.get("poc_script")
         if not poc_method_id:
             poc_method_id = self.poc_generator.generate_poc(context)
 
@@ -599,7 +593,7 @@ class ResultReviewer:
         if poc_executed:
             try:
                 if isinstance(exec_result, dict):
-                    poc_confirmed = exec_result.get('is_exploitable', False)
+                    poc_confirmed = exec_result.get("is_exploitable", False)
                 else:
                     poc_confirmed = bool(exec_result)
             except Exception as e:
@@ -609,30 +603,28 @@ class ResultReviewer:
         if finding_id not in self._poc_execution_history:
             self._poc_execution_history[finding_id] = []
 
-        self._poc_execution_history[finding_id].append({
-            'poc_method_id': poc_method_id,
-            'executed': poc_executed,
-            'result': poc_confirmed,
-            'timestamp': datetime.now().isoformat()
-        })
+        self._poc_execution_history[finding_id].append(
+            {
+                "poc_method_id": poc_method_id,
+                "executed": poc_executed,
+                "result": poc_confirmed,
+                "timestamp": datetime.now().isoformat(),
+            }
+        )
 
         result = ValidationResult(
             is_valid=None,
             is_false_positive=None,
             confidence=0.5,
             reason=f"POC执行{'成功' if poc_executed else '失败'}",
-            evidence={'poc_method_id': poc_method_id, 'exec_result': exec_result}
+            evidence={"poc_method_id": poc_method_id, "exec_result": exec_result},
         )
         result.poc_executed = poc_executed
         result.poc_result = poc_confirmed
 
         return result
 
-    def _execute_poc_with_timeout(
-        self,
-        poc_code: str,
-        context: VulnContext
-    ) -> Optional[Any]:
+    def _execute_poc_with_timeout(self, poc_code: str, context: VulnContext) -> Optional[Any]:
         """
         使用超时机制执行 POC
 
@@ -643,22 +635,22 @@ class ResultReviewer:
         Returns:
             POC 执行结果，超时或失败返回 None
         """
-        result_holder = {'result': None, 'error': None}
+        result_holder = {"result": None, "error": None}
 
         def _run_poc():
             try:
                 local_vars = {
-                    'context': context,
-                    'VulnContext': VulnContext,
-                    'ValidationResult': ValidationResult,
-                    '__builtins__': __builtins__
+                    "context": context,
+                    "VulnContext": VulnContext,
+                    "ValidationResult": ValidationResult,
+                    "__builtins__": __builtins__,
                 }
                 exec(poc_code, local_vars)
-                func_name = [k for k in local_vars.keys() if k.startswith('verify_')]
+                func_name = [k for k in local_vars.keys() if k.startswith("verify_")]
                 if func_name:
-                    result_holder['result'] = local_vars[func_name[0]](context)
+                    result_holder["result"] = local_vars[func_name[0]](context)
             except Exception as e:
-                result_holder['error'] = str(e)
+                result_holder["error"] = str(e)
                 logger.error(f"POC execution error: {e}")
 
         thread = threading.Thread(target=_run_poc, daemon=True)
@@ -669,16 +661,14 @@ class ResultReviewer:
             logger.warning(f"POC execution timed out after {self.poc_execution_timeout}s")
             return None
 
-        if result_holder['error']:
+        if result_holder["error"]:
             logger.error(f"POC execution failed: {result_holder['error']}")
             return None
 
-        return result_holder['result']
+        return result_holder["result"]
 
     def save_poc_adjustment(
-        self,
-        poc_method_id: str,
-        adjustment_data: Dict[str, Any]
+        self, poc_method_id: str, adjustment_data: Dict[str, Any]
     ) -> Optional[str]:
         """
         保存 POC 调整到方法存储
@@ -695,23 +685,23 @@ class ResultReviewer:
             logger.warning(f"Original method {poc_method_id} not found")
             return None
 
-        adjustment_type = adjustment_data.get('type', 'feedback_adjustment')
-        details = adjustment_data.get('details', '')
+        adjustment_type = adjustment_data.get("type", "feedback_adjustment")
+        details = adjustment_data.get("details", "")
 
         new_method_id = f"{poc_method_id}_adj_{datetime.now().strftime('%Y%m%d%H%M%S')}"
 
-        confidence_map = {'high': 'medium', 'medium': 'low', 'low': 'low'}
-        new_confidence = confidence_map.get(original_method.confidence_level, 'low')
+        confidence_map = {"high": "medium", "medium": "low", "low": "low"}
+        new_confidence = confidence_map.get(original_method.confidence_level, "low")
 
-        new_steps = original_method.validation.get('steps', [])
+        new_steps = original_method.validation.get("steps", [])
         new_steps.append(f"自动调整 [{adjustment_type}]: {details}")
 
         adjustment_metadata = {
-            'original_method_id': poc_method_id,
-            'adjustment_type': adjustment_type,
-            'adjustment_details': details,
-            'adjustment_timestamp': datetime.now().isoformat(),
-            'adjustment_reason': 'verification_feedback'
+            "original_method_id": poc_method_id,
+            "adjustment_type": adjustment_type,
+            "adjustment_details": details,
+            "adjustment_timestamp": datetime.now().isoformat(),
+            "adjustment_reason": "verification_feedback",
         }
 
         new_method_def = MethodDefinition(
@@ -720,34 +710,30 @@ class ResultReviewer:
             vuln_type=original_method.vuln_type,
             pattern=original_method.pattern,
             confidence_level=new_confidence,
-            validation={
-                'type': 'feedback_adjusted',
-                'steps': new_steps
-            },
+            validation={"type": "feedback_adjusted", "steps": new_steps},
             poc_template=original_method.poc_template,
             evidence_required=original_method.evidence_required,
-            metadata=adjustment_metadata
+            metadata=adjustment_metadata,
         )
 
         success = self.method_storage.save_method(new_method_id, new_method_def)
         if success:
             if poc_method_id not in self._adjustment_history:
                 self._adjustment_history[poc_method_id] = []
-            self._adjustment_history[poc_method_id].append({
-                'new_method_id': new_method_id,
-                'adjustment_data': adjustment_data,
-                'timestamp': datetime.now().isoformat()
-            })
+            self._adjustment_history[poc_method_id].append(
+                {
+                    "new_method_id": new_method_id,
+                    "adjustment_data": adjustment_data,
+                    "timestamp": datetime.now().isoformat(),
+                }
+            )
             logger.info(f"POC adjustment saved: {poc_method_id} -> {new_method_id}")
             return new_method_id
 
         return None
 
     def _auto_adjust_poc_if_needed(
-        self,
-        context: VulnContext,
-        finding: Dict[str, Any],
-        poc_result: ValidationResult
+        self, context: VulnContext, finding: Dict[str, Any], poc_result: ValidationResult
     ):
         """
         根据 POC 执行结果自动调整 POC
@@ -757,25 +743,21 @@ class ResultReviewer:
             finding: 原始发现数据
             poc_result: POC 执行结果
         """
-        poc_method_id = finding.get('poc_script')
+        poc_method_id = finding.get("poc_script")
         if not poc_method_id:
             return
 
         if poc_result.poc_result is False:
             adjustment_data = {
-                'type': 'false_positive',
-                'details': f"POC执行确认漏洞不存在，置信度从 {poc_result.confidence} 降至低置信度"
+                "type": "false_positive",
+                "details": f"POC执行确认漏洞不存在，置信度从 {poc_result.confidence} 降至低置信度",
             }
             new_method_id = self.save_poc_adjustment(poc_method_id, adjustment_data)
             if new_method_id:
-                finding['poc_script'] = new_method_id
+                finding["poc_script"] = new_method_id
                 logger.info(f"POC auto-adjusted to {new_method_id}")
 
-    def apply_user_feedback(
-        self,
-        finding_id: str,
-        feedback: Dict[str, Any]
-    ) -> bool:
+    def apply_user_feedback(self, finding_id: str, feedback: Dict[str, Any]) -> bool:
         """
         应用用户反馈
 
@@ -787,24 +769,24 @@ class ResultReviewer:
             是否应用成功
         """
         for result in self.verification_results:
-            if result['finding_id'] == finding_id:
-                if 'is_false_positive' in feedback:
-                    result['is_false_positive'] = feedback['is_false_positive']
-                    result['is_valid'] = not feedback['is_false_positive']
+            if result["finding_id"] == finding_id:
+                if "is_false_positive" in feedback:
+                    result["is_false_positive"] = feedback["is_false_positive"]
+                    result["is_valid"] = not feedback["is_false_positive"]
 
-                if 'reason' in feedback:
-                    result['reason'] = feedback['reason']
+                if "reason" in feedback:
+                    result["reason"] = feedback["reason"]
 
-                if feedback.get('adjust_poc') and result.get('poc_script'):
+                if feedback.get("adjust_poc") and result.get("poc_script"):
                     new_method_id = self.save_poc_adjustment(
-                        result['poc_script'],
+                        result["poc_script"],
                         {
-                            'type': feedback.get('adjustment_type', 'user_feedback'),
-                            'details': feedback.get('details', 'User provided feedback')
-                        }
+                            "type": feedback.get("adjustment_type", "user_feedback"),
+                            "details": feedback.get("details", "User provided feedback"),
+                        },
                     )
                     if new_method_id:
-                        result['poc_script'] = new_method_id
+                        result["poc_script"] = new_method_id
 
                 return True
 

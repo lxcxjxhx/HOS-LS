@@ -1,16 +1,14 @@
 """增强误报过滤测试"""
 
 import pytest
+
 from src.ai.filters.enhanced_filter import EnhancedFindingsFilter, HardExclusionRules
 
 
 class TestEnhancedFindingsFilter:
     def test_init(self):
         """测试初始化"""
-        filter = EnhancedFindingsFilter(
-            use_hard_exclusions=True,
-            use_ai_filtering=True
-        )
+        filter = EnhancedFindingsFilter(use_hard_exclusions=True, use_ai_filtering=True)
         assert filter.use_hard_exclusions is True
         assert filter.use_ai_filtering is True
 
@@ -24,9 +22,9 @@ class TestEnhancedFindingsFilter:
             "severity": "high",
             "confidence": 0.8,
             "code_snippet": "cursor.execute('SELECT * FROM users WHERE id = %s', (user_id,))",
-            "file_path": "test.py"
+            "file_path": "test.py",
         }
-        
+
         reason = HardExclusionRules.get_exclusion_reason(finding)
         # 这个发现不应该被排除，因为它是一个有效的 SQL 注入漏洞
         assert reason is None
@@ -39,9 +37,9 @@ class TestEnhancedFindingsFilter:
             "severity": "medium",
             "confidence": 0.7,
             "code_snippet": "file = open('test.txt')",
-            "file_path": "test.py"
+            "file_path": "test.py",
         }
-        
+
         reason = HardExclusionRules.get_exclusion_reason(finding)
         # 这个发现应该被排除，因为它是一个资源管理问题，不是安全漏洞
         assert reason is not None
@@ -50,7 +48,7 @@ class TestEnhancedFindingsFilter:
     async def test_filter_findings(self):
         """测试过滤发现"""
         filter = EnhancedFindingsFilter(use_hard_exclusions=True, use_ai_filtering=False)
-        
+
         findings = [
             {
                 "rule_id": "RESOURCE_LEAK",
@@ -59,7 +57,7 @@ class TestEnhancedFindingsFilter:
                 "severity": "medium",
                 "confidence": 0.7,
                 "code_snippet": "file = open('test.txt')",
-                "file_path": "test.py"
+                "file_path": "test.py",
             },
             {
                 "rule_id": "HARDCODED_SECRET",
@@ -68,10 +66,10 @@ class TestEnhancedFindingsFilter:
                 "severity": "critical",
                 "confidence": 0.9,
                 "code_snippet": "api_key = 'sk-1234567890abcdef'",
-                "file_path": "test.py"
-            }
+                "file_path": "test.py",
+            },
         ]
-        
+
         success, result, stats = await filter.filter_findings(findings, {"file_path": "test.py"})
         assert success is True
         assert len(result["filtered_findings"]) == 1

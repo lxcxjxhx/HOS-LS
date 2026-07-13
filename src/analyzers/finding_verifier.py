@@ -7,12 +7,12 @@
 - 置信度计算
 """
 
+import logging
 import os
 import re
-import logging
 from dataclasses import dataclass, field
-from typing import Dict, Any, Optional, List, Set
 from pathlib import Path
+from typing import Any, Dict, List, Optional, Set
 
 logger = logging.getLogger(__name__)
 
@@ -31,11 +31,12 @@ class FindingVerification:
     - matched_cwes: 匹配的 CWE 列表
     - best_match: 最佳匹配的 CWE
     """
+
     path_verified: bool = False
     code_verified: bool = False
     cwe_match: Dict[str, Any] = field(default_factory=dict)
     confidence: float = 0.0
-    verification_level: str = 'unknown'
+    verification_level: str = "unknown"
     is_hallucination: bool = True
     matched_cwes: List[Dict] = field(default_factory=list)
     best_match: Optional[Dict] = None
@@ -43,14 +44,14 @@ class FindingVerification:
     def to_dict(self) -> Dict[str, Any]:
         """转换为字典格式"""
         return {
-            'path_verified': self.path_verified,
-            'code_verified': self.code_verified,
-            'cwe_match': self.cwe_match,
-            'confidence': self.confidence,
-            'verification_level': self.verification_level,
-            'is_hallucination': self.is_hallucination,
-            'matched_cwes': self.matched_cwes,
-            'best_match': self.best_match
+            "path_verified": self.path_verified,
+            "code_verified": self.code_verified,
+            "cwe_match": self.cwe_match,
+            "confidence": self.confidence,
+            "verification_level": self.verification_level,
+            "is_hallucination": self.is_hallucination,
+            "matched_cwes": self.matched_cwes,
+            "best_match": self.best_match,
         }
 
 
@@ -58,144 +59,203 @@ class FindingVerifier:
     """AI 发现验证器"""
 
     CWE_PATTERNS = {
-        'path_traversal': {
-            'cwe_id': 'CWE-22',
-            'cwe_name': 'Path Traversal',
-            'keywords': ['path', 'traversal', '../', '..\\', 'new File', 'FileInputStream', 'FileOutputStream', ' Paths.get', 'Path.of'],
-            'risk_patterns': [
-                r'new File\s*\([^)]*\+',
-                r'FileInputStream\s*\([^)]*\+',
-                r'Paths\.get\s*\([^)]*\+',
-                r'Path\.of\s*\([^)]*\+',
-            ]
+        "path_traversal": {
+            "cwe_id": "CWE-22",
+            "cwe_name": "Path Traversal",
+            "keywords": [
+                "path",
+                "traversal",
+                "../",
+                "..\\",
+                "new File",
+                "FileInputStream",
+                "FileOutputStream",
+                " Paths.get",
+                "Path.of",
+            ],
+            "risk_patterns": [
+                r"new File\s*\([^)]*\+",
+                r"FileInputStream\s*\([^)]*\+",
+                r"Paths\.get\s*\([^)]*\+",
+                r"Path\.of\s*\([^)]*\+",
+            ],
         },
-        'sql_injection': {
-            'cwe_id': 'CWE-89',
-            'cwe_name': 'SQL Injection',
-            'keywords': ['sql', 'select', 'insert', 'update', 'delete', 'query', 'execute', 'statement', 'jdbc'],
-            'risk_patterns': [
-                r'executeQuery\s*\([^)]*\+',
-                r'createStatement\s*\([^)]*\+',
-                r'\.query\s*\([^)]*\+',
-                r'\${[^}]+\}',  # MyBatis ${} pattern
-            ]
+        "sql_injection": {
+            "cwe_id": "CWE-89",
+            "cwe_name": "SQL Injection",
+            "keywords": [
+                "sql",
+                "select",
+                "insert",
+                "update",
+                "delete",
+                "query",
+                "execute",
+                "statement",
+                "jdbc",
+            ],
+            "risk_patterns": [
+                r"executeQuery\s*\([^)]*\+",
+                r"createStatement\s*\([^)]*\+",
+                r"\.query\s*\([^)]*\+",
+                r"\${[^}]+\}",  # MyBatis ${} pattern
+            ],
         },
-        'xss': {
-            'cwe_id': 'CWE-79',
-            'cwe_name': 'Cross-site Scripting',
-            'keywords': ['html', 'innerHTML', 'outerHTML', 'script', 'eval', 'document.write', 'response.getWriter'],
-            'risk_patterns': [
-                r'innerHTML\s*=',
-                r'document\.write\s*\(',
-                r'eval\s*\(',
-                r'response\.getWriter\(\)\.write',
-            ]
+        "xss": {
+            "cwe_id": "CWE-79",
+            "cwe_name": "Cross-site Scripting",
+            "keywords": [
+                "html",
+                "innerHTML",
+                "outerHTML",
+                "script",
+                "eval",
+                "document.write",
+                "response.getWriter",
+            ],
+            "risk_patterns": [
+                r"innerHTML\s*=",
+                r"document\.write\s*\(",
+                r"eval\s*\(",
+                r"response\.getWriter\(\)\.write",
+            ],
         },
-        'command_injection': {
-            'cwe_id': 'CWE-78',
-            'cwe_name': 'OS Command Injection',
-            'keywords': ['runtime', 'exec', 'process', 'command', 'shell'],
-            'risk_patterns': [
-                r'Runtime\.getRuntime\(\)\.exec',
-                r'ProcessBuilder\s*\(',
-            ]
+        "command_injection": {
+            "cwe_id": "CWE-78",
+            "cwe_name": "OS Command Injection",
+            "keywords": ["runtime", "exec", "process", "command", "shell"],
+            "risk_patterns": [
+                r"Runtime\.getRuntime\(\)\.exec",
+                r"ProcessBuilder\s*\(",
+            ],
         },
-        'sensitive_data_exposure': {
-            'cwe_id': 'CWE-200',
-            'cwe_name': 'Exposure of Sensitive Information',
-            'keywords': ['password', 'secret', 'token', 'key', 'credential', 'api_key', 'apikey', 'access_token'],
-            'risk_patterns': [
+        "sensitive_data_exposure": {
+            "cwe_id": "CWE-200",
+            "cwe_name": "Exposure of Sensitive Information",
+            "keywords": [
+                "password",
+                "secret",
+                "token",
+                "key",
+                "credential",
+                "api_key",
+                "apikey",
+                "access_token",
+            ],
+            "risk_patterns": [
                 r'password\s*=\s*["\'][^"\']{8,}["\']',
                 r'api_?key\s*=\s*["\'][^"\']{16,}["\']',
                 r'secret\s*=\s*["\'][^"\']{16,}["\']',
-            ]
+            ],
         },
-        'xxe': {
-            'cwe_id': 'CWE-611',
-            'cwe_name': 'XML External Entity',
-            'keywords': ['xml', 'documentbuilder', 'saxparser', 'xmlreader', 'transform'],
-            'risk_patterns': [
-                r'DocumentBuilderFactory',
-                r'SAXParserFactory',
-                r'XMLReaderFactory',
-            ]
+        "xxe": {
+            "cwe_id": "CWE-611",
+            "cwe_name": "XML External Entity",
+            "keywords": ["xml", "documentbuilder", "saxparser", "xmlreader", "transform"],
+            "risk_patterns": [
+                r"DocumentBuilderFactory",
+                r"SAXParserFactory",
+                r"XMLReaderFactory",
+            ],
         },
-        'deserialization': {
-            'cwe_id': 'CWE-502',
-            'cwe_name': 'Deserialization of Untrusted Data',
-            'keywords': ['objectinputstream', 'readobject', 'deserialize', 'yaml.load', 'pickle.load'],
-            'risk_patterns': [
-                r'ObjectInputStream',
-                r'readObject\s*\(',
-                r'yaml\.load\s*\(',
-            ]
+        "deserialization": {
+            "cwe_id": "CWE-502",
+            "cwe_name": "Deserialization of Untrusted Data",
+            "keywords": [
+                "objectinputstream",
+                "readobject",
+                "deserialize",
+                "yaml.load",
+                "pickle.load",
+            ],
+            "risk_patterns": [
+                r"ObjectInputStream",
+                r"readObject\s*\(",
+                r"yaml\.load\s*\(",
+            ],
         },
-        'ssrf': {
-            'cwe_id': 'CWE-918',
-            'cwe_name': 'Server-Side Request Forgery',
-            'keywords': ['url', 'http', 'request', 'fetch', 'client', 'httpclient', 'resttemplate', 'webclient'],
-            'risk_patterns': [
-                r'RestTemplate',
-                r'WebClient',
-                r'HttpClient',
-                r'URL\s*\(',
-            ]
+        "ssrf": {
+            "cwe_id": "CWE-918",
+            "cwe_name": "Server-Side Request Forgery",
+            "keywords": [
+                "url",
+                "http",
+                "request",
+                "fetch",
+                "client",
+                "httpclient",
+                "resttemplate",
+                "webclient",
+            ],
+            "risk_patterns": [
+                r"RestTemplate",
+                r"WebClient",
+                r"HttpClient",
+                r"URL\s*\(",
+            ],
         },
-        'csrf': {
-            'cwe_id': 'CWE-352',
-            'cwe_name': 'Cross-Site Request Forgery',
-            'keywords': ['csrf', 'token', 'samesite', 'csrf_token'],
-            'risk_patterns': [
-                r'@CsrfFilter',
-                r'csrf',
-            ]
+        "csrf": {
+            "cwe_id": "CWE-352",
+            "cwe_name": "Cross-Site Request Forgery",
+            "keywords": ["csrf", "token", "samesite", "csrf_token"],
+            "risk_patterns": [
+                r"@CsrfFilter",
+                r"csrf",
+            ],
         },
-        'weak_crypto': {
-            'cwe_id': 'CWE-327',
-            'cwe_name': 'Use of Weak Cryptographic Algorithm',
-            'keywords': ['md5', 'sha1', 'des', 'rc4', 'crypto', 'cipher', 'encrypt', 'decrypt'],
-            'risk_patterns': [
+        "weak_crypto": {
+            "cwe_id": "CWE-327",
+            "cwe_name": "Use of Weak Cryptographic Algorithm",
+            "keywords": ["md5", "sha1", "des", "rc4", "crypto", "cipher", "encrypt", "decrypt"],
+            "risk_patterns": [
                 r'MessageDigest\.getInstance\s*\(\s*["\']MD5["\']',
                 r'MessageDigest\.getInstance\s*\(\s*["\']SHA-1["\']',
                 r'Cipher\.getInstance\s*\(\s*["\']DES["\']',
-            ]
+            ],
         },
-        'hardcoded_password': {
-            'cwe_id': 'CWE-259',
-            'cwe_name': 'Hard-coded Password',
-            'keywords': ['password', 'passwd', 'pwd', 'secret'],
-            'risk_patterns': [
+        "hardcoded_password": {
+            "cwe_id": "CWE-259",
+            "cwe_name": "Hard-coded Password",
+            "keywords": ["password", "passwd", "pwd", "secret"],
+            "risk_patterns": [
                 r'password\s*=\s*["\'][^"\']+["\']',
                 r'passwd\s*=\s*["\'][^"\']+["\']',
-            ]
+            ],
         },
-        'insecure_random': {
-            'cwe_id': 'CWE-338',
-            'cwe_name': 'Use of Cryptographically Weak PRNG',
-            'keywords': ['random', 'math.random', 'java.util.random'],
-            'risk_patterns': [
-                r'Math\.random\s*\(',
-                r'new Random\s*\(',
-            ]
+        "insecure_random": {
+            "cwe_id": "CWE-338",
+            "cwe_name": "Use of Cryptographically Weak PRNG",
+            "keywords": ["random", "math.random", "java.util.random"],
+            "risk_patterns": [
+                r"Math\.random\s*\(",
+                r"new Random\s*\(",
+            ],
         },
-        'missing_auth': {
-            'cwe_id': 'CWE-306',
-            'cwe_name': 'Missing Authentication',
-            'keywords': ['@GetMapping', '@PostMapping', '@RequestMapping', '@RestController', 'permitAll', 'authorize'],
-            'risk_patterns': [
-                r'@RequestMapping\s*\([^)]*\)',
-                r'\.permitAll\s*\(',
-            ]
+        "missing_auth": {
+            "cwe_id": "CWE-306",
+            "cwe_name": "Missing Authentication",
+            "keywords": [
+                "@GetMapping",
+                "@PostMapping",
+                "@RequestMapping",
+                "@RestController",
+                "permitAll",
+                "authorize",
+            ],
+            "risk_patterns": [
+                r"@RequestMapping\s*\([^)]*\)",
+                r"\.permitAll\s*\(",
+            ],
         },
-        'debug_enabled': {
-            'cwe_id': 'CWE-11',
-            'cwe_name': 'Compiler Removal of Code to Prevent Debugging',
-            'keywords': ['debug', 'debugger', 'development'],
-            'risk_patterns': [
-                r'debug\s*=\s*true',
-                r'enableDebug\s*\(',
-            ]
-        }
+        "debug_enabled": {
+            "cwe_id": "CWE-11",
+            "cwe_name": "Compiler Removal of Code to Prevent Debugging",
+            "keywords": ["debug", "debugger", "development"],
+            "risk_patterns": [
+                r"debug\s*=\s*true",
+                r"enableDebug\s*\(",
+            ],
+        },
     }
 
     def __init__(self, project_root: str = "", nvd_db_path: str = None):
@@ -205,6 +265,7 @@ class FindingVerifier:
         if nvd_db_path:
             try:
                 from src.nvd.nvd_query_adapter import NVDQueryAdapter
+
                 self.nvd_adapter = NVDQueryAdapter(nvd_db_path)
                 if not self.nvd_adapter.is_available():
                     self.nvd_adapter = None
@@ -215,23 +276,23 @@ class FindingVerifier:
         """验证 Finding 中的路径是否存在且有效"""
         try:
             if isinstance(finding, dict):
-                location = finding.get('location')
+                location = finding.get("location")
                 if not location or not isinstance(location, dict):
                     logger.debug(f"[Path] Finding has no valid location (dict)")
                     return False
-                file_path = location.get('file')
-                line = location.get('line', 0)
+                file_path = location.get("file")
+                line = location.get("line", 0)
             else:
-                if not hasattr(finding, 'location'):
+                if not hasattr(finding, "location"):
                     logger.debug(f"[Path] Finding has no location attribute")
                     return False
 
                 if isinstance(finding.location, dict):
-                    file_path = finding.location.get('file')
-                    line = finding.location.get('line', 0)
+                    file_path = finding.location.get("file")
+                    line = finding.location.get("line", 0)
                 else:
                     file_path = finding.location.file
-                    line = getattr(finding.location, 'line', 0)
+                    line = getattr(finding.location, "line", 0)
 
             if not file_path:
                 logger.debug(f"[Path] Finding has no file path")
@@ -261,21 +322,21 @@ class FindingVerifier:
         root = project_root or self.project_root
 
         if isinstance(finding, dict):
-            location = finding.get('location')
+            location = finding.get("location")
             if not location or not isinstance(location, dict):
                 logger.debug(f"[Code] Finding has no valid location (dict)")
                 return False
-            file_path = location.get('file')
-            code_snippet = finding.get('code_snippet')
+            file_path = location.get("file")
+            code_snippet = finding.get("code_snippet")
         else:
-            if not hasattr(finding, 'location'):
+            if not hasattr(finding, "location"):
                 logger.debug(f"[Code] Finding has no location attribute")
                 return False
             if isinstance(finding.location, dict):
-                file_path = finding.location.get('file')
+                file_path = finding.location.get("file")
             else:
                 file_path = finding.location.file
-            code_snippet = getattr(finding, 'code_snippet', None)
+            code_snippet = getattr(finding, "code_snippet", None)
 
         if not file_path:
             return False
@@ -289,7 +350,7 @@ class FindingVerifier:
             return False
 
         try:
-            with open(full_path, 'r', encoding='utf-8') as f:
+            with open(full_path, "r", encoding="utf-8") as f:
                 content = f.read()
         except Exception:
             return False
@@ -298,11 +359,11 @@ class FindingVerifier:
             if code_snippet.strip() in content:
                 return True
 
-        rule_name = getattr(finding, 'rule_name', '') or ''
+        rule_name = getattr(finding, "rule_name", "") or ""
         if rule_name:
             for pattern_name, pattern_info in self.CWE_PATTERNS.items():
-                if any(kw.lower() in rule_name.lower() for kw in pattern_info['keywords']):
-                    for risk_pattern in pattern_info['risk_patterns']:
+                if any(kw.lower() in rule_name.lower() for kw in pattern_info["keywords"]):
+                    for risk_pattern in pattern_info["risk_patterns"]:
                         if re.search(risk_pattern, content):
                             return True
 
@@ -326,7 +387,7 @@ class FindingVerifier:
         keywords = self._extract_keywords(finding)
 
         if not keywords:
-            return {'matched_cwes': [], 'best_match': None, 'confidence': 0.0}
+            return {"matched_cwes": [], "best_match": None, "confidence": 0.0}
 
         if self.nvd_adapter and self.nvd_adapter.is_available():
             nvd_results = self.nvd_adapter.match_cwe(keywords, limit=5)
@@ -334,47 +395,45 @@ class FindingVerifier:
                 for nvd_result in nvd_results:
                     cvss_stats = {}
                     if self.nvd_adapter:
-                        cvss_stats = self.nvd_adapter.get_cwe_with_cvss_stats(nvd_result['cwe_id'])
+                        cvss_stats = self.nvd_adapter.get_cwe_with_cvss_stats(nvd_result["cwe_id"])
 
-                    confidence = nvd_result.get('confidence', 0.5)
+                    confidence = nvd_result.get("confidence", 0.5)
 
-                    if cvss_stats and cvss_stats.get('avg_cvss', 0) > 7.0:
+                    if cvss_stats and cvss_stats.get("avg_cvss", 0) > 7.0:
                         confidence = min(1.0, confidence * 1.2)
 
-                    matched_cwes.append({
-                        'cwe_id': nvd_result['cwe_id'],
-                        'cwe_name': nvd_result['cwe_name'],
-                        'pattern_name': 'nvd_db',
-                        'confidence': confidence,
-                        'matched_keywords': nvd_result.get('matched_keywords', []),
-                        'matched_patterns': [],
-                        'source': 'nvd_database',
-                        'cvss_stats': cvss_stats
-                    })
+                    matched_cwes.append(
+                        {
+                            "cwe_id": nvd_result["cwe_id"],
+                            "cwe_name": nvd_result["cwe_name"],
+                            "pattern_name": "nvd_db",
+                            "confidence": confidence,
+                            "matched_keywords": nvd_result.get("matched_keywords", []),
+                            "matched_patterns": [],
+                            "source": "nvd_database",
+                            "cvss_stats": cvss_stats,
+                        }
+                    )
 
         hardcoded_results = self._match_cwe_hardcoded(finding)
-        matched_cwes.extend(hardcoded_results.get('matched_cwes', []))
+        matched_cwes.extend(hardcoded_results.get("matched_cwes", []))
 
         if matched_cwes:
             seen = set()
             unique_results = []
             for m in matched_cwes:
-                if m['cwe_id'] not in seen:
-                    seen.add(m['cwe_id'])
+                if m["cwe_id"] not in seen:
+                    seen.add(m["cwe_id"])
                     unique_results.append(m)
 
-            best_match = max(unique_results, key=lambda x: x['confidence'])
+            best_match = max(unique_results, key=lambda x: x["confidence"])
             return {
-                'matched_cwes': unique_results,
-                'best_match': best_match,
-                'confidence': best_match['confidence']
+                "matched_cwes": unique_results,
+                "best_match": best_match,
+                "confidence": best_match["confidence"],
             }
 
-        return {
-            'matched_cwes': [],
-            'best_match': None,
-            'confidence': 0.0
-        }
+        return {"matched_cwes": [], "best_match": None, "confidence": 0.0}
 
     def _match_cwe_hardcoded(self, finding) -> Dict[str, Any]:
         """使用硬编码模式匹配 CWE
@@ -386,9 +445,9 @@ class FindingVerifier:
             匹配的 CWE 信息
         """
         matched_cwes = []
-        rule_name = getattr(finding, 'rule_name', '') or ''
-        description = getattr(finding, 'description', '') or ''
-        code_snippet = getattr(finding, 'code_snippet', '') or ''
+        rule_name = getattr(finding, "rule_name", "") or ""
+        description = getattr(finding, "description", "") or ""
+        code_snippet = getattr(finding, "code_snippet", "") or ""
 
         combined_text = f"{rule_name} {description} {code_snippet}".lower()
 
@@ -397,30 +456,32 @@ class FindingVerifier:
             matched_kws = []
             matched_patterns = []
 
-            for kw in pattern_info['keywords']:
+            for kw in pattern_info["keywords"]:
                 if kw.lower() in combined_text:
                     score += 1
                     matched_kws.append(kw)
 
             if score > 0:
-                for risk_pattern in pattern_info['risk_patterns']:
+                for risk_pattern in pattern_info["risk_patterns"]:
                     if code_snippet and re.search(risk_pattern, code_snippet):
                         score += 2
                         matched_patterns.append(risk_pattern)
 
                 confidence = min(1.0, score / 5.0)
 
-                matched_cwes.append({
-                    'cwe_id': pattern_info['cwe_id'],
-                    'cwe_name': pattern_info['cwe_name'],
-                    'pattern_name': pattern_name,
-                    'confidence': confidence,
-                    'matched_keywords': matched_kws,
-                    'matched_patterns': matched_patterns,
-                    'source': 'hardcoded_pattern'
-                })
+                matched_cwes.append(
+                    {
+                        "cwe_id": pattern_info["cwe_id"],
+                        "cwe_name": pattern_info["cwe_name"],
+                        "pattern_name": pattern_name,
+                        "confidence": confidence,
+                        "matched_keywords": matched_kws,
+                        "matched_patterns": matched_patterns,
+                        "source": "hardcoded_pattern",
+                    }
+                )
 
-        return {'matched_cwes': matched_cwes}
+        return {"matched_cwes": matched_cwes}
 
     def _extract_keywords(self, finding) -> List[str]:
         """从 finding 中提取关键词
@@ -431,9 +492,9 @@ class FindingVerifier:
         Returns:
             关键词列表
         """
-        rule_name = getattr(finding, 'rule_name', '') or ''
-        description = getattr(finding, 'description', '') or ''
-        code_snippet = getattr(finding, 'code_snippet', '') or ''
+        rule_name = getattr(finding, "rule_name", "") or ""
+        description = getattr(finding, "description", "") or ""
+        code_snippet = getattr(finding, "code_snippet", "") or ""
 
         combined_text = f"{rule_name} {description}".lower()
 
@@ -441,13 +502,27 @@ class FindingVerifier:
         keyword_set = set()
 
         for pattern_info in self.CWE_PATTERNS.values():
-            for kw in pattern_info['keywords']:
+            for kw in pattern_info["keywords"]:
                 if kw.lower() in combined_text and kw.lower() not in keyword_set:
                     keywords.append(kw)
                     keyword_set.add(kw.lower())
 
-        vuln_keywords = ['injection', 'xss', 'csrf', 'traversal', 'disclosure', 'weak', 'hardcoded',
-                        'command', 'sql', 'path', 'sensitive', 'credential', 'secret', 'authentication']
+        vuln_keywords = [
+            "injection",
+            "xss",
+            "csrf",
+            "traversal",
+            "disclosure",
+            "weak",
+            "hardcoded",
+            "command",
+            "sql",
+            "path",
+            "sensitive",
+            "credential",
+            "secret",
+            "authentication",
+        ]
         for kw in vuln_keywords:
             if kw in combined_text and kw not in keyword_set:
                 keywords.append(kw)
@@ -480,13 +555,13 @@ class FindingVerifier:
         if code_valid:
             verification_score += 0.35
 
-        if cwe_match['confidence'] > 0:
-            verification_score += cwe_match['confidence'] * 0.4
+        if cwe_match["confidence"] > 0:
+            verification_score += cwe_match["confidence"] * 0.4
 
         if verification_score >= 0.6:
             confidence = verification_score
         else:
-            existing_confidence = getattr(finding, 'confidence', 0.5)
+            existing_confidence = getattr(finding, "confidence", 0.5)
             confidence = verification_score * 0.6 + existing_confidence * 0.4
 
         return min(1.0, max(0.0, confidence))
@@ -532,31 +607,31 @@ class FindingVerifier:
         root = project_root or self.project_root
 
         if isinstance(finding, dict):
-            location = finding.get('location')
+            location = finding.get("location")
             if location and isinstance(location, dict):
-                file_path = location.get('file')
+                file_path = location.get("file")
             else:
                 file_path = None
-            metadata = finding.get('metadata', {})
+            metadata = finding.get("metadata", {})
         else:
-            if hasattr(finding, 'location'):
+            if hasattr(finding, "location"):
                 if isinstance(finding.location, dict):
-                    file_path = finding.location.get('file')
+                    file_path = finding.location.get("file")
                 else:
-                    file_path = finding.location.file if hasattr(finding.location, 'file') else None
+                    file_path = finding.location.file if hasattr(finding.location, "file") else None
             else:
                 file_path = None
-            metadata = getattr(finding, 'metadata', {})
+            metadata = getattr(finding, "metadata", {})
 
-        signal_state = metadata.get('signal_state', 'NEW')
-        status = metadata.get('status', 'UNKNOWN')
-        is_agent_confirmed = signal_state == 'CONFIRMED' or status == 'CONFIRMED'
+        signal_state = metadata.get("signal_state", "NEW")
+        status = metadata.get("status", "UNKNOWN")
+        is_agent_confirmed = signal_state == "CONFIRMED" or status == "CONFIRMED"
 
         is_scope_verified = True
         if root and file_path and not self._is_file_in_project_scope(file_path, root):
             logger.debug(f"[Scope] 文件路径与项目根目录不匹配，尝试模糊匹配: {file_path}")
             file_name = Path(file_path).name
-            root_files = list(Path(root).rglob('*')) if Path(root).exists() else []
+            root_files = list(Path(root).rglob("*")) if Path(root).exists() else []
             root_file_names = {f.name for f in root_files if f.is_file()}
             if file_name not in root_file_names:
                 logger.debug(f"[Scope] 模糊匹配失败，文件不在项目扫描范围内: {file_path}")
@@ -576,10 +651,10 @@ class FindingVerifier:
                 code_verified=code_valid,
                 cwe_match=cwe_match,
                 confidence=confidence,
-                verification_level='needs_review',
+                verification_level="needs_review",
                 is_hallucination=False,
                 matched_cwes=[],
-                best_match=None
+                best_match=None,
             )
 
         path_valid = self.verify_finding_path(finding, root)
@@ -588,21 +663,25 @@ class FindingVerifier:
         confidence = self.calculate_confidence(finding, root)
 
         if is_agent_confirmed:
-            verification_level = 'single_verified' if confidence < 0.5 else (
-                'double_verified' if confidence < 0.7 else (
-                    'triple_verified' if confidence >= 0.9 else 'single_verified'
+            verification_level = (
+                "single_verified"
+                if confidence < 0.5
+                else (
+                    "double_verified"
+                    if confidence < 0.7
+                    else ("triple_verified" if confidence >= 0.9 else "single_verified")
                 )
             )
-        elif confidence >= 0.9 and path_valid and code_valid and cwe_match['best_match']:
-            verification_level = 'triple_verified'
-        elif confidence >= 0.7 and path_valid and cwe_match['best_match']:
-            verification_level = 'double_verified'
+        elif confidence >= 0.9 and path_valid and code_valid and cwe_match["best_match"]:
+            verification_level = "triple_verified"
+        elif confidence >= 0.7 and path_valid and cwe_match["best_match"]:
+            verification_level = "double_verified"
         elif confidence >= 0.5 and path_valid:
-            verification_level = 'single_verified'
+            verification_level = "single_verified"
         elif confidence >= 0.3 and path_valid:
-            verification_level = 'needs_review'
+            verification_level = "needs_review"
         else:
-            verification_level = 'potential_hallucination'
+            verification_level = "potential_hallucination"
 
         is_hallucination = confidence < 0.3 and not is_agent_confirmed
 
@@ -613,8 +692,8 @@ class FindingVerifier:
             confidence=confidence,
             verification_level=verification_level,
             is_hallucination=is_hallucination,
-            matched_cwes=cwe_match.get('matched_cwes', []),
-            best_match=cwe_match.get('best_match')
+            matched_cwes=cwe_match.get("matched_cwes", []),
+            best_match=cwe_match.get("best_match"),
         )
 
 
@@ -679,14 +758,12 @@ class FuzzyCweMatcher:
         for cwe_id in cwe_ids:
             cwe_info = self.nvd_adapter.get_cwe_by_id(cwe_id)
             if cwe_info:
-                descriptions[cwe_id] = cwe_info.get('cwe_description', '')
+                descriptions[cwe_id] = cwe_info.get("cwe_description", "")
 
         return descriptions
 
     def match_with_fuzzy_similarity(
-        self,
-        finding: Dict[str, Any],
-        threshold: float = 0.6
+        self, finding: Dict[str, Any], threshold: float = 0.6
     ) -> List[Dict[str, Any]]:
         """基于语义相似性匹配 CWE
 
@@ -697,9 +774,9 @@ class FuzzyCweMatcher:
         Returns:
             匹配的 CWE 列表，按相似度排序
         """
-        rule_name = finding.get('rule_name', '')
-        description = finding.get('description', '')
-        code_snippet = finding.get('code_snippet', '')
+        rule_name = finding.get("rule_name", "")
+        description = finding.get("description", "")
+        code_snippet = finding.get("code_snippet", "")
 
         combined_text = f"{rule_name} {description}".strip()
 
@@ -714,42 +791,48 @@ class FuzzyCweMatcher:
             nvd_results = self.nvd_adapter.match_cwe(keywords, limit=10)
 
             for nvd_result in nvd_results:
-                cwe_desc = nvd_result.get('cwe_description', '')
-                similarity = self._calculate_text_similarity(combined_text.lower(), cwe_desc.lower())
+                cwe_desc = nvd_result.get("cwe_description", "")
+                similarity = self._calculate_text_similarity(
+                    combined_text.lower(), cwe_desc.lower()
+                )
 
                 if similarity >= threshold:
-                    matched_results.append({
-                        'cwe_id': nvd_result['cwe_id'],
-                        'cwe_name': nvd_result['cwe_name'],
-                        'cwe_description': cwe_desc,
-                        'confidence': similarity,
-                        'matched_keywords': nvd_result.get('matched_keywords', []),
-                        'source': 'nvd_database',
-                        'match_type': 'fuzzy_semantic'
-                    })
+                    matched_results.append(
+                        {
+                            "cwe_id": nvd_result["cwe_id"],
+                            "cwe_name": nvd_result["cwe_name"],
+                            "cwe_description": cwe_desc,
+                            "confidence": similarity,
+                            "matched_keywords": nvd_result.get("matched_keywords", []),
+                            "source": "nvd_database",
+                            "match_type": "fuzzy_semantic",
+                        }
+                    )
 
         hardcoded_results = self._match_cwe_hardcoded(finding)
-        for hr in hardcoded_results.get('matched_cwes', []):
-            cwe_desc = hr.get('cwe_description', '')
+        for hr in hardcoded_results.get("matched_cwes", []):
+            cwe_desc = hr.get("cwe_description", "")
             similarity = self._calculate_text_similarity(combined_text.lower(), cwe_desc.lower())
 
             if similarity >= threshold:
-                matched_results.append({
-                    'cwe_id': hr['cwe_id'],
-                    'cwe_name': hr['cwe_name'],
-                    'cwe_description': cwe_desc,
-                    'confidence': similarity,
-                    'matched_keywords': hr.get('matched_keywords', []),
-                    'source': 'hardcoded_pattern',
-                    'match_type': 'fuzzy_semantic'
-                })
+                matched_results.append(
+                    {
+                        "cwe_id": hr["cwe_id"],
+                        "cwe_name": hr["cwe_name"],
+                        "cwe_description": cwe_desc,
+                        "confidence": similarity,
+                        "matched_keywords": hr.get("matched_keywords", []),
+                        "source": "hardcoded_pattern",
+                        "match_type": "fuzzy_semantic",
+                    }
+                )
 
-        matched_results.sort(key=lambda x: x['confidence'], reverse=True)
+        matched_results.sort(key=lambda x: x["confidence"], reverse=True)
         unique_results = []
         seen_ids = set()
         for r in matched_results:
-            if r['cwe_id'] not in seen_ids:
-                seen_ids.add(r['cwe_id'])
+            if r["cwe_id"] not in seen_ids:
+                seen_ids.add(r["cwe_id"])
                 unique_results.append(r)
 
         self._semantic_cache[cache_key] = unique_results[:5]
@@ -765,10 +848,26 @@ class FuzzyCweMatcher:
             关键词列表
         """
         vuln_keywords = [
-            'injection', 'xss', 'csrf', 'traversal', 'disclosure', 'weak',
-            'hardcoded', 'command', 'sql', 'path', 'sensitive', 'credential',
-            'secret', 'authentication', 'authorization', 'serialization',
-            'deserialization', 'overflow', 'disclosure', 'exposure'
+            "injection",
+            "xss",
+            "csrf",
+            "traversal",
+            "disclosure",
+            "weak",
+            "hardcoded",
+            "command",
+            "sql",
+            "path",
+            "sensitive",
+            "credential",
+            "secret",
+            "authentication",
+            "authorization",
+            "serialization",
+            "deserialization",
+            "overflow",
+            "disclosure",
+            "exposure",
         ]
 
         text_lower = text.lower()
@@ -795,37 +894,54 @@ class FuzzyCweMatcher:
             匹配的 CWE 信息
         """
         matched_cwes = []
-        rule_name = getattr(finding, 'rule_name', '') or finding.get('rule_name', '')
-        description = getattr(finding, 'description', '') or finding.get('description', '')
-        code_snippet = getattr(finding, 'code_snippet', '') or finding.get('code_snippet', '')
+        rule_name = getattr(finding, "rule_name", "") or finding.get("rule_name", "")
+        description = getattr(finding, "description", "") or finding.get("description", "")
+        code_snippet = getattr(finding, "code_snippet", "") or finding.get("code_snippet", "")
 
         combined_text = f"{rule_name} {description} {code_snippet}".lower()
 
         CWE_PATTERNS = {
-            'sql_injection': {
-                'cwe_id': 'CWE-89',
-                'cwe_name': 'SQL Injection',
-                'keywords': ['sql', 'select', 'insert', 'update', 'delete', 'query', 'execute', 'statement', 'jdbc'],
+            "sql_injection": {
+                "cwe_id": "CWE-89",
+                "cwe_name": "SQL Injection",
+                "keywords": [
+                    "sql",
+                    "select",
+                    "insert",
+                    "update",
+                    "delete",
+                    "query",
+                    "execute",
+                    "statement",
+                    "jdbc",
+                ],
             },
-            'xss': {
-                'cwe_id': 'CWE-79',
-                'cwe_name': 'Cross-site Scripting',
-                'keywords': ['html', 'innerHTML', 'script', 'eval', 'document.write', 'response.getWriter'],
+            "xss": {
+                "cwe_id": "CWE-79",
+                "cwe_name": "Cross-site Scripting",
+                "keywords": [
+                    "html",
+                    "innerHTML",
+                    "script",
+                    "eval",
+                    "document.write",
+                    "response.getWriter",
+                ],
             },
-            'command_injection': {
-                'cwe_id': 'CWE-78',
-                'cwe_name': 'OS Command Injection',
-                'keywords': ['runtime', 'exec', 'process', 'command', 'shell'],
+            "command_injection": {
+                "cwe_id": "CWE-78",
+                "cwe_name": "OS Command Injection",
+                "keywords": ["runtime", "exec", "process", "command", "shell"],
             },
-            'path_traversal': {
-                'cwe_id': 'CWE-22',
-                'cwe_name': 'Path Traversal',
-                'keywords': ['path', 'traversal', '../', '..\\', 'new File', 'FileInputStream'],
+            "path_traversal": {
+                "cwe_id": "CWE-22",
+                "cwe_name": "Path Traversal",
+                "keywords": ["path", "traversal", "../", "..\\", "new File", "FileInputStream"],
             },
-            'hardcoded': {
-                'cwe_id': 'CWE-798',
-                'cwe_name': 'Use of Hard-coded Credentials',
-                'keywords': ['password', 'secret', 'token', 'key', 'credential', 'api_key'],
+            "hardcoded": {
+                "cwe_id": "CWE-798",
+                "cwe_name": "Use of Hard-coded Credentials",
+                "keywords": ["password", "secret", "token", "key", "credential", "api_key"],
             },
         }
 
@@ -833,25 +949,29 @@ class FuzzyCweMatcher:
             score = 0
             matched_kws = []
 
-            for kw in pattern_info['keywords']:
+            for kw in pattern_info["keywords"]:
                 if kw.lower() in combined_text:
                     score += 1
                     matched_kws.append(kw)
 
             if score > 0:
                 confidence = min(1.0, score / 3.0)
-                matched_cwes.append({
-                    'cwe_id': pattern_info['cwe_id'],
-                    'cwe_name': pattern_info['cwe_name'],
-                    'confidence': confidence,
-                    'matched_keywords': matched_kws,
-                    'cwe_description': '',
-                })
+                matched_cwes.append(
+                    {
+                        "cwe_id": pattern_info["cwe_id"],
+                        "cwe_name": pattern_info["cwe_name"],
+                        "confidence": confidence,
+                        "matched_keywords": matched_kws,
+                        "cwe_description": "",
+                    }
+                )
 
-        return {'matched_cwes': matched_cwes}
+        return {"matched_cwes": matched_cwes}
 
 
-def verify_ai_findings(findings: List, project_root: str, nvd_vulnerabilities: List = None, nvd_db_path: str = None) -> List[Dict[str, Any]]:
+def verify_ai_findings(
+    findings: List, project_root: str, nvd_vulnerabilities: List = None, nvd_db_path: str = None
+) -> List[Dict[str, Any]]:
     """批量验证 AI 发现
 
     Args:
@@ -868,31 +988,39 @@ def verify_ai_findings(findings: List, project_root: str, nvd_vulnerabilities: L
 
     for finding in findings:
         verification = verifier.verify_and_annotate(finding, project_root)
-        verification_dict = verification.to_dict() if hasattr(verification, 'to_dict') else verification
+        verification_dict = (
+            verification.to_dict() if hasattr(verification, "to_dict") else verification
+        )
         results.append(verification_dict)
 
         if isinstance(finding, dict):
-            if 'metadata' in finding and isinstance(finding['metadata'], dict):
-                finding['metadata']['verification'] = verification_dict
-                finding['metadata']['path_verified'] = verification_dict.get('path_verified', False)
-                finding['metadata']['code_verified'] = verification_dict.get('code_verified', False)
-                finding['metadata']['confidence_score'] = verification_dict.get('confidence', 0.0)
-                finding['metadata']['verification_level'] = verification_dict.get('verification_level', 'none')
-                finding['metadata']['is_hallucination'] = verification_dict.get('is_hallucination', True)
-                cwe_match = verification_dict.get('cwe_match', {})
-                if isinstance(cwe_match, dict) and cwe_match.get('best_match'):
-                    finding['metadata']['matched_cwe'] = cwe_match['best_match']
+            if "metadata" in finding and isinstance(finding["metadata"], dict):
+                finding["metadata"]["verification"] = verification_dict
+                finding["metadata"]["path_verified"] = verification_dict.get("path_verified", False)
+                finding["metadata"]["code_verified"] = verification_dict.get("code_verified", False)
+                finding["metadata"]["confidence_score"] = verification_dict.get("confidence", 0.0)
+                finding["metadata"]["verification_level"] = verification_dict.get(
+                    "verification_level", "none"
+                )
+                finding["metadata"]["is_hallucination"] = verification_dict.get(
+                    "is_hallucination", True
+                )
+                cwe_match = verification_dict.get("cwe_match", {})
+                if isinstance(cwe_match, dict) and cwe_match.get("best_match"):
+                    finding["metadata"]["matched_cwe"] = cwe_match["best_match"]
         else:
-            if hasattr(finding, 'metadata'):
-                finding.metadata['verification'] = verification_dict
-                finding.metadata['path_verified'] = verification_dict['path_verified']
-                finding.metadata['code_verified'] = verification_dict['code_verified']
-                finding.metadata['confidence_score'] = verification_dict['confidence']
-                finding.metadata['verification_level'] = verification_dict['verification_level']
-                finding.metadata['is_hallucination'] = verification_dict['is_hallucination']
+            if hasattr(finding, "metadata"):
+                finding.metadata["verification"] = verification_dict
+                finding.metadata["path_verified"] = verification_dict["path_verified"]
+                finding.metadata["code_verified"] = verification_dict["code_verified"]
+                finding.metadata["confidence_score"] = verification_dict["confidence"]
+                finding.metadata["verification_level"] = verification_dict["verification_level"]
+                finding.metadata["is_hallucination"] = verification_dict["is_hallucination"]
 
-                if verification_dict.get('cwe_match') and verification_dict['cwe_match'].get('best_match'):
-                    finding.metadata['matched_cwe'] = verification_dict['cwe_match']['best_match']
+                if verification_dict.get("cwe_match") and verification_dict["cwe_match"].get(
+                    "best_match"
+                ):
+                    finding.metadata["matched_cwe"] = verification_dict["cwe_match"]["best_match"]
 
     return results
 
@@ -906,11 +1034,7 @@ class MultiLayerValidator:
     """
 
     def __init__(self):
-        self.layers = [
-            KeywordMatchValidator(),
-            AnnotationTypeValidator(),
-            SemanticValidator()
-        ]
+        self.layers = [KeywordMatchValidator(), AnnotationTypeValidator(), SemanticValidator()]
 
     def validate(self, vulnerability: dict, file_content: str) -> tuple[bool, str, dict]:
         """执行多层验证
@@ -925,20 +1049,23 @@ class MultiLayerValidator:
         results = []
         for layer in self.layers:
             is_valid, status, details = layer.validate(vulnerability, file_content)
-            results.append({
-                "layer": layer.__class__.__name__,
-                "is_valid": is_valid,
-                "status": status,
-                "details": details
-            })
+            results.append(
+                {
+                    "layer": layer.__class__.__name__,
+                    "is_valid": is_valid,
+                    "status": status,
+                    "details": details,
+                }
+            )
 
             if not is_valid:
                 return False, status, {"layers": results}
 
         return True, "CONFIRMED", {"layers": results}
 
-    def validate_location(self, line_number: int, line_content: str,
-                         vulnerability_type: str) -> tuple[bool, str]:
+    def validate_location(
+        self, line_number: int, line_content: str, vulnerability_type: str
+    ) -> tuple[bool, str]:
         """验证行号位置是否与漏洞类型匹配
 
         Args:
@@ -950,8 +1077,10 @@ class MultiLayerValidator:
             (是否匹配, 原因)
         """
         for layer in self.layers:
-            if hasattr(layer, 'validate_location'):
-                is_valid, reason = layer.validate_location(line_number, line_content, vulnerability_type)
+            if hasattr(layer, "validate_location"):
+                is_valid, reason = layer.validate_location(
+                    line_number, line_content, vulnerability_type
+                )
                 if not is_valid:
                     return False, reason
 
@@ -979,7 +1108,7 @@ class KeywordMatchValidator:
         matched_lines = []
         for kw in keywords:
             if kw.lower() in file_content.lower():
-                lines = file_content.split('\n')
+                lines = file_content.split("\n")
                 for i, line in enumerate(lines):
                     if kw.lower() in line.lower():
                         matched_lines.append(i + 1)
@@ -998,24 +1127,27 @@ class KeywordMatchValidator:
 
         combined = f"{rule_name} {description} {vuln_type}"
 
-        words = re.findall(r'[a-zA-Z][a-zA-Z0-9]{2,}', combined.lower())
+        words = re.findall(r"[a-zA-Z][a-zA-Z0-9]{2,}", combined.lower())
         keywords.extend([w for w in words if len(w) > 3 and not self._contains_chinese(w)])
 
-        annotation_pattern = r'@(\w+)'
+        annotation_pattern = r"@(\w+)"
         annotations = re.findall(annotation_pattern, combined)
-        keywords.extend([f"@{ann.lower()}" for ann in annotations if not self._contains_chinese(ann)])
+        keywords.extend(
+            [f"@{ann.lower()}" for ann in annotations if not self._contains_chinese(ann)]
+        )
 
         return list(set(keywords))[:20]
 
     def _contains_chinese(self, text: str) -> bool:
         """检查是否包含中文"""
         for char in text:
-            if '\u4e00' <= char <= '\u9fff':
+            if "\u4e00" <= char <= "\u9fff":
                 return True
         return False
 
-    def validate_location(self, line_number: int, line_content: str,
-                         vulnerability_type: str) -> tuple[bool, str]:
+    def validate_location(
+        self, line_number: int, line_content: str, vulnerability_type: str
+    ) -> tuple[bool, str]:
         """验证位置 - 关键词层面"""
         return True, "VALID"
 
@@ -1044,8 +1176,9 @@ class AnnotationTypeValidator:
 
         return True, "VALID", {}
 
-    def validate_location(self, line_number: int, line_content: str,
-                         vulnerability_type: str) -> tuple[bool, str]:
+    def validate_location(
+        self, line_number: int, line_content: str, vulnerability_type: str
+    ) -> tuple[bool, str]:
         """验证位置 - 注解类型层面"""
         if not vulnerability_type:
             return True, "VALID"
@@ -1061,7 +1194,9 @@ class AnnotationTypeValidator:
                 return False, "该行不包含@RefreshScope注解"
 
         if "configuration" in type_lower or "config" in type_lower:
-            if not any(kw in line_content.lower() for kw in ["config", "properties", "@", "configuration"]):
+            if not any(
+                kw in line_content.lower() for kw in ["config", "properties", "@", "configuration"]
+            ):
                 return False, "该行不包含配置相关代码"
 
         return True, "VALID"
@@ -1093,7 +1228,9 @@ class SemanticValidator:
 
         return True, "VALID", {"score": semantic_score}
 
-    def _calculate_semantic_score(self, vuln_type: str, description: str, file_content: str) -> float:
+    def _calculate_semantic_score(
+        self, vuln_type: str, description: str, file_content: str
+    ) -> float:
         """计算语义匹配分数"""
         score = 0.0
         keywords = []
@@ -1119,14 +1256,16 @@ class SemanticValidator:
 
         return min(1.0, score)
 
-    def validate_location(self, line_number: int, line_content: str,
-                         vulnerability_type: str) -> tuple[bool, str]:
+    def validate_location(
+        self, line_number: int, line_content: str, vulnerability_type: str
+    ) -> tuple[bool, str]:
         """验证位置 - 语义层面"""
         return True, "VALID"
 
 
-def multi_layer_validate(vulnerability: dict, file_content: str,
-                         line_number: int = None, line_content: str = None) -> tuple[bool, str, dict]:
+def multi_layer_validate(
+    vulnerability: dict, file_content: str, line_number: int = None, line_content: str = None
+) -> tuple[bool, str, dict]:
     """多层验证的便捷函数
 
     Args:

@@ -1,15 +1,14 @@
 """增量索引管理器测试"""
 
-import pytest
-import tempfile
-import shutil
 import os
+import shutil
+import tempfile
 import time
 from pathlib import Path
-from src.ai.pure_ai.incremental_index import (
-    IncrementalIndexManager,
-    FileIndexEntry
-)
+
+import pytest
+
+from src.ai.pure_ai.incremental_index import FileIndexEntry, IncrementalIndexManager
 
 
 class TestIncrementalIndexManager:
@@ -26,8 +25,7 @@ class TestIncrementalIndexManager:
     def index_manager(self, temp_project_dir):
         """创建增量索引管理器实例"""
         return IncrementalIndexManager(
-            project_path=temp_project_dir,
-            config={"hash_cache_size": 8192}
+            project_path=temp_project_dir, config={"hash_cache_size": 8192}
         )
 
     @pytest.fixture
@@ -82,8 +80,7 @@ class TestIncrementalIndexManager:
         changed_files = {"new_file.py"}
 
         unchanged = index_manager.get_unchanged_files(
-            changed_files=set(changed_files),
-            all_files=all_files
+            changed_files=set(changed_files), all_files=all_files
         )
 
         assert len(unchanged) == len(temp_files)
@@ -117,7 +114,7 @@ class TestIncrementalIndexManager:
             file_path=temp_files[0],
             file_hash=new_hash,
             mtime=new_stat.st_mtime,
-            size=new_stat.st_size
+            size=new_stat.st_size,
         )
 
         updated_entry = index_manager.get_index_entry(temp_files[0])

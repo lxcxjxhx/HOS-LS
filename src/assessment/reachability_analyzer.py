@@ -2,13 +2,14 @@
 
 实现漏洞可达性分析，评估漏洞是否可被实际利用
 """
-from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Any, Set
-from pathlib import Path
+
 import re
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Set
 
 from src.core.config import Config, get_config
-from src.taint.engine import CallGraphBuilder, TaintSource, TaintSink
+from src.taint.engine import CallGraphBuilder, TaintSink, TaintSource
 from src.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -17,6 +18,7 @@ logger = get_logger(__name__)
 @dataclass
 class EntryPoint:
     """入口点"""
+
     name: str
     file_path: str
     line: int
@@ -29,6 +31,7 @@ class EntryPoint:
 @dataclass
 class ReachabilityResult:
     """可达性分析结果"""
+
     reachable: bool
     reachability_score: float
     entry_point: Optional[str]
@@ -57,7 +60,7 @@ class ReachabilityCalculator:
             (r"(app|router)\.(get|post|put|delete)\s*\(", "endpoint"),
             (r"function\s+\w+\s*\(", "function"),
             (r"exports?\.\w+\s*=", "exported"),
-        ]
+        ],
     }
 
     SINK_PATTERNS = {
@@ -80,9 +83,7 @@ class ReachabilityCalculator:
         self._entry_points_cache: Dict[str, List[EntryPoint]] = {}
 
     def calculate_reachability(
-        self,
-        finding: Dict[str, Any],
-        codebase_context: Dict[str, Any]
+        self, finding: Dict[str, Any], codebase_context: Dict[str, Any]
     ) -> ReachabilityResult:
         """计算漏洞可达性
 
@@ -110,7 +111,7 @@ class ReachabilityCalculator:
                 confidence=0.3,
                 vulnerability_type=vuln_type,
                 source_location=source_location,
-                sink_location=source_location
+                sink_location=source_location,
             )
 
         reachable_entry_points = self._find_reachable_entry_points(
@@ -127,7 +128,7 @@ class ReachabilityCalculator:
                 confidence=0.9,
                 vulnerability_type=vuln_type,
                 source_location=source_location,
-                sink_location=source_location
+                sink_location=source_location,
             )
 
         best_entry = reachable_entry_points[0]
@@ -138,10 +139,7 @@ class ReachabilityCalculator:
         barriers = self._find_barriers(data_flow_path, vuln_type)
 
         score = self._calculate_reachability_score(
-            len(reachable_entry_points),
-            len(data_flow_path),
-            len(barriers),
-            vuln_type
+            len(reachable_entry_points), len(data_flow_path), len(barriers), vuln_type
         )
 
         return ReachabilityResult(
@@ -153,7 +151,7 @@ class ReachabilityCalculator:
             confidence=0.8,
             vulnerability_type=vuln_type,
             source_location=source_location,
-            sink_location=source_location
+            sink_location=source_location,
         )
 
     def find_entry_points(self, source_files: List[str]) -> List[EntryPoint]:
@@ -201,10 +199,7 @@ class ReachabilityCalculator:
         return "java"
 
     def _extract_entry_points(
-        self,
-        content: str,
-        file_path: str,
-        language: str
+        self, content: str, file_path: str, language: str
     ) -> List[EntryPoint]:
         """从内容中提取入口点"""
         entry_points = []
@@ -214,13 +209,15 @@ class ReachabilityCalculator:
             for pattern, ptype in patterns:
                 if re.search(pattern, line):
                     annotations = self._extract_annotations(content, line_num)
-                    entry_points.append(EntryPoint(
-                        name=self._extract_function_name(line, language),
-                        file_path=file_path,
-                        line=line_num,
-                        annotations=annotations,
-                        access_modifier=self._extract_access_modifier(line)
-                    ))
+                    entry_points.append(
+                        EntryPoint(
+                            name=self._extract_function_name(line, language),
+                            file_path=file_path,
+                            line=line_num,
+                            annotations=annotations,
+                            access_modifier=self._extract_access_modifier(line),
+                        )
+                    )
                     break
 
         return entry_points
@@ -264,17 +261,11 @@ class ReachabilityCalculator:
         return "package"
 
     def _find_reachable_entry_points(
-        self,
-        sink_file: str,
-        sink_line: int,
-        entry_points: List[EntryPoint],
-        vuln_type: str
+        self, sink_file: str, sink_line: int, entry_points: List[EntryPoint], vuln_type: str
     ) -> List[EntryPoint]:
         """查找可达入口点"""
         reachable = []
-        call_graph = self.call_graph_builder.build(
-            [ep.file_path for ep in entry_points]
-        )
+        call_graph = self.call_graph_builder.build([ep.file_path for ep in entry_points])
 
         for ep in entry_points:
             if self._is_reachable_via_call_graph(ep, sink_file, sink_line, call_graph):
@@ -289,7 +280,7 @@ class ReachabilityCalculator:
         entry_point: EntryPoint,
         sink_file: str,
         sink_line: int,
-        call_graph: Dict[str, List[str]]
+        call_graph: Dict[str, List[str]],
     ) -> bool:
         """检查通过调用图是否可达"""
         entry_key = f"{entry_point.file_path}:{entry_point.name}"
@@ -305,12 +296,12 @@ class ReachabilityCalculator:
         sink_file: str,
         sink_line: int,
         vuln_type: str,
-        context: Dict[str, Any]
+        context: Dict[str, Any],
     ) -> List[str]:
         """追踪数据流路径"""
         path = [
             f"{entry_point.file_path}:{entry_point.line} ({entry_point.name})",
-            f"{sink_file}:{sink_line} (sink)"
+            f"{sink_file}:{sink_line} (sink)",
         ]
         return path
 
@@ -327,11 +318,7 @@ class ReachabilityCalculator:
         return barriers
 
     def _calculate_reachability_score(
-        self,
-        num_entry_points: int,
-        path_length: int,
-        num_barriers: int,
-        vuln_type: str
+        self, num_entry_points: int, path_length: int, num_barriers: int, vuln_type: str
     ) -> float:
         """计算可达性分数"""
         base_score = 1.0
@@ -356,9 +343,7 @@ class ReachabilityCalculator:
         return min(1.0, max(0.0, score))
 
     def get_reachability_for_findings(
-        self,
-        findings: List[Dict[str, Any]],
-        codebase_context: Dict[str, Any]
+        self, findings: List[Dict[str, Any]], codebase_context: Dict[str, Any]
     ) -> List[ReachabilityResult]:
         """批量计算漏洞可达性
 
@@ -376,22 +361,23 @@ class ReachabilityCalculator:
                 results.append(result)
             except Exception as e:
                 logger.debug(f"可达性分析失败: {e}")
-                results.append(ReachabilityResult(
-                    reachable=False,
-                    reachability_score=0.0,
-                    entry_point=None,
-                    data_flow_path=[],
-                    barriers=[],
-                    confidence=0.0,
-                    vulnerability_type=finding.get("vulnerability_type", "UNKNOWN")
-                ))
+                results.append(
+                    ReachabilityResult(
+                        reachable=False,
+                        reachability_score=0.0,
+                        entry_point=None,
+                        data_flow_path=[],
+                        barriers=[],
+                        confidence=0.0,
+                        vulnerability_type=finding.get("vulnerability_type", "UNKNOWN"),
+                    )
+                )
 
         return results
 
 
 def calculate_findings_reachability(
-    findings: List[Dict[str, Any]],
-    source_files: List[str]
+    findings: List[Dict[str, Any]], source_files: List[str]
 ) -> List[ReachabilityResult]:
     """便捷函数：计算漏洞可达性
 

@@ -1,5 +1,6 @@
 from typing import List
-from src.analyzers.verification.interfaces import Validator, VulnContext, ValidationResult
+
+from src.analyzers.verification.interfaces import ValidationResult, Validator, VulnContext
 
 
 class PermitAllValidator(Validator):
@@ -67,7 +68,7 @@ class PermitAllValidator(Validator):
                 is_false_positive=True,
                 confidence=0.95,
                 reason="代码中不包含 permitAll 配置",
-                evidence={"code_snippet": code}
+                evidence={"code_snippet": code},
             )
 
         matched_sensitive_paths = []
@@ -84,7 +85,7 @@ class PermitAllValidator(Validator):
                 is_false_positive=True,
                 confidence=0.7,
                 reason="permitAll 配置存在但未匹配到明显敏感的路径",
-                evidence={"code_snippet": code}
+                evidence={"code_snippet": code},
             )
 
         severity_score = 0.0
@@ -119,12 +120,12 @@ class PermitAllValidator(Validator):
                 "file_path": context.file_path,
                 "line_number": context.line_number,
                 "matched_paths": matched_sensitive_paths,
-                "severity_score": severity_score
+                "severity_score": severity_score,
             },
             verification_steps=[
                 "1. 确认 permitAll 匹配的路径是否包含敏感操作",
                 "2. 检查该端点是否需要认证（如用户数据、权限操作）",
                 "3. 验证是否有其他安全层保护（如 IP 白名单）",
-                "4. 评估绕过后可能造成的危害程度"
-            ]
+                "4. 评估绕过后可能造成的危害程度",
+            ],
         )

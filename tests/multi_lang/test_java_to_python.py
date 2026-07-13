@@ -1,22 +1,24 @@
-import sys
 import ast
-import subprocess
-import tempfile
 import os
 import runpy
+import subprocess
+import sys
+import tempfile
 
 project_root = os.path.join(os.path.dirname(__file__), "..", "..")
 sys.path.insert(0, project_root)
 
 module_name = "ast_transpiler_engine"
-module_path = os.path.join(project_root, "src", "analyzers", "verification", "ast_transpiler_engine.py")
+module_path = os.path.join(
+    project_root, "src", "analyzers", "verification", "ast_transpiler_engine.py"
+)
 
 mod_info = runpy.run_path(module_path, run_name=module_name)
 JavaASTParser = mod_info["JavaASTParser"]
 
 
 def test_java_to_python_transpilation():
-    java_code = '''
+    java_code = """
 public class HelloWorld {
     private String name;
 
@@ -33,7 +35,7 @@ public class HelloWorld {
         System.out.println(hello.getName());
     }
 }
-'''
+"""
 
     print("=" * 60)
     print("Java to Python Transpilation Test Results")
@@ -71,7 +73,7 @@ public class HelloWorld {
             "executable": False,
             "execution_output": "",
             "error_message": error_message,
-            "generated_code": ""
+            "generated_code": "",
         }
 
     print("\n[2] Generated Python code:")
@@ -89,16 +91,13 @@ public class HelloWorld {
         print(f"    Error: {error_message}")
 
     if is_valid_syntax:
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
             f.write(python_code)
             temp_file = f.name
 
         try:
             result = subprocess.run(
-                [sys.executable, temp_file],
-                capture_output=True,
-                text=True,
-                timeout=10
+                [sys.executable, temp_file], capture_output=True, text=True, timeout=10
             )
             execution_output = result.stdout
             if result.stderr:
@@ -153,7 +152,7 @@ public class HelloWorld {
         "executable": is_executable,
         "execution_output": execution_output,
         "error_message": error_message,
-        "generated_code": python_code
+        "generated_code": python_code,
     }
 
 

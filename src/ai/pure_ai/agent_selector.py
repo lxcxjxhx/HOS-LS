@@ -3,7 +3,6 @@ from typing import Dict, List, Optional
 
 from src.core.config import Config
 
-
 VULN_TYPE_AGENT_MAP = {
     "SQL_INJECTION": ["SemanticAgent", "ValidationAgent", "AttackAgent"],
     "XSS": ["SemanticAgent", "ValidationAgent", "AttackAgent"],
@@ -99,7 +98,13 @@ class AgentSelector:
         selected_agents = self.select_agents(vuln_type, context)
         skip_reasons = {}
 
-        for agent in ["ContextBuilder", "SemanticAgent", "ValidationAgent", "AttackAgent", "FinalDecision"]:
+        for agent in [
+            "ContextBuilder",
+            "SemanticAgent",
+            "ValidationAgent",
+            "AttackAgent",
+            "FinalDecision",
+        ]:
             if agent not in selected_agents:
                 if agent == "ContextBuilder" and self._should_skip_context_builder(context):
                     skip_reasons[agent] = "context_already_sufficient"

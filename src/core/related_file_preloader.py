@@ -3,11 +3,11 @@
 在扫描过程中预加载关联文件，减少等待时间。
 """
 
+import logging
 import threading
-from concurrent.futures import ThreadPoolExecutor, Future
+from concurrent.futures import Future, ThreadPoolExecutor
 from pathlib import Path
 from typing import Dict, List, Optional, Set
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -69,9 +69,7 @@ class RelatedFilePreloader:
         with self._lock:
             self._pending_futures[file_path] = future
 
-        future.add_done_callback(
-            lambda f, fp=file_path: self._handle_load_complete(fp, f)
-        )
+        future.add_done_callback(lambda f, fp=file_path: self._handle_load_complete(fp, f))
 
     def _load_file_content(self, file_path: str) -> Optional[str]:
         """加载文件内容
@@ -92,7 +90,7 @@ class RelatedFilePreloader:
                     self._loading_status[file_path] = FileLoadingStatus.FAILED
                 return None
 
-            with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+            with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
                 content = f.read()
 
             with self._lock:
@@ -219,17 +217,19 @@ class RelatedFilePreloader:
         """
         with self._lock:
             status_counts = {}
-            for status in [FileLoadingStatus.PENDING, FileLoadingStatus.LOADING,
-                          FileLoadingStatus.LOADED, FileLoadingStatus.FAILED]:
-                status_counts[status] = sum(
-                    1 for s in self._loading_status.values() if s == status
-                )
+            for status in [
+                FileLoadingStatus.PENDING,
+                FileLoadingStatus.LOADING,
+                FileLoadingStatus.LOADED,
+                FileLoadingStatus.FAILED,
+            ]:
+                status_counts[status] = sum(1 for s in self._loading_status.values() if s == status)
 
             return {
-                'cache_size': len(self._content_cache),
-                'pending_count': status_counts.get(FileLoadingStatus.PENDING, 0),
-                'loading_count': status_counts.get(FileLoadingStatus.LOADING, 0),
-                'loaded_count': status_counts.get(FileLoadingStatus.LOADED, 0),
-                'failed_count': status_counts.get(FileLoadingStatus.FAILED, 0),
-                'pending_futures': len(self._pending_futures),
+                "cache_size": len(self._content_cache),
+                "pending_count": status_counts.get(FileLoadingStatus.PENDING, 0),
+                "loading_count": status_counts.get(FileLoadingStatus.LOADING, 0),
+                "loaded_count": status_counts.get(FileLoadingStatus.LOADED, 0),
+                "failed_count": status_counts.get(FileLoadingStatus.FAILED, 0),
+                "pending_futures": len(self._pending_futures),
             }

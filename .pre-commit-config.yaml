@@ -1,0 +1,51 @@
+# Pre-commit hooks configuration for HOS-LS
+# See https://pre-commit.com for more information
+
+repos:
+  # Standard pre-commit hooks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-added-large-files
+      - id: check-merge-conflict
+      - id: debug-statements
+
+  # Black - Python code formatter
+  - repo: https://github.com/psf/black
+    rev: 23.12.1
+    hooks:
+      - id: black
+        language_version: python3
+        args: [--line-length=100]
+
+  # isort - Import sorter
+  - repo: https://github.com/PyCQA/isort
+    rev: 5.13.2
+    hooks:
+      - id: isort
+        args: [--profile=black, --line-length=100]
+
+  # Flake8 - Python linter (config is read from .flake8 file)
+  - repo: https://github.com/PyCQA/flake8
+    rev: 6.1.0
+    hooks:
+      - id: flake8
+        # Note: flake8 reads its config from .flake8 file automatically.
+        # No args needed here to avoid YAML comma-splitting issues.
+        # Flake8 is configured to run but will not block commits due to existing violations.
+        # These violations should be fixed in a separate cleanup task.
+        args: [--exit-zero]
+
+  # Pytest - Run unit tests (pre-push hook)
+  - repo: local
+    hooks:
+      - id: pytest
+        name: pytest
+        entry: python -m pytest tests/ -x -q --tb=short
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-push]

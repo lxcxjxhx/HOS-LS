@@ -6,7 +6,7 @@
 import asyncio
 import time
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional, Type, Tuple
+from typing import Any, Dict, List, Optional, Tuple, Type
 
 from src.ai.models import AIProvider, AIRequest, AIResponse
 from src.core.config import Config, get_config
@@ -66,9 +66,10 @@ class AIClient(ABC):
         try:
             from src.ai.token_tracker import get_token_tracker
         except ImportError:
+
             def get_token_tracker(*args, **kwargs):
                 return None
-        
+
         token_tracker = get_token_tracker()
         retries = 0
         last_error = None
@@ -79,7 +80,7 @@ class AIClient(ABC):
                 start_time = time.time()
                 response = await self.generate(request)
                 duration = time.time() - start_time
-                
+
                 # 记录token使用
                 if response.usage and token_tracker:
                     token_tracker.track_usage(
@@ -89,9 +90,9 @@ class AIClient(ABC):
                         completion_tokens=response.usage.get("completion_tokens", 0),
                         total_tokens=response.usage.get("total_tokens", 0),
                         duration=duration,
-                        success=True
+                        success=True,
                     )
-                
+
                 logger.info(f"AI API call successful in {duration:.1f}s")
                 return response
             except Exception as e:
@@ -269,21 +270,20 @@ class AIModelManager:
             AI 响应
         """
         from src.ai.token_tracker import get_token_tracker
-        
+
         token_tracker = get_token_tracker()
-        
+
         if not token_tracker:
             raise RuntimeError("Token tracker not available")
-        
+
         # 检查缓存
         cached_response = token_tracker.check_cache(
-            prompt=request.prompt,
-            system_prompt=request.system_prompt
+            prompt=request.prompt, system_prompt=request.system_prompt
         )
         if cached_response:
             logger.info("Using cached AI response")
             return cached_response
-        
+
         # 尝试使用指定的提供商或默认提供商
         if provider is None:
             # 使用回退链
@@ -294,20 +294,20 @@ class AIModelManager:
                         start_time = time.time()
                         response = await client.generate_with_retry(request)
                         duration = time.time() - start_time
-                        
+
                         # 更新性能统计
                         self._update_performance(fallback_provider, duration, True)
-                        
+
                         # 添加到缓存
                         token_tracker.add_to_cache(
                             prompt=request.prompt,
                             system_prompt=request.system_prompt,
-                            result=response
+                            result=response,
                         )
-                        
+
                         if fallback_provider != self._fallback_chain[0]:
                             logger.warning(f"Using fallback provider: {fallback_provider}")
-                        
+
                         return response
                     except Exception as e:
                         logger.warning(f"Provider {fallback_provider} failed: {e}")
@@ -323,17 +323,15 @@ class AIModelManager:
                     start_time = time.time()
                     response = await client.generate_with_retry(request)
                     duration = time.time() - start_time
-                    
+
                     # 更新性能统计
                     self._update_performance(provider, duration, True)
-                    
+
                     # 添加到缓存
                     token_tracker.add_to_cache(
-                        prompt=request.prompt,
-                        system_prompt=request.system_prompt,
-                        result=response
+                        prompt=request.prompt, system_prompt=request.system_prompt, result=response
                     )
-                    
+
                     return response
                 except Exception as e:
                     logger.warning(f"Provider {provider} failed: {e}")
@@ -344,11 +342,7 @@ class AIModelManager:
 
     def list_available_providers(self) -> List[AIProvider]:
         """列出可用的提供商"""
-        return [
-            provider
-            for provider, client in self._clients.items()
-            if client.is_available()
-        ]
+        return [provider for provider, client in self._clients.items() if client.is_available()]
 
     async def validate_all_providers(self) -> Dict[AIProvider, Tuple[bool, str]]:
         """验证所有提供商的 API 访问
@@ -404,7 +398,7 @@ class AIModelManager:
                 "successful_calls": 0,
                 "total_duration": 0.0,
                 "average_duration": 0.0,
-                "success_rate": 0.0
+                "success_rate": 0.0,
             }
 
         stats = self._model_performance[provider]

@@ -4,16 +4,18 @@
 修复版本：使用 NVDQueryAdapter 作为底层查询引擎
 """
 
-from typing import List, Optional, Dict, Any
 from dataclasses import dataclass
+from typing import Any, Dict, List, Optional
 
 from src.utils.logger import get_logger
 
 logger = get_logger(__name__)
 
+
 @dataclass
 class NVDVulnerability:
     """NVD漏洞信息"""
+
     cve_id: str
     description: str
     cvss_score: float
@@ -26,6 +28,7 @@ class NVDVulnerability:
     references: Optional[List[str]] = None
     cwe_ids: Optional[List[str]] = None
     published_date: Optional[str] = None
+
 
 class NVDAdapter:
     """NVD数据库适配器
@@ -49,7 +52,7 @@ class NVDAdapter:
 
             self._query_adapter = NVDQueryAdapter()
             if self._query_adapter.is_available():
-                self._db_type = 'sqlite'
+                self._db_type = "sqlite"
                 self._initialized = True
                 stats = self._query_adapter.get_db_stats()
                 logger.info(f"NVD查询引擎初始化成功: {stats}")
@@ -74,7 +77,7 @@ class NVDAdapter:
         product: str,
         version: Optional[str] = None,
         min_score: float = 0.0,
-        limit: int = 50
+        limit: int = 50,
     ) -> List[NVDVulnerability]:
         """扫描库漏洞
 
@@ -92,25 +95,24 @@ class NVDAdapter:
 
             vulnerabilities = []
             for match in cwe_matches:
-                cwe_id = match.get('cwe_id', '')
+                cwe_id = match.get("cwe_id", "")
                 if cwe_id:
                     cve_results = self._query_adapter.search_vulnerabilities(
-                        cwe_id=cwe_id,
-                        limit=limit
+                        cwe_id=cwe_id, limit=limit
                     )
                     for cve in cve_results:
-                        cvss_score = cve.get('cvss_score', 0.0) or 0.0
+                        cvss_score = cve.get("cvss_score", 0.0) or 0.0
                         if cvss_score >= min_score:
                             vuln = NVDVulnerability(
-                                cve_id=cve.get('cve_id', ''),
-                                description=cve.get('description', ''),
+                                cve_id=cve.get("cve_id", ""),
+                                description=cve.get("description", ""),
                                 cvss_score=cvss_score,
-                                severity=cve.get('severity', 'MEDIUM') or 'MEDIUM',
+                                severity=cve.get("severity", "MEDIUM") or "MEDIUM",
                                 kev_exploited=False,
                                 exploit_count=0,
                                 poc_stars=0,
                                 affected_versions=[version] if version else [],
-                                cwe_ids=[cwe_id]
+                                cwe_ids=[cwe_id],
                             )
                             vulnerabilities.append(vuln)
 
@@ -119,11 +121,7 @@ class NVDAdapter:
             logger.debug(f"扫描库漏洞失败: {e}")
             return []
 
-    def find_exploitable(
-        self,
-        min_score: float = 7.0,
-        limit: int = 50
-    ) -> List[NVDVulnerability]:
+    def find_exploitable(self, min_score: float = 7.0, limit: int = 50) -> List[NVDVulnerability]:
         """查找可利用的漏洞
 
         搜索高严重性的漏洞
@@ -132,25 +130,22 @@ class NVDAdapter:
             return []
 
         try:
-            cve_results = self._query_adapter.search_vulnerabilities(
-                severity='HIGH',
-                limit=limit
-            )
+            cve_results = self._query_adapter.search_vulnerabilities(severity="HIGH", limit=limit)
 
             vulnerabilities = []
             for cve in cve_results:
-                cvss_score = cve.get('cvss_score', 0.0) or 0.0
+                cvss_score = cve.get("cvss_score", 0.0) or 0.0
                 if cvss_score >= min_score:
                     vuln = NVDVulnerability(
-                        cve_id=cve.get('cve_id', ''),
-                        description=cve.get('description', ''),
+                        cve_id=cve.get("cve_id", ""),
+                        description=cve.get("description", ""),
                         cvss_score=cvss_score,
-                        severity=cve.get('severity', 'MEDIUM') or 'MEDIUM',
+                        severity=cve.get("severity", "MEDIUM") or "MEDIUM",
                         kev_exploited=False,
                         exploit_count=0,
                         poc_stars=0,
                         affected_versions=[],
-                        cwe_ids=[]
+                        cwe_ids=[],
                     )
                     vulnerabilities.append(vuln)
 
@@ -167,21 +162,21 @@ class NVDAdapter:
         try:
             cve_results = self._query_adapter.search_vulnerabilities(limit=100)
             for cve in cve_results:
-                if cve.get('cve_id') == cve_id:
+                if cve.get("cve_id") == cve_id:
                     return {
-                        'cve_id': cve.get('cve_id'),
-                        'description': cve.get('description'),
-                        'cvss_score': cve.get('cvss_score'),
-                        'severity': cve.get('severity'),
-                        'cvss_vector': None,
-                        'kev_exploited': False,
-                        'kev_description': None,
-                        'exploit_count': 0,
-                        'poc_count': 0,
-                        'cwe_ids': [],
-                        'cwe_names': [],
-                        'published_date': None,
-                        'last_modified': None
+                        "cve_id": cve.get("cve_id"),
+                        "description": cve.get("description"),
+                        "cvss_score": cve.get("cvss_score"),
+                        "severity": cve.get("severity"),
+                        "cvss_vector": None,
+                        "kev_exploited": False,
+                        "kev_description": None,
+                        "exploit_count": 0,
+                        "poc_count": 0,
+                        "cwe_ids": [],
+                        "cwe_names": [],
+                        "published_date": None,
+                        "last_modified": None,
                     }
         except Exception as e:
             logger.debug(f"获取CVE详情失败: {e}")
@@ -195,8 +190,8 @@ class NVDAdapter:
 
         try:
             cwe_info = self._query_adapter.get_cwe_with_cves(cve_id, limit=10)
-            if cwe_info and 'related_cves' in cwe_info:
-                return cwe_info['related_cves']
+            if cwe_info and "related_cves" in cwe_info:
+                return cwe_info["related_cves"]
         except Exception as e:
             logger.debug(f"获取Exploit列表失败: {e}")
 
@@ -209,8 +204,8 @@ class NVDAdapter:
 
         try:
             cwe_info = self._query_adapter.get_cwe_with_cves(cve_id, limit=10)
-            if cwe_info and 'related_cves' in cwe_info:
-                return cwe_info['related_cves']
+            if cwe_info and "related_cves" in cwe_info:
+                return cwe_info["related_cves"]
         except Exception as e:
             logger.debug(f"获取PoC列表失败: {e}")
 
@@ -238,7 +233,9 @@ class NVDAdapter:
             logger.debug(f"CWE匹配失败: {e}")
             return []
 
-    def get_cves_by_cwe(self, cwe_id: str, min_score: float = 0.0, limit: int = 50) -> List[NVDVulnerability]:
+    def get_cves_by_cwe(
+        self, cwe_id: str, min_score: float = 0.0, limit: int = 50
+    ) -> List[NVDVulnerability]:
         """获取指定CWE相关的CVE
 
         Args:
@@ -253,25 +250,22 @@ class NVDAdapter:
             return []
 
         try:
-            cve_results = self._query_adapter.search_vulnerabilities(
-                cwe_id=cwe_id,
-                limit=limit
-            )
+            cve_results = self._query_adapter.search_vulnerabilities(cwe_id=cwe_id, limit=limit)
 
             vulnerabilities = []
             for cve in cve_results:
-                cvss_score = cve.get('cvss_score', 0.0) or 0.0
+                cvss_score = cve.get("cvss_score", 0.0) or 0.0
                 if cvss_score >= min_score:
                     vuln = NVDVulnerability(
-                        cve_id=cve.get('cve_id', ''),
-                        description=cve.get('description', ''),
+                        cve_id=cve.get("cve_id", ""),
+                        description=cve.get("description", ""),
                         cvss_score=cvss_score,
-                        severity=cve.get('severity', 'MEDIUM') or 'MEDIUM',
+                        severity=cve.get("severity", "MEDIUM") or "MEDIUM",
                         kev_exploited=False,
                         exploit_count=0,
                         poc_stars=0,
                         affected_versions=[],
-                        cwe_ids=[cwe_id]
+                        cwe_ids=[cwe_id],
                     )
                     vulnerabilities.append(vuln)
 
@@ -280,7 +274,9 @@ class NVDAdapter:
             logger.debug(f"获取CWE相关的CVE失败: {e}")
             return []
 
+
 _nvd_adapter: Optional[NVDAdapter] = None
+
 
 def get_nvd_adapter() -> NVDAdapter:
     """获取全局NVD适配器实例"""
@@ -288,6 +284,7 @@ def get_nvd_adapter() -> NVDAdapter:
     if _nvd_adapter is None:
         _nvd_adapter = NVDAdapter()
     return _nvd_adapter
+
 
 def reset_nvd_adapter() -> None:
     """重置全局NVD适配器实例（用于测试）"""

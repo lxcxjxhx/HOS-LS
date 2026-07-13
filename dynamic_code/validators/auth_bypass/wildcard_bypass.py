@@ -1,5 +1,6 @@
 from typing import List
-from src.analyzers.verification.interfaces import Validator, VulnContext, ValidationResult
+
+from src.analyzers.verification.interfaces import ValidationResult, Validator, VulnContext
 
 
 class WildcardBypassValidator(Validator):
@@ -80,11 +81,13 @@ class WildcardBypassValidator(Validator):
                 is_false_positive=True,
                 confidence=0.9,
                 reason="检测到 /** 通配符但不是 release-urls 全放行配置",
-                evidence={"code_snippet": code}
+                evidence={"code_snippet": code},
             )
 
         file_path_lower = context.file_path.lower()
-        is_yaml_config = any(ext in file_path_lower for ext in [".yaml", ".yml", ".toml", ".properties"])
+        is_yaml_config = any(
+            ext in file_path_lower for ext in [".yaml", ".yml", ".toml", ".properties"]
+        )
 
         has_sensitive_context = False
         code_lower = code.lower()
@@ -95,16 +98,10 @@ class WildcardBypassValidator(Validator):
 
         if has_sensitive_context:
             confidence = 0.95
-            reason = (
-                f"检测到严重的认证绕过配置: {', '.join(matched_patterns)}。"
-                f"该配置可能放行了包含敏感上下文的端点。"
-            )
+            reason = f"检测到严重的认证绕过配置: {', '.join(matched_patterns)}。" f"该配置可能放行了包含敏感上下文的端点。"
         else:
             confidence = 0.9
-            reason = (
-                f"检测到危险的通配符配置: {', '.join(matched_patterns)}。"
-                f"/** 通配符会匹配所有路径，可能导致未授权访问。"
-            )
+            reason = f"检测到危险的通配符配置: {', '.join(matched_patterns)}。" f"/** 通配符会匹配所有路径，可能导致未授权访问。"
 
         evidence = {
             "code_snippet": code,
@@ -129,6 +126,6 @@ class WildcardBypassValidator(Validator):
                 "2. 检查 /** 覆盖的路径是否包含需要认证的资源",
                 "3. 验证认证配置的其他部分是否存在",
                 "4. 建议：限制 release-urls 到具体路径而非 /**",
-                "5. 确认是否为测试环境或特殊用途的配置"
-            ]
+                "5. 确认是否为测试环境或特殊用途的配置",
+            ],
         )

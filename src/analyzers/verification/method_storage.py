@@ -1,14 +1,16 @@
-from pathlib import Path
-from typing import Dict, List, Optional, Any
-import yaml
 import hashlib
 import json
-from dataclasses import dataclass, asdict
+from dataclasses import asdict, dataclass
+from pathlib import Path
+from typing import Any, Dict, List, Optional
+
+import yaml
 
 
 @dataclass
 class MethodDefinition:
     """验证方法定义"""
+
     id: str
     name: str
     vuln_type: str
@@ -25,7 +27,7 @@ class MethodDefinition:
         return asdict(self)
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> 'MethodDefinition':
+    def from_dict(cls, data: Dict[str, Any]) -> "MethodDefinition":
         return cls(**data)
 
 
@@ -54,10 +56,10 @@ class MethodStorage:
 
         for yaml_file in self.storage_path.glob("*.yaml"):
             try:
-                with open(yaml_file, 'r', encoding='utf-8') as f:
+                with open(yaml_file, "r", encoding="utf-8") as f:
                     data = yaml.safe_load(f)
-                    if data and 'methods' in data:
-                        for method_id, method_data in data['methods'].items():
+                    if data and "methods" in data:
+                        for method_id, method_data in data["methods"].items():
                             method_def = MethodDefinition.from_dict(method_data)
                             self.methods[method_id] = method_def
                             self._method_files[method_id] = yaml_file
@@ -69,7 +71,7 @@ class MethodStorage:
         if method_id in self._method_files:
             return self._method_files[method_id]
 
-        vuln_type = self.methods[method_id].vuln_type if method_id in self.methods else 'general'
+        vuln_type = self.methods[method_id].vuln_type if method_id in self.methods else "general"
         return self.storage_path / f"{vuln_type}_methods.yaml"
 
     def save_method(self, method_id: str, method_def: MethodDefinition) -> bool:
@@ -104,9 +106,9 @@ class MethodStorage:
             if self._method_files.get(mid) == yaml_file
         }
 
-        data = {'methods': methods_in_file}
+        data = {"methods": methods_in_file}
 
-        with open(yaml_file, 'w', encoding='utf-8') as f:
+        with open(yaml_file, "w", encoding="utf-8") as f:
             yaml.dump(data, f, allow_unicode=True, sort_keys=False)
 
     def load_method(self, method_id: str) -> Optional[MethodDefinition]:
@@ -134,10 +136,7 @@ class MethodStorage:
         if vuln_type is None:
             return list(self.methods.values())
 
-        return [
-            method for method in self.methods.values()
-            if method.vuln_type == vuln_type
-        ]
+        return [method for method in self.methods.values() if method.vuln_type == vuln_type]
 
     def list_method_ids(self, vuln_type: str = None) -> List[str]:
         """
@@ -153,8 +152,7 @@ class MethodStorage:
             return list(self.methods.keys())
 
         return [
-            method_id for method_id, method in self.methods.items()
-            if method.vuln_type == vuln_type
+            method_id for method_id, method in self.methods.items() if method.vuln_type == vuln_type
         ]
 
     def validate_method(self, method_id: str) -> bool:
@@ -172,12 +170,20 @@ class MethodStorage:
 
         method = self.methods[method_id]
 
-        required_fields = ['id', 'name', 'vuln_type', 'pattern', 'confidence_level', 'validation', 'poc_template']
+        required_fields = [
+            "id",
+            "name",
+            "vuln_type",
+            "pattern",
+            "confidence_level",
+            "validation",
+            "poc_template",
+        ]
         for field in required_fields:
             if not hasattr(method, field) or getattr(method, field) is None:
                 return False
 
-        valid_confidence = ['high', 'medium', 'low']
+        valid_confidence = ["high", "medium", "low"]
         if method.confidence_level not in valid_confidence:
             return False
 

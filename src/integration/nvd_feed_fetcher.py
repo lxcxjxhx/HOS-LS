@@ -9,9 +9,10 @@ import os
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import List, Optional, Dict, Any
-import aiohttp
+from typing import Any, Dict, List, Optional
+
 import aiofiles
+import aiohttp
 
 from src.db.models import CVE, CVECollection
 from src.utils.logger import get_logger
@@ -45,7 +46,7 @@ class NVDFeedFetcher:
         connector = None
         if self.config.use_proxy:
             connector = aiohttp.TCPConnector()
-        
+
         self.session = aiohttp.ClientSession(
             connector=connector,
             timeout=aiohttp.ClientTimeout(total=self.config.request_timeout),
@@ -104,7 +105,7 @@ class NVDFeedFetcher:
         try:
             cve_data = nvd_item.get("cve", {})
             cve_id = cve_data.get("CVE_data_meta", {}).get("ID", "")
-            
+
             if not cve_id:
                 return None
 
@@ -117,7 +118,7 @@ class NVDFeedFetcher:
             cvss_v3_vector = None
             cvss_v2_score = None
             cvss_v2_vector = None
-            
+
             impact = nvd_item.get("impact", {})
             base_metric_v3 = impact.get("baseMetricV3", {})
             if base_metric_v3:
@@ -151,10 +152,12 @@ class NVDFeedFetcher:
             references = []
             ref_data = cve_data.get("references", {}).get("reference_data", [])
             for ref in ref_data:
-                references.append({
-                    "url": ref.get("url", ""),
-                    "name": ref.get("name", ""),
-                })
+                references.append(
+                    {
+                        "url": ref.get("url", ""),
+                        "name": ref.get("name", ""),
+                    }
+                )
 
             published_date = None
             last_modified_date = None
@@ -259,7 +262,8 @@ class NVDFeedFetcher:
             all_cves[cve.cve_id] = cve
 
         filtered_cves = [
-            cve for cve in all_cves.values()
+            cve
+            for cve in all_cves.values()
             if cve.last_modified_date and cve.last_modified_date >= since
         ]
 
@@ -275,7 +279,7 @@ class NVDFeedFetcher:
         """保存到缓存"""
         try:
             cache_file = self.cache_dir / filename
-            async with aiofiles.open(cache_file, 'w', encoding='utf-8') as f:
+            async with aiofiles.open(cache_file, "w", encoding="utf-8") as f:
                 await f.write(collection.to_json())
             logger.info(f"Saved to cache: {cache_file}")
             return True
@@ -290,7 +294,7 @@ class NVDFeedFetcher:
             if not cache_file.exists():
                 return None
 
-            async with aiofiles.open(cache_file, 'r', encoding='utf-8') as f:
+            async with aiofiles.open(cache_file, "r", encoding="utf-8") as f:
                 content = await f.read()
             collection = CVECollection.from_json(content)
             logger.info(f"Loaded from cache: {cache_file}")

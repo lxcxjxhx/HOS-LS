@@ -5,8 +5,8 @@
 
 from src.plugins.builtin.functional.custom_scanner_plugin import (
     CustomScannerPlugin,
-    SensitiveDataDetector,
     FilenamePatternScanner,
+    SensitiveDataDetector,
 )
 
 __all__ = [

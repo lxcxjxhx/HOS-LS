@@ -32,58 +32,52 @@ class NucleiPlugin(MCPToolPlugin):
         tool_path = shutil.which(self._tool_command)
         if tool_path:
             return True, f"Nuclei available at: {tool_path}"
-        return False, "Nuclei not found. Please install nuclei: https://github.com/projectdiscovery/nuclei"
+        return (
+            False,
+            "Nuclei not found. Please install nuclei: https://github.com/projectdiscovery/nuclei",
+        )
 
     async def execute_tool(self, args: List[str], timeout: int = 600) -> ToolResult:
         if not self._tool_command:
             return ToolResult(
-                success=False,
-                output="",
-                error="Tool command not configured",
-                raw_output=""
+                success=False, output="", error="Tool command not configured", raw_output=""
             )
 
         cmd = [self._tool_command] + args
         try:
-            process = await __import__('asyncio').create_subprocess_exec(
+            process = await __import__("asyncio").create_subprocess_exec(
                 *cmd,
-                stdout=__import__('asyncio').subprocess.PIPE,
-                stderr=__import__('asyncio').subprocess.PIPE
+                stdout=__import__("asyncio").subprocess.PIPE,
+                stderr=__import__("asyncio").subprocess.PIPE,
             )
             try:
-                stdout, stderr = await __import__('asyncio').wait_for(
-                    process.communicate(),
-                    timeout=timeout
+                stdout, stderr = await __import__("asyncio").wait_for(
+                    process.communicate(), timeout=timeout
                 )
-                raw_output = stdout.decode('utf-8', errors='ignore') if stdout else ""
-                error_output = stderr.decode('utf-8', errors='ignore') if stderr else ""
+                raw_output = stdout.decode("utf-8", errors="ignore") if stdout else ""
+                error_output = stderr.decode("utf-8", errors="ignore") if stderr else ""
                 success = process.returncode == 0
 
                 return ToolResult(
                     success=success,
                     output=raw_output if success else error_output,
                     error=error_output if not success else "",
-                    raw_output=raw_output
+                    raw_output=raw_output,
                 )
-            except __import__('asyncio').TimeoutError:
+            except __import__("asyncio").TimeoutError:
                 process.kill()
                 return ToolResult(
                     success=False,
                     output="",
                     error=f"Nuclei execution timeout after {timeout}s",
-                    raw_output=""
+                    raw_output="",
                 )
         except FileNotFoundError:
             return ToolResult(
                 success=False,
                 output="",
                 error=f"Nuclei not found: {self._tool_command}",
-                raw_output=""
+                raw_output="",
             )
         except Exception as e:
-            return ToolResult(
-                success=False,
-                output="",
-                error=str(e),
-                raw_output=""
-            )
+            return ToolResult(success=False, output="", error=str(e), raw_output="")

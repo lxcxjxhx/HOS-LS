@@ -1,11 +1,12 @@
+from typing import Any, Dict, List, Optional
+
 from rich.console import Console
-from rich.progress import Progress, SpinnerColumn, BarColumn, TextColumn, TimeElapsedColumn
-from rich.table import Table
-from rich.panel import Panel
-from rich.markdown import Markdown
-from rich.syntax import Syntax
 from rich.live import Live
-from typing import Optional, List, Dict, Any
+from rich.markdown import Markdown
+from rich.panel import Panel
+from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn, TimeElapsedColumn
+from rich.syntax import Syntax
+from rich.table import Table
 
 
 class TerminalUI:
@@ -34,13 +35,17 @@ class TerminalUI:
 
     def print_code(self, code: str, language: str = "python") -> None:
         syntax = Syntax(code, language, theme="monokai", line_numbers=True)
-        self.console.print(Panel(syntax, title=f"[cyan]{language.upper()}[/cyan]", border_style="dim"))
+        self.console.print(
+            Panel(syntax, title=f"[cyan]{language.upper()}[/cyan]", border_style="dim")
+        )
 
     def print_markdown(self, markdown_text: str) -> None:
         md = Markdown(markdown_text)
         self.console.print(md)
 
-    def print_table(self, headers: List[str], rows: List[List[str]], title: Optional[str] = None) -> None:
+    def print_table(
+        self, headers: List[str], rows: List[List[str]], title: Optional[str] = None
+    ) -> None:
         table = Table(title=title, show_header=True, header_style="bold cyan")
         for header in headers:
             table.add_column(header, style="white")
@@ -59,12 +64,18 @@ class TerminalUI:
         table.add_column("描述", style="white")
         for finding in findings:
             severity = finding.get("severity", "unknown")
-            severity_style = "red" if severity in ["critical", "high"] else "yellow" if severity == "medium" else "blue"
+            severity_style = (
+                "red"
+                if severity in ["critical", "high"]
+                else "yellow"
+                if severity == "medium"
+                else "blue"
+            )
             table.add_row(
                 f"[{severity_style}]{severity}[/{severity_style}]",
                 finding.get("rule_name", "N/A"),
                 finding.get("file", "N/A"),
-                finding.get("message", "N/A")[:60]
+                finding.get("message", "N/A")[:60],
             )
         self.console.print(table)
 
@@ -86,7 +97,7 @@ class TerminalUI:
             TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
             TextColumn("[progress.completed]{task.completed}/{task.total}"),
             TimeElapsedColumn(),
-            console=self.console
+            console=self.console,
         )
         progress.start()
         task_id = progress.add_task(f"[cyan]{description}[/cyan]", total=total)
@@ -99,27 +110,30 @@ class TerminalUI:
         progress.stop()
 
     def print_chat_message(self, role: str, message: str, timestamp: Optional[str] = None) -> None:
-        role_colors = {
-            "user": "blue",
-            "assistant": "green",
-            "system": "yellow",
-            "agent": "magenta"
-        }
+        role_colors = {"user": "blue", "assistant": "green", "system": "yellow", "agent": "magenta"}
         color = role_colors.get(role.lower(), "white")
         if timestamp:
-            self.console.print(f"[dim]{timestamp}[/dim] [bold {color}]{role}[/bold {color}]: {message}")
+            self.console.print(
+                f"[dim]{timestamp}[/dim] [bold {color}]{role}[/bold {color}]: {message}"
+            )
         else:
             self.console.print(f"[bold {color}]{role}[/bold {color}]: {message}")
 
-    def print_agent_status(self, agent_name: str, status: str, details: Optional[str] = None) -> None:
+    def print_agent_status(
+        self, agent_name: str, status: str, details: Optional[str] = None
+    ) -> None:
         status_colors = {
             "running": "yellow",
             "completed": "green",
             "failed": "red",
-            "pending": "dim"
+            "pending": "dim",
         }
         color = status_colors.get(status.lower(), "white")
         if details:
-            self.console.print(f"[bold cyan]{agent_name}[/bold cyan] [bold {color}]{status}[/bold {color}] - [dim]{details}[/dim]")
+            self.console.print(
+                f"[bold cyan]{agent_name}[/bold cyan] [bold {color}]{status}[/bold {color}] - [dim]{details}[/dim]"
+            )
         else:
-            self.console.print(f"[bold cyan]{agent_name}[/bold cyan] [bold {color}]{status}[/bold {color}]")
+            self.console.print(
+                f"[bold cyan]{agent_name}[/bold cyan] [bold {color}]{status}[/bold {color}]"
+            )

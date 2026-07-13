@@ -15,7 +15,7 @@ from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn
 
 from src.core.config import Config
-from src.core.plan_generator import get_plan_generator, ScanPlan, ScanStrategy
+from src.core.plan_generator import ScanPlan, ScanStrategy, get_plan_generator
 
 
 class ScanStatus(Enum):
@@ -86,7 +86,7 @@ class ModeRouter:
 
     def get_mode(self) -> ScanMode:
         """获取当前模式"""
-        mode_str = getattr(self.config, 'scan_mode', 'auto')
+        mode_str = getattr(self.config, "scan_mode", "auto")
         try:
             return ScanMode(mode_str.lower())
         except ValueError:
@@ -98,7 +98,7 @@ class ModeRouter:
 
     def should_incremental_scan(self) -> bool:
         """判断是否使用增量扫描"""
-        return self.config.scan.incremental and not getattr(self.config, 'full_scan', False)
+        return self.config.scan.incremental and not getattr(self.config, "full_scan", False)
 
 
 @dataclass
@@ -182,7 +182,9 @@ class Finding:
         return result
 
 
-def extract_code_context(file_path: str, target_line: int, context_size: int = 10, end_line: int = None) -> CodeContext:
+def extract_code_context(
+    file_path: str, target_line: int, context_size: int = 10, end_line: int = None
+) -> CodeContext:
     """提取文件指定行的代码上下文
 
     Args:
@@ -199,7 +201,7 @@ def extract_code_context(file_path: str, target_line: int, context_size: int = 1
         if not path.exists():
             return CodeContext()
 
-        with open(path, 'r', encoding='utf-8', errors='ignore') as f:
+        with open(path, "r", encoding="utf-8", errors="ignore") as f:
             lines = f.readlines()
 
         total_lines = len(lines)
@@ -212,20 +214,30 @@ def extract_code_context(file_path: str, target_line: int, context_size: int = 1
         start_line = max(0, min(target_line, end_line) - context_size - 1)
         end_idx = min(total_lines, max(target_line, end_line) + context_size)
 
-        context_before = [lines[i].rstrip() for i in range(start_line, min(target_line, end_line) - 1)] if min(target_line, end_line) > 1 else []
+        context_before = (
+            [lines[i].rstrip() for i in range(start_line, min(target_line, end_line) - 1)]
+            if min(target_line, end_line) > 1
+            else []
+        )
 
         vuln_start = min(target_line, end_line)
         vuln_end = min(max(target_line, end_line), total_lines)
-        vulnerable_lines = [lines[i].rstrip() for i in range(vuln_start - 1, vuln_end)] if vuln_start <= total_lines else []
-        vulnerable_line = '\n'.join(vulnerable_lines) if vulnerable_lines else ""
+        vulnerable_lines = (
+            [lines[i].rstrip() for i in range(vuln_start - 1, vuln_end)]
+            if vuln_start <= total_lines
+            else []
+        )
+        vulnerable_line = "\n".join(vulnerable_lines) if vulnerable_lines else ""
 
-        context_after = [lines[i].rstrip() for i in range(vuln_end, end_idx)] if vuln_end < total_lines else []
+        context_after = (
+            [lines[i].rstrip() for i in range(vuln_end, end_idx)] if vuln_end < total_lines else []
+        )
 
         return CodeContext(
             context_before=context_before,
             vulnerable_line=vulnerable_line,
             context_after=context_after,
-            line_number=vuln_start
+            line_number=vuln_start,
         )
     except Exception:
         return CodeContext()
@@ -286,11 +298,7 @@ class ScanResult:
         removed_count = 0
 
         for finding in self.findings:
-            key = (
-                finding.rule_id,
-                str(finding.location),
-                finding.severity.value
-            )
+            key = (finding.rule_id, str(finding.location), finding.severity.value)
             if key not in seen:
                 seen[key] = finding
                 unique_findings.append(finding)
@@ -304,7 +312,9 @@ class ScanResult:
 
         self.findings = unique_findings
         if removed_count > 0:
-            print(f"[DEBUG] Deduplicated {removed_count} findings, {len(self.findings)} unique findings remain")
+            print(
+                f"[DEBUG] Deduplicated {removed_count} findings, {len(self.findings)} unique findings remain"
+            )
         return removed_count
 
     def complete(self) -> None:
@@ -541,9 +551,7 @@ class ScanEngine:
                 except Exception as e:
                     # 创建失败结果
                     result = ScanResult(
-                        target=str(target),
-                        status=ScanStatus.FAILED,
-                        error_message=str(e)
+                        target=str(target), status=ScanStatus.FAILED, error_message=str(e)
                     )
                     result.end_time = datetime.now()
                     return result

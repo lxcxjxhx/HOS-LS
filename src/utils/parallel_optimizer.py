@@ -4,24 +4,25 @@
 """
 
 import asyncio
+import logging
 import time
-from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
+from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any, Callable, Dict, List, Optional, TypeVar
 from functools import wraps
-import logging
+from typing import Any, Callable, Dict, List, Optional, TypeVar
 
 from src.utils.logger import get_logger
 
 logger = get_logger(__name__)
 
-T = TypeVar('T')
+T = TypeVar("T")
 
 
 @dataclass
 class PipelineStage:
     """流水线阶段"""
+
     name: str
     process_func: Callable
     estimated_time: float = 0.0
@@ -146,17 +147,16 @@ class ParallelScanOptimizer:
         current_data = initial_data
 
         for group_idx, group in enumerate(parallel_groups):
-            logger.debug(f"Executing parallel group {group_idx + 1}/{len(parallel_groups)}: {group}")
+            logger.debug(
+                f"Executing parallel group {group_idx + 1}/{len(parallel_groups)}: {group}"
+            )
 
             if len(group) == 1:
                 stage_name = group[0]
                 current_data = await self.execute_stage(stage_name, current_data)
                 results[stage_name] = current_data
             else:
-                tasks = [
-                    self.execute_stage(stage_name, current_data)
-                    for stage_name in group
-                ]
+                tasks = [self.execute_stage(stage_name, current_data) for stage_name in group]
                 group_results = await asyncio.gather(*tasks, return_exceptions=True)
 
                 for stage_name, result in zip(group, group_results):
@@ -211,9 +211,7 @@ class ParallelScanOptimizer:
             if len(times) > 1:
                 variance = self._calculate_variance(times)
                 if variance > 0.5:
-                    suggestions.append(
-                        f"{stage_name} 执行时间波动较大，可能需要稳定输入或添加缓存"
-                    )
+                    suggestions.append(f"{stage_name} 执行时间波动较大，可能需要稳定输入或添加缓存")
 
         return suggestions
 

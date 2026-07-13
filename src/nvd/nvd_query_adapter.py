@@ -6,8 +6,8 @@
 
 import os
 import time
-from typing import List, Dict, Any, Optional
 from pathlib import Path
+from typing import Any, Dict, List, Optional
 
 from src.utils.logger import get_logger
 
@@ -34,6 +34,7 @@ class NVDQueryAdapter:
         if use_cache:
             try:
                 from src.nvd.query_cache import NVDQueryCache, get_global_cache
+
                 self._cache = get_global_cache()
             except Exception:
                 self._cache = None
@@ -49,6 +50,7 @@ class NVDQueryAdapter:
         """查找默认的 NVD 数据库路径（使用增强的路径查找逻辑）"""
         try:
             from src.nvd.db.sqlite_connection import SQLiteConnection
+
             # 修复：使用公开的类方法 find_database_path() 而不是错误的实例方法
             found_path = SQLiteConnection.find_database_path()
             if found_path:
@@ -58,15 +60,21 @@ class NVDQueryAdapter:
             logger.debug(f"[NVDQueryAdapter] SQLiteConnection路径查找失败: {e}")
 
         possible_paths = [
-            Path(__file__).parent.parent.parent.parent / 'All Vulnerabilities' / 'sql_data' / 'nvd_vulnerability.db',
-            Path('c:/1AAA_PROJECT/HOS/HOS-LS/HOS-LS/All Vulnerabilities/sql_data/nvd_vulnerability.db'),
-            Path.cwd() / 'All Vulnerabilities' / 'sql_data' / 'nvd_vulnerability.db',
+            Path(__file__).parent.parent.parent.parent
+            / "All Vulnerabilities"
+            / "sql_data"
+            / "nvd_vulnerability.db",
+            Path(
+                "c:/1AAA_PROJECT/HOS/HOS-LS/HOS-LS/All Vulnerabilities/sql_data/nvd_vulnerability.db"
+            ),
+            Path.cwd() / "All Vulnerabilities" / "sql_data" / "nvd_vulnerability.db",
         ]
 
         for path in possible_paths:
             if path.exists() and path.is_file():
                 try:
                     import sqlite3
+
                     test_conn = sqlite3.connect(str(path), timeout=1.0)
                     test_conn.execute("SELECT 1")
                     test_conn.close()
@@ -81,6 +89,7 @@ class NVDQueryAdapter:
         """连接数据库"""
         try:
             import sqlite3
+
             self._conn = sqlite3.connect(self.db_path, timeout=30.0)
             self._conn.row_factory = sqlite3.Row
             self._connected = True
@@ -130,21 +139,23 @@ class NVDQueryAdapter:
 
         try:
             cursor = self._conn.cursor()
-            cursor.execute("""
+            cursor.execute(
+                """
                 SELECT cwe_id, name, description
                 FROM cwe
-            """)
+            """
+            )
             rows = cursor.fetchall()
             cursor.close()
 
             self._cwe_index = {}
             for row in rows:
-                self._cwe_index[row['cwe_id']] = {
-                    'cwe_id': row['cwe_id'],
-                    'cwe_name': row['name'],
-                    'cwe_description': row['description'],
-                    'name_lower': row['name'].lower(),
-                    'desc_lower': row['description'].lower()
+                self._cwe_index[row["cwe_id"]] = {
+                    "cwe_id": row["cwe_id"],
+                    "cwe_name": row["name"],
+                    "cwe_description": row["description"],
+                    "name_lower": row["name"].lower(),
+                    "desc_lower": row["description"].lower(),
                 }
 
             self._index_built = True
@@ -174,8 +185,8 @@ class NVDQueryAdapter:
             score = 0
             matched_kws = []
 
-            name_lower = cwe_info['name_lower']
-            desc_lower = cwe_info['desc_lower']
+            name_lower = cwe_info["name_lower"]
+            desc_lower = cwe_info["desc_lower"]
 
             for kw in keywords:
                 kw_lower = kw.lower()
@@ -190,16 +201,18 @@ class NVDQueryAdapter:
                         matched_kws.append(kw)
 
             if score > 0:
-                scored.append({
-                    'cwe_id': cwe_id,
-                    'cwe_name': cwe_info['cwe_name'],
-                    'cwe_description': cwe_info['cwe_description'],
-                    'confidence': min(1.0, score / 6.0),
-                    'matched_keywords': matched_kws,
-                    'score': score
-                })
+                scored.append(
+                    {
+                        "cwe_id": cwe_id,
+                        "cwe_name": cwe_info["cwe_name"],
+                        "cwe_description": cwe_info["cwe_description"],
+                        "confidence": min(1.0, score / 6.0),
+                        "matched_keywords": matched_kws,
+                        "score": score,
+                    }
+                )
 
-        scored.sort(key=lambda x: x['score'], reverse=True)
+        scored.sort(key=lambda x: x["score"], reverse=True)
         return scored[:limit]
 
     def match_cwe(self, keywords: List[str], limit: int = 5) -> List[Dict[str, Any]]:
@@ -274,31 +287,34 @@ class NVDQueryAdapter:
             cwe_index = self._ensure_cwe_index()
             if cwe_id in cwe_index:
                 result = {
-                    'cwe_id': cwe_index[cwe_id]['cwe_id'],
-                    'cwe_name': cwe_index[cwe_id]['cwe_name'],
-                    'cwe_description': cwe_index[cwe_id]['cwe_description'],
-                    'confidence': 1.0
+                    "cwe_id": cwe_index[cwe_id]["cwe_id"],
+                    "cwe_name": cwe_index[cwe_id]["cwe_name"],
+                    "cwe_description": cwe_index[cwe_id]["cwe_description"],
+                    "confidence": 1.0,
                 }
                 if self._cache:
                     self._cache.set(cache_key, result)
                 return result
 
             cursor = self._conn.cursor()
-            cursor.execute("""
+            cursor.execute(
+                """
                 SELECT cwe_id, cwe_name, cwe_description
                 FROM cwe
                 WHERE cwe_id = ?
-            """, (cwe_id,))
+            """,
+                (cwe_id,),
+            )
 
             row = cursor.fetchone()
             cursor.close()
 
             if row:
                 result = {
-                    'cwe_id': row['cwe_id'],
-                    'cwe_name': row['cwe_name'],
-                    'cwe_description': row['cwe_description'],
-                    'confidence': 1.0
+                    "cwe_id": row["cwe_id"],
+                    "cwe_name": row["cwe_name"],
+                    "cwe_description": row["cwe_description"],
+                    "confidence": 1.0,
                 }
                 if self._cache:
                     self._cache.set(cache_key, result)
@@ -332,7 +348,8 @@ class NVDQueryAdapter:
 
         try:
             cursor = self._conn.cursor()
-            cursor.execute("""
+            cursor.execute(
+                """
                 SELECT
                     AVG(cvss.cvss_score) as avg_score,
                     MAX(cvss.cvss_score) as max_score,
@@ -342,18 +359,20 @@ class NVDQueryAdapter:
                 FROM cve_cwe
                 JOIN cvss ON cve_cwe.cve_id = cvss.cve_id
                 WHERE cve_cwe.cwe_id = ?
-            """, (cwe_id,))
+            """,
+                (cwe_id,),
+            )
 
             row = cursor.fetchone()
             cursor.close()
 
             result = {
-                'cwe_id': cwe_id,
-                'avg_cvss': float(row['avg_score']) if row['avg_score'] else 0.0,
-                'max_cvss': float(row['max_score']) if row['max_score'] else 0.0,
-                'min_cvss': float(row['min_score']) if row['min_score'] else 0.0,
-                'severity_variants': row['severity_count'] or 0,
-                'cve_count': row['cve_count'] or 0
+                "cwe_id": cwe_id,
+                "avg_cvss": float(row["avg_score"]) if row["avg_score"] else 0.0,
+                "max_cvss": float(row["max_score"]) if row["max_score"] else 0.0,
+                "min_cvss": float(row["min_score"]) if row["min_score"] else 0.0,
+                "severity_variants": row["severity_count"] or 0,
+                "cve_count": row["cve_count"] or 0,
             }
 
             if self._cache:
@@ -365,7 +384,9 @@ class NVDQueryAdapter:
             logger.error(f"CVSS统计查询失败 (CWE: {cwe_id}): {e}")
             return {}
 
-    def search_vulnerabilities(self, cwe_id: str = None, severity: str = None, limit: int = 100) -> List[Dict[str, Any]]:
+    def search_vulnerabilities(
+        self, cwe_id: str = None, severity: str = None, limit: int = 100
+    ) -> List[Dict[str, Any]]:
         """搜索特定 CWE 的漏洞
 
         Args:
@@ -411,12 +432,14 @@ class NVDQueryAdapter:
 
             results = []
             for row in rows:
-                results.append({
-                    'cve_id': row['cve_id'],
-                    'description': row['description'],
-                    'cvss_score': float(row['cvss_score']) if row['cvss_score'] else None,
-                    'severity': row['cvss_severity']
-                })
+                results.append(
+                    {
+                        "cve_id": row["cve_id"],
+                        "description": row["description"],
+                        "cvss_score": float(row["cvss_score"]) if row["cvss_score"] else None,
+                        "severity": row["cvss_severity"],
+                    }
+                )
 
             return results
 
@@ -439,11 +462,11 @@ class NVDQueryAdapter:
             return {}
 
         cves = self.search_vulnerabilities(cwe_id=cwe_id, limit=limit)
-        cwe_info['related_cves'] = cves
-        cwe_info['cve_count'] = len(cves)
+        cwe_info["related_cves"] = cves
+        cwe_info["cve_count"] = len(cves)
 
         cvss_stats = self.get_cwe_with_cvss_stats(cwe_id)
-        cwe_info['cvss_stats'] = cvss_stats
+        cwe_info["cvss_stats"] = cvss_stats
 
         return cwe_info
 
@@ -474,7 +497,7 @@ class NVDQueryAdapter:
             cursor.execute("SELECT cwe_id FROM cwe ORDER BY cwe_id")
             rows = cursor.fetchall()
             cursor.close()
-            result = [row['cwe_id'] for row in rows]
+            result = [row["cwe_id"] for row in rows]
 
             if self._cache:
                 self._cache.set(cache_key, result)
@@ -492,10 +515,10 @@ class NVDQueryAdapter:
             各表的记录数统计
         """
         stats = {
-            'connected': self._connected,
-            'db_path': self.db_path,
-            'index_built': self._index_built,
-            'index_size': len(self._cwe_index) if self._cwe_index else 0
+            "connected": self._connected,
+            "db_path": self.db_path,
+            "index_built": self._index_built,
+            "index_size": len(self._cwe_index) if self._cwe_index else 0,
         }
 
         if not self._ensure_connected():
@@ -503,7 +526,7 @@ class NVDQueryAdapter:
 
         try:
             cursor = self._conn.cursor()
-            tables = ['cve', 'cvss', 'cpe', 'cwe', 'cve_cwe', 'kev', 'exploit', 'poc']
+            tables = ["cve", "cvss", "cpe", "cwe", "cve_cwe", "kev", "exploit", "poc"]
 
             for table in tables:
                 try:

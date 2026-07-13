@@ -1,17 +1,17 @@
 import asyncio
-import sys
 import re
-from typing import Optional, List, Dict, Any
+import sys
 from pathlib import Path
+from typing import Any, Dict, List, Optional
 
-from src.core.config import Config
-from src.core.chat.terminal_ui import TerminalUI
-from src.core.chat.pipeline_builder import PipelineBuilder
+from src.ai.entity.extractor import AIEntityExtractor
+from src.ai.intent.classifier import AIIntentClassifier
+from src.ai.pipeline.configurator import AIPipelineConfigurator
 from src.ai.pure_ai.context_memory import ContextMemoryManager
 from src.ai.pure_ai.multi_agent_pipeline import MultiAgentPipeline
-from src.ai.intent.classifier import AIIntentClassifier
-from src.ai.entity.extractor import AIEntityExtractor
-from src.ai.pipeline.configurator import AIPipelineConfigurator
+from src.core.chat.pipeline_builder import PipelineBuilder
+from src.core.chat.terminal_ui import TerminalUI
+from src.core.config import Config
 
 
 class ConversationalSecurityAgent:
@@ -42,12 +42,14 @@ class ConversationalSecurityAgent:
             user_input=user_input,
             entities=entities,
             intent=intent,
-            response_summary=response[:100] if response else ""
+            response_summary=response[:100] if response else "",
         )
 
         return response
 
-    async def _generate_response(self, user_input: str, intent: Optional[str], entities: List[Any]) -> str:
+    async def _generate_response(
+        self, user_input: str, intent: Optional[str], entities: List[Any]
+    ) -> str:
         if not self.ui:
             return f"Processing: {user_input}"
 
@@ -102,10 +104,7 @@ class ChatMain:
 
     async def run(self) -> None:
         self._running = True
-        self.ui.print_header(
-            "HOS-LS Security Chat",
-            "Type /help for available commands"
-        )
+        self.ui.print_header("HOS-LS Security Chat", "Type /help for available commands")
 
         while self._running:
             try:
@@ -178,6 +177,7 @@ class ChatMain:
         """AI增强的分析"""
         try:
             from src.core.scanner import create_scanner
+
             scanner = create_scanner(self.config)
             result = scanner.scan_sync(target)
 
@@ -239,12 +239,9 @@ class ChatMain:
                         ]
                         if matching_lines[:3]:
                             snippets = [
-                                f"  行{ln}: {line.strip()[:100]}"
-                                for ln, line in matching_lines[:3]
+                                f"  行{ln}: {line.strip()[:100]}" for ln, line in matching_lines[:3]
                             ]
-                            results.append(
-                                f"**{file_path}** (显示前3个匹配):\n" + "\n".join(snippets)
-                            )
+                            results.append(f"**{file_path}** (显示前3个匹配):\n" + "\n".join(snippets))
                 except Exception:
                     continue
 
@@ -260,14 +257,13 @@ class ChatMain:
 
             if sys.platform == "win32":
                 import os
+
                 os.system("")
 
             prompt = self.ui.get_prompt()
             print(prompt, end="", flush=True)
 
-            line = await asyncio.get_event_loop().run_in_executor(
-                None, sys.stdin.readline
-            )
+            line = await asyncio.get_event_loop().run_in_executor(None, sys.stdin.readline)
 
             return line.rstrip("\n\r") if line else None
 
@@ -368,7 +364,9 @@ class ChatMain:
                         continue
 
             if results:
-                return f"Found {len(results)} matches for '{func_name}':\n\n" + "\n---\n".join(results[:5])
+                return f"Found {len(results)} matches for '{func_name}':\n\n" + "\n---\n".join(
+                    results[:5]
+                )
             else:
                 return f"No function or class found matching: {func_name}"
 
@@ -399,7 +397,8 @@ class ChatMain:
                                     for ln, line in matching_lines[:3]
                                 ]
                                 results.append(
-                                    f"**{file_path}** (showing first 3 matches):\n" + "\n".join(snippets)
+                                    f"**{file_path}** (showing first 3 matches):\n"
+                                    + "\n".join(snippets)
                                 )
                     except Exception:
                         continue
@@ -414,15 +413,26 @@ class ChatMain:
 
     def _should_exclude_path(self, path: Path) -> bool:
         exclude_dirs = {
-            "node_modules", ".git", "__pycache__", ".venv", "venv",
-            "dist", "build", ".idea", ".vscode", "generated",
-            "nvd_json_data_feeds", ".cache", "site-packages"
+            "node_modules",
+            ".git",
+            "__pycache__",
+            ".venv",
+            "venv",
+            "dist",
+            "build",
+            ".idea",
+            ".vscode",
+            "generated",
+            "nvd_json_data_feeds",
+            ".cache",
+            "site-packages",
         }
         return any(excl in path.parts for excl in exclude_dirs)
 
     async def _execute_scan(self) -> str:
         try:
             from src.core.scanner import create_scanner
+
             scanner = create_scanner(self.config)
             target = "."
             result = scanner.scan_sync(target)
@@ -516,5 +526,6 @@ async def run_chat(config: Config) -> None:
 
 if __name__ == "__main__":
     from src.core.config import get_config
+
     config = get_config()
     asyncio.run(run_chat(config))

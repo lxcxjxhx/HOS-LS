@@ -7,7 +7,7 @@ import re
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from src.plugins.base import ScanPlugin, PluginMetadata, PluginPriority
+from src.plugins.base import PluginMetadata, PluginPriority, ScanPlugin
 
 
 class CustomScannerPlugin(ScanPlugin):
@@ -41,20 +41,24 @@ class CustomScannerPlugin(ScanPlugin):
         self._rules: List[Dict[str, Any]] = []
 
         if "sensitive_data" in self._config["enabled_rules"]:
-            self._rules.append({
-                "name": "sensitive_data",
-                "pattern": self._build_sensitive_pattern(),
-                "severity": "HIGH",
-                "message": "检测到敏感数据模式",
-            })
+            self._rules.append(
+                {
+                    "name": "sensitive_data",
+                    "pattern": self._build_sensitive_pattern(),
+                    "severity": "HIGH",
+                    "message": "检测到敏感数据模式",
+                }
+            )
 
         if "filename_pattern" in self._config["enabled_rules"]:
-            self._rules.append({
-                "name": "filename_pattern",
-                "pattern": self._build_filename_pattern(),
-                "severity": "MEDIUM",
-                "message": "检测到可疑文件名模式",
-            })
+            self._rules.append(
+                {
+                    "name": "filename_pattern",
+                    "pattern": self._build_filename_pattern(),
+                    "severity": "MEDIUM",
+                    "message": "检测到可疑文件名模式",
+                }
+            )
 
     def _build_sensitive_pattern(self) -> re.Pattern:
         """构建敏感数据检测正则"""
@@ -63,10 +67,10 @@ class CustomScannerPlugin(ScanPlugin):
             r'api[_-]?key\s*=\s*["\'][^"\']{10,}["\']',
             r'secret\s*=\s*["\'][^"\']{3,}["\']',
             r'token\s*=\s*["\'][^"\']{10,}["\']',
-            r'-----BEGIN\s+(RSA\s+)?PRIVATE\s+KEY-----',
-            r'-----BEGIN\s+OPENSSH\s+PRIVATE\s+KEY-----',
-            r'AKIA[0-9A-Z]{16}',
-            r'sk_live_[0-9a-zA-Z]{24,}',
+            r"-----BEGIN\s+(RSA\s+)?PRIVATE\s+KEY-----",
+            r"-----BEGIN\s+OPENSSH\s+PRIVATE\s+KEY-----",
+            r"AKIA[0-9A-Z]{16}",
+            r"sk_live_[0-9a-zA-Z]{24,}",
         ]
         pattern = "|".join(sensitive_patterns)
         flags = 0 if self._config.get("case_sensitive") else re.IGNORECASE
@@ -75,15 +79,15 @@ class CustomScannerPlugin(ScanPlugin):
     def _build_filename_pattern(self) -> re.Pattern:
         """构建文件名检测正则"""
         suspicious_names = [
-            r'\.env\.',
-            r'\.gitignore',
-            r'config\.',
-            r'secret',
-            r'credentials',
-            r'\.pem$',
-            r'\.key$',
-            r'\.p12$',
-            r'\.jks$',
+            r"\.env\.",
+            r"\.gitignore",
+            r"config\.",
+            r"secret",
+            r"credentials",
+            r"\.pem$",
+            r"\.key$",
+            r"\.p12$",
+            r"\.jks$",
         ]
         pattern = "|".join(suspicious_names)
         return re.compile(pattern, re.IGNORECASE)
@@ -109,20 +113,22 @@ class CustomScannerPlugin(ScanPlugin):
         for rule in self._rules:
             matches = rule["pattern"].finditer(content)
             for match in matches:
-                findings.append({
-                    "rule_id": f"custom_{rule['name']}",
-                    "rule_name": rule["name"],
-                    "message": rule["message"],
-                    "severity": rule["severity"],
-                    "confidence": "MEDIUM",
-                    "location": {
-                        "file": str(file_path),
-                        "line": content[:match.start()].count("\n") + 1,
-                        "column": self._get_column(content, match.start()),
-                    },
-                    "matched_content": match.group()[:100],
-                    "plugin": self.name,
-                })
+                findings.append(
+                    {
+                        "rule_id": f"custom_{rule['name']}",
+                        "rule_name": rule["name"],
+                        "message": rule["message"],
+                        "severity": rule["severity"],
+                        "confidence": "MEDIUM",
+                        "location": {
+                            "file": str(file_path),
+                            "line": content[: match.start()].count("\n") + 1,
+                            "column": self._get_column(content, match.start()),
+                        },
+                        "matched_content": match.group()[:100],
+                        "plugin": self.name,
+                    }
+                )
 
         return findings
 
@@ -169,22 +175,22 @@ class SensitiveDataDetector(ScanPlugin):
             "rule_id": "硬编码密钥",
         },
         "bearer_token": {
-            "pattern": r'Bearer\s+[0-9a-zA-Z_\-]{20,}',
+            "pattern": r"Bearer\s+[0-9a-zA-Z_\-]{20,}",
             "severity": "HIGH",
             "rule_id": "暴露的Bearer令牌",
         },
         "aws_key": {
-            "pattern": r'AKIA[0-9A-Z]{16}',
+            "pattern": r"AKIA[0-9A-Z]{16}",
             "severity": "CRITICAL",
             "rule_id": "AWS访问密钥",
         },
         "private_key": {
-            "pattern": r'-----BEGIN\s+(RSA\s+|EC\s+|DSA\s+|OPENSSH\s+)?PRIVATE\s+KEY-----',
+            "pattern": r"-----BEGIN\s+(RSA\s+|EC\s+|DSA\s+|OPENSSH\s+)?PRIVATE\s+KEY-----",
             "severity": "CRITICAL",
             "rule_id": "私钥文件",
         },
         "jwt_token": {
-            "pattern": r'eyJ[a-zA-Z0-9-_]+\.eyJ[a-zA-Z0-9-_]+\.[a-zA-Z0-9-_]+',
+            "pattern": r"eyJ[a-zA-Z0-9-_]+\.eyJ[a-zA-Z0-9-_]+\.[a-zA-Z0-9-_]+",
             "severity": "MEDIUM",
             "rule_id": "JWT令牌",
         },
@@ -227,21 +233,23 @@ class SensitiveDataDetector(ScanPlugin):
         for name, pattern in self._patterns.items():
             rule_data = self.SENSITIVE_PATTERNS[name]
             for match in pattern.finditer(content):
-                line_num = content[:match.start()].count("\n") + 1
-                findings.append({
-                    "rule_id": rule_data["rule_id"],
-                    "rule_name": name,
-                    "message": f"检测到敏感数据: {rule_data['rule_id']}",
-                    "severity": rule_data["severity"],
-                    "confidence": "HIGH",
-                    "location": {
-                        "file": str(file_path),
-                        "line": line_num,
-                        "column": self._get_column(content, match.start()),
-                    },
-                    "matched_content": match.group()[:100],
-                    "plugin": self.name,
-                })
+                line_num = content[: match.start()].count("\n") + 1
+                findings.append(
+                    {
+                        "rule_id": rule_data["rule_id"],
+                        "rule_name": name,
+                        "message": f"检测到敏感数据: {rule_data['rule_id']}",
+                        "severity": rule_data["severity"],
+                        "confidence": "HIGH",
+                        "location": {
+                            "file": str(file_path),
+                            "line": line_num,
+                            "column": self._get_column(content, match.start()),
+                        },
+                        "matched_content": match.group()[:100],
+                        "plugin": self.name,
+                    }
+                )
 
         return findings
 
@@ -292,11 +300,7 @@ class FilenamePatternScanner(ScanPlugin):
         compiled = []
         for pattern_str, severity, description in patterns:
             try:
-                compiled.append((
-                    re.compile(pattern_str, re.IGNORECASE),
-                    severity,
-                    description
-                ))
+                compiled.append((re.compile(pattern_str, re.IGNORECASE), severity, description))
             except re.error:
                 continue
         return compiled
@@ -319,20 +323,22 @@ class FilenamePatternScanner(ScanPlugin):
 
         for pattern, severity, description in self._patterns:
             if pattern.search(filename):
-                findings.append({
-                    "rule_id": f"filename_{description}",
-                    "rule_name": "filename_pattern",
-                    "message": f"检测到风险文件: {description}",
-                    "severity": severity,
-                    "confidence": "HIGH",
-                    "location": {
-                        "file": str(file_path),
-                        "line": 0,
-                        "column": 0,
-                    },
-                    "matched_content": filename,
-                    "plugin": self.name,
-                })
+                findings.append(
+                    {
+                        "rule_id": f"filename_{description}",
+                        "rule_name": "filename_pattern",
+                        "message": f"检测到风险文件: {description}",
+                        "severity": severity,
+                        "confidence": "HIGH",
+                        "location": {
+                            "file": str(file_path),
+                            "line": 0,
+                            "column": 0,
+                        },
+                        "matched_content": filename,
+                        "plugin": self.name,
+                    }
+                )
                 break
 
         return findings

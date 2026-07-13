@@ -4,10 +4,11 @@
 """
 
 import os
-import yaml
+from functools import lru_cache
 from pathlib import Path
 from typing import Any, Dict, Optional
-from functools import lru_cache
+
+import yaml
 
 from src.utils.logger import get_logger
 
@@ -17,7 +18,7 @@ logger = get_logger(__name__)
 class ConfigCenter:
     """配置中心"""
 
-    _instance: Optional['ConfigCenter'] = None
+    _instance: Optional["ConfigCenter"] = None
 
     def __init__(self, config_dir: Optional[Path] = None):
         if config_dir is None:
@@ -29,7 +30,7 @@ class ConfigCenter:
         self._load_all_configs()
 
     @classmethod
-    def get_instance(cls) -> 'ConfigCenter':
+    def get_instance(cls) -> "ConfigCenter":
         """获取单例实例"""
         if cls._instance is None:
             cls._instance = cls()
@@ -48,7 +49,7 @@ class ConfigCenter:
     def _load_yaml(self, path: Path) -> Dict[str, Any]:
         """加载 YAML 文件"""
         try:
-            with open(path, 'r', encoding='utf-8') as f:
+            with open(path, "r", encoding="utf-8") as f:
                 data = yaml.safe_load(f)
                 config_name = path.stem
                 self._configs[config_name] = data
@@ -67,7 +68,7 @@ class ConfigCenter:
         Returns:
             配置值
         """
-        keys = key.split('.')
+        keys = key.split(".")
         config_name = keys[0]
 
         if config_name not in self._configs:

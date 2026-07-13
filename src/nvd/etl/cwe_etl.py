@@ -1,17 +1,18 @@
 import xml.etree.ElementTree as ET
 from pathlib import Path
-from typing import Optional, Dict, List
+from typing import Dict, List, Optional
+
 from tqdm import tqdm
+
 from .base import BaseETL
+
 
 class CWEETL(BaseETL):
     """CWE数据ETL处理器"""
 
     ETL_NAME = "cwe"
 
-    CWE_NAMESPACES = {
-        'ns': 'http://cwe.mitre.org/cwe-6'
-    }
+    CWE_NAMESPACES = {"ns": "http://cwe.mitre.org/cwe-6"}
 
     def __init__(self, connection=None):
         super().__init__(connection)
@@ -78,7 +79,7 @@ class CWEETL(BaseETL):
         tree = ET.parse(xml_file)
         root = tree.getroot()
 
-        weaknesses = root.findall('.//ns:Weakness', self.CWE_NAMESPACES)
+        weaknesses = root.findall(".//ns:Weakness", self.CWE_NAMESPACES)
 
         print(f"║  📊 发现 {len(weaknesses)} 个CWE条目                               ║")
         print("╠══════════════════════════════════════════════════════════════╣")
@@ -90,7 +91,7 @@ class CWEETL(BaseETL):
             if cwe_data and self._insert_cwe(cwe_data):
                 self.records_inserted += 1
 
-                cve_cwes = self._extract_cve_cwe_relations(weakness, cwe_data['cwe_id'])
+                cve_cwes = self._extract_cve_cwe_relations(weakness, cwe_data["cwe_id"])
                 for rel in cve_cwes:
                     if self._insert_cve_cwe_relation(rel):
                         self.records_inserted += 1
@@ -100,28 +101,28 @@ class CWEETL(BaseETL):
     def _extract_cwe_data(self, weakness: ET.Element) -> Optional[Dict]:
         """提取CWE数据"""
         try:
-            cwe_id = weakness.get('ID')
+            cwe_id = weakness.get("ID")
             if not cwe_id:
                 return None
 
-            name_elem = weakness.find('ns:Name', self.CWE_NAMESPACES)
-            name = name_elem.text if name_elem is not None else ''
+            name_elem = weakness.find("ns:Name", self.CWE_NAMESPACES)
+            name = name_elem.text if name_elem is not None else ""
 
-            abstraction_elem = weakness.find('ns:Abstraction', self.CWE_NAMESPACES)
-            abstraction = abstraction_elem.text if abstraction_elem is not None else ''
+            abstraction_elem = weakness.find("ns:Abstraction", self.CWE_NAMESPACES)
+            abstraction = abstraction_elem.text if abstraction_elem is not None else ""
 
-            status_elem = weakness.find('ns:Status', self.CWE_NAMESPACES)
-            status = status_elem.text if status_elem is not None else ''
+            status_elem = weakness.find("ns:Status", self.CWE_NAMESPACES)
+            status = status_elem.text if status_elem is not None else ""
 
-            desc_elem = weakness.find('ns:Description', self.CWE_NAMESPACES)
-            description = desc_elem.text if desc_elem is not None else ''
+            desc_elem = weakness.find("ns:Description", self.CWE_NAMESPACES)
+            description = desc_elem.text if desc_elem is not None else ""
 
             return {
-                'cwe_id': f'CWE-{cwe_id}',
-                'name': name,
-                'weakness_abstraction': abstraction,
-                'status': status,
-                'description': description
+                "cwe_id": f"CWE-{cwe_id}",
+                "name": name,
+                "weakness_abstraction": abstraction,
+                "status": status,
+                "description": description,
             }
         except Exception as e:
             print(f"提取CWE数据失败: {e}")
@@ -131,19 +132,17 @@ class CWEETL(BaseETL):
         """提取CVE-CWE关联"""
         relations = []
 
-        related_vulnerabilities = weakness.find('ns:RelatedVulnerabilities', self.CWE_NAMESPACES)
+        related_vulnerabilities = weakness.find("ns:RelatedVulnerabilities", self.CWE_NAMESPACES)
         if related_vulnerabilities is None:
             return relations
 
-        for rel_vuln in related_vulnerabilities.findall('ns:RelatedVulnerability', self.CWE_NAMESPACES):
-            cve_id = rel_vuln.get('CVEID')
+        for rel_vuln in related_vulnerabilities.findall(
+            "ns:RelatedVulnerability", self.CWE_NAMESPACES
+        ):
+            cve_id = rel_vuln.get("CVEID")
             if cve_id:
-                is_primary = rel_vuln.get('Nature', '') == 'Primary'
-                relations.append({
-                    'cve_id': cve_id,
-                    'cwe_id': cwe_id,
-                    'is_primary': is_primary
-                })
+                is_primary = rel_vuln.get("Nature", "") == "Primary"
+                relations.append({"cve_id": cve_id, "cwe_id": cwe_id, "is_primary": is_primary})
 
         return relations
 

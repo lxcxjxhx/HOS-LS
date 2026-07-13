@@ -4,8 +4,8 @@
 """
 
 import re
-from typing import Any, Dict, List, Optional, Union, Set
 from pathlib import Path
+from typing import Any, Dict, List, Optional, Set, Union
 
 from src.rules.base import BaseRule, RuleCategory, RuleMetadata, RuleResult, RuleSeverity
 
@@ -84,43 +84,48 @@ class DirectPromptInjectionRule(BaseRule):
         self._dangerous_patterns = [
             (
                 re.compile(
-                    r"(?:system\s*[:=]\s*[\"']?" +
-                    r"(?:.*?)?[\"']?\s*\+?\s*(?:f?[\"'][^\"']*(?:" +
-                    "|".join(self._user_input_patterns) + r")[^\"']*[\"']|" +
-                    "|".join(self._user_input_patterns) +
-                    r"))",
-                    re.IGNORECASE | re.DOTALL
+                    r"(?:system\s*[:=]\s*[\"']?"
+                    + r"(?:.*?)?[\"']?\s*\+?\s*(?:f?[\"'][^\"']*(?:"
+                    + "|".join(self._user_input_patterns)
+                    + r")[^\"']*[\"']|"
+                    + "|".join(self._user_input_patterns)
+                    + r"))",
+                    re.IGNORECASE | re.DOTALL,
                 ),
-                "系统提示词拼接用户输入"
+                "系统提示词拼接用户输入",
             ),
             (
                 re.compile(
-                    r"(?:messages\s*=\s*\[.*?\{[^}]*(?:content\s*[:=]\s*(?:f?[\"'][^\"']*(?:" +
-                    "|".join(self._user_input_patterns) + r")[^\"']*[\"']|" +
-                    "|".join(self._user_input_patterns) + r")",
-                    re.IGNORECASE | re.DOTALL
+                    r"(?:messages\s*=\s*\[.*?\{[^}]*(?:content\s*[:=]\s*(?:f?[\"'][^\"']*(?:"
+                    + "|".join(self._user_input_patterns)
+                    + r")[^\"']*[\"']|"
+                    + "|".join(self._user_input_patterns)
+                    + r")",
+                    re.IGNORECASE | re.DOTALL,
                 ),
-                "消息列表包含用户输入"
+                "消息列表包含用户输入",
             ),
             (
                 re.compile(
-                    r"(?:prompt\s*[:=]\s*(?:f?[\"'][^\"']*(?:" +
-                    "|".join(self._user_input_patterns) + r")[^\"']*[\"']|" +
-                    "|".join(self._user_input_patterns) +
-                    r"))",
-                    re.IGNORECASE
+                    r"(?:prompt\s*[:=]\s*(?:f?[\"'][^\"']*(?:"
+                    + "|".join(self._user_input_patterns)
+                    + r")[^\"']*[\"']|"
+                    + "|".join(self._user_input_patterns)
+                    + r"))",
+                    re.IGNORECASE,
                 ),
-                "Prompt 变量直接使用用户输入"
+                "Prompt 变量直接使用用户输入",
             ),
             (
                 re.compile(
-                    r"(?:system\s*[:=]\s*(?:f?[\"'][^\"']*\{[^}]*(?:" +
-                    "|".join(self._user_input_patterns) + r")[^}]*\}[^\"']*[\"']|" +
-                    "|".join(self._user_input_patterns) +
-                    r"))",
-                    re.IGNORECASE
+                    r"(?:system\s*[:=]\s*(?:f?[\"'][^\"']*\{[^}]*(?:"
+                    + "|".join(self._user_input_patterns)
+                    + r")[^}]*\}[^\"']*[\"']|"
+                    + "|".join(self._user_input_patterns)
+                    + r"))",
+                    re.IGNORECASE,
                 ),
-                "f-string 系统提示词包含用户输入"
+                "f-string 系统提示词包含用户输入",
             ),
         ]
 
@@ -263,8 +268,7 @@ class InstructionOverrideRule(BaseRule):
         ]
 
         self._compiled_patterns = [
-            re.compile(p, re.IGNORECASE | re.MULTILINE)
-            for p in self._injection_patterns
+            re.compile(p, re.IGNORECASE | re.MULTILINE) for p in self._injection_patterns
         ]
 
     def check(self, target: Union[str, Path, Dict[str, Any]]) -> List[RuleResult]:
@@ -411,13 +415,17 @@ class ContextOverflowRule(BaseRule):
         self._dangerous_patterns = [
             (
                 re.compile(
-                    r"(?:" + "|".join(self._llm_api_patterns) + r")" +
-                    r"\s*\(" +
-                    r"(?:[^)]*(?:" + "|".join(self._user_input_patterns) + r")[^)]*)?" +
-                    r"\)",
-                    re.IGNORECASE
+                    r"(?:"
+                    + "|".join(self._llm_api_patterns)
+                    + r")"
+                    + r"\s*\("
+                    + r"(?:[^)]*(?:"
+                    + "|".join(self._user_input_patterns)
+                    + r")[^)]*)?"
+                    + r"\)",
+                    re.IGNORECASE,
                 ),
-                "LLM API 调用包含用户输入但无长度检查"
+                "LLM API 调用包含用户输入但无长度检查",
             ),
         ]
 

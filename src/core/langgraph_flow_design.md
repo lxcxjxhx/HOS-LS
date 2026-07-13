@@ -17,15 +17,15 @@ class ScanState:
     # 输入信息
     target: str  # 扫描目标
     config: Any  # 扫描配置
-    
+
     # 中间结果
     code_analysis_result: Optional[Dict[str, Any]] = None  # 代码分析结果
     rag_results: Optional[List[Dict[str, Any]]] = None  # RAG检索结果
     graph_query_results: Optional[List[Dict[str, Any]]] = None  # 图谱查询结果
-    
+
     # 最终结果
     scan_result: Optional[ScanResult] = None  # 扫描结果
-    
+
     # 决策标记
     needs_rag: bool = False  # 是否需要RAG检索
     needs_graph: bool = False  # 是否需要图谱查询
@@ -71,21 +71,21 @@ graph.add_edge("fast_path", "generate_report")
 ```python
 def evaluate_complexity(code: str) -> bool:
     """评估代码复杂度
-    
+
     Args:
         code: 代码内容
-        
+
     Returns:
         bool: 是否为简单代码
     """
     # 基于代码长度、复杂度指标等评估
     lines = code.split('\n')
     code_lines = [line for line in lines if line.strip() and not line.strip().startswith('#')]
-    
+
     # 简单代码判断标准
     if len(code_lines) < 50:
         return True
-    
+
     # 检查是否包含高风险模式
     high_risk_patterns = [
         'eval(', 'exec(', 'execfile(', 'compile(',
@@ -93,11 +93,11 @@ def evaluate_complexity(code: str) -> bool:
         'os.system', 'subprocess', 'socket',
         'SQL', 'database', 'connection'
     ]
-    
+
     for pattern in high_risk_patterns:
         if pattern.lower() in code.lower():
             return False
-    
+
     return True
 ```
 
@@ -106,15 +106,15 @@ def evaluate_complexity(code: str) -> bool:
 ```python
 def identify_vulnerability_types(code_analysis: Dict[str, Any]) -> List[str]:
     """识别漏洞类型
-    
+
     Args:
         code_analysis: 代码分析结果
-        
+
     Returns:
         List[str]: 漏洞类型列表
     """
     vulnerability_types = []
-    
+
     # 基于代码分析结果识别漏洞类型
     if code_analysis.get('has_eval'):
         vulnerability_types.append('RCE')
@@ -124,7 +124,7 @@ def identify_vulnerability_types(code_analysis: Dict[str, Any]) -> List[str]:
         vulnerability_types.append('XSS')
     if code_analysis.get('has_deserialization'):
         vulnerability_types.append('Deserialization')
-    
+
     return vulnerability_types
 ```
 
@@ -133,10 +133,10 @@ def identify_vulnerability_types(code_analysis: Dict[str, Any]) -> List[str]:
 ```python
 def should_use_rag(code_analysis: Dict[str, Any]) -> bool:
     """判断是否需要RAG检索
-    
+
     Args:
         code_analysis: 代码分析结果
-        
+
     Returns:
         bool: 是否需要RAG
     """
@@ -149,22 +149,22 @@ def should_use_rag(code_analysis: Dict[str, Any]) -> bool:
 
 def should_use_graph(rag_results: List[Dict[str, Any]]) -> bool:
     """判断是否需要图谱查询
-    
+
     Args:
         rag_results: RAG检索结果
-        
+
     Returns:
         bool: 是否需要图谱查询
     """
     # 基于RAG结果判断
     if not rag_results:
         return False
-    
+
     # 检查是否存在可能的攻击链
     for result in rag_results:
         if 'CVE' in result.get('title', ''):
             return True
-    
+
     return False
 ```
 

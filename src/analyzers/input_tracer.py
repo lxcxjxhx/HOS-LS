@@ -8,7 +8,7 @@ import re
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import Dict, List, Optional, Any, Set, Tuple
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 from src.utils.logger import get_logger
 
@@ -17,6 +17,7 @@ logger = get_logger(__name__)
 
 class InputSourceType(Enum):
     """输入源类型"""
+
     DIRECT_USER_INPUT = "direct_user_input"
     INDIRECT_USER_INPUT = "indirect_user_input"
     CONFIG_FILE = "config_file"
@@ -27,6 +28,7 @@ class InputSourceType(Enum):
 
 class ControllabilityLevel(Enum):
     """可控性级别"""
+
     FULLY_CONTROLLED = "fully_controlled"
     PARTIALLY_CONTROLLED = "partially_controlled"
     NOT_CONTROLLED = "not_controlled"
@@ -35,6 +37,7 @@ class ControllabilityLevel(Enum):
 @dataclass
 class TraceNode:
     """追踪路径节点"""
+
     node_type: str
     location: str
     line_number: int
@@ -60,6 +63,7 @@ class TraceNode:
 @dataclass
 class ControllabilityResult:
     """输入可控性分析结果"""
+
     is_direct_user_input: bool
     is_indirect: bool
     is_internal: bool
@@ -213,18 +217,20 @@ class InputTracer:
         if not content:
             return self._create_unknown_result()
 
-        lines = content.split('\n')
+        lines = content.split("\n")
         method_context = self._find_method_context(lines, line_number)
 
         if method_context:
-            trace_path.append({
-                "node_type": "method",
-                "location": file_path,
-                "line_number": method_context["start_line"],
-                "source_type": "unknown",
-                "value_name": method_context["name"],
-                "method_signature": method_context["signature"],
-            })
+            trace_path.append(
+                {
+                    "node_type": "method",
+                    "location": file_path,
+                    "line_number": method_context["start_line"],
+                    "source_type": "unknown",
+                    "value_name": method_context["name"],
+                    "method_signature": method_context["signature"],
+                }
+            )
 
             for param_info in method_context.get("params", []):
                 param_name = param_info["name"]
@@ -234,27 +240,33 @@ class InputTracer:
                     source_type = InputSourceType.DIRECT_USER_INPUT
                     is_direct_user_input = True
                     confidence = 0.95
-                    trace_path.append({
-                        "node_type": "parameter",
-                        "location": file_path,
-                        "line_number": param_info["line"],
-                        "source_type": InputSourceType.DIRECT_USER_INPUT.value,
-                        "value_name": param_name,
-                        "annotation": param_annotation,
-                        "metadata": {"description": self.USER_INPUT_ANNOTATIONS["java"][param_annotation]},
-                    })
+                    trace_path.append(
+                        {
+                            "node_type": "parameter",
+                            "location": file_path,
+                            "line_number": param_info["line"],
+                            "source_type": InputSourceType.DIRECT_USER_INPUT.value,
+                            "value_name": param_name,
+                            "annotation": param_annotation,
+                            "metadata": {
+                                "description": self.USER_INPUT_ANNOTATIONS["java"][param_annotation]
+                            },
+                        }
+                    )
                 elif param_annotation in self.INTERNAL_SOURCES["java"]:
                     source_type = InputSourceType.INTERNAL_VALUE
                     is_internal = True
                     confidence = 0.9
-                    trace_path.append({
-                        "node_type": "parameter",
-                        "location": file_path,
-                        "line_number": param_info["line"],
-                        "source_type": InputSourceType.INTERNAL_VALUE.value,
-                        "value_name": param_name,
-                        "annotation": param_annotation,
-                    })
+                    trace_path.append(
+                        {
+                            "node_type": "parameter",
+                            "location": file_path,
+                            "line_number": param_info["line"],
+                            "source_type": InputSourceType.INTERNAL_VALUE.value,
+                            "value_name": param_name,
+                            "annotation": param_annotation,
+                        }
+                    )
                 elif self._is_suspicious_variable(param_name):
                     is_indirect = True
                     if source_type == InputSourceType.UNKNOWN:
@@ -265,9 +277,7 @@ class InputTracer:
         variable_refs = self._extract_variable_references(code_snippet)
 
         for var_ref in variable_refs:
-            var_trace = self._trace_variable_origin(
-                file_path, lines, line_number, var_ref
-            )
+            var_trace = self._trace_variable_origin(file_path, lines, line_number, var_ref)
             if var_trace:
                 trace_path.extend([node.to_dict() for node in var_trace])
 
@@ -281,7 +291,10 @@ class InputTracer:
                 trace_path.extend(ois_result.trace_path)
 
         if "RestTemplate" in code_snippet:
-            url_match = re.search(r'(?:get|post|put|delete|patch|ForEntity|getForObject|postForObject)\s*<\w+>\s*\([^,)]*,\s*([^,)]+)', code_snippet)
+            url_match = re.search(
+                r"(?:get|post|put|delete|patch|ForEntity|getForObject|postForObject)\s*<\w+>\s*\([^,)]*,\s*([^,)]+)",
+                code_snippet,
+            )
             if url_match:
                 url_param = url_match.group(1)
                 attack_prerequisites.append("RestTemplate URL 参数来自用户可控输入")
@@ -292,7 +305,9 @@ class InputTracer:
                     confidence = 0.95
                     trace_path.extend(rt_result.trace_path)
 
-        if "${" in code_snippet or any(marker in code_snippet for marker in self.SQL_DYNAMIC_MARKERS):
+        if "${" in code_snippet or any(
+            marker in code_snippet for marker in self.SQL_DYNAMIC_MARKERS
+        ):
             attack_prerequisites.append("用户可控字符串参数进入 SQL 拼接")
             is_sql_injection_scenario = True
         else:
@@ -347,21 +362,23 @@ class InputTracer:
         if not content:
             return self._create_unknown_result()
 
-        lines = content.split('\n')
+        lines = content.split("\n")
 
         for pattern, description in self.USER_INPUT_ANNOTATIONS["python"].items():
             if pattern in code_snippet:
                 source_type = InputSourceType.DIRECT_USER_INPUT
                 is_direct_user_input = True
                 confidence = 0.95
-                trace_path.append({
-                    "node_type": "user_input",
-                    "location": file_path,
-                    "line_number": line_number,
-                    "source_type": InputSourceType.DIRECT_USER_INPUT.value,
-                    "value_name": pattern,
-                    "metadata": {"description": description},
-                })
+                trace_path.append(
+                    {
+                        "node_type": "user_input",
+                        "location": file_path,
+                        "line_number": line_number,
+                        "source_type": InputSourceType.DIRECT_USER_INPUT.value,
+                        "value_name": pattern,
+                        "metadata": {"description": description},
+                    }
+                )
                 break
 
         for pattern, description in self.INTERNAL_SOURCES["python"].items():
@@ -369,14 +386,16 @@ class InputTracer:
                 source_type = InputSourceType.INTERNAL_VALUE
                 is_internal = True
                 confidence = 0.9
-                trace_path.append({
-                    "node_type": "internal",
-                    "location": file_path,
-                    "line_number": line_number,
-                    "source_type": InputSourceType.INTERNAL_VALUE.value,
-                    "value_name": pattern,
-                    "metadata": {"description": description},
-                })
+                trace_path.append(
+                    {
+                        "node_type": "internal",
+                        "location": file_path,
+                        "line_number": line_number,
+                        "source_type": InputSourceType.INTERNAL_VALUE.value,
+                        "value_name": pattern,
+                        "metadata": {"description": description},
+                    }
+                )
                 break
 
         if "pickle.load" in code_snippet or "pickle.loads" in code_snippet:
@@ -432,14 +451,16 @@ class InputTracer:
                 source_type = InputSourceType.DIRECT_USER_INPUT
                 is_direct_user_input = True
                 confidence = 0.95
-                trace_path.append({
-                    "node_type": "user_input",
-                    "location": file_path,
-                    "line_number": line_number,
-                    "source_type": InputSourceType.DIRECT_USER_INPUT.value,
-                    "value_name": pattern,
-                    "metadata": {"description": description},
-                })
+                trace_path.append(
+                    {
+                        "node_type": "user_input",
+                        "location": file_path,
+                        "line_number": line_number,
+                        "source_type": InputSourceType.DIRECT_USER_INPUT.value,
+                        "value_name": pattern,
+                        "metadata": {"description": description},
+                    }
+                )
                 break
 
         for pattern, description in self.INTERNAL_SOURCES["javascript"].items():
@@ -447,14 +468,16 @@ class InputTracer:
                 source_type = InputSourceType.INTERNAL_VALUE
                 is_internal = True
                 confidence = 0.9
-                trace_path.append({
-                    "node_type": "internal",
-                    "location": file_path,
-                    "line_number": line_number,
-                    "source_type": InputSourceType.INTERNAL_VALUE.value,
-                    "value_name": pattern,
-                    "metadata": {"description": description},
-                })
+                trace_path.append(
+                    {
+                        "node_type": "internal",
+                        "location": file_path,
+                        "line_number": line_number,
+                        "source_type": InputSourceType.INTERNAL_VALUE.value,
+                        "value_name": pattern,
+                        "metadata": {"description": description},
+                    }
+                )
                 break
 
         if "innerHTML" in code_snippet or "document.write" in code_snippet:
@@ -513,7 +536,7 @@ class InputTracer:
         if not content:
             return self._create_unknown_result()
 
-        lines = content.split('\n')
+        lines = content.split("\n")
 
         if line_number > len(lines):
             return self._create_unknown_result()
@@ -532,14 +555,16 @@ class InputTracer:
                 summary="未发现反序列化入口",
             )
 
-        trace_path.append({
-            "node_type": "sink",
-            "location": file_path,
-            "line_number": line_number,
-            "source_type": "unknown",
-            "value_name": "ObjectInputStream.readObject",
-            "metadata": {"description": "反序列化入口点"},
-        })
+        trace_path.append(
+            {
+                "node_type": "sink",
+                "location": file_path,
+                "line_number": line_number,
+                "source_type": "unknown",
+                "value_name": "ObjectInputStream.readObject",
+                "metadata": {"description": "反序列化入口点"},
+            }
+        )
 
         attack_prerequisites.append("ObjectInputStream.readObject() 被调用")
 
@@ -557,14 +582,16 @@ class InputTracer:
                 summary="无法确定输入来源，需要人工分析",
             )
 
-        trace_path.append({
-            "node_type": "method",
-            "location": file_path,
-            "line_number": method_context["start_line"],
-            "source_type": "unknown",
-            "value_name": method_context["name"],
-            "method_signature": method_context["signature"],
-        })
+        trace_path.append(
+            {
+                "node_type": "method",
+                "location": file_path,
+                "line_number": method_context["start_line"],
+                "source_type": "unknown",
+                "value_name": method_context["name"],
+                "method_signature": method_context["signature"],
+            }
+        )
 
         has_user_input = False
         has_internal_input = False
@@ -575,25 +602,31 @@ class InputTracer:
 
             if param_annotation in self.USER_INPUT_ANNOTATIONS["java"]:
                 has_user_input = True
-                trace_path.append({
-                    "node_type": "parameter",
-                    "location": file_path,
-                    "line_number": param_info["line"],
-                    "source_type": InputSourceType.DIRECT_USER_INPUT.value,
-                    "value_name": param_name,
-                    "annotation": param_annotation,
-                    "metadata": {"description": self.USER_INPUT_ANNOTATIONS["java"][param_annotation]},
-                })
+                trace_path.append(
+                    {
+                        "node_type": "parameter",
+                        "location": file_path,
+                        "line_number": param_info["line"],
+                        "source_type": InputSourceType.DIRECT_USER_INPUT.value,
+                        "value_name": param_name,
+                        "annotation": param_annotation,
+                        "metadata": {
+                            "description": self.USER_INPUT_ANNOTATIONS["java"][param_annotation]
+                        },
+                    }
+                )
             elif param_annotation in self.INTERNAL_SOURCES["java"]:
                 has_internal_input = True
-                trace_path.append({
-                    "node_type": "parameter",
-                    "location": file_path,
-                    "line_number": param_info["line"],
-                    "source_type": InputSourceType.INTERNAL_VALUE.value,
-                    "value_name": param_name,
-                    "annotation": param_annotation,
-                })
+                trace_path.append(
+                    {
+                        "node_type": "parameter",
+                        "location": file_path,
+                        "line_number": param_info["line"],
+                        "source_type": InputSourceType.INTERNAL_VALUE.value,
+                        "value_name": param_name,
+                        "annotation": param_annotation,
+                    }
+                )
 
         if "byte[]" in current_line or "InputStream" in method_context.get("signature", ""):
             variable_data_flow = self._trace_data_flow_to_sink(
@@ -629,8 +662,14 @@ class InputTracer:
             confidence=confidence,
             is_exploitable=is_exploitable,
             trace_path=trace_path,
-            controllability_level=ControllabilityLevel.FULLY_CONTROLLED if has_user_input else ControllabilityLevel.NOT_CONTROLLED,
-            source_type=InputSourceType.DIRECT_USER_INPUT if has_user_input else InputSourceType.UNKNOWN,
+            controllability_level=(
+                ControllabilityLevel.FULLY_CONTROLLED
+                if has_user_input
+                else ControllabilityLevel.NOT_CONTROLLED
+            ),
+            source_type=(
+                InputSourceType.DIRECT_USER_INPUT if has_user_input else InputSourceType.UNKNOWN
+            ),
             summary=summary,
         )
 
@@ -656,7 +695,7 @@ class InputTracer:
         if not content:
             return self._create_unknown_result()
 
-        lines = content.split('\n')
+        lines = content.split("\n")
 
         if line_number > len(lines):
             return self._create_unknown_result()
@@ -675,14 +714,16 @@ class InputTracer:
                 summary="未发现 RestTemplate",
             )
 
-        trace_path.append({
-            "node_type": "sink",
-            "location": file_path,
-            "line_number": line_number,
-            "source_type": "unknown",
-            "value_name": "RestTemplate",
-            "metadata": {"description": "HTTP 客户端调用点", "url_param": url_param},
-        })
+        trace_path.append(
+            {
+                "node_type": "sink",
+                "location": file_path,
+                "line_number": line_number,
+                "source_type": "unknown",
+                "value_name": "RestTemplate",
+                "metadata": {"description": "HTTP 客户端调用点", "url_param": url_param},
+            }
+        )
 
         attack_prerequisites.append("RestTemplate 用于发起 HTTP 请求")
 
@@ -700,18 +741,18 @@ class InputTracer:
                 summary="无法确定 URL 参数来源",
             )
 
-        trace_path.append({
-            "node_type": "method",
-            "location": file_path,
-            "line_number": method_context["start_line"],
-            "source_type": "unknown",
-            "value_name": method_context["name"],
-            "method_signature": method_context["signature"],
-        })
-
-        url_origin = self._trace_variable_origin(
-            file_path, lines, line_number, url_param
+        trace_path.append(
+            {
+                "node_type": "method",
+                "location": file_path,
+                "line_number": method_context["start_line"],
+                "source_type": "unknown",
+                "value_name": method_context["name"],
+                "method_signature": method_context["signature"],
+            }
         )
+
+        url_origin = self._trace_variable_origin(file_path, lines, line_number, url_param)
 
         has_user_input = False
         has_internal_input = False
@@ -734,25 +775,33 @@ class InputTracer:
 
                     if param_annotation in self.USER_INPUT_ANNOTATIONS["java"]:
                         has_user_input = True
-                        trace_path.append({
-                            "node_type": "parameter",
-                            "location": file_path,
-                            "line_number": param_info["line"],
-                            "source_type": InputSourceType.DIRECT_USER_INPUT.value,
-                            "value_name": url_param,
-                            "annotation": param_annotation,
-                            "metadata": {"description": self.USER_INPUT_ANNOTATIONS["java"][param_annotation]},
-                        })
+                        trace_path.append(
+                            {
+                                "node_type": "parameter",
+                                "location": file_path,
+                                "line_number": param_info["line"],
+                                "source_type": InputSourceType.DIRECT_USER_INPUT.value,
+                                "value_name": url_param,
+                                "annotation": param_annotation,
+                                "metadata": {
+                                    "description": self.USER_INPUT_ANNOTATIONS["java"][
+                                        param_annotation
+                                    ]
+                                },
+                            }
+                        )
                     elif param_annotation in self.INTERNAL_SOURCES["java"]:
                         has_internal_input = True
-                        trace_path.append({
-                            "node_type": "parameter",
-                            "location": file_path,
-                            "line_number": param_info["line"],
-                            "source_type": InputSourceType.INTERNAL_VALUE.value,
-                            "value_name": url_param,
-                            "annotation": param_annotation,
-                        })
+                        trace_path.append(
+                            {
+                                "node_type": "parameter",
+                                "location": file_path,
+                                "line_number": param_info["line"],
+                                "source_type": InputSourceType.INTERNAL_VALUE.value,
+                                "value_name": url_param,
+                                "annotation": param_annotation,
+                            }
+                        )
 
         is_exploitable = has_user_input and not has_internal_input
         confidence = 0.95 if has_user_input else (0.5 if has_internal_input else 0.3)
@@ -775,8 +824,14 @@ class InputTracer:
             confidence=confidence,
             is_exploitable=is_exploitable,
             trace_path=trace_path,
-            controllability_level=ControllabilityLevel.FULLY_CONTROLLED if has_user_input else ControllabilityLevel.NOT_CONTROLLED,
-            source_type=InputSourceType.DIRECT_USER_INPUT if has_user_input else InputSourceType.UNKNOWN,
+            controllability_level=(
+                ControllabilityLevel.FULLY_CONTROLLED
+                if has_user_input
+                else ControllabilityLevel.NOT_CONTROLLED
+            ),
+            source_type=(
+                InputSourceType.DIRECT_USER_INPUT if has_user_input else InputSourceType.UNKNOWN
+            ),
             summary=summary,
         )
 
@@ -788,7 +843,7 @@ class InputTracer:
 
         sink_line_content = lines[sink_line - 1] if sink_line <= len(lines) else ""
 
-        var_match = re.search(r'(\w+)\s*\.readObject', sink_line_content)
+        var_match = re.search(r"(\w+)\s*\.readObject", sink_line_content)
         if var_match:
             var_name = var_match.group(1)
 
@@ -797,21 +852,25 @@ class InputTracer:
                 origin_content = lines[origin_line - 1]
 
                 if "@RequestParam" in origin_content or "@PathVariable" in origin_content:
-                    trace_nodes.append(TraceNode(
-                        node_type="data_flow",
-                        location=file_path,
-                        line_number=origin_line,
-                        source_type=InputSourceType.DIRECT_USER_INPUT,
-                        value_name=var_name,
-                    ))
+                    trace_nodes.append(
+                        TraceNode(
+                            node_type="data_flow",
+                            location=file_path,
+                            line_number=origin_line,
+                            source_type=InputSourceType.DIRECT_USER_INPUT,
+                            value_name=var_name,
+                        )
+                    )
                 elif "@Value" in origin_content:
-                    trace_nodes.append(TraceNode(
-                        node_type="data_flow",
-                        location=file_path,
-                        line_number=origin_line,
-                        source_type=InputSourceType.INTERNAL_VALUE,
-                        value_name=var_name,
-                    ))
+                    trace_nodes.append(
+                        TraceNode(
+                            node_type="data_flow",
+                            location=file_path,
+                            line_number=origin_line,
+                            source_type=InputSourceType.INTERNAL_VALUE,
+                            value_name=var_name,
+                        )
+                    )
 
         return trace_nodes
 
@@ -822,10 +881,10 @@ class InputTracer:
         for i in range(before_line - 1, -1, -1):
             line = lines[i]
 
-            if re.search(rf'\b{var_name}\b\s*=', line):
+            if re.search(rf"\b{var_name}\b\s*=", line):
                 return i + 1
 
-            if re.search(r'\b(public|private|protected)\s+\w+', line):
+            if re.search(r"\b(public|private|protected)\s+\w+", line):
                 break
 
         return None
@@ -839,36 +898,40 @@ class InputTracer:
         for i in range(current_line - 2, max(0, current_line - 50), -1):
             line = lines[i]
 
-            if re.search(rf'\b{var_name}\b\s*=', line):
-                assign_match = re.search(rf'(\w+)\s*=\s*(.+)', line)
+            if re.search(rf"\b{var_name}\b\s*=", line):
+                assign_match = re.search(rf"(\w+)\s*=\s*(.+)", line)
                 if assign_match:
                     rhs = assign_match.group(2).strip()
 
                     for annotation, desc in self.USER_INPUT_ANNOTATIONS["java"].items():
                         if annotation in rhs or annotation.split(".")[-1] in rhs:
-                            trace_nodes.append(TraceNode(
-                                node_type="assignment",
-                                location=file_path,
-                                line_number=i + 1,
-                                source_type=InputSourceType.DIRECT_USER_INPUT,
-                                value_name=var_name,
-                                annotation=annotation,
-                            ))
+                            trace_nodes.append(
+                                TraceNode(
+                                    node_type="assignment",
+                                    location=file_path,
+                                    line_number=i + 1,
+                                    source_type=InputSourceType.DIRECT_USER_INPUT,
+                                    value_name=var_name,
+                                    annotation=annotation,
+                                )
+                            )
                             return trace_nodes
 
                     for annotation, desc in self.INTERNAL_SOURCES["java"].items():
                         if annotation in rhs:
-                            trace_nodes.append(TraceNode(
-                                node_type="assignment",
-                                location=file_path,
-                                line_number=i + 1,
-                                source_type=InputSourceType.INTERNAL_VALUE,
-                                value_name=var_name,
-                                annotation=annotation,
-                            ))
+                            trace_nodes.append(
+                                TraceNode(
+                                    node_type="assignment",
+                                    location=file_path,
+                                    line_number=i + 1,
+                                    source_type=InputSourceType.INTERNAL_VALUE,
+                                    value_name=var_name,
+                                    annotation=annotation,
+                                )
+                            )
                             return trace_nodes
 
-                    rhs_var_match = re.match(r'^(\w+)$', rhs)
+                    rhs_var_match = re.match(r"^(\w+)$", rhs)
                     if rhs_var_match:
                         nested_origin = self._trace_variable_origin(
                             file_path, lines, i + 1, rhs_var_match.group(1)
@@ -876,40 +939,83 @@ class InputTracer:
                         trace_nodes.extend(nested_origin)
                         return trace_nodes
 
-            if re.search(r'\b(public|private|protected)\s+\w+', line):
+            if re.search(r"\b(public|private|protected)\s+\w+", line):
                 break
 
         return trace_nodes
 
     def _extract_variable_references(self, code_snippet: str) -> List[str]:
         """提取代码片段中的变量引用"""
-        var_pattern = r'\b([a-zA-Z_][a-zA-Z0-9_]*)\b'
+        var_pattern = r"\b([a-zA-Z_][a-zA-Z0-9_]*)\b"
         matches = re.findall(var_pattern, code_snippet)
 
         keywords = {
-            "int", "long", "float", "double", "boolean", "char", "byte", "short",
-            "String", "Integer", "Long", "Float", "Double", "Boolean", "Byte", "Short",
-            "Object", "Class", "System", "out", "in", "err",
-            "if", "else", "for", "while", "do", "switch", "case", "break", "continue",
-            "return", "try", "catch", "finally", "throw", "throws",
-            "new", "this", "super", "import", "package", "class", "interface",
-            "extends", "implements", "abstract", "final", "static", "void",
-            "public", "private", "protected", "default",
+            "int",
+            "long",
+            "float",
+            "double",
+            "boolean",
+            "char",
+            "byte",
+            "short",
+            "String",
+            "Integer",
+            "Long",
+            "Float",
+            "Double",
+            "Boolean",
+            "Byte",
+            "Short",
+            "Object",
+            "Class",
+            "System",
+            "out",
+            "in",
+            "err",
+            "if",
+            "else",
+            "for",
+            "while",
+            "do",
+            "switch",
+            "case",
+            "break",
+            "continue",
+            "return",
+            "try",
+            "catch",
+            "finally",
+            "throw",
+            "throws",
+            "new",
+            "this",
+            "super",
+            "import",
+            "package",
+            "class",
+            "interface",
+            "extends",
+            "implements",
+            "abstract",
+            "final",
+            "static",
+            "void",
+            "public",
+            "private",
+            "protected",
+            "default",
         }
 
         return [m for m in matches if m not in keywords]
 
-    def _find_method_context(
-        self, lines: List[str], line_number: int
-    ) -> Optional[Dict[str, Any]]:
+    def _find_method_context(self, lines: List[str], line_number: int) -> Optional[Dict[str, Any]]:
         """查找方法上下文"""
         for i in range(line_number - 1, -1, -1):
             line = lines[i]
 
             method_match = re.search(
-                r'((?:public|private|protected)?\s*(?:static)?\s*\w+\s+)?'
-                r'(\w+)\s*\(([^)]*)\)',
-                line
+                r"((?:public|private|protected)?\s*(?:static)?\s*\w+\s+)?" r"(\w+)\s*\(([^)]*)\)",
+                line,
             )
 
             if method_match and not any(kw in line for kw in ["if", "for", "while", "switch"]):
@@ -919,17 +1025,19 @@ class InputTracer:
 
                 params = []
                 if params_str.strip():
-                    param_pattern = r'(?:@(\w+)\s+)?(\w+)\s+(\w+)'
+                    param_pattern = r"(?:@(\w+)\s+)?(\w+)\s+(\w+)"
                     for param_match in re.finditer(param_pattern, params_str):
                         annotation = param_match.group(1)
                         param_type = param_match.group(2)
                         param_name = param_match.group(3)
-                        params.append({
-                            "annotation": f"@{annotation}" if annotation else None,
-                            "type": param_type,
-                            "name": param_name,
-                            "line": i + 1,
-                        })
+                        params.append(
+                            {
+                                "annotation": f"@{annotation}" if annotation else None,
+                                "type": param_type,
+                                "name": param_name,
+                                "line": i + 1,
+                            }
+                        )
 
                 return {
                     "name": method_name,
@@ -943,12 +1051,12 @@ class InputTracer:
     def _is_suspicious_variable(self, var_name: str) -> bool:
         """判断变量名是否可疑"""
         suspicious_patterns = [
-            r'^(id|Ids|ID)$',
-            r'(Id|Name|Name)$',
-            r'(keyword|search|query)$',
-            r'(url|uri|link|href)$',
-            r'(file|path)$',
-            r'(user|input|param)$',
+            r"^(id|Ids|ID)$",
+            r"(Id|Name|Name)$",
+            r"(keyword|search|query)$",
+            r"(url|uri|link|href)$",
+            r"(file|path)$",
+            r"(user|input|param)$",
         ]
 
         for pattern in suspicious_patterns:
@@ -963,7 +1071,7 @@ class InputTracer:
             return self._file_cache[file_path]
 
         try:
-            with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+            with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
                 content = f.read()
                 self._file_cache[file_path] = content
                 return content
@@ -975,14 +1083,14 @@ class InputTracer:
         """检测编程语言"""
         ext = Path(file_path).suffix.lower()
         language_map = {
-            '.java': 'java',
-            '.py': 'python',
-            '.js': 'javascript',
-            '.ts': 'javascript',
-            '.jsx': 'javascript',
-            '.tsx': 'javascript',
+            ".java": "java",
+            ".py": "python",
+            ".js": "javascript",
+            ".ts": "javascript",
+            ".jsx": "javascript",
+            ".tsx": "javascript",
         }
-        return language_map.get(ext, 'unknown')
+        return language_map.get(ext, "unknown")
 
     def _determine_controllability_level(
         self, is_direct: bool, is_indirect: bool, is_internal: bool
@@ -1120,11 +1228,13 @@ class InputTracer:
             lines.append("追踪路径:")
             for i, node in enumerate(result.trace_path, 1):
                 lines.append(f"  {i}. [{node.get('node_type', 'unknown')}]")
-                lines.append(f"     位置: {node.get('location', 'unknown')}:{node.get('line_number', 0)}")
+                lines.append(
+                    f"     位置: {node.get('location', 'unknown')}:{node.get('line_number', 0)}"
+                )
                 lines.append(f"     值: {node.get('value_name', 'unknown')}")
-                if node.get('annotation'):
+                if node.get("annotation"):
                     lines.append(f"     注解: {node.get('annotation')}")
-                if node.get('source_type'):
+                if node.get("source_type"):
                     lines.append(f"     来源类型: {node.get('source_type')}")
                 lines.append("")
 

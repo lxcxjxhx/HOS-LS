@@ -4,8 +4,9 @@
 """
 
 import os
-import yaml
 from typing import Optional
+
+import yaml
 
 DEFAULT_LANGUAGE = "zh"
 SUPPORTED_LANGUAGES = ["zh", "en"]
@@ -58,7 +59,7 @@ class LocaleManager:
             return
 
         try:
-            with open(config_path, 'r', encoding='utf-8') as f:
+            with open(config_path, "r", encoding="utf-8") as f:
                 config = yaml.safe_load(f)
 
             if config and isinstance(config, dict):

@@ -4,15 +4,15 @@
 """
 
 import re
-from typing import Any, Dict, List, Optional, Union
 from pathlib import Path
+from typing import Any, Dict, List, Optional, Union
 
 from src.rules.base import BaseRule, RuleCategory, RuleMetadata, RuleResult, RuleSeverity
 
 
 class WeakCryptoRule(BaseRule):
     """弱加密算法检测规则
-    
+
     检测以下模式:
     - MD5 用于密码或签名
     - SHA1 用于安全敏感场景
@@ -20,7 +20,7 @@ class WeakCryptoRule(BaseRule):
     - ECB 模式
     - 弱哈希算法
     """
-    
+
     def __init__(self, config: Optional[Dict[str, Any]] = None) -> None:
         metadata = RuleMetadata(
             id="HOS005",
@@ -38,7 +38,7 @@ class WeakCryptoRule(BaseRule):
             tags=["cryptography", "encryption", "hash", "weak", "security"],
         )
         super().__init__(metadata, config)
-        
+
         self._patterns = [
             (re.compile(r"hashlib\.md5\s*\(", re.IGNORECASE), "MD5 哈希算法"),
             (re.compile(r"MD5\s*\(", re.IGNORECASE), "MD5 哈希算法"),
@@ -55,7 +55,7 @@ class WeakCryptoRule(BaseRule):
             (re.compile(r"random\.randint\s*\(", re.IGNORECASE), "不安全的随机数"),
             (re.compile(r"random\.choice\s*\(", re.IGNORECASE), "不安全的随机数"),
         ]
-        
+
         self._context_patterns = {
             "password": re.compile(r"password|passwd|pwd|secret|key", re.IGNORECASE),
             "token": re.compile(r"token|auth|session|jwt", re.IGNORECASE),
@@ -64,15 +64,15 @@ class WeakCryptoRule(BaseRule):
 
     def check(self, target: Union[str, Path, Dict[str, Any]]) -> List[RuleResult]:
         """执行弱加密算法检测
-        
+
         Args:
             target: 检查目标（文件路径、代码内容或 AST 节点）
-            
+
         Returns:
             规则执行结果列表
         """
         results = []
-        
+
         if isinstance(target, Path):
             try:
                 content = target.read_text(encoding="utf-8")
@@ -87,22 +87,22 @@ class WeakCryptoRule(BaseRule):
             file_path = target.get("file_path", "<unknown>")
         else:
             return results
-        
+
         lines = content.split("\n")
-        
+
         for pattern, description in self._patterns:
             for match in pattern.finditer(content):
                 line_num = content[: match.start()].count("\n") + 1
                 col_num = match.start() - content[: match.start()].rfind("\n")
-                
+
                 if line_num <= len(lines):
                     code_snippet = lines[line_num - 1].strip()
                 else:
                     code_snippet = match.group()
-                
+
                 context = self._analyze_context(content, line_num)
                 severity = self._determine_severity(description, context)
-                
+
                 result = RuleResult(
                     rule_id=self.metadata.id,
                     rule_name=self.metadata.name,
@@ -121,21 +121,21 @@ class WeakCryptoRule(BaseRule):
                     metadata={"context": context},
                 )
                 results.append(result)
-        
+
         return results
-    
+
     def _analyze_context(self, content: str, line_num: int) -> str:
         """分析代码上下文"""
         lines = content.split("\n")
         start = max(0, line_num - 5)
         end = min(len(lines), line_num + 5)
         context_code = "\n".join(lines[start:end])
-        
+
         for context_type, pattern in self._context_patterns.items():
             if pattern.search(context_code):
                 return context_type
         return "general"
-    
+
     def _determine_severity(self, description: str, context: str) -> RuleSeverity:
         """根据上下文确定严重级别"""
         if context in ["password", "token"]:
@@ -146,7 +146,7 @@ class WeakCryptoRule(BaseRule):
             return RuleSeverity.HIGH
         else:
             return RuleSeverity.MEDIUM
-    
+
     def _get_fix_suggestion(self, issue_type: str) -> str:
         """获取修复建议"""
         suggestions = {

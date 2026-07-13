@@ -1,18 +1,19 @@
 """报告生成器测试"""
 
-import pytest
 import tempfile
 from pathlib import Path
 
+import pytest
+
+from src.core.engine import Finding, Location, ScanResult, ScanStatus, Severity
 from src.reporting.generator import (
     BaseReportGenerator,
-    JSONReportGenerator,
     HTMLReportGenerator,
+    JSONReportGenerator,
     MarkdownReportGenerator,
-    SARIFReportGenerator,
     ReportGenerator,
+    SARIFReportGenerator,
 )
-from src.core.engine import ScanResult, ScanStatus, Finding, Location, Severity
 
 
 @pytest.fixture
@@ -54,17 +55,18 @@ def sample_result(sample_findings):
 class TestJSONReportGenerator:
     def test_generate(self, sample_result):
         generator = JSONReportGenerator()
-        
+
         with tempfile.TemporaryDirectory() as tmpdir:
             output_path = Path(tmpdir) / "report.json"
             result_path = generator.generate([sample_result], str(output_path))
-            
+
             assert Path(result_path).exists()
-            
+
             import json
+
             with open(result_path) as f:
                 data = json.load(f)
-            
+
             assert "results" in data
             assert "summary" in data
             assert data["summary"]["total_findings"] == 2
@@ -77,14 +79,14 @@ class TestJSONReportGenerator:
 class TestHTMLReportGenerator:
     def test_generate(self, sample_result):
         generator = HTMLReportGenerator()
-        
+
         with tempfile.TemporaryDirectory() as tmpdir:
             output_path = Path(tmpdir) / "report.html"
             result_path = generator.generate([sample_result], str(output_path))
-            
+
             assert Path(result_path).exists()
-            
-            content = Path(result_path).read_text(encoding='utf-8')
+
+            content = Path(result_path).read_text(encoding="utf-8")
             assert "HOS-LS" in content
             assert "SQL Injection" in content
             assert "Command Injection" in content
@@ -97,14 +99,14 @@ class TestHTMLReportGenerator:
 class TestMarkdownReportGenerator:
     def test_generate(self, sample_result):
         generator = MarkdownReportGenerator()
-        
+
         with tempfile.TemporaryDirectory() as tmpdir:
             output_path = Path(tmpdir) / "report.md"
             result_path = generator.generate([sample_result], str(output_path))
-            
+
             assert Path(result_path).exists()
-            
-            content = Path(result_path).read_text(encoding='utf-8')
+
+            content = Path(result_path).read_text(encoding="utf-8")
             assert "# HOS-LS" in content
             assert "SQL Injection" in content
 
@@ -116,17 +118,18 @@ class TestMarkdownReportGenerator:
 class TestSARIFReportGenerator:
     def test_generate(self, sample_result):
         generator = SARIFReportGenerator()
-        
+
         with tempfile.TemporaryDirectory() as tmpdir:
             output_path = Path(tmpdir) / "report.sarif"
             result_path = generator.generate([sample_result], str(output_path))
-            
+
             assert Path(result_path).exists()
-            
+
             import json
+
             with open(result_path) as f:
                 data = json.load(f)
-            
+
             assert data["version"] == "2.1.0"
             assert "runs" in data
 
@@ -138,35 +141,35 @@ class TestSARIFReportGenerator:
 class TestReportGenerator:
     def test_generate_json(self, sample_result):
         generator = ReportGenerator()
-        
+
         with tempfile.TemporaryDirectory() as tmpdir:
             output_path = Path(tmpdir) / "report.json"
             result_path = generator.generate([sample_result], str(output_path), "json")
-            
+
             assert Path(result_path).exists()
 
     def test_generate_html(self, sample_result):
         generator = ReportGenerator()
-        
+
         with tempfile.TemporaryDirectory() as tmpdir:
             output_path = Path(tmpdir) / "report.html"
             result_path = generator.generate([sample_result], str(output_path), "html")
-            
+
             assert Path(result_path).exists()
 
     def test_invalid_format(self, sample_result):
         generator = ReportGenerator()
-        
+
         with tempfile.TemporaryDirectory() as tmpdir:
             output_path = Path(tmpdir) / "report.xyz"
-            
+
             with pytest.raises(ValueError):
                 generator.generate([sample_result], str(output_path), "invalid_format")
 
     def test_list_formats(self):
         generator = ReportGenerator()
         formats = generator.list_formats()
-        
+
         assert "json" in formats
         assert "html" in formats
         assert "markdown" in formats
@@ -174,23 +177,23 @@ class TestReportGenerator:
 
     def test_register_generator(self, sample_result):
         generator = ReportGenerator()
-        
+
         class CustomGenerator(BaseReportGenerator):
             @property
             def format(self):
                 return "custom"
-            
+
             def generate(self, results, output_path):
                 Path(output_path).write_text("custom report")
                 return output_path
-        
+
         generator.register_generator("custom", CustomGenerator)
-        
+
         assert "custom" in generator.list_formats()
-        
+
         with tempfile.TemporaryDirectory() as tmpdir:
             output_path = Path(tmpdir) / "report.custom"
             result_path = generator.generate([sample_result], str(output_path), "custom")
-            
+
             assert Path(result_path).exists()
             assert Path(result_path).read_text() == "custom report"

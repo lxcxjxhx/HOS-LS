@@ -3,9 +3,10 @@
 实现结构化搜索和语义搜索的融合，提供更准确的CVE检索能力。
 """
 
-from typing import Dict, List, Optional, Any
+from typing import Any, Dict, List, Optional
 
 from src.utils.logger import get_logger
+
 try:
     from src.storage.hybrid_store import HybridStore
 except ImportError:
@@ -25,7 +26,9 @@ class HybridRetriever:
         """
         self.hybrid_store = hybrid_store
 
-    def search(self, query: str, filters: Optional[Dict[str, Any]] = None, top_k: int = 10) -> List[Dict[str, Any]]:
+    def search(
+        self, query: str, filters: Optional[Dict[str, Any]] = None, top_k: int = 10
+    ) -> List[Dict[str, Any]]:
         """执行混合搜索
 
         Args:
@@ -61,7 +64,9 @@ class HybridRetriever:
             logger.error(f"结构化搜索失败: {e}")
             return []
 
-    def search_semantic(self, query: str, filters: Optional[Dict[str, Any]] = None, top_k: int = 10) -> List[Dict[str, Any]]:
+    def search_semantic(
+        self, query: str, filters: Optional[Dict[str, Any]] = None, top_k: int = 10
+    ) -> List[Dict[str, Any]]:
         """执行语义搜索
 
         Args:
@@ -104,7 +109,7 @@ class HybridRetriever:
         Returns:
             CVE列表
         """
-        filters = {'cwe': cwe}
+        filters = {"cwe": cwe}
         return self.search_structured(filters, limit)
 
     def search_by_severity(self, min_score: float, max_score: float, limit: int = 100) -> List[Any]:
@@ -118,7 +123,7 @@ class HybridRetriever:
         Returns:
             CVE列表
         """
-        filters = {'min_score': min_score, 'max_score': max_score}
+        filters = {"min_score": min_score, "max_score": max_score}
         return self.search_structured(filters, limit)
 
     def search_by_date(self, start_date, end_date, limit: int = 100) -> List[Any]:
@@ -132,7 +137,7 @@ class HybridRetriever:
         Returns:
             CVE列表
         """
-        filters = {'start_date': start_date, 'end_date': end_date}
+        filters = {"start_date": start_date, "end_date": end_date}
         return self.search_structured(filters, limit)
 
     def search_by_tags(self, tags: List[str], limit: int = 100) -> List[Any]:
@@ -145,7 +150,7 @@ class HybridRetriever:
         Returns:
             CVE列表
         """
-        filters = {'tags': tags}
+        filters = {"tags": tags}
         return self.search_structured(filters, limit)
 
     def search_attack_vectors(self, attack_vector: str, limit: int = 100) -> List[Any]:
@@ -158,7 +163,7 @@ class HybridRetriever:
         Returns:
             CVE列表
         """
-        filters = {'tags': [attack_vector.lower()]}
+        filters = {"tags": [attack_vector.lower()]}
         return self.search_structured(filters, limit)
 
     def get_statistics(self) -> Dict[str, Any]:
@@ -169,12 +174,12 @@ class HybridRetriever:
         """
         try:
             return {
-                'cve_count': self.hybrid_store.get_cve_count(),
-                'vector_count': self.hybrid_store.get_vector_count()
+                "cve_count": self.hybrid_store.get_cve_count(),
+                "vector_count": self.hybrid_store.get_vector_count(),
             }
         except Exception as e:
             logger.error(f"获取统计信息失败: {e}")
-            return {'cve_count': 0, 'vector_count': 0}
+            return {"cve_count": 0, "vector_count": 0}
 
 
 def create_hybrid_retriever(hybrid_store: HybridStore) -> HybridRetriever:

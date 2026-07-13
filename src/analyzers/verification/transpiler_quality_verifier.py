@@ -1,8 +1,8 @@
-from dataclasses import dataclass, field
-from typing import Any, List, Tuple, Optional, Set, Dict
 import ast
-import random
 import inspect
+import random
+from dataclasses import dataclass, field
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 from .universal_parser import SupportedLanguage
 
@@ -45,7 +45,7 @@ class ASTTranspilerEngine:
 
 
 class TranspilerQualityVerifier:
-    def __init__(self, ast_transpiler: ASTTranspilerEngine, executor: 'PythonTestExecutor'):
+    def __init__(self, ast_transpiler: ASTTranspilerEngine, executor: "PythonTestExecutor"):
         self.ast_transpiler = ast_transpiler
         self.executor = executor
         self._supported_languages: Set[SupportedLanguage] = {
@@ -56,10 +56,17 @@ class TranspilerQualityVerifier:
             SupportedLanguage.RUST,
         }
 
-    def generate_test_cases(self, source_code: str, count: int = 5, language: SupportedLanguage = SupportedLanguage.PYTHON) -> List[TestCase]:
+    def generate_test_cases(
+        self,
+        source_code: str,
+        count: int = 5,
+        language: SupportedLanguage = SupportedLanguage.PYTHON,
+    ) -> List[TestCase]:
         return self._generate_for_language(language, source_code, count)
 
-    def _generate_for_language(self, language: SupportedLanguage, source_code: str, count: int) -> List[TestCase]:
+    def _generate_for_language(
+        self, language: SupportedLanguage, source_code: str, count: int
+    ) -> List[TestCase]:
         if language == SupportedLanguage.PYTHON:
             return self._generate_python_test_cases(source_code, count)
         elif language == SupportedLanguage.JAVA:
@@ -81,12 +88,14 @@ class TranspilerQualityVerifier:
             inp_type = self._get_input_type(inp)
             generated = self._generate_test_values_for_type(inp_type, count)
             for value in generated:
-                test_cases.append(TestCase(
-                    input_data=value,
-                    expected_output=None,
-                    description=f"{inp_type} test: {value}",
-                    language=SupportedLanguage.PYTHON
-                ))
+                test_cases.append(
+                    TestCase(
+                        input_data=value,
+                        expected_output=None,
+                        description=f"{inp_type} test: {value}",
+                        language=SupportedLanguage.PYTHON,
+                    )
+                )
 
         return test_cases[:count]
 
@@ -96,9 +105,14 @@ class TranspilerQualityVerifier:
 
         java_specific_values = [
             None,
-            0, 1, -1, 42,
-            0.0, 1.5,
-            True, False,
+            0,
+            1,
+            -1,
+            42,
+            0.0,
+            1.5,
+            True,
+            False,
             "",
             "hello",
             [],
@@ -114,20 +128,24 @@ class TranspilerQualityVerifier:
             inp_type = self._get_input_type(inp)
             generated = self._generate_test_values_for_type(inp_type, count)
             for value in generated:
-                test_cases.append(TestCase(
-                    input_data=value,
-                    expected_output=None,
-                    description=f"Java {inp_type} test: {value}",
-                    language=SupportedLanguage.JAVA
-                ))
+                test_cases.append(
+                    TestCase(
+                        input_data=value,
+                        expected_output=None,
+                        description=f"Java {inp_type} test: {value}",
+                        language=SupportedLanguage.JAVA,
+                    )
+                )
 
         for value in java_specific_values[:count]:
-            test_cases.append(TestCase(
-                input_data=value,
-                expected_output=None,
-                description=f"Java-specific test: {type(value).__name__ if value is not None else 'null'}",
-                language=SupportedLanguage.JAVA
-            ))
+            test_cases.append(
+                TestCase(
+                    input_data=value,
+                    expected_output=None,
+                    description=f"Java-specific test: {type(value).__name__ if value is not None else 'null'}",
+                    language=SupportedLanguage.JAVA,
+                )
+            )
 
         return test_cases[:count]
 
@@ -137,9 +155,14 @@ class TranspilerQualityVerifier:
 
         cpp_specific_values = [
             None,
-            0, 1, -1, 42,
-            0.0, 1.5,
-            True, False,
+            0,
+            1,
+            -1,
+            42,
+            0.0,
+            1.5,
+            True,
+            False,
             "",
             "hello",
             [],
@@ -157,20 +180,24 @@ class TranspilerQualityVerifier:
             inp_type = self._get_input_type(inp)
             generated = self._generate_test_values_for_type(inp_type, count)
             for value in generated:
-                test_cases.append(TestCase(
-                    input_data=value,
-                    expected_output=None,
-                    description=f"C++ {inp_type} test: {value}",
-                    language=SupportedLanguage.CPP
-                ))
+                test_cases.append(
+                    TestCase(
+                        input_data=value,
+                        expected_output=None,
+                        description=f"C++ {inp_type} test: {value}",
+                        language=SupportedLanguage.CPP,
+                    )
+                )
 
         for value in cpp_specific_values[:count]:
-            test_cases.append(TestCase(
-                input_data=value,
-                expected_output=None,
-                description=f"C++-specific test: {type(value).__name__ if value is not None else 'null'}",
-                language=SupportedLanguage.CPP
-            ))
+            test_cases.append(
+                TestCase(
+                    input_data=value,
+                    expected_output=None,
+                    description=f"C++-specific test: {type(value).__name__ if value is not None else 'null'}",
+                    language=SupportedLanguage.CPP,
+                )
+            )
 
         return test_cases[:count]
 
@@ -180,9 +207,14 @@ class TranspilerQualityVerifier:
 
         go_specific_values = [
             None,
-            0, 1, -1, 42,
-            0.0, 1.5,
-            True, False,
+            0,
+            1,
+            -1,
+            42,
+            0.0,
+            1.5,
+            True,
+            False,
             "",
             "hello",
             [],
@@ -199,20 +231,24 @@ class TranspilerQualityVerifier:
             inp_type = self._get_input_type(inp)
             generated = self._generate_test_values_for_type(inp_type, count)
             for value in generated:
-                test_cases.append(TestCase(
-                    input_data=value,
-                    expected_output=None,
-                    description=f"Go {inp_type} test: {value}",
-                    language=SupportedLanguage.GO
-                ))
+                test_cases.append(
+                    TestCase(
+                        input_data=value,
+                        expected_output=None,
+                        description=f"Go {inp_type} test: {value}",
+                        language=SupportedLanguage.GO,
+                    )
+                )
 
         for value in go_specific_values[:count]:
-            test_cases.append(TestCase(
-                input_data=value,
-                expected_output=None,
-                description=f"Go-specific test: {type(value).__name__ if value is not None else 'nil'}",
-                language=SupportedLanguage.GO
-            ))
+            test_cases.append(
+                TestCase(
+                    input_data=value,
+                    expected_output=None,
+                    description=f"Go-specific test: {type(value).__name__ if value is not None else 'nil'}",
+                    language=SupportedLanguage.GO,
+                )
+            )
 
         return test_cases[:count]
 
@@ -222,9 +258,14 @@ class TranspilerQualityVerifier:
 
         rust_specific_values = [
             None,
-            0, 1, -1, 42,
-            0.0, 1.5,
-            True, False,
+            0,
+            1,
+            -1,
+            42,
+            0.0,
+            1.5,
+            True,
+            False,
             "",
             "hello",
             [],
@@ -243,20 +284,24 @@ class TranspilerQualityVerifier:
             inp_type = self._get_input_type(inp)
             generated = self._generate_test_values_for_type(inp_type, count)
             for value in generated:
-                test_cases.append(TestCase(
-                    input_data=value,
-                    expected_output=None,
-                    description=f"Rust {inp_type} test: {value}",
-                    language=SupportedLanguage.RUST
-                ))
+                test_cases.append(
+                    TestCase(
+                        input_data=value,
+                        expected_output=None,
+                        description=f"Rust {inp_type} test: {value}",
+                        language=SupportedLanguage.RUST,
+                    )
+                )
 
         for value in rust_specific_values[:count]:
-            test_cases.append(TestCase(
-                input_data=value,
-                expected_output=None,
-                description=f"Rust-specific test: {type(value).__name__ if value is not None else 'None'}",
-                language=SupportedLanguage.RUST
-            ))
+            test_cases.append(
+                TestCase(
+                    input_data=value,
+                    expected_output=None,
+                    description=f"Rust-specific test: {type(value).__name__ if value is not None else 'None'}",
+                    language=SupportedLanguage.RUST,
+                )
+            )
 
         return test_cases[:count]
 
@@ -270,13 +315,29 @@ class TranspilerQualityVerifier:
                     for target in node.targets:
                         if isinstance(target, ast.Name):
                             var_name = target.id.lower()
-                            if any(keyword in var_name for keyword in ['num', 'count', 'amount', 'price', 'age', 'score', 'rate']):
+                            if any(
+                                keyword in var_name
+                                for keyword in [
+                                    "num",
+                                    "count",
+                                    "amount",
+                                    "price",
+                                    "age",
+                                    "score",
+                                    "rate",
+                                ]
+                            ):
                                 inputs.append(0)
-                            elif any(keyword in var_name for keyword in ['name', 'text', 'str', 'msg', 'message', 'input']):
+                            elif any(
+                                keyword in var_name
+                                for keyword in ["name", "text", "str", "msg", "message", "input"]
+                            ):
                                 inputs.append("")
-                            elif any(keyword in var_name for keyword in ['list', 'arr', 'items', 'data']):
+                            elif any(
+                                keyword in var_name for keyword in ["list", "arr", "items", "data"]
+                            ):
                                 inputs.append([])
-                            elif any(keyword in var_name for keyword in ['dict', 'obj', 'config']):
+                            elif any(keyword in var_name for keyword in ["dict", "obj", "config"]):
                                 inputs.append({})
                             else:
                                 inputs.append(None)
@@ -284,13 +345,29 @@ class TranspilerQualityVerifier:
                 elif isinstance(node, ast.FunctionDef):
                     for arg in node.args.args:
                         arg_name = arg.arg.lower()
-                        if any(keyword in arg_name for keyword in ['num', 'count', 'amount', 'price', 'age', 'score', 'rate']):
+                        if any(
+                            keyword in arg_name
+                            for keyword in [
+                                "num",
+                                "count",
+                                "amount",
+                                "price",
+                                "age",
+                                "score",
+                                "rate",
+                            ]
+                        ):
                             inputs.append(0)
-                        elif any(keyword in arg_name for keyword in ['name', 'text', 'str', 'msg', 'message', 'input']):
+                        elif any(
+                            keyword in arg_name
+                            for keyword in ["name", "text", "str", "msg", "message", "input"]
+                        ):
                             inputs.append("")
-                        elif any(keyword in arg_name for keyword in ['list', 'arr', 'items', 'data']):
+                        elif any(
+                            keyword in arg_name for keyword in ["list", "arr", "items", "data"]
+                        ):
                             inputs.append([])
-                        elif any(keyword in arg_name for keyword in ['dict', 'obj', 'config']):
+                        elif any(keyword in arg_name for keyword in ["dict", "obj", "config"]):
                             inputs.append({})
                         else:
                             inputs.append(None)
@@ -335,8 +412,8 @@ class TranspilerQualityVerifier:
                 -1e10,
                 1e-10,
                 -1e-10,
-                float('inf'),
-                float('-inf'),
+                float("inf"),
+                float("-inf"),
             ]
         elif type_name == "string":
             return [
@@ -378,7 +455,9 @@ class TranspilerQualityVerifier:
         else:
             return [None, 0, "", [], {}]
 
-    def verify(self, source_code: str, transpiled_code: str, test_cases: List[TestCase]) -> List[VerificationResult]:
+    def verify(
+        self, source_code: str, transpiled_code: str, test_cases: List[TestCase]
+    ) -> List[VerificationResult]:
         results = []
 
         for test_case in test_cases:
@@ -387,7 +466,9 @@ class TranspilerQualityVerifier:
 
         return results
 
-    def _verify_single_test(self, source_code: str, transpiled_code: str, test_case: TestCase) -> VerificationResult:
+    def _verify_single_test(
+        self, source_code: str, transpiled_code: str, test_case: TestCase
+    ) -> VerificationResult:
         wrapper_original = self._create_execution_wrapper(source_code, test_case.input_data)
         wrapper_transpiled = self._create_execution_wrapper(transpiled_code, test_case.input_data)
 
@@ -401,8 +482,16 @@ class TranspilerQualityVerifier:
 
         if result_original["success"] and result_transpiled["success"]:
             try:
-                original_output = eval(result_original["output"].strip()) if result_original["output"].strip() else None
-                transpiled_output = eval(result_transpiled["output"].strip()) if result_transpiled["output"].strip() else None
+                original_output = (
+                    eval(result_original["output"].strip())
+                    if result_original["output"].strip()
+                    else None
+                )
+                transpiled_output = (
+                    eval(result_transpiled["output"].strip())
+                    if result_transpiled["output"].strip()
+                    else None
+                )
                 is_equivalent = self.are_equivalent(original_output, transpiled_output)
             except Exception as e:
                 error_message = f"Output parsing error: {str(e)}"
@@ -418,7 +507,7 @@ class TranspilerQualityVerifier:
             is_equivalent=is_equivalent,
             error_message=error_message,
             execution_time_original=result_original.get("execution_time", 0.0),
-            execution_time_transpiled=result_transpiled.get("execution_time", 0.0)
+            execution_time_transpiled=result_transpiled.get("execution_time", 0.0),
         )
 
     def _create_execution_wrapper(self, code: str, input_data: Any) -> str:
@@ -440,7 +529,10 @@ print(repr(result))
                 if abs(float(obj1) - float(obj2)) <= tolerance:
                     return True, ""
                 return False, f"Numeric difference at {path or 'root'}: {obj1} vs {obj2}"
-            return False, f"Type mismatch at {path or 'root'}: {type(obj1).__name__} vs {type(obj2).__name__}"
+            return (
+                False,
+                f"Type mismatch at {path or 'root'}: {type(obj1).__name__} vs {type(obj2).__name__}",
+            )
 
         if obj1 is None and obj2 is None:
             return True, ""
@@ -468,7 +560,10 @@ print(repr(result))
 
         if isinstance(obj1, dict):
             if set(obj1.keys()) != set(obj2.keys()):
-                return False, f"Key mismatch at {path or 'root'}: {set(obj1.keys())} vs {set(obj2.keys())}"
+                return (
+                    False,
+                    f"Key mismatch at {path or 'root'}: {set(obj1.keys())} vs {set(obj2.keys())}",
+                )
             for key in obj1:
                 child_path = f"{path}.{key}" if path else key
                 is_eq, msg = self.deep_compare(obj1[key], obj2[key], child_path)
@@ -485,7 +580,9 @@ print(repr(result))
             if attrs1.keys() != attrs2.keys():
                 return False, f"Object attribute mismatch at {path or 'root'}"
             for key in attrs1:
-                is_eq, msg = self.deep_compare(attrs1[key], attrs2[key], f"{path}.{key}" if path else key)
+                is_eq, msg = self.deep_compare(
+                    attrs1[key], attrs2[key], f"{path}.{key}" if path else key
+                )
                 if not is_eq:
                     return False, msg
             return True, ""
@@ -495,7 +592,7 @@ print(repr(result))
     def _get_comparable_attrs(self, obj: Any) -> dict:
         comparable = {}
         for attr_name in dir(obj):
-            if not attr_name.startswith('_'):
+            if not attr_name.startswith("_"):
                 try:
                     value = getattr(obj, attr_name)
                     if not callable(value):
@@ -522,10 +619,12 @@ print(repr(result))
             equivalence_rate=equivalence_rate,
             failed_cases=failed_cases,
             suggestions=suggestions,
-            language_stats=language_stats
+            language_stats=language_stats,
         )
 
-    def _compute_language_stats(self, results: List[VerificationResult]) -> Dict[SupportedLanguage, Dict[str, Any]]:
+    def _compute_language_stats(
+        self, results: List[VerificationResult]
+    ) -> Dict[SupportedLanguage, Dict[str, Any]]:
         stats: Dict[SupportedLanguage, Dict[str, Any]] = {}
 
         for result in results:
@@ -546,7 +645,7 @@ print(repr(result))
 
         for lang, stat in stats.items():
             if stat["total"] > 0:
-                stat["equivalence_rate"] = (stat["passed"] / stat["total"] * 100)
+                stat["equivalence_rate"] = stat["passed"] / stat["total"] * 100
 
         return stats
 
@@ -570,7 +669,11 @@ print(repr(result))
         input_type = self._get_input_type(result.test_case.input_data)
         issue_categories = []
 
-        if "Type coercion" in result.error_message or (result.original_output is not None and result.transpiled_output is not None and type(result.original_output) != type(result.transpiled_output)):
+        if "Type coercion" in result.error_message or (
+            result.original_output is not None
+            and result.transpiled_output is not None
+            and type(result.original_output) != type(result.transpiled_output)
+        ):
             issue_categories.append("类型转换差异：转换过程中可能丢失了类型信息")
 
         if isinstance(result.test_case.input_data, (int, float)):
@@ -610,7 +713,13 @@ print(repr(result))
 
         return " | ".join(issue_categories) if issue_categories else "未发现问题"
 
-    def verify_for_language(self, source_code: str, transpiled_code: str, language: SupportedLanguage, test_cases: List[TestCase]) -> List[VerificationResult]:
+    def verify_for_language(
+        self,
+        source_code: str,
+        transpiled_code: str,
+        language: SupportedLanguage,
+        test_cases: List[TestCase],
+    ) -> List[VerificationResult]:
         results = []
 
         for test_case in test_cases:
@@ -621,7 +730,13 @@ print(repr(result))
 
         return results
 
-    def are_equivalent(self, output1: Any, output2: Any, tolerance: float = 1e-9, language: Optional[SupportedLanguage] = None) -> bool:
+    def are_equivalent(
+        self,
+        output1: Any,
+        output2: Any,
+        tolerance: float = 1e-9,
+        language: Optional[SupportedLanguage] = None,
+    ) -> bool:
         if language == SupportedLanguage.JAVA:
             return self._are_equivalent_java(output1, output2, tolerance)
         elif language == SupportedLanguage.CPP:
@@ -691,10 +806,12 @@ print(repr(result))
         if isinstance(output1, bool) and isinstance(output2, bool):
             return output1 == output2
 
-        if hasattr(output1, '_cpp_pointer_value__') and hasattr(output2, '_cpp_pointer_value__'):
+        if hasattr(output1, "_cpp_pointer_value__") and hasattr(output2, "_cpp_pointer_value__"):
             return output1._cpp_pointer_value__ == output2._cpp_pointer_value__
 
-        if hasattr(output1, '_cpp_reference_value__') and hasattr(output2, '_cpp_reference_value__'):
+        if hasattr(output1, "_cpp_reference_value__") and hasattr(
+            output2, "_cpp_reference_value__"
+        ):
             return output1._cpp_reference_value__ == output2._cpp_reference_value__
 
         is_eq, _ = self.deep_compare(output1, output2)
@@ -736,18 +853,24 @@ print(repr(result))
         if output1 is None and output2 is None:
             return True
 
-        if hasattr(output1, '_rust_option_is_some__') and hasattr(output2, '_rust_option_is_some__'):
+        if hasattr(output1, "_rust_option_is_some__") and hasattr(
+            output2, "_rust_option_is_some__"
+        ):
             if output1._rust_option_is_some__ != output2._rust_option_is_some__:
                 return False
             if output1._rust_option_is_some__:
-                return self._are_equivalent_rust(output1._rust_option_value__, output2._rust_option_value__, tolerance)
+                return self._are_equivalent_rust(
+                    output1._rust_option_value__, output2._rust_option_value__, tolerance
+                )
             return True
 
-        if hasattr(output1, '_rust_result_is_ok__') and hasattr(output2, '_rust_result_is_ok__'):
+        if hasattr(output1, "_rust_result_is_ok__") and hasattr(output2, "_rust_result_is_ok__"):
             if output1._rust_result_is_ok__ != output2._rust_result_is_ok__:
                 return False
             if output1._rust_result_is_ok__:
-                return self._are_equivalent_rust(output1._rust_result_value__, output2._rust_result_value__, tolerance)
+                return self._are_equivalent_rust(
+                    output1._rust_result_value__, output2._rust_result_value__, tolerance
+                )
             return True
 
         if isinstance(output1, list) and isinstance(output2, list):
@@ -785,8 +908,10 @@ def java_object(class_name: str, fields: Dict[str, Any]) -> Any:
             self._class_name = name
             for k, v in flds.items():
                 setattr(self, k, v)
+
         def __repr__(self):
             return f"{self._class_name}({', '.join(f'{k}={v!r}' for k, v in self.__dict__.items() if not k.startswith('_'))})"
+
     return Obj(class_name, fields)
 
 
@@ -795,12 +920,16 @@ def java_collection(collection_type: str, items: List[Any]) -> Any:
         def __init__(self, ctype, items):
             self._collection_type = ctype
             self._items = list(items)
+
         def __iter__(self):
             return iter(self._items)
+
         def __len__(self):
             return len(self._items)
+
         def __repr__(self):
             return f"{self._collection_type}({self._items})"
+
     return Collection(collection_type, items)
 
 
@@ -808,8 +937,10 @@ def cpp_pointer(value: Any) -> Any:
     class Pointer:
         def __init__(self, val):
             self._cpp_pointer_value__ = val
+
         def __repr__(self):
             return f"ptr({self._cpp_pointer_value__})"
+
     return Pointer(value)
 
 
@@ -817,8 +948,10 @@ def cpp_reference(value: Any) -> Any:
     class Reference:
         def __init__(self, val):
             self._cpp_reference_value__ = val
+
         def __repr__(self):
             return f"ref({self._cpp_reference_value__})"
+
     return Reference(value)
 
 
@@ -827,8 +960,10 @@ def cpp_smart_pointer(pointer_type: str, value: Any) -> Any:
         def __init__(self, ptype, val):
             self._pointer_type = ptype
             self._cpp_pointer_value__ = val
+
         def __repr__(self):
             return f"{self._pointer_type}({self._cpp_pointer_value__})"
+
     return SmartPointer(pointer_type, value)
 
 
@@ -836,12 +971,16 @@ def cpp_vector(items: List[Any]) -> Any:
     class Vector:
         def __init__(self, items):
             self._items = list(items)
+
         def __iter__(self):
             return iter(self._items)
+
         def __len__(self):
             return len(self._items)
+
         def __repr__(self):
             return f"Vector({self._items})"
+
     return Vector(items)
 
 
@@ -849,18 +988,25 @@ def cpp_map(mapping: Dict[str, Any]) -> Any:
     class Map:
         def __init__(self, m):
             self._map = dict(m)
+
         def __getitem__(self, key):
             return self._map[key]
+
         def keys(self):
             return self._map.keys()
+
         def values(self):
             return self._map.values()
+
         def items(self):
             return self._map.items()
+
         def __len__(self):
             return len(self._map)
+
         def __repr__(self):
             return f"Map({self._map})"
+
     return Map(mapping)
 
 
@@ -869,12 +1015,16 @@ def go_slice(items: List[Any]) -> Any:
         def __init__(self, items):
             self._items = list(items)
             self._is_nil = False
+
         def __iter__(self):
             return iter(self._items)
+
         def __len__(self):
             return len(self._items)
+
         def __repr__(self):
             return f"Slice({self._items})"
+
     return Slice(items)
 
 
@@ -883,18 +1033,25 @@ def go_map(mapping: Dict[str, Any]) -> Any:
         def __init__(self, m):
             self._map = dict(m)
             self._is_nil = False
+
         def __getitem__(self, key):
             return self._map[key]
+
         def keys(self):
             return self._map.keys()
+
         def values(self):
             return self._map.values()
+
         def items(self):
             return self._map.items()
+
         def __len__(self):
             return len(self._map)
+
         def __repr__(self):
             return f"Map({self._map})"
+
     return GoMap(mapping)
 
 
@@ -903,12 +1060,16 @@ def go_nil_slice() -> Any:
         def __init__(self):
             self._is_nil = True
             self._items = []
+
         def __iter__(self):
             return iter(self._items)
+
         def __len__(self):
             return 0
+
         def __repr__(self):
             return "nil"
+
     return NilSlice()
 
 
@@ -917,14 +1078,19 @@ def go_nil_map() -> Any:
         def __init__(self):
             self._is_nil = True
             self._map = {}
+
         def __getitem__(self, key):
             raise KeyError(key)
+
         def keys(self):
             return self._map.keys()
+
         def __len__(self):
             return 0
+
         def __repr__(self):
             return "nil"
+
     return NilMap()
 
 
@@ -933,10 +1099,12 @@ def rust_option_some(value: Any) -> Any:
         def __init__(self, val, is_some):
             self._rust_option_is_some__ = is_some
             self._rust_option_value__ = val
+
         def __repr__(self):
             if self._rust_option_is_some__:
                 return f"Some({self._rust_option_value__})"
             return "None"
+
     return Option(value, True)
 
 
@@ -945,8 +1113,10 @@ def rust_option_none() -> Any:
         def __init__(self):
             self._rust_option_is_some__ = False
             self._rust_option_value__ = None
+
         def __repr__(self):
             return "None"
+
     return Option()
 
 
@@ -956,10 +1126,12 @@ def rust_result_ok(value: Any) -> Any:
             self._rust_result_is_ok__ = is_ok
             self._rust_result_value__ = val
             self._rust_result_err__ = None if is_ok else val
+
         def __repr__(self):
             if self._rust_result_is_ok__:
                 return f"Ok({self._rust_result_value__})"
             return f"Err({self._rust_result_err__})"
+
     return Result(value, True)
 
 
@@ -969,10 +1141,12 @@ def rust_result_err(error: Any) -> Any:
             self._rust_result_is_ok__ = is_ok
             self._rust_result_value__ = None
             self._rust_result_err__ = err
+
         def __repr__(self):
             if self._rust_result_is_ok__:
                 return f"Ok({self._rust_result_value__})"
             return f"Err({self._rust_result_err__})"
+
     return Result(error, False)
 
 
@@ -980,12 +1154,16 @@ def rust_vec(items: List[Any]) -> Any:
     class Vec:
         def __init__(self, items):
             self._items = list(items)
+
         def __iter__(self):
             return iter(self._items)
+
         def __len__(self):
             return len(self._items)
+
         def __repr__(self):
             return f"Vec({self._items})"
+
     return Vec(items)
 
 
@@ -993,16 +1171,23 @@ def rust_hashmap(mapping: Dict[str, Any]) -> Any:
     class HashMap:
         def __init__(self, m):
             self._map = dict(m)
+
         def __getitem__(self, key):
             return self._map[key]
+
         def keys(self):
             return self._map.keys()
+
         def values(self):
             return self._map.values()
+
         def items(self):
             return self._map.items()
+
         def __len__(self):
             return len(self._map)
+
         def __repr__(self):
             return f"HashMap({self._map})"
+
     return HashMap(mapping)

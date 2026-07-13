@@ -4,10 +4,10 @@
 节点链表达式、自动补全和CLI/Chat双向转换功能。
 """
 
-from typing import Dict, List, Any, Optional, Set, Callable
+import re
 from dataclasses import dataclass, field
 from enum import Enum
-import re
+from typing import Any, Callable, Dict, List, Optional, Set
 
 from src.ai.pipeline.configurator import AIPipelineConfigurator
 
@@ -26,8 +26,9 @@ class AgentType(Enum):
 
 
 class AgentNode:
-    def __init__(self, agent_type: AgentType, enabled: bool = True,
-                 config: Optional[Dict[str, Any]] = None):
+    def __init__(
+        self, agent_type: AgentType, enabled: bool = True, config: Optional[Dict[str, Any]] = None
+    ):
         self.agent_type = agent_type
         self.enabled = enabled
         self.config = config or {}
@@ -48,17 +49,33 @@ class PipelineConfig:
 
 
 class PipelineBuilder:
-    FLAG_PATTERN = re.compile(r'--([a-zA-Z0-9_-]+)(?:\+([a-zA-Z0-9_+-]+))?')
-    CHAIN_PATTERN = re.compile(r'^([a-zA-Z_][a-zA-Z0-9_]*)(?:\+([a-zA-Z_][a-zA-Z0-9_+-]*))*$')
+    FLAG_PATTERN = re.compile(r"--([a-zA-Z0-9_-]+)(?:\+([a-zA-Z0-9_+-]+))?")
+    CHAIN_PATTERN = re.compile(r"^([a-zA-Z_][a-zA-Z0-9_]*)(?:\+([a-zA-Z_][a-zA-Z0-9_+-]*))*$")
 
     MACRO_COMMANDS: Dict[str, List[AgentType]] = {
-        "full-audit": [AgentType.SCAN, AgentType.CONTEXT, AgentType.UNDERSTAND,
-                       AgentType.RISK, AgentType.VERIFY, AgentType.ATTACK,
-                       AgentType.ADVERSARIAL, AgentType.FINAL, AgentType.POC, AgentType.REPORT],
+        "full-audit": [
+            AgentType.SCAN,
+            AgentType.CONTEXT,
+            AgentType.UNDERSTAND,
+            AgentType.RISK,
+            AgentType.VERIFY,
+            AgentType.ATTACK,
+            AgentType.ADVERSARIAL,
+            AgentType.FINAL,
+            AgentType.POC,
+            AgentType.REPORT,
+        ],
         "quick-scan": [AgentType.SCAN, AgentType.CONTEXT, AgentType.FINAL],
-        "deep-scan": [AgentType.SCAN, AgentType.CONTEXT, AgentType.UNDERSTAND,
-                      AgentType.RISK, AgentType.VERIFY, AgentType.ATTACK,
-                      AgentType.ADVERSARIAL, AgentType.FINAL],
+        "deep-scan": [
+            AgentType.SCAN,
+            AgentType.CONTEXT,
+            AgentType.UNDERSTAND,
+            AgentType.RISK,
+            AgentType.VERIFY,
+            AgentType.ATTACK,
+            AgentType.ADVERSARIAL,
+            AgentType.FINAL,
+        ],
     }
 
     DEPENDENCY_GRAPH: Dict[AgentType, Set[AgentType]] = {
@@ -123,9 +140,7 @@ class PipelineBuilder:
     def _initialize_default_nodes(self) -> None:
         for agent_type in AgentType:
             self._nodes[agent_type] = AgentNode(
-                agent_type=agent_type,
-                enabled=True,
-                config=self.config.get(agent_type.value, {})
+                agent_type=agent_type, enabled=True, config=self.config.get(agent_type.value, {})
             )
 
     def register_macro(self, name: str, agents: List[AgentType]) -> None:
@@ -181,7 +196,7 @@ class PipelineBuilder:
             return []
 
         agents: List[AgentType] = []
-        parts = chain.split('+')
+        parts = chain.split("+")
 
         for part in parts:
             part = part.strip()
@@ -239,7 +254,7 @@ class PipelineBuilder:
                 node = AgentNode(
                     agent_type=agent_type,
                     enabled=True,
-                    config=self._nodes[agent_type].config.copy()
+                    config=self._nodes[agent_type].config.copy(),
                 )
                 node.dependencies = self.DEPENDENCY_GRAPH.get(agent_type, set()).copy()
                 nodes.append(node)
@@ -250,7 +265,7 @@ class PipelineBuilder:
         return PipelineConfig(
             nodes=nodes,
             enable_parallel=self.config.get("enable_parallel", False),
-            max_retries=self.config.get("max_retries", 3)
+            max_retries=self.config.get("max_retries", 3),
         )
 
     def cli_to_chat(self, cli_command: str) -> str:
@@ -303,6 +318,7 @@ class PipelineBuilder:
         if self._use_ai:
             try:
                 import asyncio
+
                 loop = asyncio.get_event_loop()
                 if loop.is_running():
                     future = asyncio.ensure_future(self._get_ai_configurator())

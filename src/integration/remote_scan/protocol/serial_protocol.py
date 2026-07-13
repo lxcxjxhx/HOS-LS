@@ -4,20 +4,21 @@
 """
 
 import logging
-import time
 import re
+import time
 from typing import Optional
+
 import serial
 import serial.tools.list_ports
 
 from .exceptions import (
-    SerialException,
-    SerialConnectionError,
-    SerialTimeoutError,
-    SerialReadError,
-    SerialWriteError,
     SerialConfigurationError,
+    SerialConnectionError,
+    SerialException,
     SerialPatternNotFoundError,
+    SerialReadError,
+    SerialTimeoutError,
+    SerialWriteError,
 )
 
 logger = logging.getLogger(__name__)
@@ -276,7 +277,7 @@ class SerialProtocol:
 
                 match = regex.search(buffer)
                 if match:
-                    matched_content = buffer[:match.end()]
+                    matched_content = buffer[: match.end()]
                     return matched_content
 
             except serial.SerialException as e:

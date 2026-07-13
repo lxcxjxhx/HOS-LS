@@ -1,12 +1,8 @@
 """Agent流水线构建器测试"""
 
 import pytest
-from src.core.chat.pipeline_builder import (
-    PipelineBuilder,
-    PipelineConfig,
-    AgentType,
-    AgentNode
-)
+
+from src.core.chat.pipeline_builder import AgentNode, AgentType, PipelineBuilder, PipelineConfig
 
 
 class TestPipelineBuilder:
@@ -60,7 +56,7 @@ class TestPipelineBuilder:
         assert AgentType.CONTEXT in completed
         assert AgentType.SCAN in completed
 
-        order = completed[:completed.index(AgentType.ATTACK) + 1]
+        order = completed[: completed.index(AgentType.ATTACK) + 1]
         assert AgentType.SCAN in order
         assert AgentType.CONTEXT in order
         assert AgentType.UNDERSTAND in order

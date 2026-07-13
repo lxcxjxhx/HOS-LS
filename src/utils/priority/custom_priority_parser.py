@@ -121,12 +121,8 @@ class CustomPriorityParser:
             file_patterns=custom_rules.get("file_patterns", {}),
             path_rules=custom_rules.get("path_rules", {}),
             weights=PriorityWeights(
-                keyword_match=custom_rules.get("weights", {}).get(
-                    "keyword_match", 0.4
-                ),
-                file_pattern=custom_rules.get("weights", {}).get(
-                    "file_pattern", 0.3
-                ),
+                keyword_match=custom_rules.get("weights", {}).get("keyword_match", 0.4),
+                file_pattern=custom_rules.get("weights", {}).get("file_pattern", 0.3),
                 path_match=custom_rules.get("weights", {}).get("path_match", 0.3),
             ),
         )
@@ -143,9 +139,7 @@ class CustomPriorityParser:
             },
         }
 
-    def get_priority(
-        self, file_path: Union[str, Path]
-    ) -> PriorityResult:
+    def get_priority(self, file_path: Union[str, Path]) -> PriorityResult:
         """评估文件的优先级
 
         Args:
@@ -167,12 +161,8 @@ class CustomPriorityParser:
             except Exception:
                 pass
 
-        keyword_score, matched_keywords = self._evaluate_keywords(
-            file_path, file_content
-        )
-        file_pattern_score, matched_file_patterns = self._evaluate_file_patterns(
-            file_path
-        )
+        keyword_score, matched_keywords = self._evaluate_keywords(file_path, file_content)
+        file_pattern_score, matched_file_patterns = self._evaluate_file_patterns(file_path)
         path_score, matched_paths = self._evaluate_paths(file_path)
 
         total_score = (
@@ -194,9 +184,7 @@ class CustomPriorityParser:
             matched_paths=matched_paths,
         )
 
-    def _evaluate_keywords(
-        self, file_path: Path, file_content: str
-    ) -> tuple[float, List[str]]:
+    def _evaluate_keywords(self, file_path: Path, file_content: str) -> tuple[float, List[str]]:
         """评估关键词匹配
 
         Args:
@@ -257,7 +245,9 @@ class CustomPriorityParser:
                     matched.append(keyword)
                 score_details["low_priority"] += 0.3
 
-        max_possible = len(high_keywords) * 1.0 + len(medium_keywords) * 0.6 + len(low_keywords) * 0.3
+        max_possible = (
+            len(high_keywords) * 1.0 + len(medium_keywords) * 0.6 + len(low_keywords) * 0.3
+        )
         if max_possible == 0:
             return 0.0, matched
 
@@ -270,9 +260,7 @@ class CustomPriorityParser:
 
         return score, matched
 
-    def _evaluate_file_patterns(
-        self, file_path: Path
-    ) -> tuple[float, List[str]]:
+    def _evaluate_file_patterns(self, file_path: Path) -> tuple[float, List[str]]:
         """评估文件模式匹配
 
         Args:
@@ -315,7 +303,9 @@ class CustomPriorityParser:
                     matched.append(pattern)
                 score_details["low_priority"] += 0.3
 
-        max_possible = len(high_patterns) * 1.0 + len(medium_patterns) * 0.6 + len(low_patterns) * 0.3
+        max_possible = (
+            len(high_patterns) * 1.0 + len(medium_patterns) * 0.6 + len(low_patterns) * 0.3
+        )
         if max_possible == 0:
             return 0.0, matched
 
@@ -412,6 +402,7 @@ class CustomPriorityParser:
         elif "**" in pattern:
             regex_pattern = pattern.replace("**/", ".*/").replace("**", ".*")
             import re
+
             return bool(re.search(regex_pattern, file_path))
         else:
             return pattern in file_path

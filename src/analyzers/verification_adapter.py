@@ -5,12 +5,12 @@
 """
 
 from dataclasses import dataclass, field
-from typing import List, Dict, Any, Optional, Tuple, Type, Union
 from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple, Type, Union
 
-from src.utils.logger import get_logger
-from src.analyzers.unified_finding_validator import UnifiedFindingValidator
 from src.analyzers.finding_verifier import FindingVerification
+from src.analyzers.unified_finding_validator import UnifiedFindingValidator
+from src.utils.logger import get_logger
 
 logger = get_logger(__name__)
 
@@ -18,6 +18,7 @@ logger = get_logger(__name__)
 @dataclass
 class VerificationStats:
     """验证统计信息"""
+
     total_findings: int = 0
     triple_verified: int = 0
     double_verified: int = 0
@@ -31,15 +32,15 @@ class VerificationStats:
 
     def to_dict(self) -> Dict[str, Any]:
         return {
-            'total_findings': self.total_findings,
-            'triple_verified': self.triple_verified,
-            'double_verified': self.double_verified,
-            'single_verified': self.single_verified,
-            'needs_review': self.needs_review,
-            'potential_hallucination': self.potential_hallucination,
-            'unknown': self.unknown,
-            'hallucinations_filtered': self.hallucinations_filtered,
-            'average_confidence': self.average_confidence,
+            "total_findings": self.total_findings,
+            "triple_verified": self.triple_verified,
+            "double_verified": self.double_verified,
+            "single_verified": self.single_verified,
+            "needs_review": self.needs_review,
+            "potential_hallucination": self.potential_hallucination,
+            "unknown": self.unknown,
+            "hallucinations_filtered": self.hallucinations_filtered,
+            "average_confidence": self.average_confidence,
         }
 
 
@@ -60,23 +61,25 @@ class FindingConverter:
             统一格式字典
         """
         return {
-            'id': f"code_vuln_{finding.file_path}_{finding.line_number}",
-            'rule_id': finding.vuln_type,
-            'rule_name': finding.vuln_type,
-            'severity': finding.level.value if hasattr(finding.level, 'value') else str(finding.level),
-            'description': finding.description,
-            'file_path': finding.file_path,
-            'location': {
-                'file': finding.file_path,
-                'line': finding.line_number,
+            "id": f"code_vuln_{finding.file_path}_{finding.line_number}",
+            "rule_id": finding.vuln_type,
+            "rule_name": finding.vuln_type,
+            "severity": (
+                finding.level.value if hasattr(finding.level, "value") else str(finding.level)
+            ),
+            "description": finding.description,
+            "file_path": finding.file_path,
+            "location": {
+                "file": finding.file_path,
+                "line": finding.line_number,
             },
-            'code_snippet': finding.code_snippet,
-            'fix_suggestion': finding.remediation,
-            'confidence': 0.5,
-            'metadata': {
-                'source_scanner': 'CodeVulnScanner',
-                'vuln_type': finding.vuln_type,
-            }
+            "code_snippet": finding.code_snippet,
+            "fix_suggestion": finding.remediation,
+            "confidence": 0.5,
+            "metadata": {
+                "source_scanner": "CodeVulnScanner",
+                "vuln_type": finding.vuln_type,
+            },
         }
 
     @staticmethod
@@ -89,39 +92,41 @@ class FindingConverter:
         Returns:
             统一格式字典
         """
-        rule_id = finding.get('rule_id', finding.get('vuln_type', 'unknown'))
-        rule_name = finding.get('rule_name', rule_id)
+        rule_id = finding.get("rule_id", finding.get("vuln_type", "unknown"))
+        rule_name = finding.get("rule_name", rule_id)
 
-        severity = finding.get('severity', 'medium')
-        if hasattr(severity, 'value'):
+        severity = finding.get("severity", "medium")
+        if hasattr(severity, "value"):
             severity = severity.value
 
-        location = finding.get('location', {})
+        location = finding.get("location", {})
         if isinstance(location, str):
-            location = {'file': location}
+            location = {"file": location}
 
-        file_path = finding.get('file_path', location.get('file', ''))
-        line = finding.get('line', location.get('line', 0))
+        file_path = finding.get("file_path", location.get("file", ""))
+        line = finding.get("line", location.get("line", 0))
 
         return {
-            'id': finding.get('id', f"dict_{file_path}_{line}"),
-            'rule_id': rule_id,
-            'rule_name': rule_name,
-            'severity': severity,
-            'description': finding.get('description', ''),
-            'file_path': file_path,
-            'location': {
-                'file': file_path,
-                'line': line,
+            "id": finding.get("id", f"dict_{file_path}_{line}"),
+            "rule_id": rule_id,
+            "rule_name": rule_name,
+            "severity": severity,
+            "description": finding.get("description", ""),
+            "file_path": file_path,
+            "location": {
+                "file": file_path,
+                "line": line,
             },
-            'code_snippet': finding.get('code_snippet', ''),
-            'fix_suggestion': finding.get('fix_suggestion', ''),
-            'confidence': finding.get('confidence', 0.5),
-            'metadata': finding.get('metadata', {}),
+            "code_snippet": finding.get("code_snippet", ""),
+            "fix_suggestion": finding.get("fix_suggestion", ""),
+            "confidence": finding.get("confidence", 0.5),
+            "metadata": finding.get("metadata", {}),
         }
 
     @staticmethod
-    def to_standard_finding(finding: Dict[str, Any], verification: FindingVerification) -> Dict[str, Any]:
+    def to_standard_finding(
+        finding: Dict[str, Any], verification: FindingVerification
+    ) -> Dict[str, Any]:
         """转换为包含验证信息的标准格式
 
         Args:
@@ -132,18 +137,18 @@ class FindingConverter:
             包含验证信息的标准发现字典
         """
         result = finding.copy()
-        result['metadata'] = result.get('metadata', {})
+        result["metadata"] = result.get("metadata", {})
 
-        result['metadata']['verification_level'] = verification.verification_level
-        result['metadata']['is_hallucination'] = verification.is_hallucination
-        result['metadata']['confidence_score'] = verification.confidence
-        result['metadata']['path_verified'] = verification.path_verified
-        result['metadata']['code_verified'] = verification.code_verified
+        result["metadata"]["verification_level"] = verification.verification_level
+        result["metadata"]["is_hallucination"] = verification.is_hallucination
+        result["metadata"]["confidence_score"] = verification.confidence
+        result["metadata"]["path_verified"] = verification.path_verified
+        result["metadata"]["code_verified"] = verification.code_verified
 
         if verification.best_match:
-            result['metadata']['matched_cwe'] = verification.best_match
+            result["metadata"]["matched_cwe"] = verification.best_match
 
-        result['confidence'] = verification.confidence
+        result["confidence"] = verification.confidence
 
         return result
 
@@ -170,6 +175,7 @@ class VerificationAdapter:
         """初始化 NVD 适配器"""
         try:
             from src.nvd.nvd_query_adapter import NVDQueryAdapter
+
             self._nvd_adapter = NVDQueryAdapter(db_path)
             if not self._nvd_adapter.is_available():
                 self._nvd_adapter = None
@@ -190,24 +196,24 @@ class VerificationAdapter:
         """
         root = project_root or self.project_root
 
-        if hasattr(finding, 'vuln_type'):
+        if hasattr(finding, "vuln_type"):
             return self.converter.from_code_vuln_finding(finding)
         elif isinstance(finding, dict):
             return self.converter.from_dict(finding)
         else:
             logger.warning(f"未知发现格式: {type(finding)}")
             return {
-                'id': f"unknown_{id(finding)}",
-                'rule_id': 'unknown',
-                'rule_name': 'unknown',
-                'severity': 'medium',
-                'description': str(finding),
-                'file_path': '',
-                'location': {'file': '', 'line': 0},
-                'code_snippet': '',
-                'fix_suggestion': '',
-                'confidence': 0.0,
-                'metadata': {'source_scanner': 'unknown'}
+                "id": f"unknown_{id(finding)}",
+                "rule_id": "unknown",
+                "rule_name": "unknown",
+                "severity": "medium",
+                "description": str(finding),
+                "file_path": "",
+                "location": {"file": "", "line": 0},
+                "code_snippet": "",
+                "fix_suggestion": "",
+                "confidence": 0.0,
+                "metadata": {"source_scanner": "unknown"},
             }
 
     def verify_scanner_results(
@@ -217,7 +223,7 @@ class VerificationAdapter:
         project_root: str = None,
         filter_hallucinations: bool = True,
         hallucination_threshold: float = 0.2,
-        scanner_threshold: float = 0.5
+        scanner_threshold: float = 0.5,
     ) -> Tuple[List[Dict], VerificationStats]:
         """批量验证扫描器结果
 
@@ -246,25 +252,29 @@ class VerificationAdapter:
 
             adapted = self.converter.to_standard_finding(adapted, verification)
 
-            adapted['metadata']['source_scanner'] = scanner_name
+            adapted["metadata"]["source_scanner"] = scanner_name
 
             all_confidences.append(verification.confidence)
 
             level = verification.verification_level
-            if level == 'triple_verified':
+            if level == "triple_verified":
                 stats.triple_verified += 1
-            elif level == 'double_verified':
+            elif level == "double_verified":
                 stats.double_verified += 1
-            elif level == 'single_verified':
+            elif level == "single_verified":
                 stats.single_verified += 1
-            elif level == 'needs_review':
+            elif level == "needs_review":
                 stats.needs_review += 1
-            elif level == 'potential_hallucination':
+            elif level == "potential_hallucination":
                 stats.potential_hallucination += 1
             else:
                 stats.unknown += 1
 
-            if filter_hallucinations and verification.is_hallucination and verification.confidence < hallucination_threshold:
+            if (
+                filter_hallucinations
+                and verification.is_hallucination
+                and verification.confidence < hallucination_threshold
+            ):
                 stats.hallucinations_filtered += 1
                 continue
 
@@ -272,7 +282,9 @@ class VerificationAdapter:
                 verified_findings.append(adapted)
 
         stats.confidence_scores = all_confidences
-        stats.average_confidence = sum(all_confidences) / len(all_confidences) if all_confidences else 0.0
+        stats.average_confidence = (
+            sum(all_confidences) / len(all_confidences) if all_confidences else 0.0
+        )
 
         return verified_findings, stats
 
@@ -291,32 +303,36 @@ class VerificationAdapter:
         all_confidences = []
 
         for finding in findings:
-            metadata = finding.get('metadata', {})
-            level = metadata.get('verification_level', 'unknown')
-            confidence = metadata.get('confidence_score', 0.0)
+            metadata = finding.get("metadata", {})
+            level = metadata.get("verification_level", "unknown")
+            confidence = metadata.get("confidence_score", 0.0)
 
             all_confidences.append(confidence)
 
-            if level == 'triple_verified':
+            if level == "triple_verified":
                 stats.triple_verified += 1
-            elif level == 'double_verified':
+            elif level == "double_verified":
                 stats.double_verified += 1
-            elif level == 'single_verified':
+            elif level == "single_verified":
                 stats.single_verified += 1
-            elif level == 'needs_review':
+            elif level == "needs_review":
                 stats.needs_review += 1
-            elif level == 'potential_hallucination':
+            elif level == "potential_hallucination":
                 stats.potential_hallucination += 1
             else:
                 stats.unknown += 1
 
         stats.confidence_scores = all_confidences
-        stats.average_confidence = sum(all_confidences) / len(all_confidences) if all_confidences else 0.0
+        stats.average_confidence = (
+            sum(all_confidences) / len(all_confidences) if all_confidences else 0.0
+        )
 
         return stats
 
 
-def get_verification_adapter(project_root: str = "", nvd_db_path: str = None) -> VerificationAdapter:
+def get_verification_adapter(
+    project_root: str = "", nvd_db_path: str = None
+) -> VerificationAdapter:
     """获取验证适配器实例
 
     Args:

@@ -11,18 +11,17 @@
 - confidence: float (0-1)
 """
 
-from typing import List, Optional, Dict, Any
 from dataclasses import dataclass
+from typing import Any, Dict, List, Optional
 
-from src.analyzers.finding_verifier import FindingVerifier, FindingVerification
-
+from src.analyzers.finding_verifier import FindingVerification, FindingVerifier
 
 VERIFICATION_MULTIPLIER = {
-    'potential_hallucination': 0.5,
-    'needs_review': 0.8,
-    'single_verified': 1.0,
-    'double_verified': 1.1,
-    'triple_verified': 1.2
+    "potential_hallucination": 0.5,
+    "needs_review": 0.8,
+    "single_verified": 1.0,
+    "double_verified": 1.1,
+    "triple_verified": 1.2,
 }
 
 
@@ -52,28 +51,36 @@ class UnifiedFindingValidator:
 
         if isinstance(finding, dict):
             finding_dict = finding
+
             class DictFinding:
                 def __init__(self, d):
                     for k, v in d.items():
                         setattr(self, k, v)
-                    self.metadata = d.get('metadata', {})
-                    self.location = type('Location', (), {'file': d.get('file_path', d.get('location', {}).get('file', ''))})()
+                    self.metadata = d.get("metadata", {})
+                    self.location = type(
+                        "Location",
+                        (),
+                        {"file": d.get("file_path", d.get("location", {}).get("file", ""))},
+                    )()
+
             finding = DictFinding(finding_dict)
 
         verification = self._verifier.verify_and_annotate(finding, root)
 
-        if hasattr(finding, 'metadata'):
-            finding.metadata['verification_level'] = verification.verification_level
-            finding.metadata['is_hallucination'] = verification.is_hallucination
-            finding.metadata['confidence_score'] = verification.confidence
-            finding.metadata['path_verified'] = verification.path_verified
-            finding.metadata['code_verified'] = verification.code_verified
+        if hasattr(finding, "metadata"):
+            finding.metadata["verification_level"] = verification.verification_level
+            finding.metadata["is_hallucination"] = verification.is_hallucination
+            finding.metadata["confidence_score"] = verification.confidence
+            finding.metadata["path_verified"] = verification.path_verified
+            finding.metadata["code_verified"] = verification.code_verified
             if verification.best_match:
-                finding.metadata['matched_cwe'] = verification.best_match
+                finding.metadata["matched_cwe"] = verification.best_match
 
         return verification
 
-    def validate_findings(self, findings: List, project_root: Optional[str] = None) -> List[FindingVerification]:
+    def validate_findings(
+        self, findings: List, project_root: Optional[str] = None
+    ) -> List[FindingVerification]:
         """批量验证发现
 
         Args:
@@ -108,13 +115,13 @@ class UnifiedFindingValidator:
             confidence = 1.0
 
             if isinstance(finding, dict):
-                metadata = finding.get('metadata', {})
-                is_hallucination = metadata.get('is_hallucination', False)
-                confidence = metadata.get('confidence_score', 1.0)
-            elif hasattr(finding, 'metadata'):
+                metadata = finding.get("metadata", {})
+                is_hallucination = metadata.get("is_hallucination", False)
+                confidence = metadata.get("confidence_score", 1.0)
+            elif hasattr(finding, "metadata"):
                 metadata = finding.metadata
-                is_hallucination = metadata.get('is_hallucination', False)
-                confidence = metadata.get('confidence_score', 1.0)
+                is_hallucination = metadata.get("is_hallucination", False)
+                confidence = metadata.get("confidence_score", 1.0)
 
             if is_hallucination and confidence < threshold:
                 continue
@@ -133,26 +140,26 @@ class UnifiedFindingValidator:
             各验证等级的统计
         """
         stats = {
-            'total': len(findings),
-            'triple_verified': 0,
-            'double_verified': 0,
-            'single_verified': 0,
-            'needs_review': 0,
-            'potential_hallucination': 0,
-            'unknown': 0
+            "total": len(findings),
+            "triple_verified": 0,
+            "double_verified": 0,
+            "single_verified": 0,
+            "needs_review": 0,
+            "potential_hallucination": 0,
+            "unknown": 0,
         }
 
         for finding in findings:
-            level = 'unknown'
+            level = "unknown"
             if isinstance(finding, dict):
-                level = finding.get('metadata', {}).get('verification_level', 'unknown')
-            elif hasattr(finding, 'metadata'):
-                level = finding.metadata.get('verification_level', 'unknown')
+                level = finding.get("metadata", {}).get("verification_level", "unknown")
+            elif hasattr(finding, "metadata"):
+                level = finding.metadata.get("verification_level", "unknown")
 
             if level in stats:
                 stats[level] += 1
             else:
-                stats['unknown'] += 1
+                stats["unknown"] += 1
 
         return stats
 

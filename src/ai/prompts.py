@@ -3,10 +3,11 @@
 保留旧接口以兼容现有代码，新代码应使用 prompt_engine。
 """
 
-from typing import Dict, Any, Optional
-from src.ai.prompt_engine import get_prompt_engine, PromptEngine
+from typing import Any, Dict, Optional
 
-_prompt_manager: Optional['PromptManager'] = None
+from src.ai.prompt_engine import PromptEngine, get_prompt_engine
+
+_prompt_manager: Optional["PromptManager"] = None
 
 
 class PromptManager:
@@ -39,14 +40,14 @@ def get_prompt_manager(config=None) -> PromptManager:
 def get_semantic_analysis_prompt(analysis_input: Dict[str, Any]) -> str:
     """获取语义分析提示词"""
     engine = get_prompt_engine()
-    code = analysis_input.get('code', '')
-    evidence = analysis_input.get('evidence', [])
-    taint_paths = analysis_input.get('taint_paths', [])
-    cve_patterns = analysis_input.get('cve_patterns', [])
+    code = analysis_input.get("code", "")
+    evidence = analysis_input.get("evidence", [])
+    taint_paths = analysis_input.get("taint_paths", [])
+    cve_patterns = analysis_input.get("cve_patterns", [])
 
-    evidence_str = '\n'.join([str(item) for item in evidence])
-    taint_paths_str = '\n'.join([str(item) for item in taint_paths])
-    cve_patterns_str = '\n'.join([str(item) for item in cve_patterns])
+    evidence_str = "\n".join([str(item) for item in evidence])
+    taint_paths_str = "\n".join([str(item) for item in taint_paths])
+    cve_patterns_str = "\n".join([str(item) for item in cve_patterns])
 
     return f"""你是专业的语义安全分析专家，负责基于代码和现有证据进行深入的语义理解和漏洞分析。
 

@@ -4,11 +4,12 @@
 """
 
 import time
-from typing import Optional, Dict, Any
+from typing import Any, Dict, Optional
 
 # 导入 torch 用于 GPU 内存管理
 try:
     import torch
+
     TORCH_AVAILABLE = True
 except ImportError:
     TORCH_AVAILABLE = False
@@ -16,6 +17,7 @@ except ImportError:
 # 导入 psutil 用于系统内存监控
 try:
     import psutil
+
     PSUTIL_AVAILABLE = True
 except ImportError:
     PSUTIL_AVAILABLE = False
@@ -44,18 +46,18 @@ class MemoryMonitor:
             return None
 
         try:
-            device = torch.device('cuda:0')
-            total_memory = torch.cuda.get_device_properties(device).total_memory / (1024 ** 3)  # GB
-            allocated_memory = torch.cuda.memory_allocated(device) / (1024 ** 3)  # GB
-            cached_memory = torch.cuda.memory_reserved(device) / (1024 ** 3)  # GB
+            device = torch.device("cuda:0")
+            total_memory = torch.cuda.get_device_properties(device).total_memory / (1024**3)  # GB
+            allocated_memory = torch.cuda.memory_allocated(device) / (1024**3)  # GB
+            cached_memory = torch.cuda.memory_reserved(device) / (1024**3)  # GB
             free_memory = total_memory - allocated_memory
 
             return {
-                'total': total_memory,
-                'allocated': allocated_memory,
-                'cached': cached_memory,
-                'free': free_memory,
-                'used_percent': (allocated_memory / total_memory) * 100
+                "total": total_memory,
+                "allocated": allocated_memory,
+                "cached": cached_memory,
+                "free": free_memory,
+                "used_percent": (allocated_memory / total_memory) * 100,
             }
         except Exception as e:
             print(f"获取 GPU 内存信息失败: {e}")
@@ -73,10 +75,10 @@ class MemoryMonitor:
         try:
             memory = psutil.virtual_memory()
             return {
-                'total': memory.total / (1024 ** 3),  # GB
-                'available': memory.available / (1024 ** 3),  # GB
-                'used': memory.used / (1024 ** 3),  # GB
-                'used_percent': memory.percent
+                "total": memory.total / (1024**3),  # GB
+                "available": memory.available / (1024**3),  # GB
+                "used": memory.used / (1024**3),  # GB
+                "used_percent": memory.percent,
             }
         except Exception as e:
             print(f"获取系统内存信息失败: {e}")
@@ -89,9 +91,9 @@ class MemoryMonitor:
             包含 GPU 和系统内存信息的字典
         """
         status = {
-            'timestamp': time.time(),
-            'gpu': self.get_gpu_memory(),
-            'system': self.get_system_memory()
+            "timestamp": time.time(),
+            "gpu": self.get_gpu_memory(),
+            "system": self.get_system_memory(),
         }
 
         # 记录内存历史
@@ -121,8 +123,8 @@ class MemoryMonitor:
         # 提取 GPU 内存使用数据
         gpu_memory_usages = []
         for record in recent_history:
-            if record['gpu']:
-                gpu_memory_usages.append(record['gpu']['allocated'])
+            if record["gpu"]:
+                gpu_memory_usages.append(record["gpu"]["allocated"])
 
         if not gpu_memory_usages:
             return None
@@ -147,11 +149,11 @@ class MemoryMonitor:
         """
         memory_status = self.get_memory_status()
 
-        if not memory_status['gpu']:
+        if not memory_status["gpu"]:
             return current_batch_size
 
-        gpu_memory = memory_status['gpu']
-        used_percent = gpu_memory['used_percent']
+        gpu_memory = memory_status["gpu"]
+        used_percent = gpu_memory["used_percent"]
 
         # 根据内存使用情况调整批量大小
         if used_percent > 80:
@@ -191,17 +193,21 @@ class MemoryMonitor:
         Args:
             status: 内存状态字典
         """
-        timestamp = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(status['timestamp']))
+        timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(status["timestamp"]))
         print(f"\n[{timestamp}] 内存状态:")
 
-        if status['gpu']:
-            gpu = status['gpu']
-            print(f"GPU 内存: {gpu['allocated']:.2f} GB / {gpu['total']:.2f} GB ({gpu['used_percent']:.1f}%)")
+        if status["gpu"]:
+            gpu = status["gpu"]
+            print(
+                f"GPU 内存: {gpu['allocated']:.2f} GB / {gpu['total']:.2f} GB ({gpu['used_percent']:.1f}%)"
+            )
             print(f"GPU 可用: {gpu['free']:.2f} GB")
 
-        if status['system']:
-            system = status['system']
-            print(f"系统内存: {system['used']:.2f} GB / {system['total']:.2f} GB ({system['used_percent']:.1f}%)")
+        if status["system"]:
+            system = status["system"]
+            print(
+                f"系统内存: {system['used']:.2f} GB / {system['total']:.2f} GB ({system['used_percent']:.1f}%)"
+            )
             print(f"系统可用: {system['available']:.2f} GB")
 
     def get_batch_size_recommendation(self, model_name: str, text_length: int) -> int:
@@ -218,10 +224,10 @@ class MemoryMonitor:
         base_batch_size = 512
 
         # 根据模型调整
-        if 'gemma' in model_name.lower():
+        if "gemma" in model_name.lower():
             # Gemma 模型内存效率较高
             base_batch_size = 768
-        elif 'qwen' in model_name.lower():
+        elif "qwen" in model_name.lower():
             # Qwen 模型内存使用较大
             base_batch_size = 384
 
@@ -235,12 +241,12 @@ class MemoryMonitor:
 
         # 根据 GPU 内存调整
         memory_status = self.get_memory_status()
-        if memory_status['gpu']:
-            gpu_memory = memory_status['gpu']
-            if gpu_memory['total'] < 8:
+        if memory_status["gpu"]:
+            gpu_memory = memory_status["gpu"]
+            if gpu_memory["total"] < 8:
                 # 小 GPU 内存
                 base_batch_size = max(128, base_batch_size // 2)
-            elif gpu_memory['total'] >= 16:
+            elif gpu_memory["total"] >= 16:
                 # 大 GPU 内存
                 base_batch_size = min(2048, base_batch_size * 2)
 

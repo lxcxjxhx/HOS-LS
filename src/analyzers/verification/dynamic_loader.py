@@ -3,16 +3,16 @@
 支持扫描、加载、选择和热更新验证器。
 """
 
+import importlib.util
 import os
 import sys
-import importlib.util
-from pathlib import Path
-from typing import Dict, List, Optional, Type, Any
 from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Type
+
 import yaml
 
-from .interfaces import Validator, ValidationResult, VulnContext
-
+from .interfaces import ValidationResult, Validator, VulnContext
 
 _VALIDATOR_REGISTRY: Dict[str, Type[Validator]] = {}
 
@@ -29,7 +29,7 @@ def register_validator(cls: Type[Validator]) -> Type[Validator]:
     Returns:
         原始验证器类
     """
-    if hasattr(cls, 'name') and cls.name:
+    if hasattr(cls, "name") and cls.name:
         _VALIDATOR_REGISTRY[cls.name] = cls
     return cls
 
@@ -66,13 +66,13 @@ class DynamicLoader:
 
     def _init_import_path(self) -> None:
         """初始化导入路径，确保 src 模块可导入"""
-        src_path = self.project_root / 'src'
+        src_path = self.project_root / "src"
         parent_path = self.project_root
 
         if str(parent_path) not in sys.path:
             sys.path.insert(0, str(parent_path))
 
-        verification_path = self.project_root / 'src' / 'analyzers' / 'verification'
+        verification_path = self.project_root / "src" / "analyzers" / "verification"
         if str(verification_path) not in sys.path:
             sys.path.insert(0, str(verification_path))
 
@@ -80,10 +80,10 @@ class DynamicLoader:
         """加载配置文件"""
         if self.config_path.exists():
             try:
-                with open(self.config_path, 'r', encoding='utf-8') as f:
+                with open(self.config_path, "r", encoding="utf-8") as f:
                     config = yaml.safe_load(f)
-                    self.rules = config.get('rules', {}) if config else {}
-                    self.parallel_workers = config.get('parallel_workers', 4) if config else 4
+                    self.rules = config.get("rules", {}) if config else {}
+                    self.parallel_workers = config.get("parallel_workers", 4) if config else 4
             except Exception as e:
                 print(f"Failed to load config from {self.config_path}: {e}")
                 self.rules = {}
@@ -100,7 +100,7 @@ class DynamicLoader:
         """构建漏洞类型索引"""
         self._vuln_type_index.clear()
         for validator in self.validators.values():
-            if hasattr(validator, 'vuln_types') and validator.vuln_types:
+            if hasattr(validator, "vuln_types") and validator.vuln_types:
                 for vuln_type in validator.vuln_types:
                     if vuln_type not in self._vuln_type_index:
                         self._vuln_type_index[vuln_type] = []
@@ -124,9 +124,9 @@ class DynamicLoader:
             return loaded
 
         for category_dir in self.validators_dir.iterdir():
-            if category_dir.is_dir() and not category_dir.name.startswith('_'):
+            if category_dir.is_dir() and not category_dir.name.startswith("_"):
                 for validator_file in category_dir.glob("*.py"):
-                    if validator_file.name.startswith('_'):
+                    if validator_file.name.startswith("_"):
                         continue
                     try:
                         name = self.load_validator(str(validator_file))
@@ -157,8 +157,7 @@ class DynamicLoader:
 
         try:
             spec = importlib.util.spec_from_file_location(
-                f"validators.{category_name}.{module_name}",
-                validator_file
+                f"validators.{category_name}.{module_name}", validator_file
             )
             if spec is None or spec.loader is None:
                 print(f"Failed to create module spec for {validator_path}")
@@ -170,13 +169,14 @@ class DynamicLoader:
 
             for attr_name in dir(module):
                 attr = getattr(module, attr_name)
-                if (isinstance(attr, type)
+                if (
+                    isinstance(attr, type)
                     and issubclass(attr, Validator)
                     and attr is not Validator
-                    and attr_name != 'Validator'):
-
+                    and attr_name != "Validator"
+                ):
                     validator_instance = attr()
-                    validator_name = getattr(validator_instance, 'name', None)
+                    validator_name = getattr(validator_instance, "name", None)
 
                     if validator_name:
                         self.validators[validator_name] = validator_instance
@@ -185,7 +185,7 @@ class DynamicLoader:
                         self._invalidate_cache()
                         return validator_name
 
-            if hasattr(module, 'validate') and callable(getattr(module, 'validate')):
+            if hasattr(module, "validate") and callable(getattr(module, "validate")):
                 default_name = f"{category_name}.{module_name}"
                 validator_instance = self._create_wrapper_validator(module, default_name)
                 if validator_instance:
@@ -208,13 +208,13 @@ class DynamicLoader:
         Returns:
             包装后的验证器实例
         """
-        validate_func = getattr(module, 'validate', None)
+        validate_func = getattr(module, "validate", None)
 
         class WrappedValidator(Validator):
             name = name
-            vuln_types = getattr(module, 'VULN_TYPES', [])
-            description = getattr(module, 'DESCRIPTION', getattr(module, '__doc__', '') or '')
-            confidence_level = getattr(module, 'CONFIDENCE_LEVEL', 'medium')
+            vuln_types = getattr(module, "VULN_TYPES", [])
+            description = getattr(module, "DESCRIPTION", getattr(module, "__doc__", "") or "")
+            confidence_level = getattr(module, "CONFIDENCE_LEVEL", "medium")
 
             def verify(self, context: Dict[str, Any]) -> Dict[str, Any]:
                 if validate_func:
@@ -257,7 +257,9 @@ class DynamicLoader:
             result[vuln_type] = self.select_validators(vuln_type)
         return result
 
-    def _validate_parallel(self, validators: List[Validator], context: Dict[str, Any]) -> List[Dict[str, Any]]:
+    def _validate_parallel(
+        self, validators: List[Validator], context: Dict[str, Any]
+    ) -> List[Dict[str, Any]]:
         """并行执行验证
 
         Args:
@@ -282,11 +284,13 @@ class DynamicLoader:
                     results.append(result)
                 except Exception as e:
                     validator = future_to_validator[future]
-                    results.append({
-                        "validator": getattr(validator, 'name', 'unknown'),
-                        "status": "error",
-                        "message": str(e)
-                    })
+                    results.append(
+                        {
+                            "validator": getattr(validator, "name", "unknown"),
+                            "status": "error",
+                            "message": str(e),
+                        }
+                    )
         return results
 
     def _execute_validator(self, validator: Validator, context: Dict[str, Any]) -> Dict[str, Any]:
@@ -303,9 +307,9 @@ class DynamicLoader:
             return validator.verify(context)
         except Exception as e:
             return {
-                "validator": getattr(validator, 'name', 'unknown'),
+                "validator": getattr(validator, "name", "unknown"),
                 "status": "error",
-                "message": str(e)
+                "message": str(e),
             }
 
     def get_validator(self, name: str) -> Optional[Validator]:
@@ -364,9 +368,9 @@ class DynamicLoader:
         """
         paths = []
         for module_name in sys.modules:
-            if module_name.startswith('validators.'):
+            if module_name.startswith("validators."):
                 module = sys.modules[module_name]
-                if hasattr(module, '__file__') and module.__file__:
+                if hasattr(module, "__file__") and module.__file__:
                     paths.append(module.__file__)
         return paths
 
@@ -378,10 +382,10 @@ class DynamicLoader:
         """
         return [
             {
-                'name': v.name,
-                'types': ', '.join(getattr(v, 'vuln_types', [])),
-                'description': getattr(v, 'description', ''),
-                'confidence': getattr(v, 'confidence_level', 'medium')
+                "name": v.name,
+                "types": ", ".join(getattr(v, "vuln_types", [])),
+                "description": getattr(v, "description", ""),
+                "confidence": getattr(v, "confidence_level", "medium"),
             }
             for v in self.validators.values()
         ]

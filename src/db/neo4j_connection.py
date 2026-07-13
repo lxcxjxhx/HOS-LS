@@ -3,11 +3,11 @@
 提供 Neo4j 图数据库连接管理功能，支持图模型操作和增量写入。
 """
 
-from typing import Dict, List, Optional, Any
+from typing import Any, Dict, List, Optional
 
 from neo4j import GraphDatabase
-from neo4j_graphrag.generation import GraphRAG
 from neo4j_graphrag.embeddings import OpenAIEmbeddings
+from neo4j_graphrag.generation import GraphRAG
 
 from src.core.config import Config, get_config
 
@@ -44,11 +44,11 @@ class Neo4jManager:
         # 获取 Neo4j 配置
         # 检查是否有 neo4j 配置
         neo4j_config = {}
-        if hasattr(self._config, 'neo4j'):
-            neo4j_config = getattr(self._config, 'neo4j', {})
-        elif hasattr(self._config, 'database') and hasattr(self._config.database, 'neo4j'):
-            neo4j_config = getattr(self._config.database, 'neo4j', {})
-        
+        if hasattr(self._config, "neo4j"):
+            neo4j_config = getattr(self._config, "neo4j", {})
+        elif hasattr(self._config, "database") and hasattr(self._config.database, "neo4j"):
+            neo4j_config = getattr(self._config.database, "neo4j", {})
+
         # 从配置中获取值，如果没有则使用默认值
         if isinstance(neo4j_config, dict):
             uri = neo4j_config.get("uri", "neo4j://localhost:7687")
@@ -68,13 +68,10 @@ class Neo4jManager:
 
         # 打印连接信息（不打印密码）
         print(f"连接 Neo4j: {uri}, 用户名: {username}")
-        
+
         # 创建驱动
         try:
-            self._driver = GraphDatabase.driver(
-                uri=uri,
-                auth=(username, password)
-            )
+            self._driver = GraphDatabase.driver(uri=uri, auth=(username, password))
             print("✅ Neo4j 驱动创建成功")
         except Exception as e:
             print(f"❌ Neo4j 驱动创建失败: {e}")
@@ -113,11 +110,10 @@ class Neo4jManager:
                 openai_api_key = getattr(self._config.ai, "api_key", None)
             except:
                 openai_api_key = None
-            
+
             if openai_api_key:
                 embeddings = OpenAIEmbeddings(
-                    model="text-embedding-3-small",
-                    api_key=openai_api_key
+                    model="text-embedding-3-small", api_key=openai_api_key
                 )
             else:
                 # 使用默认嵌入
@@ -128,7 +124,7 @@ class Neo4jManager:
                 neo4j_uri=uri,
                 neo4j_username=username,
                 neo4j_password=password,
-                embeddings=embeddings
+                embeddings=embeddings,
             )
         except Exception as e:
             print(f"GraphRAG 初始化失败: {e}")
@@ -140,7 +136,9 @@ class Neo4jManager:
             self._driver.close()
             self._driver = None
 
-    def execute_cypher(self, query: str, parameters: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
+    def execute_cypher(
+        self, query: str, parameters: Optional[Dict[str, Any]] = None
+    ) -> List[Dict[str, Any]]:
         """执行 Cypher 查询
 
         Args:
@@ -273,10 +271,7 @@ class Neo4jManager:
         """
         if self._graphrag:
             # 使用 GraphRAG 进行查询
-            result = self._graphrag.query(
-                query=query,
-                limit=limit
-            )
+            result = self._graphrag.query(query=query, limit=limit)
             return result
         else:
             # 使用简单的关键词搜索
@@ -303,7 +298,7 @@ class Neo4jManager:
         RETURN c.id AS cve_id, c.title AS title, c.description AS description
         """
         result = self.execute_cypher(query, {"cve_id": cve_id})
-        
+
         if result:
             cve_info = result[0]
             # 生成简单的攻击链描述

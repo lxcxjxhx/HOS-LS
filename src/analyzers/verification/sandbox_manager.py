@@ -1,18 +1,18 @@
+import atexit
+import logging
 import os
+import random
+import re
 import shutil
 import subprocess
 import tempfile
 import threading
-import atexit
-import logging
 import time
-import random
-import re
 from dataclasses import dataclass, field
 from datetime import datetime
-from pathlib import Path
-from typing import Dict, Optional, List, Any
 from enum import Enum
+from pathlib import Path
+from typing import Any, Dict, List, Optional
 
 from .java_to_python_converter import JavaToPythonConverter
 from .python_test_executor import PythonTestExecutor
@@ -67,18 +67,18 @@ class SandboxEnvironmentManager:
 
         if os.path.exists(pom_xml):
             try:
-                with open(pom_xml, 'r', encoding='utf-8') as f:
+                with open(pom_xml, "r", encoding="utf-8") as f:
                     content = f.read()
-                    if 'spring-boot-starter' in content or 'spring-boot-maven-plugin' in content:
+                    if "spring-boot-starter" in content or "spring-boot-maven-plugin" in content:
                         return True
             except Exception as e:
                 logger.warning(f"Failed to read pom.xml: {e}")
 
         if os.path.exists(build_gradle):
             try:
-                with open(build_gradle, 'r', encoding='utf-8') as f:
+                with open(build_gradle, "r", encoding="utf-8") as f:
                     content = f.read()
-                    if 'spring-boot' in content:
+                    if "spring-boot" in content:
                         return True
             except Exception as e:
                 logger.warning(f"Failed to read build.gradle: {e}")
@@ -109,8 +109,8 @@ class SandboxEnvironmentManager:
                     created_at=datetime.now(),
                     metadata={
                         "is_spring_boot": is_spring_boot,
-                        "original_project_name": os.path.basename(project_path)
-                    }
+                        "original_project_name": os.path.basename(project_path),
+                    },
                 )
 
             return sandbox_path
@@ -120,7 +120,9 @@ class SandboxEnvironmentManager:
                 shutil.rmtree(sandbox_path, ignore_errors=True)
             raise RuntimeError(f"Failed to copy project to sandbox: {e}") from e
 
-    def start_isolated_service(self, sandbox_path: str, port: int, service_name: Optional[str] = None) -> str:
+    def start_isolated_service(
+        self, sandbox_path: str, port: int, service_name: Optional[str] = None
+    ) -> str:
         if not os.path.exists(sandbox_path):
             raise ValueError(f"Sandbox path does not exist: {sandbox_path}")
 
@@ -149,11 +151,7 @@ class SandboxEnvironmentManager:
 
         try:
             process = subprocess.Popen(
-                cmd,
-                cwd=sandbox_path,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                text=True
+                cmd, cwd=sandbox_path, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
             )
 
             with self._lock:
@@ -164,7 +162,9 @@ class SandboxEnvironmentManager:
                         sandbox_info.services.append(service_id)
                         break
 
-            logger.info(f"Started isolated service {service_id} on port {port} with command: {' '.join(cmd)}")
+            logger.info(
+                f"Started isolated service {service_id} on port {port} with command: {' '.join(cmd)}"
+            )
             return service_id
 
         except Exception as e:
@@ -282,7 +282,7 @@ class SandboxEnvironmentManager:
             return {
                 "service_id": service_id,
                 "running": process.poll() is None,
-                "return_code": process.returncode if process.poll() is not None else None
+                "return_code": process.returncode if process.poll() is not None else None,
             }
 
     def run_python_test(self, java_code: str, timeout: int = 30) -> dict:
@@ -301,7 +301,7 @@ class SandboxEnvironmentManager:
             "converted_code": None,
             "output": None,
             "error": None,
-            "execution_time": 0.0
+            "execution_time": 0.0,
         }
 
         try:

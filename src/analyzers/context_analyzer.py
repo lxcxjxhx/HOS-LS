@@ -99,15 +99,11 @@ class ContextAnalyzer:
 
             if is_hardcoded:
                 hardcoded_params.extend(caller.get("hardcoded_args", []))
-                reasons.append(
-                    f"服务层 {caller['file']}::{caller['method']} 调用时参数硬编码"
-                )
+                reasons.append(f"服务层 {caller['file']}::{caller['method']} 调用时参数硬编码")
             else:
                 all_hardcoded = False
                 user_controllable_params.extend(caller.get("user_args", []))
-                reasons.append(
-                    f"服务层 {caller['file']}::{caller['method']} 调用时参数来自用户输入"
-                )
+                reasons.append(f"服务层 {caller['file']}::{caller['method']} 调用时参数来自用户输入")
 
         if best_caller:
             service_layer_file = best_caller["file"]
@@ -160,9 +156,7 @@ class ContextAnalyzer:
                 user_controllable_params=list(set(user_controllable_params)),
             )
 
-    def find_service_layer_callers(
-        self, mapper_interface: str, mapper_method: str
-    ) -> List[Dict]:
+    def find_service_layer_callers(self, mapper_interface: str, mapper_method: str) -> List[Dict]:
         """查找服务层调用者
 
         Args:
@@ -276,7 +270,9 @@ class ContextAnalyzer:
         Returns:
             正则表达式模式
         """
-        uncapitalized = mapper_interface[0].lower() + mapper_interface[1:] if mapper_interface else ""
+        uncapitalized = (
+            mapper_interface[0].lower() + mapper_interface[1:] if mapper_interface else ""
+        )
         return rf"\b(\w*{uncapitalized}\w*)\b"
 
     def _find_service_files(self) -> List[Path]:
@@ -334,9 +330,7 @@ class ContextAnalyzer:
             args_str = match.group(1) if match.groups() else ""
             args = [arg.strip() for arg in args_str.split(",") if arg.strip()]
 
-            enclosing_method = self._find_enclosing_method(
-                content, match.start(), method_matches
-            )
+            enclosing_method = self._find_enclosing_method(content, match.start(), method_matches)
 
             caller: Dict[str, Any] = {
                 "file": str(file_path),
@@ -393,9 +387,7 @@ class ContextAnalyzer:
                     if params_match and params_match.group(1).strip():
                         params_str = params_match.group(1).strip()
                         method_info["params"] = [
-                            p.strip().split()[-1]
-                            for p in params_str.split(",")
-                            if p.strip()
+                            p.strip().split()[-1] for p in params_str.split(",") if p.strip()
                         ]
                     else:
                         method_info["params"] = []

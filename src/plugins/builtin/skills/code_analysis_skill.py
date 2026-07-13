@@ -89,7 +89,7 @@ class CodeAnalysisSkill(SkillPlugin):
                     "medium_count": "0",
                     "low_count": "0",
                     "score": "100",
-                }
+                },
             ),
             SkillPrompt(
                 name="code_review",
@@ -157,7 +157,7 @@ class CodeAnalysisSkill(SkillPlugin):
                     "code": "",
                     "file_path": "unknown",
                     "score": "100",
-                }
+                },
             ),
             SkillPrompt(
                 name="security_assessment",
@@ -243,7 +243,7 @@ class CodeAnalysisSkill(SkillPlugin):
                     "critical_code": "",
                     "compliance_standard": "通用安全标准",
                     "score": "70",
-                }
+                },
             ),
             SkillPrompt(
                 name="penetration_test_report",
@@ -346,7 +346,7 @@ class CodeAnalysisSkill(SkillPlugin):
                     "tool_1": "",
                     "tool_2": "",
                     "environment_config": "",
-                }
+                },
             ),
         ]
 

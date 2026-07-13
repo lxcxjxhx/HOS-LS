@@ -1,9 +1,9 @@
-import sys
-import re
 import os
-from typing import Any, Callable, Dict, List, Optional, Set, Union
+import re
+import sys
 from abc import ABC, abstractmethod
 from datetime import datetime
+from typing import Any, Callable, Dict, List, Optional, Set, Union
 
 from .multi_lang_mocks import MockRegistry, setup_python_module_mocks
 
@@ -408,7 +408,7 @@ class MockInputStream(MockJavaClass):
         return byte
 
     def read_all(self) -> bytes:
-        return self._data[self._position:]
+        return self._data[self._position :]
 
     def skip(self, n: int) -> int:
         skipped = min(n, len(self._data) - self._position)
@@ -458,7 +458,7 @@ class MockBufferedReader(MockJavaClass):
             return None
         data = self._reader.read_all()
         try:
-            return data.decode('utf-8').split('\n')[0]
+            return data.decode("utf-8").split("\n")[0]
         except:
             return None
 
@@ -632,11 +632,9 @@ class MockRequestMapping:
         route_key = f"{self._method}:{self._path}"
         if route_key not in MockRequestMapping._routes:
             MockRequestMapping._routes[route_key] = []
-        MockRequestMapping._routes[route_key].append({
-            "path": self._path,
-            "method": self._method,
-            "handler": func
-        })
+        MockRequestMapping._routes[route_key].append(
+            {"path": self._path, "method": self._method, "handler": func}
+        )
         return func
 
     @classmethod
@@ -718,32 +716,32 @@ class MyBatisParameterHandler(MockJavaClass):
 
     @staticmethod
     def handle_dollar_brace(sql: str, params: Dict[str, Any]) -> str:
-        pattern = r'\$\{([^}]+)\}'
+        pattern = r"\$\{([^}]+)\}"
         matches = re.findall(pattern, sql)
         result = sql
         for match in matches:
             key = match.strip()
             value = params.get(key, "")
-            result = result.replace(f'${{{match}}}', str(value))
+            result = result.replace(f"${{{match}}}", str(value))
         return result
 
     @staticmethod
     def handle_hash_brace(sql: str, params: Dict[str, Any]) -> str:
-        pattern = r'#\{([^}]+)\}'
+        pattern = r"#\{([^}]+)\}"
         result = sql
         param_index = 0
         for match in re.findall(pattern, sql):
             key = match.strip()
-            value = params.get(key, f'?')
-            if value == '?':
+            value = params.get(key, f"?")
+            if value == "?":
                 param_index += 1
-                result = result.replace(f'#{{{match}}}', '?', 1)
+                result = result.replace(f"#{{{match}}}", "?", 1)
             else:
                 if isinstance(value, str):
                     value = f"'{value}'"
                 else:
                     value = str(value)
-                result = result.replace(f'#{{{match}}}', value, 1)
+                result = result.replace(f"#{{{match}}}", value, 1)
         return result
 
 
@@ -972,7 +970,7 @@ class MockPreparedStatement(MockJavaClass):
         sql = self._sql
         for i, param in enumerate(self._params):
             if param is not None:
-                sql = sql.replace(f'?', f"'{param}'" if isinstance(param, str) else str(param), 1)
+                sql = sql.replace(f"?", f"'{param}'" if isinstance(param, str) else str(param), 1)
         return MockResultSet()
 
     def executeUpdate(self) -> int:
@@ -1058,9 +1056,10 @@ class VirtualRuntimeEnvironment:
             return
 
         for module_name in list(sys.modules.keys()):
-            if any(module_name.startswith(prefix) for prefix in [
-                "java.", "javax.", "org.springframework.", "org.apache."
-            ]):
+            if any(
+                module_name.startswith(prefix)
+                for prefix in ["java.", "javax.", "org.springframework.", "org.apache."]
+            ):
                 self._original_modules[module_name] = sys.modules[module_name]
                 del sys.modules[module_name]
 
@@ -1074,7 +1073,7 @@ class VirtualRuntimeEnvironment:
 
             if module_name:
                 if module_name not in sys.modules:
-                    mock_module = type(sys)('_mock_' + module_name)
+                    mock_module = type(sys)("_mock_" + module_name)
                     mock_module.__path__ = []
                     sys.modules[module_name] = mock_module
 
@@ -1119,9 +1118,10 @@ class VirtualRuntimeEnvironment:
             module_parts = java_class_name.rsplit(".", 1)
             if len(module_parts) == 2:
                 module_name, class_name = module_parts
-                if any(module_name.startswith(prefix) for prefix in [
-                    "java", "javax", "org.springframework", "org.apache"
-                ]):
+                if any(
+                    module_name.startswith(prefix)
+                    for prefix in ["java", "javax", "org.springframework", "org.apache"]
+                ):
                     if module_name in sys.modules:
                         module = sys.modules[module_name]
                         if hasattr(module, class_name):

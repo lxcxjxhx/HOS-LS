@@ -5,8 +5,8 @@
 """
 
 import re
-from typing import Any, Dict, List, Optional, Union, Set
 from pathlib import Path
+from typing import Any, Dict, List, Optional, Set, Union
 
 from src.rules.base import BaseRule, RuleCategory, RuleMetadata, RuleResult, RuleSeverity
 
@@ -105,12 +105,18 @@ class IDORRule(BaseRule):
         self._dangerous_patterns = [
             (
                 re.compile(
-                    r"(?:" + "|".join(self._user_input_object_patterns) + r")" +
-                    r"(?:\s*,\s*" + "|".join(self._user_input_object_patterns) + r")*" +
-                    r"\s*(?:=>|:|\))\s*(?:" + "|".join(self._object_access_patterns) + r")",
-                    re.IGNORECASE
+                    r"(?:"
+                    + "|".join(self._user_input_object_patterns)
+                    + r")"
+                    + r"(?:\s*,\s*"
+                    + "|".join(self._user_input_object_patterns)
+                    + r")*"
+                    + r"\s*(?:=>|:|\))\s*(?:"
+                    + "|".join(self._object_access_patterns)
+                    + r")",
+                    re.IGNORECASE,
                 ),
-                "用户输入直接作为对象查询参数，无访问控制验证"
+                "用户输入直接作为对象查询参数，无访问控制验证",
             ),
         ]
 
@@ -228,33 +234,29 @@ class BusinessLogicFlawRule(BaseRule):
         self._flaw_patterns = [
             (
                 re.compile(
-                    r"(?:price|amount|quantity|discount|coupon|rate|fee)\s*=\s*" +
-                    r"(?:request\.[a-zA-Z_]+|params\[|args\[|form\[|json\[|[a-zA-Z_]+)",
-                    re.IGNORECASE
+                    r"(?:price|amount|quantity|discount|coupon|rate|fee)\s*=\s*"
+                    + r"(?:request\.[a-zA-Z_]+|params\[|args\[|form\[|json\[|[a-zA-Z_]+)",
+                    re.IGNORECASE,
                 ),
-                "业务关键字段直接使用用户输入"
+                "业务关键字段直接使用用户输入",
+            ),
+            (
+                re.compile(r"if\s*\(\s*[a-zA-Z_]+\s*[<>]=\s*0\s*\)\s*\{?\s*return", re.IGNORECASE),
+                "仅检验负值，缺少上限验证",
             ),
             (
                 re.compile(
-                    r"if\s*\(\s*[a-zA-Z_]+\s*[<>]=\s*0\s*\)\s*\{?\s*return",
-                    re.IGNORECASE
+                    r"(?:discount|coupon|reward|points)\s*\.\s*apply"
+                    + r"(?:(?!\.validate|\.check)[^;])*request",
+                    re.IGNORECASE | re.DOTALL,
                 ),
-                "仅检验负值，缺少上限验证"
+                "优惠/积分应用缺少服务端验证",
             ),
             (
                 re.compile(
-                    r"(?:discount|coupon|reward|points)\s*\.\s*apply" +
-                    r"(?:(?!\.validate|\.check)[^;])*request",
-                    re.IGNORECASE | re.DOTALL
+                    r"timestamp\s*[<>]=\s*(?:time\.time\(\)|datetime\.now\(\))", re.IGNORECASE
                 ),
-                "优惠/积分应用缺少服务端验证"
-            ),
-            (
-                re.compile(
-                    r"timestamp\s*[<>]=\s*(?:time\.time\(\)|datetime\.now\(\))",
-                    re.IGNORECASE
-                ),
-                "时间戳比较可能被客户端篡改"
+                "时间戳比较可能被客户端篡改",
             ),
         ]
 
@@ -349,28 +351,24 @@ class RaceConditionRule(BaseRule):
         self._toctou_patterns = [
             (
                 re.compile(
-                    r"(?:if|while|assert)\s*\([^)]*file_exists|os\.path\.exists|" +
-                    r"is_file|is_dir|exists|stat|get_status",
-                    re.IGNORECASE
+                    r"(?:if|while|assert)\s*\([^)]*file_exists|os\.path\.exists|"
+                    + r"is_file|is_dir|exists|stat|get_status",
+                    re.IGNORECASE,
                 ),
                 r"(?:open|read|write|execute|chmod|chown|delete|remove|unlink)\s*\(",
-                "文件存在性检查与使用之间存在竞态窗口"
+                "文件存在性检查与使用之间存在竞态窗口",
             ),
             (
                 re.compile(
-                    r"(?:if|while|assert)\s*\([^)]*lock|acquire|semaphore|mutex",
-                    re.IGNORECASE
+                    r"(?:if|while|assert)\s*\([^)]*lock|acquire|semaphore|mutex", re.IGNORECASE
                 ),
                 r"(?:unlock|release|exit|return)\s*\(",
-                "锁检查后释放前存在竞态窗口"
+                "锁检查后释放前存在竞态窗口",
             ),
             (
-                re.compile(
-                    r"(?:balance|stock|quantity|count|available)\s*[<>]=",
-                    re.IGNORECASE
-                ),
+                re.compile(r"(?:balance|stock|quantity|count|available)\s*[<>]=", re.IGNORECASE),
                 r"(?:balance|stock|quantity|count|available)\s*[+\-]=",
-                "余额/库存检查与修改之间存在竞态窗口"
+                "余额/库存检查与修改之间存在竞态窗口",
             ),
         ]
 
@@ -407,7 +405,7 @@ class RaceConditionRule(BaseRule):
                 check_pattern, use_pattern, description = pattern_tuple
                 for check_match in check_pattern.finditer(content):
                     check_end = check_match.end()
-                    search_area = content[check_end:check_end + 500]
+                    search_area = content[check_end : check_end + 500]
                     if use_pattern.search(search_area):
                         line_num = content[: check_match.start()].count("\n") + 1
                         col_num = check_match.start() - content[: check_match.start()].rfind("\n")

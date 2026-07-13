@@ -4,14 +4,14 @@
 优先使用NVD SQLite数据库进行匹配。
 """
 
-import re
 import json
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, List, Optional, Set, Any
+from typing import Any, Dict, List, Optional, Set
 
-from src.utils.logger import get_logger
 from src.core.config import Config, get_config
+from src.utils.logger import get_logger
 
 logger = get_logger(__name__)
 
@@ -19,6 +19,7 @@ logger = get_logger(__name__)
 @dataclass
 class LibraryInfo:
     """库信息"""
+
     name: str
     version: Optional[str] = None
     source: str = ""
@@ -28,6 +29,7 @@ class LibraryInfo:
 @dataclass
 class LibraryVulnerability:
     """库漏洞信息"""
+
     cve_id: str
     library_name: str
     affected_versions: List[str]
@@ -54,22 +56,24 @@ class LibraryMatcher:
         self._nvd_available = False
         self._library_cve_cache: Dict[str, List[LibraryVulnerability]] = {}
         self._language_patterns = {
-            'python': {
-                'import': re.compile(r'^\s*import\s+([\w\.]+)'),
-                'from_import': re.compile(r'^\s*from\s+([\w\.]+)\s+import'),
-                'requirements': re.compile(r'^([\w\-\.]+)\s*==\s*([\d\.]+)'),
-                'setup_py': re.compile(r'\'([\w\-\.]+)\',\s*version=\'([\d\.]+)\'')
+            "python": {
+                "import": re.compile(r"^\s*import\s+([\w\.]+)"),
+                "from_import": re.compile(r"^\s*from\s+([\w\.]+)\s+import"),
+                "requirements": re.compile(r"^([\w\-\.]+)\s*==\s*([\d\.]+)"),
+                "setup_py": re.compile(r"\'([\w\-\.]+)\',\s*version=\'([\d\.]+)\'"),
             },
-            'javascript': {
-                'require': re.compile(r'require\(["\']([\w\-\.]+)["\']\)'),
-                'import': re.compile(r'import.*from\s+["\']([\w\-\.]+)["\']'),
-                'package_json': re.compile(r'"([\w\-\.]+)":\s*"([\d\.]+)"')
+            "javascript": {
+                "require": re.compile(r'require\(["\']([\w\-\.]+)["\']\)'),
+                "import": re.compile(r'import.*from\s+["\']([\w\-\.]+)["\']'),
+                "package_json": re.compile(r'"([\w\-\.]+)":\s*"([\d\.]+)"'),
             },
-            'java': {
-                'import': re.compile(r'^\s*import\s+([\w\.]+);'),
-                'maven': re.compile(r'<artifactId>([\w\-\.]+)</artifactId>.*<version>([\d\.]+)</version>', re.DOTALL),
-                'gradle': re.compile(r'implementation\s+["\']([\w\:]+):([\w\-\.]+):([\d\.]+)["\']')
-            }
+            "java": {
+                "import": re.compile(r"^\s*import\s+([\w\.]+);"),
+                "maven": re.compile(
+                    r"<artifactId>([\w\-\.]+)</artifactId>.*<version>([\d\.]+)</version>", re.DOTALL
+                ),
+                "gradle": re.compile(r'implementation\s+["\']([\w\:]+):([\w\-\.]+):([\d\.]+)["\']'),
+            },
         }
         self._init_nvd_connection()
 
@@ -77,6 +81,7 @@ class LibraryMatcher:
         """初始化NVD数据库连接"""
         try:
             from src.scanner.nvd_adapter import NVDAdapter
+
             self._nvd_adapter = NVDAdapter()
             self._nvd_available = self._nvd_adapter.is_available()
             if self._nvd_available:
@@ -102,43 +107,44 @@ class LibraryMatcher:
         detected = set()
 
         patterns = self._language_patterns.get(language, {})
-        
+
         for pattern_name, pattern in patterns.items():
             for match in pattern.finditer(code):
-                if pattern_name in ['import', 'from_import', 'require']:
+                if pattern_name in ["import", "from_import", "require"]:
                     # 提取库名
                     library_name = match.group(1)
                     # 只取主库名（如 'requests' 而不是 'requests.exceptions'）
-                    library_name = library_name.split('.')[0]
+                    library_name = library_name.split(".")[0]
                     if library_name not in detected:
                         detected.add(library_name)
-                        libraries.append(LibraryInfo(
-                            name=library_name,
-                            source=pattern_name
-                        ))
-                elif pattern_name in ['requirements', 'setup_py', 'package_json', 'maven', 'gradle']:
+                        libraries.append(LibraryInfo(name=library_name, source=pattern_name))
+                elif pattern_name in [
+                    "requirements",
+                    "setup_py",
+                    "package_json",
+                    "maven",
+                    "gradle",
+                ]:
                     # 提取库名和版本
-                    if pattern_name == 'gradle':
+                    if pattern_name == "gradle":
                         # Gradle 格式: group:name:version
                         group, name, version = match.groups()
                         library_name = f"{group}:{name}"
                     else:
-                        if pattern_name == 'maven':
+                        if pattern_name == "maven":
                             # Maven 格式: artifactId 和 version
                             name, version = match.groups()
                         else:
                             # 其他格式: name==version
                             name, version = match.groups()
                         library_name = name
-                    
+
                     if library_name not in detected:
                         detected.add(library_name)
-                        libraries.append(LibraryInfo(
-                            name=library_name,
-                            version=version,
-                            source=pattern_name
-                        ))
-        
+                        libraries.append(
+                            LibraryInfo(name=library_name, version=version, source=pattern_name)
+                        )
+
         return libraries
 
     def match_vulnerabilities(self, libraries: List[LibraryInfo]) -> List[LibraryVulnerability]:
@@ -176,15 +182,11 @@ class LibraryMatcher:
 
         for library in uncached_libraries:
             try:
-                vendor = library.name.split('.')[0]
+                vendor = library.name.split(".")[0]
                 product = library.name
 
                 hits = self._nvd_adapter.scan_library(
-                    vendor=vendor,
-                    product=product,
-                    version=library.version,
-                    min_score=5.0,
-                    limit=50
+                    vendor=vendor, product=product, version=library.version, min_score=5.0, limit=50
                 )
 
                 library_vulns = []
@@ -197,13 +199,13 @@ class LibraryMatcher:
                         description=hit.description,
                         fix_version=hit.fix_version,
                         metadata={
-                            'cvss_score': hit.cvss_score,
-                            'kev_exploited': hit.kev_exploited,
-                            'exploit_count': hit.exploit_count,
-                            'poc_stars': hit.poc_stars,
-                            'cwe_ids': hit.cwe_ids,
-                            'references': hit.references
-                        }
+                            "cvss_score": hit.cvss_score,
+                            "kev_exploited": hit.kev_exploited,
+                            "exploit_count": hit.exploit_count,
+                            "poc_stars": hit.poc_stars,
+                            "cwe_ids": hit.cwe_ids,
+                            "references": hit.references,
+                        },
                     )
                     vulnerabilities.append(vuln)
                     library_vulns.append(vuln)
@@ -219,17 +221,17 @@ class LibraryMatcher:
     def _map_severity(self, severity: str) -> str:
         """映射NVD严重级别到标准级别"""
         if not severity:
-            return 'MEDIUM'
+            return "MEDIUM"
         severity_upper = severity.upper()
-        if severity_upper in ('CRITICAL', 'HIGH', 'MEDIUM', 'LOW'):
+        if severity_upper in ("CRITICAL", "HIGH", "MEDIUM", "LOW"):
             return severity_upper
-        if severity_upper.startswith('HIGH'):
-            return 'HIGH'
-        if severity_upper.startswith('MED'):
-            return 'MEDIUM'
-        if severity_upper.startswith('LOW'):
-            return 'LOW'
-        return 'MEDIUM'
+        if severity_upper.startswith("HIGH"):
+            return "HIGH"
+        if severity_upper.startswith("MED"):
+            return "MEDIUM"
+        if severity_upper.startswith("LOW"):
+            return "LOW"
+        return "MEDIUM"
 
     def _is_version_affected(self, version: Optional[str], affected_versions: List[str]) -> bool:
         """检查版本是否受影响
@@ -248,10 +250,10 @@ class LibraryMatcher:
             if affected_version == version:
                 return True
             # 处理版本范围，如 "< 1.0.0", ">= 2.0.0, < 2.1.0"
-            if '<' in affected_version or '>' in affected_version:
+            if "<" in affected_version or ">" in affected_version:
                 if self._check_version_range(version, affected_version):
                     return True
-        
+
         return False
 
     def _check_version_range(self, version: str, version_range: str) -> bool:
@@ -266,14 +268,15 @@ class LibraryMatcher:
         """
         try:
             import packaging.version
+
             current_version = packaging.version.parse(version)
-            
+
             # 处理逗号分隔的多个范围
-            ranges = version_range.split(',')
+            ranges = version_range.split(",")
             for range_str in ranges:
                 range_str = range_str.strip()
-                if range_str.startswith('<'):
-                    if '<=' in range_str:
+                if range_str.startswith("<"):
+                    if "<=" in range_str:
                         max_version = packaging.version.parse(range_str[2:].strip())
                         if current_version <= max_version:
                             return True
@@ -281,8 +284,8 @@ class LibraryMatcher:
                         max_version = packaging.version.parse(range_str[1:].strip())
                         if current_version < max_version:
                             return True
-                elif range_str.startswith('>'):
-                    if '>=' in range_str:
+                elif range_str.startswith(">"):
+                    if ">=" in range_str:
                         min_version = packaging.version.parse(range_str[2:].strip())
                         if current_version >= min_version:
                             return True
@@ -292,7 +295,7 @@ class LibraryMatcher:
                             return True
         except Exception:
             pass
-        
+
         return False
 
     def get_vulnerability_by_cve(self, cve_id: str) -> Optional[LibraryVulnerability]:
@@ -309,20 +312,20 @@ class LibraryMatcher:
                 detail = self._nvd_adapter.get_cve_details(cve_id)
                 if detail:
                     return LibraryVulnerability(
-                        cve_id=detail.get('cve_id', cve_id),
-                        library_name='',
+                        cve_id=detail.get("cve_id", cve_id),
+                        library_name="",
                         affected_versions=[],
-                        severity=self._map_severity(detail.get('severity', '')),
-                        description=detail.get('description', ''),
+                        severity=self._map_severity(detail.get("severity", "")),
+                        description=detail.get("description", ""),
                         fix_version=None,
                         metadata={
-                            'cvss_score': detail.get('cvss_score'),
-                            'kev_exploited': detail.get('kev_exploited'),
-                            'exploit_count': detail.get('exploit_count', 0),
-                            'poc_count': detail.get('poc_count', 0),
-                            'cwe_ids': detail.get('cwe_ids'),
-                            'references': detail.get('references')
-                        }
+                            "cvss_score": detail.get("cvss_score"),
+                            "kev_exploited": detail.get("kev_exploited"),
+                            "exploit_count": detail.get("exploit_count", 0),
+                            "poc_count": detail.get("poc_count", 0),
+                            "cwe_ids": detail.get("cwe_ids"),
+                            "references": detail.get("references"),
+                        },
                     )
             except Exception as e:
                 logger.debug(f"通过NVD获取CVE详情失败: {e}")
@@ -384,9 +387,7 @@ class LibraryMatcher:
             return []
 
     def find_exploitable_vulnerabilities(
-        self,
-        min_score: float = 7.0,
-        limit: int = 50
+        self, min_score: float = 7.0, limit: int = 50
     ) -> List[LibraryVulnerability]:
         """查找可利用的漏洞
 
@@ -405,17 +406,17 @@ class LibraryMatcher:
                 for hit in hits:
                     vuln = LibraryVulnerability(
                         cve_id=hit.cve_id,
-                        library_name='',
+                        library_name="",
                         affected_versions=hit.affected_versions or [],
                         severity=self._map_severity(hit.severity),
                         description=hit.description,
                         fix_version=hit.fix_version,
                         metadata={
-                            'cvss_score': hit.cvss_score,
-                            'kev_exploited': hit.kev_exploited,
-                            'exploit_count': hit.exploit_count,
-                            'poc_stars': hit.poc_stars
-                        }
+                            "cvss_score": hit.cvss_score,
+                            "kev_exploited": hit.kev_exploited,
+                            "exploit_count": hit.exploit_count,
+                            "poc_stars": hit.poc_stars,
+                        },
                     )
                     vulnerabilities.append(vuln)
             except Exception as e:

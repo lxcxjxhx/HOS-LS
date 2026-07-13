@@ -6,6 +6,7 @@ from typing import Any, Dict, List, Optional
 @dataclass
 class ValidationResult:
     """验证结果"""
+
     is_valid: Optional[bool]
     is_false_positive: Optional[bool]
     confidence: float
@@ -18,6 +19,7 @@ class ValidationResult:
 @dataclass
 class VulnContext:
     """漏洞上下文"""
+
     file_path: str
     line_number: int
     code_snippet: str
@@ -66,9 +68,7 @@ class Validator(ABC):
 
 
 def create_false_positive_result(
-    reason: str,
-    confidence: float = 0.9,
-    evidence: Dict[str, Any] = None
+    reason: str, confidence: float = 0.9, evidence: Dict[str, Any] = None
 ) -> ValidationResult:
     """创建误报结果"""
     return ValidationResult(
@@ -76,14 +76,12 @@ def create_false_positive_result(
         is_false_positive=True,
         confidence=confidence,
         reason=reason,
-        evidence=evidence or {}
+        evidence=evidence or {},
     )
 
 
 def create_valid_result(
-    reason: str,
-    confidence: float = 0.8,
-    evidence: Dict[str, Any] = None
+    reason: str, confidence: float = 0.8, evidence: Dict[str, Any] = None
 ) -> ValidationResult:
     """创建有效漏洞结果"""
     return ValidationResult(
@@ -91,18 +89,12 @@ def create_valid_result(
         is_false_positive=False,
         confidence=confidence,
         reason=reason,
-        evidence=evidence or {}
+        evidence=evidence or {},
     )
 
 
-def create_uncertain_result(
-    reason: str,
-    confidence: float = 0.5
-) -> ValidationResult:
+def create_uncertain_result(reason: str, confidence: float = 0.5) -> ValidationResult:
     """创建不确定结果"""
     return ValidationResult(
-        is_valid=None,
-        is_false_positive=None,
-        confidence=confidence,
-        reason=reason
+        is_valid=None, is_false_positive=None, confidence=confidence, reason=reason
     )

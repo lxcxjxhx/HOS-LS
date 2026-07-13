@@ -6,10 +6,10 @@
 import hashlib
 import json
 from dataclasses import asdict
-from typing import Dict, Optional, Any, List
+from typing import Any, Dict, List, Optional
 
-from src.ai.models import SecurityAnalysisResult
 from src.ai.analyzer import AnalysisContext
+from src.ai.models import SecurityAnalysisResult
 from src.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -44,7 +44,7 @@ class AnalysisCache:
             "language": context.language,
             "analysis_level": context.analysis_level.value,
             "function_name": context.function_name,
-            "class_name": context.class_name
+            "class_name": context.class_name,
         }
         key_str = json.dumps(key_data, sort_keys=True)
         return hashlib.md5(key_str.encode()).hexdigest()
@@ -64,7 +64,7 @@ class AnalysisCache:
             if key in self._access_order:
                 self._access_order.remove(key)
             self._access_order.append(key)
-            
+
             logger.debug(f"Cache hit for {context.file_path}")
             return self._deserialize_result(self._cache[key])
         logger.debug(f"Cache miss for {context.file_path}")
@@ -78,21 +78,21 @@ class AnalysisCache:
             result: 分析结果
         """
         key = self._generate_key(context)
-        
+
         # 如果缓存已满，移除最久未使用的项（LRU）
         if len(self._cache) >= self._max_size:
             oldest_key = self._access_order.pop(0)
             del self._cache[oldest_key]
             logger.debug(f"Cache evicted: {oldest_key}")
-        
+
         # 序列化结果并存储
         self._cache[key] = self._serialize_result(result)
-        
+
         # 更新访问顺序
         if key in self._access_order:
             self._access_order.remove(key)
         self._access_order.append(key)
-        
+
         logger.debug(f"Cache set for {context.file_path}")
 
     def _serialize_result(self, result: SecurityAnalysisResult) -> Dict[str, Any]:
@@ -106,8 +106,8 @@ class AnalysisCache:
         """
         result_dict = asdict(result)
         # 序列化 findings
-        if hasattr(result, 'findings') and result.findings:
-            result_dict['findings'] = [asdict(finding) for finding in result.findings]
+        if hasattr(result, "findings") and result.findings:
+            result_dict["findings"] = [asdict(finding) for finding in result.findings]
         return result_dict
 
     def _deserialize_result(self, data: Dict[str, Any]) -> SecurityAnalysisResult:
@@ -120,15 +120,15 @@ class AnalysisCache:
             SecurityAnalysisResult: 反序列化后的分析结果
         """
         from src.ai.models import VulnerabilityFinding
-        
+
         # 反序列化 findings
-        if 'findings' in data and data['findings']:
+        if "findings" in data and data["findings"]:
             findings = []
-            for finding_data in data['findings']:
+            for finding_data in data["findings"]:
                 finding = VulnerabilityFinding(**finding_data)
                 findings.append(finding)
-            data['findings'] = findings
-        
+            data["findings"] = findings
+
         return SecurityAnalysisResult(**data)
 
     def clear(self) -> None:

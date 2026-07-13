@@ -1,8 +1,10 @@
 """行号验证集成测试"""
 
-import pytest
 import os
 from pathlib import Path
+
+import pytest
+
 from src.ai.pure_ai.line_number_mapper import LineNumberMapper, LineNumberValidator
 
 
@@ -49,7 +51,10 @@ public class Test {
         if not project_path.exists():
             pytest.skip("Project path not found")
 
-        jackson_config = project_path / "bizspring-base/bizspring-base-core/src/main/java/cn/bizspring/cloud/common/core/config/JacksonConfig.java"
+        jackson_config = (
+            project_path
+            / "bizspring-base/bizspring-base-core/src/main/java/cn/bizspring/cloud/common/core/config/JacksonConfig.java"
+        )
 
         if not jackson_config.exists():
             pytest.skip("JacksonConfig.java not found")
@@ -98,7 +103,10 @@ def test_real_project_validation():
     if not project_path.exists():
         pytest.skip("Project path not found")
 
-    jackson_config = project_path / "bizspring-base/bizspring-base-core/src/main/java/cn/bizspring/cloud/common/core/config/JacksonConfig.java"
+    jackson_config = (
+        project_path
+        / "bizspring-base/bizspring-base-core/src/main/java/cn/bizspring/cloud/common/core/config/JacksonConfig.java"
+    )
 
     if not jackson_config.exists():
         pytest.skip("JacksonConfig.java not found")
@@ -111,9 +119,7 @@ def test_real_project_validation():
     validator.record_file_snapshot(str(jackson_config), content)
 
     result = validator.verify_and_correct(
-        str(jackson_config) + ":28",
-        "builder.locale(Locale.CHINA);",
-        tolerance=5
+        str(jackson_config) + ":28", "builder.locale(Locale.CHINA);", tolerance=5
     )
 
     assert result["is_valid"] is True

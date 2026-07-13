@@ -6,15 +6,15 @@
 import asyncio
 import re
 import time
-from typing import Dict, List, Any, Optional, AsyncIterator
 from dataclasses import dataclass
 from enum import Enum
+from typing import Any, AsyncIterator, Dict, List, Optional
 
 from rich.console import Console
 
-from src.ai.intent.classifier import AIIntentClassifier
-from src.ai.intent.intent_model import IntentType, IntentEntity
 from src.ai.entity.extractor import AIEntityExtractor
+from src.ai.intent.classifier import AIIntentClassifier
+from src.ai.intent.intent_model import IntentEntity, IntentType
 
 console = Console()
 
@@ -104,12 +104,14 @@ class ConversationalSecurityAgent:
             for entity in entities:
                 self.context_memory.add_entity(entity)
 
-        self._conversation_history.append(ConversationMessage(
-            role="user",
-            content=user_input,
-            timestamp=timestamp,
-            metadata={"intent": intent.value if intent else "unknown"}
-        ))
+        self._conversation_history.append(
+            ConversationMessage(
+                role="user",
+                content=user_input,
+                timestamp=timestamp,
+                metadata={"intent": intent.value if intent else "unknown"},
+            )
+        )
 
         if intent == Intent.SCAN or intent == Intent.ANALYZE:
             target = self._extract_target(user_input)
@@ -132,12 +134,14 @@ class ConversationalSecurityAgent:
         else:
             response = await self.execute_general(user_input)
 
-        self._conversation_history.append(ConversationMessage(
-            role="assistant",
-            content=response,
-            timestamp=time.time(),
-            metadata={"intent": intent.value if intent else "unknown"}
-        ))
+        self._conversation_history.append(
+            ConversationMessage(
+                role="assistant",
+                content=response,
+                timestamp=time.time(),
+                metadata={"intent": intent.value if intent else "unknown"},
+            )
+        )
 
         return response
 
@@ -207,6 +211,7 @@ class ConversationalSecurityAgent:
         if self._use_ai:
             try:
                 import asyncio
+
                 extractor = asyncio.get_event_loop().run_until_complete(
                     self._get_entity_extractor()
                 )
@@ -217,9 +222,9 @@ class ConversationalSecurityAgent:
                 pass
 
         patterns = [
-            r'(?:扫描|分析|检查)\s+(.+)',
-            r'(?:scan|analyze)\s+(.+)',
-            r'@file\s+(.+)',
+            r"(?:扫描|分析|检查)\s+(.+)",
+            r"(?:scan|analyze)\s+(.+)",
+            r"@file\s+(.+)",
         ]
 
         for pattern in patterns:
@@ -275,27 +280,35 @@ class ConversationalSecurityAgent:
                 self.config.pure_ai = True
 
             from src.core.scanner import create_scanner
+
             scanner = create_scanner(self.config)
 
-            result = await asyncio.wait_for(
-                scanner.scan(target),
-                timeout=300.0
-            )
+            result = await asyncio.wait_for(scanner.scan(target), timeout=300.0)
 
             finding_count = len(result.findings) if result.findings else 0
 
             response = f"扫描完成！发现 {finding_count} 个安全问题。"
 
             if result.findings and self.ui:
-                self.ui.print_findings_table([
-                    {
-                        "rule_name": f.rule_name,
-                        "severity": f.severity.value if hasattr(f.severity, 'value') else str(f.severity),
-                        "location": f"{f.location.file}:{f.location.line}" if hasattr(f.location, 'file') else str(f.location),
-                        "description": f.description[:100] if hasattr(f, 'description') else ""
-                    }
-                    for f in result.findings[:10]
-                ])
+                self.ui.print_findings_table(
+                    [
+                        {
+                            "rule_name": f.rule_name,
+                            "severity": (
+                                f.severity.value
+                                if hasattr(f.severity, "value")
+                                else str(f.severity)
+                            ),
+                            "location": (
+                                f"{f.location.file}:{f.location.line}"
+                                if hasattr(f.location, "file")
+                                else str(f.location)
+                            ),
+                            "description": f.description[:100] if hasattr(f, "description") else "",
+                        }
+                        for f in result.findings[:10]
+                    ]
+                )
 
             return response
 
@@ -523,5 +536,7 @@ class ConversationalSecurityAgent:
 
     def should_resume_scan(self) -> bool:
         """检查是否应该恢复扫描"""
-        return self._checkpoint_manager is not None and \
-               len(self._checkpoint_manager.list_checkpoints()) > 0
+        return (
+            self._checkpoint_manager is not None
+            and len(self._checkpoint_manager.list_checkpoints()) > 0
+        )

@@ -4,15 +4,16 @@
 """
 
 import asyncio
-import aiohttp
 import re
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Dict, List, Optional, Any
+from typing import Any, Dict, List, Optional
 
-from src.utils.logger import get_logger
+import aiohttp
+
 from src.learning.self_learning import Knowledge, KnowledgeType
 from src.storage.rag_knowledge_base import get_rag_knowledge_base
+from src.utils.logger import get_logger
 
 logger = get_logger(__name__)
 
@@ -62,7 +63,7 @@ class CVECrawler:
                 "orderby": "Publication Date",
                 "dir": "desc",
                 "search_type": "ALL",
-                "page": "1"
+                "page": "1",
             }
 
             async with self.session.get(url, params=params) as response:
@@ -74,7 +75,7 @@ class CVECrawler:
                     logger.error(f"爬取CVE列表失败，状态码: {response.status}")
         except Exception as e:
             logger.error(f"爬取CVE漏洞失败: {e}")
-        
+
         return cves
 
     async def crawl_cve_details(self, cve_id: str) -> Optional[Dict[str, Any]]:
@@ -101,7 +102,7 @@ class CVECrawler:
                     logger.error(f"爬取CVE详情失败，状态码: {response.status}")
         except Exception as e:
             logger.error(f"爬取CVE详情失败: {e}")
-        
+
         return None
 
     async def crawl_and_store_cves(self, limit: int = 50) -> int:
@@ -142,15 +143,15 @@ class CVECrawler:
             CVE列表
         """
         cves = []
-        
+
         # 正则表达式匹配CVE条目
         pattern = r'<a href="/cgi-bin/cvename\.cgi\?name=(CVE-\d+-\d+)"[^>]*>(CVE-\d+-\d+)</a>'
         matches = re.findall(pattern, html)
-        
+
         for match in matches[:limit]:
             cve_id = match[0]
             cves.append({"id": cve_id})
-        
+
         return cves
 
     def _parse_cve_details(self, html: str, cve_id: str) -> Dict[str, Any]:
@@ -170,7 +171,7 @@ class CVECrawler:
             "last_modified_date": None,
             "cvss_score": None,
             "affected_products": [],
-            "references": []
+            "references": [],
         }
 
         # 解析描述
@@ -179,12 +180,12 @@ class CVECrawler:
         if desc_match:
             description = desc_match.group(1)
             # 清理HTML标签
-            description = re.sub(r'<[^>]+>', '', description)
+            description = re.sub(r"<[^>]+>", "", description)
             description = description.strip()
             details["description"] = description
 
         # 解析日期
-        date_pattern = r'Published:<\/td><td>([^<]+)<\/td>'
+        date_pattern = r"Published:<\/td><td>([^<]+)<\/td>"
         date_match = re.search(date_pattern, html)
         if date_match:
             try:
@@ -192,16 +193,18 @@ class CVECrawler:
             except:
                 pass
 
-        modified_pattern = r'Last Modified:<\/td><td>([^<]+)<\/td>'
+        modified_pattern = r"Last Modified:<\/td><td>([^<]+)<\/td>"
         modified_match = re.search(modified_pattern, html)
         if modified_match:
             try:
-                details["last_modified_date"] = datetime.strptime(modified_match.group(1), "%Y-%m-%d")
+                details["last_modified_date"] = datetime.strptime(
+                    modified_match.group(1), "%Y-%m-%d"
+                )
             except:
                 pass
 
         # 解析CVSS分数
-        cvss_pattern = r'CVSS v2 Severity:<\/td><td>([^<]+)<\/td>'
+        cvss_pattern = r"CVSS v2 Severity:<\/td><td>([^<]+)<\/td>"
         cvss_match = re.search(cvss_pattern, html)
         if cvss_match:
             details["cvss_score"] = cvss_match.group(1).strip()
@@ -228,13 +231,15 @@ class CVECrawler:
             # 构建内容
             content_parts = [
                 f"CVE ID: {cve_details['id']}",
-                f"Description: {cve_details['description']}"
+                f"Description: {cve_details['description']}",
             ]
 
             if cve_details.get("published_date"):
                 content_parts.append(f"Published: {cve_details['published_date'].isoformat()}")
             if cve_details.get("last_modified_date"):
-                content_parts.append(f"Last Modified: {cve_details['last_modified_date'].isoformat()}")
+                content_parts.append(
+                    f"Last Modified: {cve_details['last_modified_date'].isoformat()}"
+                )
             if cve_details.get("cvss_score"):
                 content_parts.append(f"CVSS Score: {cve_details['cvss_score']}")
             if cve_details.get("references"):
@@ -251,19 +256,27 @@ class CVECrawler:
 
             # 创建知识对象
             knowledge = Knowledge(
-                id=cve_details['id'],
+                id=cve_details["id"],
                 knowledge_type=KnowledgeType.vulnerability,
                 content=content,
                 source="CVE Database",
                 confidence=0.95,
                 tags=tags,
                 metadata={
-                    "cve_id": cve_details['id'],
-                    "published_date": cve_details.get("published_date").isoformat() if cve_details.get("published_date") else None,
-                    "last_modified_date": cve_details.get("last_modified_date").isoformat() if cve_details.get("last_modified_date") else None,
+                    "cve_id": cve_details["id"],
+                    "published_date": (
+                        cve_details.get("published_date").isoformat()
+                        if cve_details.get("published_date")
+                        else None
+                    ),
+                    "last_modified_date": (
+                        cve_details.get("last_modified_date").isoformat()
+                        if cve_details.get("last_modified_date")
+                        else None
+                    ),
                     "cvss_score": cve_details.get("cvss_score"),
-                    "references": cve_details.get("references")
-                }
+                    "references": cve_details.get("references"),
+                },
             )
 
             return knowledge

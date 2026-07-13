@@ -3,44 +3,46 @@ from typing import Any, Dict, List, Optional
 
 try:
     import asts
+
     HAS_ASTS = True
 except ImportError:
     HAS_ASTS = False
 
 
 LANGUAGE_MAP: Dict[str, str] = {
-    'python': 'Python',
-    'javascript': 'JavaScript',
-    'typescript': 'TypeScript',
-    'c': 'C',
-    'cpp': 'CPP',
-    'c++': 'CPP',
-    'go': 'Go',
-    'golang': 'Go',
-    'rust': 'Rust',
-    'java': 'Java',
-    'ruby': 'Ruby',
-    'php': 'PHP',
-    'csharp': 'CSharp',
-    'c#': 'CSharp',
+    "python": "Python",
+    "javascript": "JavaScript",
+    "typescript": "TypeScript",
+    "c": "C",
+    "cpp": "CPP",
+    "c++": "CPP",
+    "go": "Go",
+    "golang": "Go",
+    "rust": "Rust",
+    "java": "Java",
+    "ruby": "Ruby",
+    "php": "PHP",
+    "csharp": "CSharp",
+    "c#": "CSharp",
 }
 
 
 @dataclass
 class NormalizedNode:
     """标准化AST节点"""
+
     node_type: str
     value: Optional[str] = None
-    children: List['NormalizedNode'] = field(default_factory=list)
+    children: List["NormalizedNode"] = field(default_factory=list)
     attributes: Dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> Dict[str, Any]:
         """转换为字典格式"""
         return {
-            'node_type': self.node_type,
-            'value': self.value,
-            'children': [child.to_dict() for child in self.children],
-            'attributes': self.attributes,
+            "node_type": self.node_type,
+            "value": self.value,
+            "children": [child.to_dict() for child in self.children],
+            "attributes": self.attributes,
         }
 
 
@@ -135,7 +137,9 @@ class TreeSitterAdapter:
         except Exception as e:
             return self._parse_with_tree_sitter_fallback(source_code, language, e)
 
-    def _parse_with_tree_sitter_fallback(self, source_code: str, language: str, original_error: Exception) -> Any:
+    def _parse_with_tree_sitter_fallback(
+        self, source_code: str, language: str, original_error: Exception
+    ) -> Any:
         """使用原生tree-sitter作为回退方案"""
         try:
             import tree_sitter
@@ -167,33 +171,30 @@ class TreeSitterAdapter:
 
     def _convert_node(self, node: Any) -> NormalizedNode:
         """将原生节点转换为标准化格式"""
-        node_type = getattr(node, 'type', str(type(node)))
-        node_value = getattr(node, 'text', None)
+        node_type = getattr(node, "type", str(type(node)))
+        node_value = getattr(node, "text", None)
         if node_value and isinstance(node_value, bytes):
-            node_value = node_value.decode('utf-8', errors='replace')
+            node_value = node_value.decode("utf-8", errors="replace")
 
         children = []
         attributes = {}
 
-        if hasattr(node, 'children'):
+        if hasattr(node, "children"):
             for child in node.children:
                 children.append(self._convert_node(child))
 
-        if hasattr(node, 'named_children'):
-            attributes['named_children'] = len(node.named_children)
+        if hasattr(node, "named_children"):
+            attributes["named_children"] = len(node.named_children)
 
-        if hasattr(node, 'start_point') and hasattr(node, 'end_point'):
-            attributes['start_point'] = node.start_point
-            attributes['end_point'] = node.end_point
+        if hasattr(node, "start_point") and hasattr(node, "end_point"):
+            attributes["start_point"] = node.start_point
+            attributes["end_point"] = node.end_point
 
-        if hasattr(node, 'is_named'):
-            attributes['is_named'] = node.is_named
+        if hasattr(node, "is_named"):
+            attributes["is_named"] = node.is_named
 
         return NormalizedNode(
-            node_type=node_type,
-            value=node_value,
-            children=children,
-            attributes=attributes
+            node_type=node_type, value=node_value, children=children, attributes=attributes
         )
 
     def parse_to_normalized(self, source_code: str, language: str) -> List[NormalizedNode]:
@@ -209,7 +210,7 @@ class TreeSitterAdapter:
         """
         tree = self.parse(source_code, language)
 
-        if hasattr(tree, 'root_node'):
+        if hasattr(tree, "root_node"):
             root = tree.root_node
         else:
             root = tree
@@ -228,28 +229,34 @@ class TreeSitterAdapter:
         """
         functions = []
         function_keywords = {
-            'function_definition', 'function_declaration',
-            'method_definition', 'function'
+            "function_definition",
+            "function_declaration",
+            "method_definition",
+            "function",
         }
 
         def traverse(node: Any):
-            node_type = getattr(node, 'type', '')
+            node_type = getattr(node, "type", "")
 
             if node_type in function_keywords:
                 func_node = self._convert_node(node)
-                if hasattr(node, 'children'):
+                if hasattr(node, "children"):
                     for child in node.children:
-                        child_type = getattr(child, 'type', '')
-                        if 'identifier' in child_type:
-                            func_node.attributes['name'] = getattr(child, 'text', b'').decode('utf-8', errors='replace') if isinstance(getattr(child, 'text', b''), bytes) else getattr(child, 'text', '')
+                        child_type = getattr(child, "type", "")
+                        if "identifier" in child_type:
+                            func_node.attributes["name"] = (
+                                getattr(child, "text", b"").decode("utf-8", errors="replace")
+                                if isinstance(getattr(child, "text", b""), bytes)
+                                else getattr(child, "text", "")
+                            )
                             break
                 functions.append(func_node)
 
-            if hasattr(node, 'children'):
+            if hasattr(node, "children"):
                 for child in node.children:
                     traverse(child)
 
-        if hasattr(ast, 'root_node'):
+        if hasattr(ast, "root_node"):
             traverse(ast.root_node)
         else:
             traverse(ast)
@@ -267,28 +274,30 @@ class TreeSitterAdapter:
             类节点列表
         """
         classes = []
-        class_keywords = {
-            'class_definition', 'class_declaration', 'class'
-        }
+        class_keywords = {"class_definition", "class_declaration", "class"}
 
         def traverse(node: Any):
-            node_type = getattr(node, 'type', '')
+            node_type = getattr(node, "type", "")
 
             if node_type in class_keywords:
                 class_node = self._convert_node(node)
-                if hasattr(node, 'children'):
+                if hasattr(node, "children"):
                     for child in node.children:
-                        child_type = getattr(child, 'type', '')
-                        if 'identifier' in child_type or child_type == 'name':
-                            class_node.attributes['name'] = getattr(child, 'text', b'').decode('utf-8', errors='replace') if isinstance(getattr(child, 'text', b''), bytes) else getattr(child, 'text', '')
+                        child_type = getattr(child, "type", "")
+                        if "identifier" in child_type or child_type == "name":
+                            class_node.attributes["name"] = (
+                                getattr(child, "text", b"").decode("utf-8", errors="replace")
+                                if isinstance(getattr(child, "text", b""), bytes)
+                                else getattr(child, "text", "")
+                            )
                             break
                 classes.append(class_node)
 
-            if hasattr(node, 'children'):
+            if hasattr(node, "children"):
                 for child in node.children:
                     traverse(child)
 
-        if hasattr(ast, 'root_node'):
+        if hasattr(ast, "root_node"):
             traverse(ast.root_node)
         else:
             traverse(ast)
@@ -307,24 +316,28 @@ class TreeSitterAdapter:
         """
         imports = []
         import_keywords = {
-            'import_statement', 'import', 'import_from', 'require_statement',
-            'include_statement', 'use_statement'
+            "import_statement",
+            "import",
+            "import_from",
+            "require_statement",
+            "include_statement",
+            "use_statement",
         }
 
         def traverse(node: Any):
-            node_type = getattr(node, 'type', '')
+            node_type = getattr(node, "type", "")
 
             if node_type in import_keywords:
-                text = getattr(node, 'text', b'')
+                text = getattr(node, "text", b"")
                 if isinstance(text, bytes):
-                    text = text.decode('utf-8', errors='replace')
+                    text = text.decode("utf-8", errors="replace")
                 imports.append(text)
 
-            if hasattr(node, 'children'):
+            if hasattr(node, "children"):
                 for child in node.children:
                     traverse(child)
 
-        if hasattr(ast, 'root_node'):
+        if hasattr(ast, "root_node"):
             traverse(ast.root_node)
         else:
             traverse(ast)

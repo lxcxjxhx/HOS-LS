@@ -1,10 +1,10 @@
-from typing import TypeVar, Generic, Optional, Any, Dict, List, Union, Callable
 from abc import ABC, abstractmethod
+from typing import Any, Callable, Dict, Generic, List, Optional, TypeVar, Union
 
-K = TypeVar('K')
-V = TypeVar('V')
-T = TypeVar('T')
-E = TypeVar('E')
+K = TypeVar("K")
+V = TypeVar("V")
+T = TypeVar("T")
+E = TypeVar("E")
 
 
 class BaseMock(ABC):
@@ -17,7 +17,7 @@ class BaseMock(ABC):
         return self
 
     @classmethod
-    def _from_python(cls, value: Any) -> 'BaseMock':
+    def _from_python(cls, value: Any) -> "BaseMock":
         return cls()
 
 
@@ -104,21 +104,21 @@ class MockStdString(BaseMock):
         self._value = value
         self._original_name = "std::string"
 
-    def append(self, other: str) -> 'MockStdString':
+    def append(self, other: str) -> "MockStdString":
         self._value += other
         return self
 
-    def replace(self, pos: int, len_: int, other: str) -> 'MockStdString':
-        self._value = self._value[:pos] + other + self._value[pos + len_:]
+    def replace(self, pos: int, len_: int, other: str) -> "MockStdString":
+        self._value = self._value[:pos] + other + self._value[pos + len_ :]
         return self
 
-    def substr(self, pos: int = 0, len_: int = -1) -> 'MockStdString':
+    def substr(self, pos: int = 0, len_: int = -1) -> "MockStdString":
         if len_ == -1:
             return MockStdString(self._value[pos:])
-        return MockStdString(self._value[pos:pos + len_])
+        return MockStdString(self._value[pos : pos + len_])
 
     def c_str(self) -> str:
-        return self._value + '\0'
+        return self._value + "\0"
 
     def length(self) -> int:
         return len(self._value)
@@ -136,7 +136,7 @@ class MockStdString(BaseMock):
         return self._value
 
     @classmethod
-    def _from_python(cls, value: Any) -> 'MockStdString':
+    def _from_python(cls, value: Any) -> "MockStdString":
         return cls(str(value))
 
 
@@ -193,7 +193,7 @@ class MockStdVector(BaseMock, Generic[T]):
         return self._data
 
     @classmethod
-    def _from_python(cls, value: Any) -> 'MockStdVector':
+    def _from_python(cls, value: Any) -> "MockStdVector":
         return cls(list(value))
 
 
@@ -248,7 +248,7 @@ class MockStdMap(BaseMock, Generic[K, V]):
         return self._data
 
     @classmethod
-    def _from_python(cls, value: Any) -> 'MockStdMap':
+    def _from_python(cls, value: Any) -> "MockStdMap":
         return cls(dict(value))
 
 
@@ -259,13 +259,13 @@ class MockStdcout(BaseMock):
 
     @classmethod
     def print(cls, *args: Any) -> None:
-        output = ' '.join(str(arg) for arg in args)
+        output = " ".join(str(arg) for arg in args)
         cls._buffer.append(output)
 
     @classmethod
     def println(cls, *args: Any) -> None:
-        output = ' '.join(str(arg) for arg in args)
-        cls._buffer.append(output + '\n')
+        output = " ".join(str(arg) for arg in args)
+        cls._buffer.append(output + "\n")
 
     @classmethod
     def flush(cls) -> None:
@@ -287,13 +287,13 @@ class MockStdcerr(BaseMock):
 
     @classmethod
     def print(cls, *args: Any) -> None:
-        output = ' '.join(str(arg) for arg in args)
+        output = " ".join(str(arg) for arg in args)
         cls._buffer.append(output)
 
     @classmethod
     def println(cls, *args: Any) -> None:
-        output = ' '.join(str(arg) for arg in args)
-        cls._buffer.append(output + '\n')
+        output = " ".join(str(arg) for arg in args)
+        cls._buffer.append(output + "\n")
 
     @classmethod
     def flush(cls) -> None:
@@ -313,17 +313,17 @@ class MockFmt(BaseMock):
 
     @staticmethod
     def Print(*args: Any) -> str:
-        return ' '.join(str(arg) for arg in args)
+        return " ".join(str(arg) for arg in args)
 
     @staticmethod
     def Println(*args: Any) -> str:
-        return ' '.join(str(arg) for arg in args) + '\n'
+        return " ".join(str(arg) for arg in args) + "\n"
 
     @staticmethod
     def Sprintf(format_str: str, *args: Any) -> str:
         result = format_str
         for arg in args:
-            result = result.replace('{}', str(arg), 1)
+            result = result.replace("{}", str(arg), 1)
         return result
 
     @staticmethod
@@ -346,7 +346,7 @@ class MockStrconv(BaseMock):
     def FormatInt(i: int, base: int = 10) -> str:
         if base == 10:
             return str(i)
-        return format(i, 'b' if base == 2 else 'x' if base == 16 else 'd')
+        return format(i, "b" if base == 2 else "x" if base == 16 else "d")
 
     @staticmethod
     def ParseInt(s: str, base: int = 10) -> int:
@@ -354,7 +354,7 @@ class MockStrconv(BaseMock):
 
     @staticmethod
     def FormatFloat(f: float, precision: int = 6) -> str:
-        return format(f, f'.{precision}f')
+        return format(f, f".{precision}f")
 
     @staticmethod
     def ParseFloat(s: str) -> float:
@@ -429,21 +429,21 @@ class MockIo(BaseMock):
     _original_name = "io"
 
     class Reader(BaseMock):
-        def __init__(self, data: bytes = b''):
+        def __init__(self, data: bytes = b""):
             self._data = data
             self._position = 0
 
         def Read(self, p: bytearray) -> int:
             if self._position >= len(self._data):
                 return 0
-            chunk = self._data[self._position:self._position + len(p)]
+            chunk = self._data[self._position : self._position + len(p)]
             for i, b in enumerate(chunk):
                 p[i] = b
             self._position += len(chunk)
             return len(chunk)
 
         def ReadAll(self) -> bytes:
-            return self._data[self._position:]
+            return self._data[self._position :]
 
     class Writer(BaseMock):
         def __init__(self):
@@ -466,16 +466,16 @@ class MockOs(BaseMock):
     _files: Dict[str, bytes] = {}
 
     @classmethod
-    def Open(cls, path: str, mode: str = 'r') -> 'MockOs.File':
+    def Open(cls, path: str, mode: str = "r") -> "MockOs.File":
         return cls.File(path, mode)
 
     @classmethod
-    def Create(cls, path: str) -> 'MockOs.File':
-        return cls.File(path, 'w')
+    def Create(cls, path: str) -> "MockOs.File":
+        return cls.File(path, "w")
 
     @classmethod
     def Read(cls, path: str) -> bytes:
-        return cls._files.get(path, b'')
+        return cls._files.get(path, b"")
 
     @classmethod
     def Write(cls, path: str, data: bytes) -> None:
@@ -490,27 +490,27 @@ class MockOs(BaseMock):
         cls._files.clear()
 
     class File(BaseMock):
-        def __init__(self, path: str, mode: str = 'r'):
+        def __init__(self, path: str, mode: str = "r"):
             self._path = path
             self._mode = mode
             self._position = 0
-            self._data = MockOs._files.get(path, b'')
+            self._data = MockOs._files.get(path, b"")
 
         def Read(self, n: int = -1) -> bytes:
             if n == -1:
-                result = self._data[self._position:]
+                result = self._data[self._position :]
                 self._position = len(self._data)
             else:
-                result = self._data[self._position:self._position + n]
+                result = self._data[self._position : self._position + n]
                 self._position += n
             return result
 
         def Write(self, data: bytes) -> int:
-            if 'w' in self._mode or 'a' in self._mode:
+            if "w" in self._mode or "a" in self._mode:
                 if self._position >= len(self._data):
                     self._data += data
                 else:
-                    self._data = self._data[:self._position] + data
+                    self._data = self._data[: self._position] + data
                 MockOs._files[self._path] = self._data
                 self._position += len(data)
                 return len(data)
@@ -574,7 +574,7 @@ class MockVec(BaseMock, Generic[T]):
         return self._data
 
     @classmethod
-    def _from_python(cls, value: Any) -> 'MockVec':
+    def _from_python(cls, value: Any) -> "MockVec":
         return cls(list(value))
 
 
@@ -626,7 +626,7 @@ class MockHashMap(BaseMock, Generic[K, V]):
         return self._data
 
     @classmethod
-    def _from_python(cls, value: Any) -> 'MockHashMap':
+    def _from_python(cls, value: Any) -> "MockHashMap":
         return cls(dict(value))
 
 
@@ -639,17 +639,17 @@ class MockOption(Generic[T]):
         self._is_none = not is_some
 
     @classmethod
-    def Some(cls, value: T) -> 'MockOption[T]':
+    def Some(cls, value: T) -> "MockOption[T]":
         return cls(value, True)
 
     @classmethod
-    def None(cls) -> 'MockOption':
+    def none(cls) -> "MockOption":
         return cls(None, False)
 
-    def is_some(&self) -> bool:
+    def is_some(self) -> bool:
         return self._is_some
 
-    def is_none(&self) -> bool:
+    def is_none(self) -> bool:
         return self._is_none
 
     def unwrap(self) -> T:
@@ -662,10 +662,10 @@ class MockOption(Generic[T]):
             return self._value
         return default
 
-    def map(self, func: Callable[[T], Any]) -> 'MockOption':
+    def map(self, func: Callable[[T], Any]) -> "MockOption":
         if self._is_some:
             return MockOption.Some(func(self._value))
-        return MockOption.None()
+        return MockOption.none()
 
     def _to_python(self) -> Optional[T]:
         return self._value
@@ -681,17 +681,17 @@ class MockResult(BaseMock, Generic[T, E]):
         self._is_err = not is_ok
 
     @classmethod
-    def Ok(cls, value: T) -> 'MockResult[T, E]':
+    def Ok(cls, value: T) -> "MockResult[T, E]":
         return cls(value, None, True)
 
     @classmethod
-    def Err(cls, error: E) -> 'MockResult[T, E]':
+    def Err(cls, error: E) -> "MockResult[T, E]":
         return cls(None, error, False)
 
-    def is_ok(&self) -> bool:
+    def is_ok(self) -> bool:
         return self._is_ok
 
-    def is_err(&self) -> bool:
+    def is_err(self) -> bool:
         return self._is_err
 
     def unwrap(self) -> T:
@@ -709,7 +709,7 @@ class MockResult(BaseMock, Generic[T, E]):
             return self._value
         return default
 
-    def map(self, func: Callable[[T], Any]) -> 'MockResult':
+    def map(self, func: Callable[[T], Any]) -> "MockResult":
         if self._is_ok:
             return MockResult.Ok(func(self._value))
         return self
@@ -725,17 +725,17 @@ class MockPrint(BaseMock):
 
     @classmethod
     def println(cls, *args: Any) -> None:
-        output = ' '.join(str(arg) for arg in args)
+        output = " ".join(str(arg) for arg in args)
         cls._buffer.append(output)
 
     @classmethod
     def print(cls, *args: Any) -> None:
-        output = ' '.join(str(arg) for arg in args)
+        output = " ".join(str(arg) for arg in args)
         cls._buffer.append(output)
 
     @classmethod
     def eprintln(cls, *args: Any) -> None:
-        output = ' '.join(str(arg) for arg in args)
+        output = " ".join(str(arg) for arg in args)
         cls._buffer.append(output)
 
     @classmethod
@@ -754,19 +754,19 @@ class MockConsole(BaseMock):
 
     @classmethod
     def Write(cls, *args: Any) -> None:
-        output = ''.join(str(arg) for arg in args)
+        output = "".join(str(arg) for arg in args)
         cls._buffer.append(output)
 
     @classmethod
     def WriteLine(cls, *args: Any) -> None:
-        output = ''.join(str(arg) for arg in args)
-        cls._buffer.append(output + '\n')
+        output = "".join(str(arg) for arg in args)
+        cls._buffer.append(output + "\n")
 
     @classmethod
     def ReadLine(cls) -> str:
         if cls._buffer:
             return cls._buffer.pop(0)
-        return ''
+        return ""
 
     @classmethod
     def get_buffer(cls) -> List[str]:
@@ -786,13 +786,13 @@ class MockString(BaseMock):
 
     @staticmethod
     def Concat(*args: str) -> str:
-        return ''.join(str(arg) for arg in args)
+        return "".join(str(arg) for arg in args)
 
     @staticmethod
     def Format(format_str: str, *args: Any) -> str:
         result = format_str
         for i, arg in enumerate(args):
-            result = result.replace('{' + str(i) + '}', str(arg))
+            result = result.replace("{" + str(i) + "}", str(arg))
         return result
 
     def Contains(self, substr: str) -> bool:
@@ -825,7 +825,7 @@ class MockString(BaseMock):
     def Substring(self, start: int, length: int = -1) -> str:
         if length == -1:
             return self._value[start:]
-        return self._value[start:start + length]
+        return self._value[start : start + length]
 
     def Replace(self, old: str, new: str) -> str:
         return self._value.replace(old, new)
@@ -840,7 +840,7 @@ class MockString(BaseMock):
         return self._value
 
     @classmethod
-    def _from_python(cls, value: Any) -> 'MockString':
+    def _from_python(cls, value: Any) -> "MockString":
         return cls(str(value))
 
 
@@ -885,8 +885,8 @@ class MockList(BaseMock, Generic[T]):
     def Capacity(self) -> int:
         return len(self._data)
 
-    def GetRange(self, index: int, count: int) -> 'MockList[T]':
-        return MockList(self._data[index:index + count])
+    def GetRange(self, index: int, count: int) -> "MockList[T]":
+        return MockList(self._data[index : index + count])
 
     def __getitem__(self, index: int) -> T:
         return self._data[index]
@@ -904,7 +904,7 @@ class MockList(BaseMock, Generic[T]):
         return self._data
 
     @classmethod
-    def _from_python(cls, value: Any) -> 'MockList':
+    def _from_python(cls, value: Any) -> "MockList":
         return cls(list(value))
 
 
@@ -964,7 +964,7 @@ class MockDictionary(BaseMock, Generic[K, V]):
         return self._data
 
     @classmethod
-    def _from_python(cls, value: Any) -> 'MockDictionary':
+    def _from_python(cls, value: Any) -> "MockDictionary":
         return cls(dict(value))
 
 
@@ -999,7 +999,7 @@ def setup_python_module_mocks(language: str) -> Dict[str, Any]:
             "HashMap": MockHashMap,
             "Option": MockOption,
             "Option::Some": MockOption.Some,
-            "Option::None": MockOption.None,
+            "Option::None": MockOption.none,
             "Result": MockResult,
             "Result::Ok": MockResult.Ok,
             "Result::Err": MockResult.Err,

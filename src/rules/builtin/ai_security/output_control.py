@@ -213,9 +213,7 @@ class SchemaValidationMissingRule(BaseRule):
             r"tools\s*=",
         ]
 
-        self._compiled_llm_patterns = [
-            re.compile(p, re.IGNORECASE) for p in self._llm_api_patterns
-        ]
+        self._compiled_llm_patterns = [re.compile(p, re.IGNORECASE) for p in self._llm_api_patterns]
         self._compiled_schema_patterns = [
             re.compile(p, re.IGNORECASE) for p in self._schema_validation_patterns
         ]
@@ -247,7 +245,7 @@ class SchemaValidationMissingRule(BaseRule):
 
         for line_num, line in llm_call_lines:
             context_lines = max(0, line_num - 5), min(len(lines), line_num + 5)
-            context = "\n".join(lines[context_lines[0]:context_lines[1]])
+            context = "\n".join(lines[context_lines[0] : context_lines[1]])
 
             has_schema_validation = any(
                 pattern.search(context) for pattern in self._compiled_schema_patterns
@@ -364,9 +362,7 @@ class HallucinationRiskRule(BaseRule):
         self._compiled_factual_patterns = [
             re.compile(p, re.IGNORECASE) for p in self._factual_claim_patterns
         ]
-        self._compiled_rag_patterns = [
-            re.compile(p, re.IGNORECASE) for p in self._rag_patterns
-        ]
+        self._compiled_rag_patterns = [re.compile(p, re.IGNORECASE) for p in self._rag_patterns]
         self._compiled_safe_patterns = [
             re.compile(p, re.IGNORECASE) for p in self._safe_output_patterns
         ]
@@ -397,9 +393,7 @@ class HallucinationRiskRule(BaseRule):
             has_factual_claim = any(
                 pattern.search(line) for pattern in self._compiled_factual_patterns
             )
-            has_safe_output = any(
-                pattern.search(line) for pattern in self._compiled_safe_patterns
-            )
+            has_safe_output = any(pattern.search(line) for pattern in self._compiled_safe_patterns)
 
             if has_factual_claim and not has_safe_output:
                 context_start = max(0, line_num - 3)

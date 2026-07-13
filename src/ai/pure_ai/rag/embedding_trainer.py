@@ -4,13 +4,13 @@
 """
 
 import os
-import torch
-import numpy as np
-from pathlib import Path
-from typing import List, Tuple, Dict, Any, Optional
 from datetime import datetime
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
 
-from sentence_transformers import SentenceTransformer, InputExample, losses
+import numpy as np
+import torch
+from sentence_transformers import InputExample, SentenceTransformer, losses
 from sentence_transformers.evaluation import TripletEvaluator
 from sentence_transformers.training_args import SentenceTransformerTrainingArguments
 from transformers import TrainingArguments
@@ -52,7 +52,7 @@ class EmbeddingTrainer:
             else:
                 logger.info(f"加载基础模型: {self.base_model}")
                 self.model = SentenceTransformer(self.base_model)
-            
+
             self.model.to(self.device)
             logger.info(f"模型已加载到 {self.device} 设备")
             return self.model
@@ -70,24 +70,24 @@ class EmbeddingTrainer:
             InputExample 列表
         """
         examples = []
-        
+
         for anchor, positive, negative in triplets:
-            example = InputExample(
-                texts=[anchor, positive, negative]
-            )
+            example = InputExample(texts=[anchor, positive, negative])
             examples.append(example)
-        
+
         logger.info(f"准备了 {len(examples)} 个训练样本")
         return examples
 
-    def train(self, 
-              train_data: List[InputExample],
-              output_dir: Path,
-              epochs: int = 3,
-              batch_size: int = 32,
-              learning_rate: float = 1e-5,
-              warmup_steps: int = 100,
-              evaluation_data: Optional[List[Tuple[str, str, str]]] = None):
+    def train(
+        self,
+        train_data: List[InputExample],
+        output_dir: Path,
+        epochs: int = 3,
+        batch_size: int = 32,
+        learning_rate: float = 1e-5,
+        warmup_steps: int = 100,
+        evaluation_data: Optional[List[Tuple[str, str, str]]] = None,
+    ):
         """训练模型
 
         Args:
@@ -138,26 +138,28 @@ class EmbeddingTrainer:
             anchor_sentences = [triplet[0] for triplet in evaluation_data]
             positive_sentences = [triplet[1] for triplet in evaluation_data]
             negative_sentences = [triplet[2] for triplet in evaluation_data]
-            
+
             evaluator = TripletEvaluator(
                 anchor_sentences=anchor_sentences,
                 positive_sentences=positive_sentences,
                 negative_sentences=negative_sentences,
-                name="eval"
+                name="eval",
             )
 
         # 开始训练
         logger.info(f"开始训练模型，使用 {self.device} 设备")
-        logger.info(f"训练参数: epochs={epochs}, batch_size={batch_size}, learning_rate={learning_rate}")
+        logger.info(
+            f"训练参数: epochs={epochs}, batch_size={batch_size}, learning_rate={learning_rate}"
+        )
 
         from sentence_transformers import SentenceTransformerTrainer
-        
+
         trainer = SentenceTransformerTrainer(
             model=self.model,
             args=training_args,
             train_dataset=train_data,
             evaluator=evaluator,
-            loss=train_loss
+            loss=train_loss,
         )
 
         # 执行训练
@@ -172,13 +174,15 @@ class EmbeddingTrainer:
         self.model = SentenceTransformer(str(best_model_path))
         return self.model
 
-    def fine_tune_with_lora(self, 
-                          train_data: List[InputExample],
-                          output_dir: Path,
-                          lora_r: int = 16,
-                          lora_alpha: int = 32,
-                          epochs: int = 3,
-                          batch_size: int = 32):
+    def fine_tune_with_lora(
+        self,
+        train_data: List[InputExample],
+        output_dir: Path,
+        lora_r: int = 16,
+        lora_alpha: int = 32,
+        epochs: int = 3,
+        batch_size: int = 32,
+    ):
         """使用 LoRA 进行微调
 
         Args:
@@ -195,9 +199,9 @@ class EmbeddingTrainer:
         try:
             # 尝试使用 Unsloth 进行 LoRA 微调
             from unsloth import FastLanguageModel
-            
+
             logger.info("使用 Unsloth 进行 LoRA 微调")
-            
+
             # 加载模型
             model, tokenizer = FastLanguageModel.from_pretrained(
                 model_name=self.base_model,
@@ -213,8 +217,13 @@ class EmbeddingTrainer:
                 lora_alpha=lora_alpha,
                 lora_dropout=0.05,
                 target_modules=[
-                    "q_proj", "k_proj", "v_proj", "o_proj",
-                    "gate_proj", "up_proj", "down_proj"
+                    "q_proj",
+                    "k_proj",
+                    "v_proj",
+                    "o_proj",
+                    "gate_proj",
+                    "up_proj",
+                    "down_proj",
                 ],
                 bias="none",
                 use_gradient_checkpointing=True,
@@ -223,36 +232,30 @@ class EmbeddingTrainer:
             # 这里需要将 InputExample 转换为适合 Unsloth 的格式
             # 由于 Unsloth 主要针对 LLM，我们使用 SentenceTransformer 的训练流程
             # 但利用 Unsloth 的内存优化
-            
+
             logger.info("使用 Unsloth 内存优化进行训练")
             return self.train(
                 train_data=train_data,
                 output_dir=output_dir,
                 epochs=epochs,
                 batch_size=batch_size,
-                learning_rate=2e-5
+                learning_rate=2e-5,
             )
         except ImportError:
             logger.warning("Unsloth 未安装，使用标准 SentenceTransformer 训练")
             return self.train(
-                train_data=train_data,
-                output_dir=output_dir,
-                epochs=epochs,
-                batch_size=batch_size
+                train_data=train_data, output_dir=output_dir, epochs=epochs, batch_size=batch_size
             )
         except Exception as e:
             logger.error(f"LoRA 微调失败: {e}")
             # 回退到标准训练
             return self.train(
-                train_data=train_data,
-                output_dir=output_dir,
-                epochs=epochs,
-                batch_size=batch_size
+                train_data=train_data, output_dir=output_dir, epochs=epochs, batch_size=batch_size
             )
 
-    def evaluate(self, 
-                model_path: Path,
-                evaluation_data: List[Tuple[str, str, str]]) -> Dict[str, float]:
+    def evaluate(
+        self, model_path: Path, evaluation_data: List[Tuple[str, str, str]]
+    ) -> Dict[str, float]:
         """评估模型
 
         Args:
@@ -265,41 +268,41 @@ class EmbeddingTrainer:
         try:
             # 加载模型
             model = SentenceTransformer(str(model_path))
-            
+
             # 准备评估数据
             anchor_sentences = [triplet[0] for triplet in evaluation_data]
             positive_sentences = [triplet[1] for triplet in evaluation_data]
             negative_sentences = [triplet[2] for triplet in evaluation_data]
-            
+
             # 创建评估器
             evaluator = TripletEvaluator(
                 anchor_sentences=anchor_sentences,
                 positive_sentences=positive_sentences,
                 negative_sentences=negative_sentences,
-                name="eval"
+                name="eval",
             )
-            
+
             # 评估
             score = evaluator(model)
             logger.info(f"评估得分: {score}")
-            
+
             # 计算额外指标
             metrics = {
                 "score": score,
                 "recall@1": self._calculate_recall(model, evaluation_data, k=1),
                 "recall@5": self._calculate_recall(model, evaluation_data, k=5),
-                "mrr": self._calculate_mrr(model, evaluation_data)
+                "mrr": self._calculate_mrr(model, evaluation_data),
             }
-            
+
             logger.info(f"评估指标: {metrics}")
             return metrics
         except Exception as e:
             logger.error(f"评估失败: {e}")
             return {}
 
-    def _calculate_recall(self, model: SentenceTransformer, 
-                         evaluation_data: List[Tuple[str, str, str]], 
-                         k: int = 1) -> float:
+    def _calculate_recall(
+        self, model: SentenceTransformer, evaluation_data: List[Tuple[str, str, str]], k: int = 1
+    ) -> float:
         """计算 Recall@K
 
         Args:
@@ -312,31 +315,32 @@ class EmbeddingTrainer:
         """
         correct = 0
         total = len(evaluation_data)
-        
+
         for anchor, positive, negative in evaluation_data:
             # 生成嵌入
             anchor_embedding = model.encode(anchor)
             positive_embedding = model.encode(positive)
             negative_embedding = model.encode(negative)
-            
+
             # 计算相似度
             pos_sim = self._cosine_similarity(anchor_embedding, positive_embedding)
             neg_sim = self._cosine_similarity(anchor_embedding, negative_embedding)
-            
+
             # 排序
             similarities = [(pos_sim, "positive"), (neg_sim, "negative")]
             similarities.sort(reverse=True, key=lambda x: x[0])
-            
+
             # 检查前 K 个是否包含 positive
             for i in range(min(k, len(similarities))):
                 if similarities[i][1] == "positive":
                     correct += 1
                     break
-        
+
         return correct / total if total > 0 else 0
 
-    def _calculate_mrr(self, model: SentenceTransformer, 
-                      evaluation_data: List[Tuple[str, str, str]]) -> float:
+    def _calculate_mrr(
+        self, model: SentenceTransformer, evaluation_data: List[Tuple[str, str, str]]
+    ) -> float:
         """计算 MRR (Mean Reciprocal Rank)
 
         Args:
@@ -347,27 +351,27 @@ class EmbeddingTrainer:
             MRR 得分
         """
         reciprocal_ranks = []
-        
+
         for anchor, positive, negative in evaluation_data:
             # 生成嵌入
             anchor_embedding = model.encode(anchor)
             positive_embedding = model.encode(positive)
             negative_embedding = model.encode(negative)
-            
+
             # 计算相似度
             pos_sim = self._cosine_similarity(anchor_embedding, positive_embedding)
             neg_sim = self._cosine_similarity(anchor_embedding, negative_embedding)
-            
+
             # 排序
             similarities = [(pos_sim, "positive"), (neg_sim, "negative")]
             similarities.sort(reverse=True, key=lambda x: x[0])
-            
+
             # 计算 reciprocal rank
             for i, (_, label) in enumerate(similarities):
                 if label == "positive":
                     reciprocal_ranks.append(1 / (i + 1))
                     break
-        
+
         return sum(reciprocal_ranks) / len(reciprocal_ranks) if reciprocal_ranks else 0
 
     def _cosine_similarity(self, vec1: np.ndarray, vec2: np.ndarray) -> float:
@@ -383,10 +387,10 @@ class EmbeddingTrainer:
         dot_product = np.dot(vec1, vec2)
         norm1 = np.linalg.norm(vec1)
         norm2 = np.linalg.norm(vec2)
-        
+
         if norm1 == 0 or norm2 == 0:
             return 0.0
-        
+
         return dot_product / (norm1 * norm2)
 
     def save_model(self, model_path: Path):
@@ -427,7 +431,7 @@ class EmbeddingTrainer:
         try:
             # 加载模型
             model = SentenceTransformer(str(model_path))
-            
+
             # 导出为 ONNX
             onnx_path.mkdir(parents=True, exist_ok=True)
             model.export_onnx(str(onnx_path / "model.onnx"))
@@ -435,14 +439,16 @@ class EmbeddingTrainer:
         except Exception as e:
             logger.error(f"导出 ONNX 失败: {e}")
 
-    def create_training_script(self, 
-                             output_path: Path,
-                             train_data_path: Path,
-                             eval_data_path: Path,
-                             output_dir: Path,
-                             base_model: str = "BAAI/bge-base-en-v1.5",
-                             epochs: int = 3,
-                             batch_size: int = 32):
+    def create_training_script(
+        self,
+        output_path: Path,
+        train_data_path: Path,
+        eval_data_path: Path,
+        output_dir: Path,
+        base_model: str = "BAAI/bge-base-en-v1.5",
+        epochs: int = 3,
+        batch_size: int = 32,
+    ):
         """创建训练脚本
 
         Args:
@@ -492,7 +498,7 @@ print("训练完成！")
 """
 
         try:
-            with open(output_path, 'w', encoding='utf-8') as f:
+            with open(output_path, "w", encoding="utf-8") as f:
                 f.write(script_content)
             logger.info(f"训练脚本已创建到 {output_path}")
         except Exception as e:

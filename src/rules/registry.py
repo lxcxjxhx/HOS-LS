@@ -6,7 +6,7 @@
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Type, Union
 
-from src.rules.base import BaseRule, RuleCategory, RuleMetadata, RuleSeverity, RuleDefinition
+from src.rules.base import BaseRule, RuleCategory, RuleDefinition, RuleMetadata, RuleSeverity
 
 
 class RuleRegistry:
@@ -193,11 +193,12 @@ class RuleRegistry:
 
     def load_builtin_rules(self) -> int:
         """加载内置规则
-        
+
         Returns:
             加载的规则数量
         """
         from src.rules.loader import RuleLoader
+
         loader = RuleLoader(self)
         return loader.load_builtin_rules()
 

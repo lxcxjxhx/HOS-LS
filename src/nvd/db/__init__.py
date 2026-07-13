@@ -9,4 +9,4 @@ NVD数据库模块 (SQLite版本)
 from .sqlite_connection import SQLiteConnection
 from .sqlite_schema import SQLiteSche
 
-__all__ = ['SQLiteConnection', 'SQLiteSche']
+__all__ = ["SQLiteConnection", "SQLiteSche"]

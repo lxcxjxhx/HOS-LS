@@ -7,6 +7,6 @@ from .code_analysis_skill import CodeAnalysisSkill
 from .report_generation_skill import ReportGenerationSkill
 
 __all__ = [
-    'CodeAnalysisSkill',
-    'ReportGenerationSkill',
+    "CodeAnalysisSkill",
+    "ReportGenerationSkill",
 ]
