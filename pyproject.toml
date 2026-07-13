@@ -195,6 +195,10 @@ ignore_missing_imports = true
 minversion = "7.0"
 addopts = "-ra -q --strict-markers --strict-config"
 testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+norecursedirs = ["fixtures", ".venv", "venv", "build", "dist", ".git"]
 markers = [
     "unit: Unit tests",
     "integration: Integration tests",
