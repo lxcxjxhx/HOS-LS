@@ -142,7 +142,10 @@ class CheckpointManager:
 
     def should_auto_save(self) -> bool:
         self._files_since_last_save += 1
-        return self._files_since_last_save >= self.auto_save_interval
+        if self._files_since_last_save >= self.auto_save_interval:
+            self._files_since_last_save = 0
+            return True
+        return False
 
     def delete_checkpoint(self, checkpoint_id: str) -> bool:
         try:
