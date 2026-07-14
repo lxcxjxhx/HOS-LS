@@ -4,7 +4,7 @@
 """
 
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 from src.ai.pure_ai.rag.bm25_index import BM25Index
 from src.ai.pure_ai.rag.rule_matcher import RuleMatcher

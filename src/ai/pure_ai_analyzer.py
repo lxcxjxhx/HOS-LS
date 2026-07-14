@@ -7,12 +7,11 @@ import asyncio
 import json
 import os
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 from rich.console import Console
 
-from src.ai.client import AIProvider, get_model_manager
-from src.ai.models import AnalysisContext, SecurityAnalysisResult, VulnerabilityFinding
+from src.ai.models import VulnerabilityFinding
 from src.ai.pure_ai.cache import CacheManager
 from src.ai.pure_ai.multi_agent_pipeline import MultiAgentPipeline
 from src.ai.pure_ai.schema_validator import LineNumberValidator
@@ -63,8 +62,8 @@ class PureAIAnalyzer:
                 api_key = os.getenv("DEEPSEEK_API_KEY")
 
             if not api_key:
-                console.print(f"[yellow]WARNING: API 密钥未设置，纯AI分析器可能无法正常工作[/yellow]")
-                console.print(f"[dim]请设置环境变量 HOS_LS_AI_API_KEY 或 DEEPSEEK_API_KEY[/dim]")
+                console.print("[yellow]WARNING: API 密钥未设置，纯AI分析器可能无法正常工作[/yellow]")
+                console.print("[dim]请设置环境变量 HOS_LS_AI_API_KEY 或 DEEPSEEK_API_KEY[/dim]")
             else:
                 if self.config.debug:
                     console.print(f"[dim][DEBUG] API 密钥已设置 (长度: {len(api_key)})[/dim]")
@@ -83,7 +82,7 @@ class PureAIAnalyzer:
             self.model_manager = AIModelManager()
             await self.model_manager.initialize(temp_config)
             if self.config.debug:
-                console.print(f"[dim][DEBUG] 模型管理器初始化成功[/dim]")
+                console.print("[dim][DEBUG] 模型管理器初始化成功[/dim]")
 
             # 映射提供商名称到AIProvider枚举
             from src.ai.client import AIProvider
@@ -106,7 +105,7 @@ class PureAIAnalyzer:
             if not self.client:
                 # 尝试获取默认客户端
                 if self.config.debug:
-                    console.print(f"[dim][DEBUG] 尝试获取默认客户端[/dim]")
+                    console.print("[dim][DEBUG] 尝试获取默认客户端[/dim]")
                 self.client = self.model_manager.get_default_client()
                 if self.config.debug:
                     console.print(f"[dim][DEBUG] 默认客户端: {self.client}[/dim]")
@@ -114,14 +113,14 @@ class PureAIAnalyzer:
             if self.client:
                 # 验证API访问
                 if self.config.debug:
-                    console.print(f"[dim][DEBUG] 验证API访问...[/dim]")
+                    console.print("[dim][DEBUG] 验证API访问...[/dim]")
                 try:
                     is_available, error_msg = await self.client.validate_api_access()
                     if is_available:
-                        console.print(f"[green][OK] API访问验证成功[/green]")
+                        console.print("[green][OK] API访问验证成功[/green]")
                     else:
                         console.print(f"[red][X] API访问验证失败: {error_msg}[/red]")
-                        console.print(f"[yellow][!] 纯AI分析器将以降级模式运行[/yellow]")
+                        console.print("[yellow][!] 纯AI分析器将以降级模式运行[/yellow]")
                 except Exception as e:
                     console.print(f"[yellow][!] API访问验证异常: {e}[/yellow]")
 
@@ -133,8 +132,8 @@ class PureAIAnalyzer:
                     f"[green][OK] 纯AI分析器初始化成功[/green] (提供商: {self.ai_provider}, 模型: {self.ai_model})"
                 )
             else:
-                console.print(f"[red][X] 纯AI分析器初始化失败：无法获取AI客户端[/red]")
-                console.print(f"[dim]请检查API密钥配置和网络连接[/dim]")
+                console.print("[red][X] 纯AI分析器初始化失败：无法获取AI客户端[/red]")
+                console.print("[dim]请检查API密钥配置和网络连接[/dim]")
         except Exception as e:
             console.print(f"[red][X] 纯AI分析器初始化失败: {e}[/red]")
             import traceback
@@ -173,7 +172,7 @@ class PureAIAnalyzer:
 
         # 验证结果完整性
         if not self._validate_results(result):
-            print(f"[DEBUG] 结果验证失败，可能存在遗漏")
+            print("[DEBUG] 结果验证失败，可能存在遗漏")
 
         # 缓存结果
         self.cache_manager.set(file_path, result)
@@ -495,7 +494,7 @@ class PureAIAnalyzer:
                     ):
                         return {
                             "is_valid": False,
-                            "reason": f"声称的问题代码模式在指定位置附近未找到匹配",
+                            "reason": "声称的问题代码模式在指定位置附近未找到匹配",
                             "file": check_file,
                             "line": line_num,
                         }
@@ -921,11 +920,11 @@ class PureAIAnalyzer:
 
         # 蛇形命名关键词映射
         word_mapping = {
-            "csrf": "CSRF",
+            "csr": "CSRF",
             "xss": "XSS",
             "sql": "SQL",
             "rce": "远程代码执行",
-            "ssrf": "SSRF",
+            "ssr": "SSRF",
             "xxe": "XXE",
             "cors": "CORS",
             "jwt": "JWT",
@@ -1090,18 +1089,19 @@ class PureAIAnalyzer:
         if not vulnerability:
             return "未知漏洞"
 
-        nvd_context = ""
+        # nvd_context = ""
         if self.nvd_adapter and self.nvd_adapter.is_available():
             try:
                 keywords = [vulnerability]
                 cwe_results = self.nvd_adapter.match_cwe(keywords, limit=1)
                 if cwe_results and len(cwe_results) > 0:
-                    cwe_info = cwe_results[0]
-                    nvd_context = cwe_info.get("cwe_description", "")
+                    # cwe_info = cwe_results[0]
+                    # nvd_context = cwe_info.get("cwe_description", "")
+                    pass
             except Exception:
                 pass
 
-        prompt = f"""你是一个安全漏洞专家。请将以下漏洞名称翻译为中文。
+        prompt = """你是一个安全漏洞专家。请将以下漏洞名称翻译为中文。
 
 漏洞名称: {vulnerability}
 {f'相关NVD描述: {nvd_context}' if nvd_context else ''}
@@ -1178,16 +1178,17 @@ class PureAIAnalyzer:
         """
         vuln_upper = vulnerability.upper()
         evidence_list = finding.get("evidence", [])
-        evidence_text = ""
+        # evidence_text = ""  # noqa: F841 - 保留用于后续扩展
         if evidence_list and isinstance(evidence_list, list):
-            evidence_text = " ".join(
-                [
-                    e.get("reason", e.get("description", "")) if isinstance(e, dict) else str(e)
-                    for e in evidence_list[:3]
-                ]
-            )
+            # evidence_text = " ".join(
+            #     [
+            #         e.get("reason", e.get("description", "")) if isinstance(e, dict) else str(e)
+            #         for e in evidence_list[:3]
+            #     ]
+            # )
+            pass
 
-        combined = f"{vuln_upper} {evidence_text.upper()}"
+        # combined = f"{vuln_upper} {evidence_text.upper()}"
 
         if "SQL" in vuln_upper or "INJECT" in vuln_upper:
             return "SQL注入漏洞：攻击者可通过在用户输入中注入恶意SQL语句来操作数据库，可能导致敏感数据泄露、数据篡改或服务器沦陷。常见于使用字符串拼接构建SQL查询的场景。"
@@ -1472,7 +1473,7 @@ class PureAIAnalyzer:
             if len(final_findings) == 0:
                 vuln_verif = result.get("vulnerability_verification", {})
                 vulnerabilities = vuln_verif.get("vulnerabilities", [])
-                risks = vuln_verif.get("risks", [])
+                # risks = vuln_verif.get("risks", [])
 
                 def get_verification_state(v):
                     return v.get("signal_state") or v.get("verification_decision") or "UNKNOWN"
@@ -1507,7 +1508,7 @@ class PureAIAnalyzer:
                                     if "%" in item_confidence
                                     else 0.5
                                 )
-                            except:
+                            except BaseException:
                                 item_confidence = 0.5
 
                         if verdict == "ESCALATE" and item_confidence < MIN_CONFIDENCE:
@@ -1854,7 +1855,7 @@ class PureAIAnalyzer:
                                 }
                             )
 
-                print(f"[DEBUG] Fallback 检查:")
+                print("[DEBUG] Fallback 检查:")
                 print(
                     f"  - vulnerability_verification.vulnerabilities (CONFIRMED): {len(confirmed)}"
                 )
@@ -2053,7 +2054,7 @@ class PureAIAnalyzer:
                                 strict_unverified.append(v)
                         final_findings = strict_unverified
                     else:
-                        print(f"[DEBUG] [紧急Fallback] 所有标准源为空，检查是否存在未处理的tracker信号...")
+                        print("[DEBUG] [紧急Fallback] 所有标准源为空，检查是否存在未处理的tracker信号...")
                         if hasattr(self, "pipeline") and hasattr(
                             self.pipeline, "evidence_chain_tracker"
                         ):
@@ -2105,13 +2106,13 @@ class PureAIAnalyzer:
                                 )
                                 final_findings = tracker_findings
                             else:
-                                print(f"[DEBUG] Fallback: 未找到任何漏洞")
+                                print("[DEBUG] Fallback: 未找到任何漏洞")
                                 final_findings = []
                         else:
-                            print(f"[DEBUG] Fallback: 未找到任何漏洞")
+                            print("[DEBUG] Fallback: 未找到任何漏洞")
                             final_findings = []
                 else:
-                    print(f"[DEBUG] Fallback: 未找到任何漏洞")
+                    print("[DEBUG] Fallback: 未找到任何漏洞")
 
             # 计算总漏洞数
             total_vulnerabilities = len(final_findings)
@@ -2207,7 +2208,7 @@ class PureAIAnalyzer:
                         severity = severity.split(".")[-1]
 
                     # 保存原始严重级别
-                    original_severity = severity
+                    # original_severity = severity
 
                     # 处理置信度，避免空字符串转换错误
                     confidence_value = finding.get("confidence", 50)
@@ -2517,7 +2518,7 @@ class PureAIAnalyzer:
             )
 
             if has_potential_findings:
-                print(f"[WARN] Agent 6 判定无漏洞，但其他 Agent 发现了潜在漏洞")
+                print("[WARN] Agent 6 判定无漏洞，但其他 Agent 发现了潜在漏洞")
                 print(
                     f"[WARN]   - risk_enumeration potential_vulnerabilities: {len(potential_vulns)}"
                 )
@@ -2554,7 +2555,7 @@ class PureAIAnalyzer:
             # 确保已初始化
             if not self.initialized:
                 if self.config.debug:
-                    console.print(f"[dim][DEBUG] 纯AI分析器未初始化，正在初始化...[/dim]")
+                    console.print("[dim][DEBUG] 纯AI分析器未初始化，正在初始化...[/dim]")
                 await self._initialize()
                 if not self.initialized:
                     console.print(f"[red][X] 纯AI分析器初始化失败，跳过分析: {file_info.path}[/red]")
@@ -2644,7 +2645,7 @@ class PureAIAnalyzer:
         from pathlib import Path
 
         dependency_files = {}
-        all_file_paths = [str(fi.path) for fi in file_infos]
+        # all_file_paths = [str(fi.path) for fi in file_infos]
 
         for file_info in file_infos:
             file_name = Path(file_info.path).name.lower()
@@ -2777,12 +2778,14 @@ class PureAIAnalyzer:
 
         task_id = None
         with progress:
-            task_id = progress.add_task(f"[cyan]AI analyzing files...", total=len(suspicious_files))
+            task_id = progress.add_task("[cyan]AI analyzing files...", total=len(suspicious_files))
 
             async def analyze_with_limit(idx, file_info):
                 async with semaphore:
                     if self.config.debug:
-                        print(f"[DEBUG] AI 分析文件 {idx+1}/{len(suspicious_files)}: {file_info.path}")
+                        print(
+                            f"[DEBUG] AI 分析文件 {idx + 1}/{len(suspicious_files)}: {file_info.path}"
+                        )
                     result = await self.analyze_file(file_info)
                     if task_id is not None:
                         progress.update(
@@ -2902,7 +2905,7 @@ class PureAIAnalyzer:
         filled_gaps_count = 0
 
         if all_ai_findings and project_libraries and nvd_vulnerabilities:
-            print(f"[DEBUG] [Triple Verification] Starting NVD CVE similarity verification...")
+            print("[DEBUG] [Triple Verification] Starting NVD CVE similarity verification...")
 
             verified_library_names = {v.library_name for v in nvd_vulnerabilities}
 
@@ -3003,10 +3006,10 @@ class PureAIAnalyzer:
                     print(f"[DEBUG]   - {hw['rule_name']} ({hw['library_name']})")
             print(f"[DEBUG] [Triple Verification] Gap-filling (NVD): {filled_gaps_count}")
 
-        print(f"[DEBUG] [Triple Verification] Starting file path and code snippet verification...")
+        print("[DEBUG] [Triple Verification] Starting file path and code snippet verification...")
 
         try:
-            from src.analyzers.finding_verifier import FindingVerifier, verify_ai_findings
+            from src.analyzers.finding_verifier import verify_ai_findings
 
             all_findings = [f for findings in results for f in findings]
             if all_findings:
@@ -3043,7 +3046,7 @@ class PureAIAnalyzer:
                     1 for v in verification_results if v["verification_level"] == "single_verified"
                 )
 
-                print(f"[DEBUG] [Triple Verification] Path/Code verification results:")
+                print("[DEBUG] [Triple Verification] Path/Code verification results:")
                 print(f"[DEBUG]   - Total findings: {len(all_findings)}")
                 print(f"[DEBUG]   - Triple verified: {triple_verified}")
                 print(f"[DEBUG]   - Double verified: {double_verified}")
@@ -3054,7 +3057,7 @@ class PureAIAnalyzer:
                 print(f"[DEBUG]   - Potential hallucinations: {hallucination_count}")
 
                 if hallucination_count > 0:
-                    print(f"[DEBUG] [Triple Verification] Potential hallucinations detected:")
+                    print("[DEBUG] [Triple Verification] Potential hallucinations detected:")
                     hallucinated_indices = set()
                     for i, v in enumerate(verification_results):
                         if v["is_hallucination"]:
@@ -3099,7 +3102,7 @@ class PureAIAnalyzer:
         """
         try:
             if self.config.debug:
-                console.print(f"[dim][DEBUG] 开始从断点恢复扫描[/dim]")
+                console.print("[dim][DEBUG] 开始从断点恢复扫描[/dim]")
 
             processed_files = checkpoint_data.get("processed_files", [])
             pending_files = checkpoint_data.get("pending_files", [])
@@ -3113,7 +3116,7 @@ class PureAIAnalyzer:
             if not self.initialized:
                 await self._initialize()
                 if not self.initialized:
-                    console.print(f"[red][X] 纯AI分析器初始化失败，无法恢复扫描[/red]")
+                    console.print("[red][X] 纯AI分析器初始化失败，无法恢复扫描[/red]")
                     return results
 
             # 继续处理未完成的部分
@@ -3236,7 +3239,7 @@ class PureAIAnalyzer:
                     cached_idx += 1
 
             if self.config.debug:
-                console.print(f"[dim][DEBUG] 增量扫描完成[/dim]")
+                console.print("[dim][DEBUG] 增量扫描完成[/dim]")
 
             return results
 
@@ -3255,7 +3258,7 @@ class PureAIAnalyzer:
         """
         self.context_memory = context_memory
         if self.config.debug:
-            console.print(f"[dim][DEBUG] 上下文记忆管理器已设置[/dim]")
+            console.print("[dim][DEBUG] 上下文记忆管理器已设置[/dim]")
 
     def set_checkpoint_callback(self, callback) -> None:
         """设置检查点回调函数
@@ -3265,4 +3268,4 @@ class PureAIAnalyzer:
         """
         self.checkpoint_callback = callback
         if self.config.debug:
-            console.print(f"[dim][DEBUG] 检查点回调函数已设置[/dim]")
+            console.print("[dim][DEBUG] 检查点回调函数已设置[/dim]")

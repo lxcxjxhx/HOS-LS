@@ -325,7 +325,6 @@ class HybridStore:
         ]
 
         # 4. Rerank结果
-        import asyncio
 
         reranked_results = await self.semantic_engine.rerank_results(query, sorted_results)
 

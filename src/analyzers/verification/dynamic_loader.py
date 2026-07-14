@@ -12,7 +12,7 @@ from typing import Any, Dict, List, Optional, Type
 
 import yaml
 
-from .interfaces import ValidationResult, Validator, VulnContext
+from .interfaces import Validator
 
 _VALIDATOR_REGISTRY: Dict[str, Type[Validator]] = {}
 
@@ -66,7 +66,7 @@ class DynamicLoader:
 
     def _init_import_path(self) -> None:
         """初始化导入路径，确保 src 模块可导入"""
-        src_path = self.project_root / "src"
+        # src_path = self.project_root / "src"
         parent_path = self.project_root
 
         if str(parent_path) not in sys.path:

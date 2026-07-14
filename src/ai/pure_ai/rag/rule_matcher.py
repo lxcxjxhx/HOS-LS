@@ -4,7 +4,7 @@
 """
 
 import re
-from typing import Any, Dict, List, Optional, Pattern
+from typing import Any, Dict, List, Pattern
 
 from src.utils.logger import get_logger
 

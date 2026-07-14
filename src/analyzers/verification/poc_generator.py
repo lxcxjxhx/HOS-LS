@@ -8,7 +8,7 @@ import tempfile
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from .interfaces import ValidationResult, VulnContext
+from .interfaces import VulnContext
 from .method_storage import MethodDefinition, MethodStorage
 
 
@@ -374,7 +374,7 @@ class AIPOCGenerator:
         if not poc_class:
             return {"error": f"Unknown vulnerability type: {vuln_type}"}
 
-        context_data = {"target": target, "vuln_type": vuln_type, "additional_params": params}
+        # context_data = {"target": target, "vuln_type": vuln_type, "additional_params": params}
 
         with tempfile.NamedTemporaryFile(
             mode="w", suffix=".py", delete=False, encoding="utf-8"
@@ -469,7 +469,7 @@ class AIPOCGenerator:
         defaults = {
             "sql_injection": r'\$\{.*?\}|".*?"\s*\+',
             "auth_bypass": r"@Secured\(|@PermitAll",
-            "ssrf": r"RestTemplate|URL\(",
+            "ssr": r"RestTemplate|URL\(",
             "xss": r"\.innerHTML\s*=",
             "deserialization": r"ObjectInputStream",
             "path_traversal": r"new File\(|Paths\.get\(",
@@ -661,10 +661,10 @@ class AIPOCGenerator:
             实际可执行的 POC Python 代码
         """
         vuln_type = context.vuln_type
-        file_path = context.file_path
-        line_number = context.line_number
-        code_snippet = context.code_snippet
-        extracted_params = self._extract_params_from_code(code_snippet, vuln_type)
+        # file_path = context.file_path
+        # line_number = context.line_number
+        # code_snippet = context.code_snippet  # noqa: F841
+        # extracted_params = self._extract_params_from_code(code_snippet, vuln_type)  # noqa: F841
 
         base_imports = '''#!/usr/bin/env python3
 """
@@ -689,16 +689,16 @@ logger = logging.getLogger('POC')
 '''
 
         if vuln_type == "sql_injection":
-            param = (
-                extracted_params.get("injection_params", ["id"])[0]
-                if extracted_params.get("injection_params")
-                else "id"
-            )
-            query_type = extracted_params.get("query_type", "unknown")
+            # param = (
+            #     extracted_params.get("injection_params", ["id"])[0]
+            #     if extracted_params.get("injection_params")
+            #     else "id"
+            # )
+            # query_type = extracted_params.get("query_type", "unknown")
 
             return (
                 base_imports
-                + f"""
+                + """
 def main():
     target = sys.argv[1] if len(sys.argv) > 1 else 'http://localhost:8080/api/endpoint'
 
@@ -725,7 +725,7 @@ if __name__ == '__main__':
         elif vuln_type == "auth_bypass":
             return (
                 base_imports
-                + f"""
+                + """
 def main():
     target = sys.argv[1] if len(sys.argv) > 1 else 'http://localhost:8080/api/endpoint'
 
@@ -749,12 +749,12 @@ if __name__ == '__main__':
 """
             )
         elif vuln_type == "ssrf":
-            url_params = extracted_params.get("url_params", ["url"])
-            param = url_params[0] if url_params else "url"
+            # url_params = extracted_params.get("url_params", ["url"])
+            # param = url_params[0] if url_params else "url"
 
             return (
                 base_imports
-                + f"""
+                + """
 def main():
     target = sys.argv[1] if len(sys.argv) > 1 else 'http://localhost:8080/api/fetch'
 
@@ -779,12 +779,12 @@ if __name__ == '__main__':
 """
             )
         elif vuln_type == "deserialization":
-            ser_type = extracted_params.get("serialization_type", "java")
-            param = "data"
+            # ser_type = extracted_params.get("serialization_type", "java")
+            # param = "data"  # noqa: F841
 
             return (
                 base_imports
-                + f"""
+                + """
 def main():
     target = sys.argv[1] if len(sys.argv) > 1 else 'http://localhost:8080/api/deserialize'
 
@@ -809,12 +809,12 @@ if __name__ == '__main__':
 """
             )
         elif vuln_type == "command_injection":
-            cmd_type = extracted_params.get("command_type", "unknown")
-            param = extracted_params.get("command_param", "cmd")
+            # cmd_type = extracted_params.get("command_type", "unknown")
+            # param = extracted_params.get("command_param", "cmd")
 
             return (
                 base_imports
-                + f"""
+                + """
 def main():
     target = sys.argv[1] if len(sys.argv) > 1 else 'http://localhost:8080/api/exec'
 
@@ -839,12 +839,12 @@ if __name__ == '__main__':
 """
             )
         elif vuln_type == "xxe":
-            xml_type = extracted_params.get("xml_parser_type", "unknown")
-            param = extracted_params.get("xml_param", "data")
+            # xml_type = extracted_params.get("xml_parser_type", "unknown")
+            # param = extracted_params.get("xml_param", "data")
 
             return (
                 base_imports
-                + f"""
+                + """
 def main():
     target = sys.argv[1] if len(sys.argv) > 1 else 'http://localhost:8080/api/xml'
 
@@ -869,12 +869,12 @@ if __name__ == '__main__':
 """
             )
         elif vuln_type == "xss":
-            xss_type = extracted_params.get("xss_type", "unknown")
-            param = extracted_params.get("xss_param", "input")
+            # xss_type = extracted_params.get("xss_type", "unknown")
+            # param = extracted_params.get("xss_param", "input")
 
             return (
                 base_imports
-                + f"""
+                + """
 def main():
     target = sys.argv[1] if len(sys.argv) > 1 else 'http://localhost:8080/api/input'
 
@@ -985,7 +985,7 @@ if __name__ == '__main__':
         else:
             return (
                 base_imports
-                + f"""
+                + """
 def main():
     target = sys.argv[1] if len(sys.argv) > 1 else 'http://localhost:8080'
 
@@ -1160,7 +1160,7 @@ if __name__ == '__main__':
         else:
             return (
                 base_imports
-                + f"""
+                + """
 def main():
     target = sys.argv[1] if len(sys.argv) > 1 else 'http://localhost:8080'
 

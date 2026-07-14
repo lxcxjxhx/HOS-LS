@@ -1,7 +1,6 @@
 import functools
-import hashlib
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from langgraph.graph import END, StateGraph
 
@@ -15,15 +14,8 @@ from src.cache.manager import CacheManager
 from src.core.chunk_processor import ChunkProcessor
 from src.core.engine import Finding, Location, ScanResult, Severity
 from src.core.fusion_agent import FusionAgent
-from src.core.langgraph_state import (
-    AgentState,
-    ScanState,
-    evaluate_complexity,
-    should_use_graph,
-    should_use_rag,
-)
+from src.core.langgraph_state import AgentState, ScanState, evaluate_complexity, should_use_graph
 from src.core.rag_graph_integrator import get_rag_graph_integrator
-from src.db.neo4j_connection import Neo4jManager
 from src.security.security_checker import get_security_checker
 from src.storage.rag_knowledge_base import RAGKnowledgeBase
 from src.taint.analyzer import TaintAnalyzer
@@ -42,7 +34,7 @@ def cache_result(func):
     @functools.wraps(func)
     async def wrapper(state: ScanState):
         # 生成缓存键
-        cache_key = hashlib.md5(f"{func.__name__}:{state.target}".encode()).hexdigest()
+        # cache_key = hashlib.md5(f"{func.__name__}:{state.target}".encode()).hexdigest()
 
         # 跳过缓存，因为ScanState对象可能无法序列化
         # 后续可以实现更复杂的缓存策略
@@ -169,7 +161,7 @@ async def retrieve_cve(state: ScanState) -> ScanState:
 
         return state.update(rag_results=rag_results, needs_graph=needs_graph)
 
-    except Exception as e:
+    except Exception:
         # 出错时继续流程
         return state.update(rag_results=[], needs_graph=False)
 
@@ -209,7 +201,7 @@ async def query_graph(state: ScanState) -> ScanState:
 
         return state.update(graph_query_results=graph_results)
 
-    except Exception as e:
+    except Exception:
         # 出错时继续流程
         return state.update(graph_query_results=[])
 
@@ -738,7 +730,7 @@ async def run_scan(target: str, config: Any) -> ScanResult:
         # 处理分析结果
         if "final_report" in result:
             final_report = result["final_report"]
-            print(f"📋 扫描结果: 分析完成")
+            print("📋 扫描结果: 分析完成")
 
             # 添加分析结果到扫描结果中
             from src.core.engine import Finding, Location, Severity
@@ -821,7 +813,7 @@ async def retrieval_node(state: AgentState) -> AgentState:
 
         return {**state, "cve_candidates": cve_candidates}
 
-    except Exception as e:
+    except Exception:
         # 出错时返回空列表
         return {**state, "cve_candidates": []}
 
@@ -893,7 +885,7 @@ async def graph_node(state: AgentState) -> AgentState:
 
         return {**state, "graph_subgraph": attack_chain}
 
-    except Exception as e:
+    except Exception:
         # 出错时返回空字典
         return {
             **state,
@@ -942,24 +934,24 @@ async def reasoning_node(state: AgentState) -> AgentState:
         print("[DEBUG] DSPy 漏洞分析完成")
 
         # 构建分析结果
-        analysis_result = f"# 漏洞分析结果\n\n"
-        analysis_result += f"## 基础信息\n"
+        analysis_result = "# 漏洞分析结果\n\n"
+        analysis_result += "## 基础信息\n"
         analysis_result += f"- 代码复杂度: {complexity:.2f}\n"
         analysis_result += f"- CVE候选数量: {len(state.get('cve_candidates', []))}\n"
         analysis_result += (
-            f"- 攻击链数量: {graph_subgraph.get('statistics', {}).get('total_chains', 0)}\n"
+            "- 攻击链数量: {graph_subgraph.get('statistics', {}).get('total_chains', 0)}\n"
         )
         analysis_result += (
-            f"- 平均相似度: {graph_subgraph.get('statistics', {}).get('average_score', 0):.2f}\n\n"
+            "- 平均相似度: {graph_subgraph.get('statistics', {}).get('average_score', 0):.2f}\n\n"
         )
 
-        analysis_result += f"## 漏洞分析\n"
+        analysis_result += "## 漏洞分析\n"
         analysis_result += f"{result.vulnerabilities}\n\n"
 
-        analysis_result += f"## 利用方式\n"
+        analysis_result += "## 利用方式\n"
         analysis_result += f"{result.exploitation}\n\n"
 
-        analysis_result += f"## 修复建议\n"
+        analysis_result += "## 修复建议\n"
         analysis_result += f"{result.fix_suggestions}\n"
 
         return {**state, "analysis_result": analysis_result}
@@ -967,10 +959,10 @@ async def reasoning_node(state: AgentState) -> AgentState:
     except Exception as e:
         print(f"[DEBUG] 推理节点出错: {e}")
         # 出错时使用默认逻辑
-        analysis_result = f"# 漏洞分析结果\n\n"
-        analysis_result += f"## 基础信息\n"
+        analysis_result = "# 漏洞分析结果\n\n"
+        analysis_result += "## 基础信息\n"
         analysis_result += f"- CVE候选数量: {len(state.get('cve_candidates', []))}\n"
-        analysis_result += f"- 攻击链数量: {state.get('graph_subgraph', {}).get('statistics', {}).get('total_chains', 0)}\n\n"
+        analysis_result += "- 攻击链数量: {state.get('graph_subgraph', {}).get('statistics', {}).get('total_chains', 0)}\n\n"
         analysis_result += "## 详细分析\n"
         analysis_result += "基于检索结果和攻击链分析，发现潜在的安全漏洞\n"
         analysis_result += "建议进一步深入分析以确定具体的漏洞类型和修复方案\n"
@@ -1098,7 +1090,6 @@ async def critic_node(state: AgentState) -> AgentState:
             print(f"[DEBUG] 评估器执行成功: {evaluation['overall']:.2f}")
         except Exception as eval_error:
             print(f"[DEBUG] 评估器执行失败: {eval_error}")
-            pass
 
         if quality_score < 60 or evaluation["overall"] < 0.6:
             # 质量不达标，需要重试
@@ -1149,8 +1140,8 @@ async def repair_node(state: AgentState) -> AgentState:
         final_report = state.get("final_report", {})
 
         # 生成详细的修复建议
-        fix_suggestions = f"# 详细修复建议\n\n"
-        fix_suggestions += f"## 具体修复方案\n"
+        fix_suggestions = "# 详细修复建议\n\n"
+        fix_suggestions += "## 具体修复方案\n"
         fix_suggestions += f"{result.fix_suggestions}\n\n"
 
         # 添加代码示例（如果可能）
@@ -1173,7 +1164,7 @@ async def repair_node(state: AgentState) -> AgentState:
 
         return {**state, "final_report": final_report}
 
-    except Exception as e:
+    except Exception:
         # 出错时使用默认逻辑
         final_report = state.get("final_report", {})
 
@@ -1247,35 +1238,3 @@ def compile_agent_graph():
     """
     graph = create_agent_graph()
     return graph.compile()
-
-
-async def analyze_code(code: str) -> Dict[str, Any]:
-    """分析代码
-
-    Args:
-        code: 代码内容
-
-    Returns:
-        Dict[str, Any]: 分析结果
-    """
-    try:
-        # 创建初始状态
-        initial_state: AgentState = {
-            "input_code": code,
-            "cve_candidates": [],
-            "graph_subgraph": {},
-            "analysis_result": "",
-            "final_report": {},
-            "iteration": 0,
-        }
-
-        # 编译图
-        app = compile_agent_graph()
-
-        # 运行流程
-        result = await app.ainvoke(initial_state)
-
-        return result
-
-    except Exception as e:
-        return {"error": str(e)}

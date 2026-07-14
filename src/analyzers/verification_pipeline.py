@@ -4,7 +4,7 @@
 """
 
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional
+from typing import List
 
 from src.analyzers.finding_verifier import FindingVerifier
 from src.utils.logger import get_logger

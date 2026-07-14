@@ -224,7 +224,7 @@ class ReportConfig(BaseModel):
     @field_validator("format")
     @classmethod
     def validate_format(cls, v: str) -> str:
-        allowed = ["html", "markdown", "json", "sarif", "xml"]
+        allowed = ["html", "markdown", "json", "sari", "xml"]
         if v not in allowed:
             raise ValueError(f"format must be one of {allowed}")
         return v

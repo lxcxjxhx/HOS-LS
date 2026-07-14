@@ -1,0 +1,1 @@
+﻿src/vulnerability\osv_client.py:99:17: F841 local variable 'references' is assigned to but never used

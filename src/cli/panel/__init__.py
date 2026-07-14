@@ -31,7 +31,7 @@ def run_config_panel(config_dict: dict = None) -> Optional[dict]:
         修改后的配置字典，如果用户放弃则返回None
     """
     panel = ConfigPanel(config_dict)
-    result = panel.run()
+    # result = panel.run()
     if panel.is_modified():
         return panel.get_config()
     return None

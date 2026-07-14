@@ -8,7 +8,7 @@ import inspect
 import json
 import re
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Type
+from typing import Any, Dict, List, Optional
 
 from src.rules.base import BaseRule, RuleDefinition
 from src.rules.registry import RuleRegistry, get_registry

@@ -4,6 +4,7 @@
 """
 
 import asyncio
+import atexit
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
@@ -226,6 +227,5 @@ async def search_library_info(
 
 
 # 注册退出处理函数，确保在程序结束时关闭会话
-import atexit
 
 atexit.register(close_web_searcher)

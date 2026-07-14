@@ -3,8 +3,6 @@
 实现PostgreSQL存储功能，用于存储CVE的结构化数据。
 """
 
-import asyncio
-from dataclasses import asdict
 from typing import Any, Dict, List, Optional
 
 import psycopg2

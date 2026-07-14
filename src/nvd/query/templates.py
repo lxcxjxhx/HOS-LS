@@ -1,6 +1,3 @@
-from typing import Dict, List
-
-
 class QueryTemplates:
     """NVD查询SQL模板"""
 

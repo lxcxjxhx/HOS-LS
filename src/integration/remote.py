@@ -3,8 +3,6 @@
 支持远程执行扫描任务。
 """
 
-import asyncio
-import json
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any, Dict, List, Optional
@@ -104,7 +102,7 @@ class RemoteExecutor:
         from src.core.scanner import create_scanner
 
         target = parameters.get("target", ".")
-        config = parameters.get("config", {})
+        # config = parameters.get("config", {})
 
         scanner = create_scanner()
         result = scanner.scan_sync(target)

@@ -275,7 +275,7 @@ class AIFilePrioritizer:
             logger.debug(f"开始AI优先级评估: {filename}")
 
             # 构建提示
-            prompt = f"""你是一个代码安全专家，需要基于文件名评估文件的安全重要性。
+            prompt = """你是一个代码安全专家，需要基于文件名评估文件的安全重要性。
 
 文件名: {filename}
 

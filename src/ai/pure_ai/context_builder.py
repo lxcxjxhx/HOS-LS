@@ -2,7 +2,6 @@ import ast
 import logging
 import os
 import re
-import xml.etree.ElementTree as ET
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -1002,7 +1001,6 @@ class ContextBuilder:
         Returns:
             数据流链路信息
         """
-        import re
 
         chain = {
             "sources": [],
@@ -1137,7 +1135,6 @@ class ContextBuilder:
         Returns:
             净化函数列表
         """
-        import re
 
         sanitizers = []
 
@@ -1341,7 +1338,7 @@ class ContextBuilder:
         related_files = []
         try:
             content = self._read_file(file_path)
-            current_dir = Path(file_path).parent
+            # current_dir = Path(file_path).parent
             project_root = self._find_project_root(file_path)
 
             imports = self._extract_java_imports(content)

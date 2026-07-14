@@ -3,7 +3,7 @@
 实现基于 bge-reranker 或 cross-encoder 的结果重排序，提高检索结果的相关性。
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 from src.utils.logger import get_logger
 
@@ -11,9 +11,11 @@ logger = get_logger(__name__)
 
 
 try:
+    import torch
     from sentence_transformers import CrossEncoder
 except ImportError:
     logger.warning("sentence-transformers not installed, using fallback implementation")
+    torch = None
     CrossEncoder = None
 
 

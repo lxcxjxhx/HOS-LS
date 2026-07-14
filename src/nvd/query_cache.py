@@ -159,7 +159,6 @@ def get_global_cache() -> NVDQueryCache:
 
 def clear_global_cache() -> None:
     """清空全局缓存"""
-    global _global_cache
     with _cache_lock:
         if _global_cache is not None:
             _global_cache.clear()

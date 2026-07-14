@@ -6,7 +6,7 @@
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, List, Optional
 
 
 @dataclass
@@ -82,7 +82,7 @@ class ContextAnalyzer:
             )
 
         all_hardcoded = True
-        all_user_controllable = False
+        # all_user_controllable = False
         hardcoded_params: List[str] = []
         user_controllable_params: List[str] = []
         reasons: List[str] = []
@@ -317,7 +317,7 @@ class ContextAnalyzer:
         except Exception:
             return callers
 
-        method_pattern = rf"(\w+)\s*\(\s*([^)]*)\s*\)"
+        method_pattern = r"(\w+)\s*\(\s*([^)]*)\s*\)"
         method_matches = list(re.finditer(method_pattern, content))
 
         call_pattern = rf"{mapper_pattern}\s*\.\s*{mapper_method}\s*\(\s*([^)]*)\s*\)"

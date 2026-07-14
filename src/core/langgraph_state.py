@@ -1,8 +1,7 @@
 from dataclasses import dataclass, field
-from pathlib import Path
 from typing import Any, Dict, List, Optional, TypedDict
 
-from src.core.engine import Finding, ScanResult
+from src.core.engine import ScanResult
 
 
 class AgentState(TypedDict):

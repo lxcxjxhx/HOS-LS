@@ -9,15 +9,13 @@
 score = source可信度 + sink危险等级 + 传播复杂度 + 是否新代码 + 历史相似漏洞
 """
 
-import hashlib
-import json
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set
+from typing import Any, Dict, List, Optional
 
 from src.db.models import Finding
-from src.taint.engine import TaintPath, TaintSink, TaintSource, get_taint_engine
+from src.taint.engine import TaintPath, TaintSource, get_taint_engine
 
 
 class RiskLevel(Enum):

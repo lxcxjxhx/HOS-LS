@@ -3,7 +3,6 @@
 实现NVD数据的流式处理、批量embedding和导入功能。
 """
 
-import asyncio
 import concurrent.futures
 import json
 import os
@@ -11,6 +10,11 @@ import zipfile
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
+
+from src.integration.import_manager import create_import_manager
+from src.integration.nvd_processor import CVEChunk, CVEStructuredData, NVDProcessor
+from src.storage.hybrid_store import HybridStore
+from src.utils.logger import get_logger
 
 # 全局极致内存优化
 os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True,max_split_size_mb:256"
@@ -24,10 +28,6 @@ try:
 except ImportError:
     IJSON_AVAILABLE = False
 
-from src.integration.import_manager import ImportManager, create_import_manager
-from src.integration.nvd_processor import CVEChunk, CVEStructuredData, NVDProcessor
-from src.storage.hybrid_store import HybridStore
-from src.utils.logger import get_logger
 
 logger = get_logger(__name__)
 
@@ -55,21 +55,21 @@ class NVDImporter:
         self.embeddings_cache_dir.mkdir(exist_ok=True)
         # 尝试导入内存监控模块
         try:
-            import psutil
+            pass
 
             self.psutil_available = True
         except ImportError:
             self.psutil_available = False
         # 尝试导入torch进行GPU内存监控
         try:
-            import torch
+            pass
 
             self.torch_available = True
         except ImportError:
             self.torch_available = False
         # 尝试导入numpy进行内存映射
         try:
-            import numpy as np
+            pass
 
             self.numpy_available = True
         except ImportError:
@@ -93,7 +93,7 @@ class NVDImporter:
                 # 使用ijson进行流式解析
                 parser = ijson.parse(file_obj)
                 data = {}
-                current_path = []
+                # current_path = []
                 stack = [data]
 
                 for prefix, event, value in parser:
@@ -266,7 +266,7 @@ class NVDImporter:
             return False
 
         try:
-            import numpy as np
+            pass
 
             # 检查内存映射文件是否有足够空间
             if self.memmap_idx >= self.memmap_array.shape[0]:
@@ -502,7 +502,7 @@ class NVDImporter:
             for i in range(0, total_texts, initial_batch_size):
                 batch_texts = processed_texts[i : i + initial_batch_size]
                 logger.info(
-                    f"处理嵌入批次 {i//initial_batch_size + 1}/{(total_texts + initial_batch_size - 1)//initial_batch_size}"
+                    f"处理嵌入批次 {i // initial_batch_size + 1}/{(total_texts + initial_batch_size - 1) // initial_batch_size}"
                 )
 
                 # 再次根据当前批次的文本长度调整批次大小
@@ -951,7 +951,9 @@ class NVDImporter:
         batch_size = self.READ_BATCH
         for i in range(0, len(cve_items), batch_size):
             batch = cve_items[i : i + batch_size]
-            logger.info(f"处理批次 {i//batch_size + 1}/{(len(cve_items) + batch_size - 1)//batch_size}")
+            logger.info(
+                f"处理批次 {i // batch_size + 1}/{(len(cve_items) + batch_size - 1) // batch_size}"
+            )
 
             # 使用进程池并行处理
             with concurrent.futures.ProcessPoolExecutor(max_workers=max_workers) as executor:

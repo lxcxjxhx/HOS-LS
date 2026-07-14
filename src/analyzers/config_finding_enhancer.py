@@ -9,7 +9,7 @@
 import re
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 from src.analyzers.config_scanner import ConfigFinding, SensitivityLevel
 
@@ -265,7 +265,7 @@ class ConfigFindingEnhancer:
     def _detect_db_type(self, key: str, file_path: str, value: str = "") -> str:
         key_lower = key.lower()
         file_lower = file_path.lower()
-        value_lower = value.lower()
+        # value_lower = value.lower()
 
         if "oracle" in key_lower or "oracle" in file_lower:
             return "Oracle"
@@ -317,7 +317,7 @@ class ConfigFindingEnhancer:
             )
 
         desc_template = pattern_info.get("desc_template", "配置{context}发现敏感信息")
-        risk_template = pattern_info.get("risk_template", "敏感信息暴露可能导致安全风险")
+        # risk_template = pattern_info.get("risk_template", "敏感信息暴露可能导致安全风险")
         env_var = pattern_info.get("env_var")
         spring_template = pattern_info.get("spring_template")
         context = self._detect_context(key, file_path)
@@ -402,7 +402,7 @@ class ConfigFindingEnhancer:
             severity = EnhancedSeverity.CRITICAL
             risk_factors.append("使用默认密码")
             desc = f"{base_desc}，极易被攻击者利用"
-            risk_template = "使用默认密码极易被攻击者利用，可能导致完全系统入侵"
+            # risk_template = "使用默认密码极易被攻击者利用，可能导致完全系统入侵"
 
         elif finding.pattern_name == "hardcoded_api_key":
             if any(k in key for k in ["public", "pub"]):

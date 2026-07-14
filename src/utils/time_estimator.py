@@ -230,9 +230,9 @@ class TimeEstimator:
         Returns:
             str: 执行报告
         """
-        stats = self.get_execution_stats()
+        # stats = self.get_execution_stats()
 
-        report = f"""# 执行时间统计报告
+        report = """# 执行时间统计报告
 
 ## 总体统计
 - 总执行次数: {stats['total_executions']}

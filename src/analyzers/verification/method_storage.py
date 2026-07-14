@@ -207,7 +207,7 @@ class MethodStorage:
 
     def _generate_method_code(self, method: MethodDefinition) -> str:
         """根据方法定义生成可执行代码"""
-        code = f'''
+        code = '''
 def verify_{method.id.replace('-', '_')}(context: VulnContext) -> ValidationResult:
     """
     {method.name}

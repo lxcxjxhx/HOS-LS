@@ -20,9 +20,7 @@ from src.core.config import Config, get_config
 from src.core.engine import ScanResult
 from src.reporting.category import (
     SPECIAL_SCAN_AREAS,
-    CategorizedReportData,
     VulnerabilityCategory,
-    VulnerabilityMetadata,
     classify_rule,
     get_special_scan_area,
 )
@@ -38,7 +36,7 @@ except ImportError:
 
 # 尝试导入 Jinja2，如果没有安装则使用简单的字符串替换
 try:
-    from jinja2 import Template
+    pass
 
     JINJA_AVAILABLE = True
 except ImportError:
@@ -133,10 +131,6 @@ def _calculate_apts_coverage_statistics(all_findings: List[Any]) -> Dict[str, An
         total_rules.add(rule_id)
 
         metadata = getattr(finding, "metadata", {}) or {}
-        if isinstance(metadata, dict):
-            source = metadata.get("source", "ai")
-        else:
-            source = "ai"
 
         vulnerability = getattr(finding, "vulnerability", "") or metadata.get("vulnerability", "")
         if vulnerability:
@@ -378,13 +372,11 @@ class BaseReportGenerator(ABC):
         Returns:
             报告文件路径
         """
-        pass
 
     @property
     @abstractmethod
     def format(self) -> str:
         """报告格式"""
-        pass
 
 
 class JSONReportGenerator(BaseReportGenerator):
@@ -421,8 +413,8 @@ class JSONReportGenerator(BaseReportGenerator):
     def _generate_summary(self, results: List[ScanResult]) -> Dict[str, Any]:
         """生成摘要
 
-        APTS-RP-008: 漏洞覆盖率统计
-        APTS-RP-006: 误报率统计
+        APTS-RP-8: 漏洞覆盖率统计
+        APTS-RP-6: 误报率统计
         """
         total_findings = sum(len(r.findings) for r in results)
         severity_counts = {"critical": 0, "high": 0, "medium": 0, "low": 0, "info": 0}
@@ -950,7 +942,7 @@ class HTMLReportGenerator(BaseReportGenerator):
     def _generate_default_html(self, results, summary, status, status_text, total_duration):
         """生成默认 HTML 内容（当模板文件不存在或渲染失败时使用）"""
         # 简单的默认 HTML 模板
-        html = f"""
+        html = """
 <!DOCTYPE html>
 <html>
 <head>
@@ -986,15 +978,15 @@ class HTMLReportGenerator(BaseReportGenerator):
                 if isinstance(location, dict):
                     location = location.get("file", "unknown")
 
-                description = getattr(finding, "description", getattr(finding, "message", "无描述"))
+                # description = getattr(finding, "description", getattr(finding, "message", "无描述"))
 
                 # 处理修复建议
-                fix_suggestion = getattr(finding, "fix_suggestion", "")
-                fix_suggestion_html = (
-                    f"<p><strong>修复建议:</strong> {fix_suggestion}</p>" if fix_suggestion else ""
-                )
+                # fix_suggestion = getattr(finding, "fix_suggestion", "")
+                # fix_suggestion_html = (
+                #     f"<p><strong>修复建议:</strong> {fix_suggestion}</p>" if fix_suggestion else ""
+                # )
 
-                html += f"""
+                html += """
     <div class="finding severity-{finding.severity.value}">
         <h3>{finding.rule_name} ({finding.rule_id})</h3>
         <p><strong>位置:</strong> {location}</p>
@@ -1013,8 +1005,8 @@ class HTMLReportGenerator(BaseReportGenerator):
     def _generate_summary(self, results: List[ScanResult]) -> Dict[str, Any]:
         """生成摘要
 
-        APTS-RP-008: 漏洞覆盖率统计
-        APTS-RP-006: 误报率统计
+        APTS-RP-8: 漏洞覆盖率统计
+        APTS-RP-6: 误报率统计
         """
         total_findings = sum(len(r.findings) for r in results)
         severity_counts = {"critical": 0, "high": 0, "medium": 0, "low": 0, "info": 0}
@@ -1071,8 +1063,6 @@ class HTMLReportGenerator(BaseReportGenerator):
         evidence = metadata.get("evidence", [])
         evidence_count = len(evidence) if evidence else 0
 
-        needs_review = False
-
         if status == "CONFIRMED":
             return True, status, False
         elif status == "REFINED":
@@ -1083,10 +1073,8 @@ class HTMLReportGenerator(BaseReportGenerator):
             if confidence >= 0.7 or evidence_count >= 2:
                 return True, status, False
             else:
-                needs_review = True
                 return True, status, True
         else:
-            needs_review = True
             return True, status, True
 
 
@@ -1111,9 +1099,9 @@ class MarkdownReportGenerator(BaseReportGenerator):
 
     def _generate_markdown(self, results: List[ScanResult]) -> str:
         """生成 Markdown 内容"""
-        summary = self._generate_summary(results)
+        # summary = self._generate_summary(results)
 
-        md = f"""# HOS-LS 安全扫描报告
+        md = """# HOS-LS 安全扫描报告
 
 ## 摘要
 
@@ -1162,7 +1150,7 @@ class MarkdownReportGenerator(BaseReportGenerator):
                     risk_score=attack_chain["risk_score"],
                     paths="\n".join(
                         [
-                            f"- {i+1}. {path.description} (风险: {path.risk_score:.2f})"
+                            f"- {i + 1}. {path.description} (风险: {path.risk_score:.2f})"
                             for i, path in enumerate(attack_chain["paths"][:5])
                         ]
                     ),
@@ -1206,7 +1194,7 @@ class MarkdownReportGenerator(BaseReportGenerator):
                     elif match_status == LineMatchStatus.UNVERIFIED.value:
                         location_str = f"{finding.location} ⚠️ [未验证]"
                 except Exception:
-                    location_str = f"{finding.location} ⚠️ [验证失败]"
+                    location_str = f"{finding.location} [验证失败]"
 
         poc_md = ""
         if hasattr(finding, "poc") and finding.poc:
@@ -1248,8 +1236,8 @@ class MarkdownReportGenerator(BaseReportGenerator):
     def _generate_summary(self, results: List[ScanResult]) -> Dict[str, Any]:
         """生成摘要
 
-        APTS-RP-008: 漏洞覆盖率统计
-        APTS-RP-006: 误报率统计
+        APTS-RP-8: 漏洞覆盖率统计
+        APTS-RP-6: 误报率统计
         """
         total_findings = sum(len(r.findings) for r in results)
         severity_counts = {"critical": 0, "high": 0, "medium": 0, "low": 0, "info": 0}
@@ -1379,7 +1367,7 @@ class ReportGenerator:
         Args:
             results: 扫描结果列表
             output_path: 输出路径
-            format: 报告格式，如果为 None 则使用配置中的格式
+            format: 报告格式, 如果为 None 则使用配置中的格式
 
         Returns:
             报告文件路径

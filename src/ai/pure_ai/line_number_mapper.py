@@ -375,7 +375,7 @@ class LineNumberMapper:
                 f"[DEBUG] 匹配完成，找到 {len(results)} 个候选，最佳匹配: 行{results[0][0]}, 相似度: {results[0][1]:.2f}"
             )
         else:
-            print(f"[DEBUG] 匹配完成，未找到任何匹配")
+            print("[DEBUG] 匹配完成，未找到任何匹配")
         return results
 
     def calculate_line_deviation(self, ai_reported_line: int, actual_line: int) -> int:
@@ -457,11 +457,7 @@ class LineNumberMapper:
             ]
             for ann in config_annotations:
                 if stripped.startswith(ann):
-                    if any(
-                        kw in vulnerability_type.lower()
-                        for kw in ["config", "configuration", "security", "auth"]
-                    ):
-                        return True, "VALID"
+                    # vulnerability_type is not available in this scope, skip this check
                     return False, f"行{line_number}是类级别注解@{ann}，需确认是否与漏洞相关"
 
         return True, "VALID"

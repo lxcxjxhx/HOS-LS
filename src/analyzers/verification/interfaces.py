@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
 
 
@@ -36,35 +36,29 @@ class Validator(ABC):
     @abstractmethod
     def name(self) -> str:
         """验证器名称"""
-        pass
 
     @property
     @abstractmethod
     def vuln_types(self) -> List[str]:
         """支持的漏洞类型"""
-        pass
 
     @property
     @abstractmethod
     def description(self) -> str:
         """验证器描述"""
-        pass
 
     @property
     @abstractmethod
     def confidence_level(self) -> str:
         """置信度级别: high, medium, low"""
-        pass
 
     @abstractmethod
     def validate(self, context: VulnContext) -> ValidationResult:
         """执行验证"""
-        pass
 
     @abstractmethod
     def check_applicability(self, context: VulnContext) -> bool:
         """检查此验证器是否适用于给定上下文"""
-        pass
 
 
 def create_false_positive_result(

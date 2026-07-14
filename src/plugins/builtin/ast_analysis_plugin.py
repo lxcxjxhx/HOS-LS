@@ -74,7 +74,7 @@ class ASTAnalysisPlugin(ScanPlugin):
                     }
                 )
 
-        except Exception as e:
+        except Exception:
             # 分析失败，返回空列表
             pass
 

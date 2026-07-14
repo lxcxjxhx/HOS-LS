@@ -1,5 +1,4 @@
 import json
-import re
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional
@@ -38,15 +37,15 @@ class KEVETL(BaseETL):
             json_files = list(data_dir.glob("*.json"))
 
         if not json_files:
-            print(f"╔══════════════════════════════════════════════════════════════╗")
+            print("╔══════════════════════════════════════════════════════════════╗")
             print(f"║  ✗ 未找到KEV JSON文件: {data_path:<36} ║")
-            print(f"╚══════════════════════════════════════════════════════════════╝")
+            print("╚══════════════════════════════════════════════════════════════╝")
             return False
 
         json_file = json_files[0]
-        print(f"╔══════════════════════════════════════════════════════════════╗")
+        print("╔══════════════════════════════════════════════════════════════╗")
         print(f"║  📂 处理文件: {json_file.name:<44} ║")
-        print(f"╚══════════════════════════════════════════════════════════════╝")
+        print("╚══════════════════════════════════════════════════════════════╝")
 
         self._process_json_file(json_file)
 
@@ -78,9 +77,9 @@ class KEVETL(BaseETL):
         vulnerabilities = data.get("vulnerabilities", [])
 
         if not vulnerabilities:
-            print(f"╔══════════════════════════════════════════════════════════════╗")
-            print(f"║  ✗ 未找到 vulnerabilities 数据                                  ║")
-            print(f"╚══════════════════════════════════════════════════════════════╝")
+            print("╔══════════════════════════════════════════════════════════════╗")
+            print("║  ✗ 未找到 vulnerabilities 数据                                  ║")
+            print("╚══════════════════════════════════════════════════════════════╝")
             return
 
         print(f"║  📊 发现 {len(vulnerabilities)} 个KEV条目                               ║")
@@ -112,7 +111,7 @@ class KEVETL(BaseETL):
             if not cve_id:
                 return None
 
-            date_added_str = item.get("dateAdded", "")
+            # date_added_str = item.get("dateAdded", "")
             due_date_str = item.get("dueDate", "")
 
             return {
@@ -131,7 +130,7 @@ class KEVETL(BaseETL):
             return None
         try:
             return datetime.strptime(date_str, "%Y-%m-%d")
-        except:
+        except BaseException:
             return None
 
     def _batch_insert(self, batch: List[Dict]) -> None:

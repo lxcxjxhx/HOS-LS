@@ -59,7 +59,6 @@ class NVDProcessor:
         # Chunk参数
         self.CHUNK_SIZE = 400
         self.CHUNK_OVERLAP = 80
-        pass
 
     def clean_text(self, text: str) -> str:
         """清洗文本，去除特殊字符和多余空格

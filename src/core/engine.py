@@ -9,7 +9,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Protocol, Set, Union
+from typing import Any, Dict, List, Optional, Protocol, Union
 
 from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn
@@ -402,7 +402,6 @@ class BaseScanner(ABC):
         Returns:
             扫描结果
         """
-        pass
 
     @abstractmethod
     def supports(self, target: Union[str, Path]) -> bool:
@@ -414,7 +413,6 @@ class BaseScanner(ABC):
         Returns:
             是否支持
         """
-        pass
 
     def create_result(self, target: Union[str, Path]) -> ScanResult:
         """创建扫描结果对象

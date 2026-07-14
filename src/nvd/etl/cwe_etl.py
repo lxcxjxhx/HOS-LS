@@ -40,14 +40,14 @@ class CWEETL(BaseETL):
                 xml_files = list(data_path_obj.glob("cwec/*.xml"))
 
         if not xml_files:
-            print(f"╔══════════════════════════════════════════════════════════════╗")
+            print("╔══════════════════════════════════════════════════════════════╗")
             print(f"║  ✗ 未找到CWE XML文件: {data_path:<36} ║")
-            print(f"╚══════════════════════════════════════════════════════════════╝")
+            print("╚══════════════════════════════════════════════════════════════╝")
             return False
 
-        print(f"╔══════════════════════════════════════════════════════════════╗")
+        print("╔══════════════════════════════════════════════════════════════╗")
         print(f"║  📂 发现 {len(xml_files)} 个CWE文件                              ║")
-        print(f"╚══════════════════════════════════════════════════════════════╝")
+        print("╚══════════════════════════════════════════════════════════════╝")
 
         for xml_file in xml_files:
             print(f"\n║  📄 处理: {xml_file.name}")
@@ -160,7 +160,7 @@ class CWEETL(BaseETL):
         try:
             self.conn.execute(query, cwe_data)
             return True
-        except Exception as e:
+        except Exception:
             self.records_skipped += 1
             return False
 
@@ -175,6 +175,6 @@ class CWEETL(BaseETL):
         try:
             self.conn.execute(query, rel_data)
             return True
-        except Exception as e:
+        except Exception:
             self.records_skipped += 1
             return False

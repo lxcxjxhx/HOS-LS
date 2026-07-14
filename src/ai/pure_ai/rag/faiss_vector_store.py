@@ -32,8 +32,6 @@ try:
 
     # 检查是否支持 GPU
     try:
-        import faiss
-
         res = faiss.StandardGpuResources()
         GPU_AVAILABLE = True
     except Exception:
@@ -106,7 +104,7 @@ class FAISSVectorStore:
         # 添加到内存存储
         if document_id in self._documents:
             # 更新现有文档
-            index = self._document_ids.index(document_id)
+            # index = self._document_ids.index(document_id)
             # FAISS 不支持直接更新，需要重建索引
             self._rebuild_index()
         else:

@@ -12,7 +12,7 @@ import os
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -197,7 +197,7 @@ class FindingVerifier:
         "csrf": {
             "cwe_id": "CWE-352",
             "cwe_name": "Cross-Site Request Forgery",
-            "keywords": ["csrf", "token", "samesite", "csrf_token"],
+            "keywords": ["csr", "token", "samesite", "csrf_token"],
             "risk_patterns": [
                 r"@CsrfFilter",
                 r"csrf",
@@ -278,24 +278,24 @@ class FindingVerifier:
             if isinstance(finding, dict):
                 location = finding.get("location")
                 if not location or not isinstance(location, dict):
-                    logger.debug(f"[Path] Finding has no valid location (dict)")
+                    logger.debug("[Path] Finding has no valid location (dict)")
                     return False
                 file_path = location.get("file")
-                line = location.get("line", 0)
+                # line = location.get("line", 0)
             else:
                 if not hasattr(finding, "location"):
-                    logger.debug(f"[Path] Finding has no location attribute")
+                    logger.debug("[Path] Finding has no location attribute")
                     return False
 
                 if isinstance(finding.location, dict):
                     file_path = finding.location.get("file")
-                    line = finding.location.get("line", 0)
+                    # line = finding.location.get("line", 0)
                 else:
                     file_path = finding.location.file
-                    line = getattr(finding.location, "line", 0)
+                    # line = getattr(finding.location, "line", 0)
 
             if not file_path:
-                logger.debug(f"[Path] Finding has no file path")
+                logger.debug("[Path] Finding has no file path")
                 return False
 
             root = project_root or self.project_root
@@ -324,13 +324,13 @@ class FindingVerifier:
         if isinstance(finding, dict):
             location = finding.get("location")
             if not location or not isinstance(location, dict):
-                logger.debug(f"[Code] Finding has no valid location (dict)")
+                logger.debug("[Code] Finding has no valid location (dict)")
                 return False
             file_path = location.get("file")
             code_snippet = finding.get("code_snippet")
         else:
             if not hasattr(finding, "location"):
-                logger.debug(f"[Code] Finding has no location attribute")
+                logger.debug("[Code] Finding has no location attribute")
                 return False
             if isinstance(finding.location, dict):
                 file_path = finding.location.get("file")
@@ -494,7 +494,7 @@ class FindingVerifier:
         """
         rule_name = getattr(finding, "rule_name", "") or ""
         description = getattr(finding, "description", "") or ""
-        code_snippet = getattr(finding, "code_snippet", "") or ""
+        # code_snippet = getattr(finding, "code_snippet", "") or ""
 
         combined_text = f"{rule_name} {description}".lower()
 
@@ -776,7 +776,7 @@ class FuzzyCweMatcher:
         """
         rule_name = finding.get("rule_name", "")
         description = finding.get("description", "")
-        code_snippet = finding.get("code_snippet", "")
+        # code_snippet = finding.get("code_snippet", "")
 
         combined_text = f"{rule_name} {description}".strip()
 
@@ -1166,7 +1166,7 @@ class AnnotationTypeValidator:
             (是否通过, 状态, 详情)
         """
         vuln_type = vulnerability.get("vulnerability_type", vulnerability.get("type", "")).lower()
-        line_number = vulnerability.get("line_number", vulnerability.get("ai_reported_line", 0))
+        # line_number = vulnerability.get("line_number", vulnerability.get("ai_reported_line", 0))
 
         if not vuln_type:
             return True, "SKIPPED", {"reason": "无漏洞类型信息"}

@@ -1,6 +1,5 @@
 import json
 import re
-from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
@@ -43,16 +42,16 @@ class NVDETL(BaseETL):
             json_files = list(data_dir.glob("**/CVE-*.json"))
 
         if not json_files:
-            print(f"╔══════════════════════════════════════════════════════════════╗")
+            print("╔══════════════════════════════════════════════════════════════╗")
             print(f"║  ✗ 未找到NVD JSON文件: {data_path:<36} ║")
-            print(f"║  提示: NVD数据需要从 NIST 下载:                            ║")
-            print(f"║        https://nvd.nist.gov/developers/vulnerabilities      ║")
-            print(f"╚══════════════════════════════════════════════════════════════╝")
+            print("║  提示: NVD数据需要从 NIST 下载:                            ║")
+            print("║        https://nvd.nist.gov/developers/vulnerabilities      ║")
+            print("╚══════════════════════════════════════════════════════════════╝")
             return False
 
-        print(f"╔══════════════════════════════════════════════════════════════╗")
+        print("╔══════════════════════════════════════════════════════════════╗")
         print(f"║  📂 发现 {len(json_files)} 个NVD文件                              ║")
-        print(f"╚══════════════════════════════════════════════════════════════╝")
+        print("╚══════════════════════════════════════════════════════════════╝")
 
         total_cvss = 0
         total_cpe = 0
@@ -80,7 +79,7 @@ class NVDETL(BaseETL):
                     self._batch_insert_cpe(batch_cpe)
                     batch_cpe = []
 
-            except Exception as e:
+            except Exception:
                 self.records_skipped += 1
 
         if batch_cvss:

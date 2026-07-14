@@ -1,5 +1,4 @@
 import hashlib
-import os
 import zipfile
 from dataclasses import dataclass
 from datetime import datetime

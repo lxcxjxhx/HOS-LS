@@ -3,9 +3,8 @@
 基于 Jinja2 的模板引擎，统一管理所有 Agent 的 Prompt 模板。
 """
 
-import os
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
@@ -92,9 +91,9 @@ class PromptEngine:
             if isinstance(file_info, dict):
                 path = file_info.get("path", "未知路径")
                 content = file_info.get("content", "").strip()[:500]
-                formatted.append(f"文件 {i+1}: {path}\n{content}\n")
+                formatted.append(f"文件 {i + 1}: {path}\n{content}\n")
             else:
-                formatted.append(f"文件 {i+1}: {str(file_info)}\n")
+                formatted.append(f"文件 {i + 1}: {str(file_info)}\n")
         return "\n".join(formatted)
 
     @staticmethod

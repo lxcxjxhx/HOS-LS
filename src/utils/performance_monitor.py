@@ -3,6 +3,7 @@
 提供性能监控和分析功能，用于跟踪 AI 分析的性能指标。
 """
 
+import asyncio
 import statistics
 import time
 from dataclasses import dataclass, field
@@ -238,4 +239,3 @@ def measure_performance(operation: str, metadata: Optional[Dict[str, Any]] = Non
 
 
 # 导入 asyncio 以支持异步装饰器
-import asyncio

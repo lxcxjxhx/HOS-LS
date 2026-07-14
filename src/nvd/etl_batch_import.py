@@ -1,16 +1,12 @@
 import signal
 import sys
-import time
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Callable, Dict, List, Optional
-
-from tqdm import tqdm
+from typing import Dict, Optional
 
 from .db.sqlite_connection import SQLiteConnection
 from .db.sqlite_schema import SQLiteSche
-from .etl.base import BaseETL
 from .etl.cve_etl import CVEETL
 from .etl.cwe_etl import CWEETL
 from .etl.exploit_etl import ExploitETL
@@ -210,9 +206,9 @@ class BatchImportManager:
             print(f"║  ⏩ 跳过 {etl_name} (已完成)                                   ║")
             return True
 
-        print(f"\n╔══════════════════════════════════════════════════════════════╗")
+        print("\n╔══════════════════════════════════════════════════════════════╗")
         print(f"║               {etl_name.upper()} 数据入库                              ║")
-        print(f"╠══════════════════════════════════════════════════════════════╣")
+        print("╠══════════════════════════════════════════════════════════════╣")
 
         if progress and continue_mode:
             print(f"║  📂 断点续传: {progress.last_file[:40]}...               ║")
@@ -221,7 +217,7 @@ class BatchImportManager:
             self._save_checkpoint(etl_name, status="running")
             print(f"║  📂 数据路径: {data_path[:50]}                             ║")
 
-        print(f"╚══════════════════════════════════════════════════════════════╝")
+        print("╚══════════════════════════════════════════════════════════════╝")
 
         try:
             etl = etl_class(self.conn)

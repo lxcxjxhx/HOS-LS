@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import ast
 import re
-import sys
 from dataclasses import dataclass, field
 from typing import Any, Optional
 
@@ -239,7 +238,7 @@ class JavaASTParser(ASTTranspilerEngine):
 
         body = []
         for child in class_node.children:
-            if child.node_type in ["method_def", "field_def"]:
+            if child.node_type in ["method_de", "field_def"]:
                 converted = self._convert_ir_node_to_python(child)
                 if converted:
                     body.append(converted)
@@ -940,7 +939,7 @@ class RustASTParser(ASTTranspilerEngine):
     def _ir_to_python_ast(self, ir: IntermediateRepresentation) -> ast.Module:
         body = []
         for node in ir.nodes:
-            if node.node_type in ["struct_def", "impl_block"]:
+            if node.node_type in ["struct_de", "impl_block"]:
                 class_def = ast.ClassDef(
                     name=node.name,
                     bases=[],
@@ -1043,7 +1042,7 @@ class GoASTParser(ASTTranspilerEngine):
     def _ir_to_python_ast(self, ir: IntermediateRepresentation) -> ast.Module:
         body = []
         for node in ir.nodes:
-            if node.node_type in ["function_def", "method_def"]:
+            if node.node_type in ["function_de", "method_def"]:
                 func_def = ast.FunctionDef(
                     name=node.name,
                     args=ast.arguments(

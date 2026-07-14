@@ -118,9 +118,9 @@ class AgentSelector:
         ordered_agents = selected_agents
 
         parallel_groups = []
-        sequential_agents = ["ContextBuilder"]
+        # sequential_agents = ["ContextBuilder"]
         parallel_candidates = ["SemanticAgent", "ValidationAgent", "AttackAgent"]
-        final_agents = ["FinalDecision"]
+        # final_agents = ["FinalDecision"]
 
         remaining_parallel = [a for a in parallel_candidates if a in ordered_agents]
 

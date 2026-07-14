@@ -6,7 +6,7 @@
 import hashlib
 import json
 import os
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
@@ -213,14 +213,14 @@ class CodeEmbedder:
                                 print(f"✅ 使用本地模型路径: {model_name_or_path}")
                             else:
                                 # 如果配置文件不完整，仍然尝试使用本地模型
-                                print(f"⚠️ 本地模型配置文件不完整，缺少model_type键，但仍尝试使用本地模型")
+                                print("⚠️ 本地模型配置文件不完整，缺少model_type键，但仍尝试使用本地模型")
                                 model_name_or_path = str(model_path)
                         except Exception as e:
                             print(f"⚠️ 读取模型配置文件失败: {e}，但仍尝试使用本地模型")
                             model_name_or_path = str(model_path)
                     else:
                         # 即使没有配置文件，也尝试使用本地模型
-                        print(f"⚠️ 本地模型缺少配置文件，但仍尝试使用本地模型")
+                        print("⚠️ 本地模型缺少配置文件，但仍尝试使用本地模型")
                         model_name_or_path = str(model_path)
                 else:
                     # 否则使用模型名称从 Hugging Face 下载
@@ -231,8 +231,6 @@ class CodeEmbedder:
                 print(f"📁 使用缓存目录: {self.config.cache_dir}")
 
             # 添加 Hugging Face token 认证
-            import os
-
             hf_token = os.environ.get("HUGGING_FACE_HUB_TOKEN")
             if hf_token:
                 model_kwargs["token"] = hf_token
@@ -703,7 +701,7 @@ class CodeEmbedder:
                 print(f"📏 使用 Matryoshka 压缩维度: {self.config.matryoshka_dim}")
 
             # 强制使用 numpy 格式输出，避免 tensor 留在 GPU
-            convert_to_tensor = False
+            # convert_to_tensor = False
             print("📊 强制使用 numpy 格式输出")
 
             print("🚀 开始生成嵌入...")
@@ -1079,7 +1077,7 @@ class InMemoryEmbedder:
             "lines": code.count("\n") / 100.0,
             "keywords": sum(
                 1
-                for kw in ["def", "class", "import", "from", "if", "else", "for", "while"]
+                for kw in ["de", "class", "import", "from", "i", "else", "for", "while"]
                 if kw in code_lower
             ),
             "functions": code_lower.count("def ") / 10.0,

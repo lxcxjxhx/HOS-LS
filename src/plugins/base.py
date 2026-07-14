@@ -88,7 +88,6 @@ class Plugin(ABC):
         Returns:
             执行结果
         """
-        pass
 
 
 class ScanPlugin(Plugin):
@@ -115,7 +114,6 @@ class ScanPlugin(Plugin):
         Returns:
             发现的安全问题列表
         """
-        pass
 
     async def execute(self, context: Dict[str, Any]) -> Dict[str, Any]:
         """执行扫描

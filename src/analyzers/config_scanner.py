@@ -16,7 +16,7 @@ import re
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import List, Optional, Tuple
 
 from src.utils.logger import get_logger
 
@@ -183,7 +183,7 @@ class ConfigScanner:
         ".conf",
     }
 
-    CONFIG_DIR_PATTERNS = {"config", "conf", "configuration", "settings", "data", "resources"}
+    CONFIG_DIR_PATTERNS = {"config", "con", "configuration", "settings", "data", "resources"}
 
     def __init__(self, include_sensitive_paths: bool = True):
         """初始化配置扫描器

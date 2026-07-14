@@ -5,6 +5,7 @@
 """
 
 import re
+from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
 from src.rules.base import BaseRule, RuleCategory, RuleMetadata, RuleResult, RuleSeverity
@@ -256,7 +257,7 @@ class SchemaValidationMissingRule(BaseRule):
                     rule_id=self.metadata.id,
                     rule_name=self.metadata.name,
                     passed=False,
-                    message=f"检测到 LLM API 调用缺少 Schema 验证",
+                    message="检测到 LLM API 调用缺少 Schema 验证",
                     severity=self.metadata.severity,
                     confidence=0.75,
                     location={"file": file_path, "line": line_num, "column": 1},
@@ -396,9 +397,9 @@ class HallucinationRiskRule(BaseRule):
             has_safe_output = any(pattern.search(line) for pattern in self._compiled_safe_patterns)
 
             if has_factual_claim and not has_safe_output:
-                context_start = max(0, line_num - 3)
-                context_end = min(len(lines), line_num + 3)
-                context = "\n".join(lines[context_start:context_end])
+                # context_start = max(0, line_num - 3)
+                # context_end = min(len(lines), line_num + 3)
+                # context = "\n".join(lines[context_start:context_end])
 
                 if not has_rag:
                     result = RuleResult(
@@ -547,15 +548,15 @@ class OutputSafetyFilterMissingRule(BaseRule):
             )
 
             if has_model_output and has_user_display and not has_safety_filter:
-                context_start = max(0, line_num - 5)
-                context_end = min(len(lines), line_num + 5)
-                context = "\n".join(lines[context_start:context_end])
+                # context_start = max(0, line_num - 5)
+                # context_end = min(len(lines), line_num + 5)
+                # context = "\n".join(lines[context_start:context_end])
 
                 result = RuleResult(
                     rule_id=self.metadata.id,
                     rule_name=self.metadata.name,
                     passed=False,
-                    message=f"检测到模型输出直接展示给用户，缺少内容安全过滤",
+                    message="检测到模型输出直接展示给用户，缺少内容安全过滤",
                     severity=self.metadata.severity,
                     confidence=0.75,
                     location={"file": file_path, "line": line_num, "column": 1},

@@ -10,7 +10,7 @@ from typing import Any, Dict, List, Optional
 
 import numpy as np
 
-from src.ai.pure_ai.rag.code_embedder import CodeEmbedder, EmbedConfig, create_embedder
+from src.ai.pure_ai.rag.code_embedder import EmbedConfig, create_embedder
 from src.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -165,7 +165,9 @@ class VectorStore:
 
         for i in range(0, total_docs, BATCH_SIZE):
             batch = documents[i : i + BATCH_SIZE]
-            logger.info(f"处理文档批次 {i//BATCH_SIZE + 1}/{(total_docs + BATCH_SIZE - 1)//BATCH_SIZE}")
+            logger.info(
+                f"处理文档批次 {i // BATCH_SIZE + 1}/{(total_docs + BATCH_SIZE - 1) // BATCH_SIZE}"
+            )
 
             # 批量处理文档
             new_embeddings = []

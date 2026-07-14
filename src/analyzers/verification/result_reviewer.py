@@ -1,8 +1,6 @@
 import json
 import logging
-import subprocess
 import threading
-from concurrent.futures import TimeoutError
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -15,7 +13,6 @@ from .interfaces import ValidationResult, VulnContext
 from .method_storage import MethodDefinition, MethodStorage
 from .poc_generator import AIPOCGenerator
 from .sandbox_integration import SandboxIntegration, create_sandbox_integration
-from .sandbox_manager import SandboxEnvironmentManager
 
 logger = logging.getLogger(__name__)
 
@@ -336,11 +333,11 @@ class ResultReviewer:
         try:
             import openai
 
-            vuln_type = context.vuln_type
-            code_snippet = context.code_snippet
-            file_path = context.file_path
+            # vuln_type = context.vuln_type
+            # code_snippet = context.code_snippet
+            # file_path = context.file_path
 
-            prompt = f"""你是专业的安全研究员，请分析以下代码片段是否存在安全漏洞。
+            prompt = """你是专业的安全研究员，请分析以下代码片段是否存在安全漏洞。
 
 漏洞类型: {vuln_type}
 文件: {file_path}
@@ -376,7 +373,7 @@ class ResultReviewer:
                 try:
                     conf_str = ai_response.split("置信度:")[1].split("\n")[0].strip()
                     confidence = float(conf_str)
-                except:
+                except BaseException:
                     confidence = 0.6
             else:
                 confidence = 0.6

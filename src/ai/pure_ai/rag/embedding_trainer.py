@@ -3,17 +3,14 @@
 使用 Unsloth 进行嵌入模型的高效微调，支持 LoRA 微调和对比学习。
 """
 
-import os
-from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 import torch
 from sentence_transformers import InputExample, SentenceTransformer, losses
 from sentence_transformers.evaluation import TripletEvaluator
 from sentence_transformers.training_args import SentenceTransformerTrainingArguments
-from transformers import TrainingArguments
 
 from src.utils.logger import get_logger
 
@@ -460,7 +457,7 @@ class EmbeddingTrainer:
             epochs: 训练轮数
             batch_size: 批次大小
         """
-        script_content = f"""
+        script_content = """
 import sys
 from pathlib import Path
 

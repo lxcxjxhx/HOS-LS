@@ -3,7 +3,7 @@
 实现基于语义扩展的查询重写，提高检索的准确性和召回率。
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 from src.utils.logger import get_logger
 
@@ -243,7 +243,7 @@ class QueryRewriter:
         if "control_flow" in ast_info:
             control_flow = ast_info["control_flow"]
             for flow in control_flow:
-                if flow in ["if", "for", "while", "try", "except"]:
+                if flow in ["i", "for", "while", "try", "except"]:
                     expanded_query += f" OR {flow}"
 
         # 调用基本重写

@@ -3,21 +3,16 @@
 基于 tree-sitter 的抽象语法树分析器。
 """
 
-import time
-from pathlib import Path
-from typing import Any, Dict, List, Optional, Set
+from typing import Any, Dict, List, Optional
 
 from tree_sitter import Language, Parser, Tree
 
 from src.analyzers.base import (
     AnalysisContext,
-    AnalysisError,
-    AnalysisIssue,
     AnalysisResult,
     AnalysisStatus,
     AnalysisType,
     BaseAnalyzer,
-    Severity,
 )
 
 
@@ -110,8 +105,8 @@ class ASTAnalyzer(BaseAnalyzer):
                 "vfork": "使用 vfork() 可能导致安全问题",
                 "strcpy": "使用 strcpy() 可能导致缓冲区溢出",
                 "strcat": "使用 strcat() 可能导致缓冲区溢出",
-                "sprintf": "使用 sprintf() 可能导致缓冲区溢出",
-                "scanf": "使用 scanf() 可能导致缓冲区溢出",
+                "sprint": "使用 sprintf() 可能导致缓冲区溢出",
+                "scan": "使用 scanf() 可能导致缓冲区溢出",
                 "gets": "使用 gets() 可能导致缓冲区溢出",
             },
         }
@@ -739,7 +734,7 @@ class ASTAnalyzer(BaseAnalyzer):
             if child.type == "arguments":
                 for arg in child.children:
                     arg_text = self._get_node_text(arg)
-                    if "+" in arg_text or 'f"' in arg_text or ".format" in arg_text:
+                    if "+" in arg_text or '"' in arg_text or ".format" in arg_text:
                         poc = "攻击者可以通过输入包含 SQL 语句的参数来执行恶意 SQL 查询，例如：' OR 1=1 --"
                         fix = "使用参数化查询或预处理语句，避免直接拼接 SQL 语句"
                         issue = self.create_issue(

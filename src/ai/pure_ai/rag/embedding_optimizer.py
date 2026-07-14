@@ -7,7 +7,7 @@ import json
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 try:
     from src.storage.embedding_evaluator import EmbeddingEvaluator
@@ -150,7 +150,7 @@ class EmbeddingOptimizer:
             return self.model_path
 
         # 准备训练数据
-        train_data = self.trainer.prepare_training_data(triplets)
+        # train_data = self.trainer.prepare_training_data(triplets)
 
         # 创建输出目录
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -158,13 +158,13 @@ class EmbeddingOptimizer:
 
         # 重训练模型
         logger.info(f"开始重训练模型，输出目录: {new_model_dir}")
-        model = self.trainer.train(
-            train_data=train_data,
-            output_dir=new_model_dir,
-            epochs=epochs,
-            batch_size=batch_size,
-            learning_rate=learning_rate,
-        )
+        # model = self.trainer.train(
+        #     train_data=train_data,
+        #     output_dir=new_model_dir,
+        #     epochs=epochs,
+        #     batch_size=batch_size,
+        #     learning_rate=learning_rate,
+        # )
 
         # 保存模型
         best_model_path = new_model_dir / "best_model"

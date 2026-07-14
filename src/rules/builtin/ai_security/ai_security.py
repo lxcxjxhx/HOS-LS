@@ -51,7 +51,6 @@ class AISecurityBaseRule(ABC):
         Returns:
             检测结果列表
         """
-        pass
 
     def match_pattern(self, text: str, patterns: List[re.Pattern]) -> Optional[re.Match]:
         """匹配文本中的模式

@@ -7,7 +7,7 @@
 import re
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Callable, Dict, List, Optional, Set
+from typing import Any, Dict, List, Optional, Set
 
 from src.ai.pipeline.configurator import AIPipelineConfigurator
 

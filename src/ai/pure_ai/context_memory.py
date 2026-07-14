@@ -1,9 +1,8 @@
 import re
 import time
 from collections import OrderedDict
-from dataclasses import dataclass, field
-from datetime import datetime
-from typing import Any, Dict, List, Optional, Set
+from dataclasses import dataclass
+from typing import Any, Dict, List, Optional
 
 
 @dataclass
@@ -65,7 +64,7 @@ class ContextMemoryManager:
                 "module",
                 "script",
             ],
-            "function": ["function", "func", "method", "def", "()", "procedure"],
+            "function": ["function", "func", "method", "de", "()", "procedure"],
             "class": ["class", "object", "struct", "interface", "type"],
             "variable": ["variable", "var", "const", "let", "value", "parameter", "arg"],
         }
@@ -78,7 +77,7 @@ class ContextMemoryManager:
             "search": ["search", "find", "look", "query", "grep"],
             "execute": ["run", "execute", "start", "launch", "call"],
             "explain": ["explain", "describe", "show", "tell", "what", "how"],
-            "compare": ["compare", "diff", "versus", "vs"],
+            "compare": ["compare", "dif", "versus", "vs"],
             "refactor": ["refactor", "restructure", "reorganize", "optimize"],
         }
 
@@ -395,7 +394,7 @@ class ContextMemoryManager:
     def add_to_history(
         self, user_input: str, entities: List[Entity], intent: Optional[str], response_summary: str
     ) -> None:
-        print(f"[DEBUG] 添加到历史记录...")
+        print("[DEBUG] 添加到历史记录...")
         turn = ConversationTurn(
             timestamp=time.time(),
             user_input=user_input,
@@ -408,7 +407,7 @@ class ContextMemoryManager:
 
         while len(self._conversation_history) > self.max_history:
             self._conversation_history.pop(0)
-            print(f"[DEBUG] 历史记录超限，删除最旧的记录")
+            print("[DEBUG] 历史记录超限，删除最旧的记录")
 
         print(f"[DEBUG] 当前历史记录数量: {len(self._conversation_history)}")
 

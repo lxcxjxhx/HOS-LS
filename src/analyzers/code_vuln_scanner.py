@@ -16,7 +16,7 @@ import re
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from src.utils.logger import get_logger
 
@@ -540,7 +540,7 @@ class InputTracer:
                 result["confidence"] = 0.9
                 return result
 
-        safe_indicators = ["String.valueOf", "String.static", "new String", "intern()", ".trim()"]
+        safe_indicators = ["String.valueO", "String.static", "new String", "intern()", ".trim()"]
 
         for safe in safe_indicators:
             if safe in code_snippet:
@@ -679,7 +679,6 @@ class CodeVulnPatterns:
         "default_password_123456": CodeVulnLevel.HIGH,
         "default_password_password": CodeVulnLevel.HIGH,
         "default_password_admin": CodeVulnLevel.HIGH,
-        "mybatis_dollar_brace_sql": CodeVulnLevel.CRITICAL,
         "java_file_path_join": CodeVulnLevel.HIGH,
         "java_paths_get_concat": CodeVulnLevel.HIGH,
         "python_file_open_concat": CodeVulnLevel.HIGH,
@@ -1002,7 +1001,7 @@ class CodeVulnScanner:
             try:
                 with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
                     content = f.read(2000)
-            except:
+            except BaseException:
                 pass
 
             content_lower = content.lower()

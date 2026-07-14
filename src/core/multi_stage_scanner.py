@@ -18,7 +18,7 @@ from typing import Any, Callable, Dict, List, Optional, Set
 from src.ai.prompts import PromptManager, get_prompt_manager
 from src.analyzers.code_slicer import CodeSlicer
 from src.core.result_aggregator import AggregatedFinding, ResultAggregator
-from src.core.scan_scheduler import MultiPhaseScanner, ScanScheduler
+from src.core.scan_scheduler import ScanScheduler
 from src.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -331,17 +331,17 @@ class MultiStageScannerEngine:
                 if not code:
                     continue
 
-                language = self.detect_language(fp)
+                language = self.detect_language(fp)  # noqa: F841 - 保留用于后续 prompt 调用
 
                 if self.config.use_code_slicing:
                     slices = self.code_slicer.slice_file(fp)
                     for code_slice in slices:
-                        prompt = self.prompt_manager.get_phase1_prompt(
-                            language=language, code=code_slice.content
-                        )
+                        # prompt = self.prompt_manager.get_phase1_prompt(
+                        #     language=language, code=code_slice.content
+                        # )
                         candidates.append(fp)
                 else:
-                    prompt = self.prompt_manager.get_phase1_prompt(language=language, code=code)
+                    # prompt = self.prompt_manager.get_phase1_prompt(language=language, code=code)
                     candidates.append(fp)
 
             except Exception as e:
@@ -641,11 +641,13 @@ class MultiStageScannerEngine:
             if self.config.use_code_slicing:
                 slices = self.code_slicer.slice_file(file_path)
                 for code_slice in slices:
-                    prompt = self.prompt_manager.get_phase1_prompt(
-                        language=language, code=code_slice.content
-                    )
+                    # prompt = self.prompt_manager.get_phase1_prompt(
+                    #     language=language, code=code_slice.content
+                    # )
+                    pass
             else:
-                prompt = self.prompt_manager.get_phase1_prompt(language=language, code=code)
+                # prompt = self.prompt_manager.get_phase1_prompt(language=language, code=code)
+                pass
 
         except Exception as e:
             logger.error(f"Phase1 error for {file_path}: {e}")
@@ -671,17 +673,18 @@ class MultiStageScannerEngine:
 
         for point in phase1_result.suspicious_points:
             try:
-                context_code = self.get_context_around_line(
-                    code, point.line, self.config.phase2_context_lines
-                )
+                # context_code = self.get_context_around_line(
+                #     code, point.line, self.config.phase2_context_lines
+                # )
 
-                prompt = self.prompt_manager.get_phase2_prompt(
-                    language=language,
-                    file_path=file_path,
-                    vuln_type=point.type,
-                    line_num=point.line,
-                    code=context_code,
-                )
+                # prompt = self.prompt_manager.get_phase2_prompt(
+                #     language=language,
+                #     file_path=file_path,
+                #     vuln_type=point.type,
+                #     line_num=point.line,
+                #     code=context_code,
+                # )
+                pass
 
             except Exception as e:
                 logger.error(f"Phase2 error for {file_path}:{point.line}: {e}")
@@ -705,9 +708,10 @@ class MultiStageScannerEngine:
         findings = []
 
         try:
-            prompt = self.prompt_manager.get_rule_based_prompt(
-                language=language, file_path=file_path, code=code
-            )
+            # prompt = self.prompt_manager.get_rule_based_prompt(
+            #     language=language, file_path=file_path, code=code
+            # )
+            pass
 
         except Exception as e:
             logger.error(f"Single stage error for {file_path}: {e}")

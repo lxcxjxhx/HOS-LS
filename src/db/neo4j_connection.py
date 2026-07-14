@@ -60,7 +60,7 @@ class Neo4jManager:
                 uri = getattr(neo4j_config, "uri", "neo4j://localhost:7687")
                 username = getattr(neo4j_config, "username", "neo4j")
                 password = getattr(neo4j_config, "password", "password")
-            except:
+            except BaseException:
                 # 如果访问失败，使用默认值
                 uri = "neo4j://localhost:7687"
                 username = "neo4j"
@@ -108,7 +108,7 @@ class Neo4jManager:
             # 配置 OpenAI 嵌入
             try:
                 openai_api_key = getattr(self._config.ai, "api_key", None)
-            except:
+            except BaseException:
                 openai_api_key = None
 
             if openai_api_key:

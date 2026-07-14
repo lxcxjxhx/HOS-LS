@@ -7,6 +7,7 @@ import hashlib
 import json
 import os
 import re
+from datetime import datetime
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import yaml
@@ -41,13 +42,9 @@ STRUCTURED_TAGS = [
 class SchemaValidationError(Exception):
     """Schema验证异常"""
 
-    pass
-
 
 class ForbiddenOutputError(Exception):
     """禁止的输出异常"""
-
-    pass
 
 
 class SchemaValidator:
@@ -441,7 +438,7 @@ class SchemaValidator:
                 current_data = self._ensure_required_fields(current_data, schema_name)
             else:
                 print(f"[WARN] Schema validation failed for {schema_name}: {error}")
-                print(f"[WARN] Final attempt exhausted, returning fixed data (may be incomplete)")
+                print("[WARN] Final attempt exhausted, returning fixed data (may be incomplete)")
                 current_data = self._fix_structure(current_data, schema_name)
                 current_data = self.fix_unknown_outputs(current_data)
                 current_data = self.fix_invalid_locations(current_data, schema_name)
@@ -530,7 +527,7 @@ class SchemaValidator:
                 },
             }
         else:
-            return {"unknown_schema": schema_name, "data": data if "data" in dir() else {}}
+            return {"unknown_schema": schema_name, "data": {}}
 
     def validate_with_retry(
         self, data: Any, schema_name: str, max_retries: int = 3
@@ -836,7 +833,7 @@ class SchemaValidator:
                     if chain_name and chain_name != "unknown":
                         fixed[prop] = f"SIGNAL-{chain_name}"
                     else:
-                        fixed[prop] = item.get("id", f"SIGNAL-unknown")
+                        fixed[prop] = item.get("id", "SIGNAL-unknown")
                 elif prop == "signal_type":
                     fixed[prop] = item.get("signal_type", item.get("type", "risk"))
                 elif prop == "original_agent":
@@ -1063,7 +1060,7 @@ class SchemaValidator:
                 try:
                     json.loads(match)
                     return match
-                except:
+                except BaseException:
                     continue
 
         return None
@@ -1168,29 +1165,29 @@ class SchemaValidator:
             "LOW": ["low", "低风险", "低"],
         }
 
-        vulnerability_keywords = [
-            "sql injection",
-            "sql注入",
-            "xss",
-            "cross-site",
-            "跨站",
-            "command injection",
-            "命令注入",
-            "path traversal",
-            "路径遍历",
-            "ssrf",
-            "服务器端请求伪造",
-            "csrf",
-            "跨站请求伪造",
-            "authentication",
-            "认证",
-            "authorization",
-            "授权",
-            "sensitive data",
-            "敏感数据",
-            "hardcoded",
-            "硬编码",
-        ]
+        # vulnerability_keywords = [
+        #     "sql injection",
+        #     "sql注入",
+        #     "xss",
+        #     "cross-site",
+        #     "跨站",
+        #     "command injection",
+        #     "命令注入",
+        #     "path traversal",
+        #     "路径遍历",
+        #     "ssrf",
+        #     "服务器端请求伪造",
+        #     "csrf",
+        #     "跨站请求伪造",
+        #     "authentication",
+        #     "认证",
+        #     "authorization",
+        #     "授权",
+        #     "sensitive data",
+        #     "敏感数据",
+        #     "hardcoded",
+        #     "硬编码",
+        # ]
 
         for severity, keywords in severity_keywords.items():
             for keyword in keywords:
@@ -1482,10 +1479,10 @@ class LineNumberValidator:
 
         location = vulnerability.get("location", "")
         evidence = vulnerability.get("evidence", [])
-        code_snippet = ""
+        # code_snippet = ""
         for ev in evidence:
             if isinstance(ev, dict) and ev.get("code_snippet"):
-                code_snippet = ev["code_snippet"]
+                # code_snippet = ev["code_snippet"]
                 break
 
         ai_reported_line = -1
@@ -1545,7 +1542,7 @@ class LineNumberValidator:
             匹配状态: "EXACT", "ADJUSTED", "FUZZY", "NOT_FOUND"
         """
         rule_name = vulnerability.get("rule_name", "unknown")
-        print(f"\n[DEBUG] ====== find_actual_line START ======")
+        print("\n[DEBUG] ====== find_actual_line START ======")
         print(f"[DEBUG] Rule: {rule_name}")
 
         if file_content:
@@ -1617,7 +1614,7 @@ class LineNumberValidator:
                             matched = any(ident in line_lower for ident in extracted_identifiers)
                             if matched:
                                 print(
-                                    f"[DEBUG] Semantic validation passed: line contains identifier from description"
+                                    "[DEBUG] Semantic validation passed: line contains identifier from description"
                                 )
                                 return ai_reported_line, "REPORTED", []
                         print(f"[DEBUG] Using AI reported line directly: {ai_reported_line}")
@@ -1642,15 +1639,15 @@ class LineNumberValidator:
                         matched = any(ident in line_lower for ident in extracted_identifiers)
                         if matched:
                             print(
-                                f"[DEBUG] Semantic validation passed: line contains identifier from description"
+                                "[DEBUG] Semantic validation passed: line contains identifier from description"
                             )
                             return ai_reported_line, "REPORTED", []
                         else:
                             print(
-                                f"[DEBUG] Semantic validation FAILED: line does not contain identifier from description"
+                                "[DEBUG] Semantic validation FAILED: line does not contain identifier from description"
                             )
                             print(
-                                f"[DEBUG] Triggering keyword-based fuzzy match to find actual line..."
+                                "[DEBUG] Triggering keyword-based fuzzy match to find actual line..."
                             )
                             candidates = self._find_lines_by_keywords(
                                 [], file_content, ai_reported_line, extracted_identifiers
@@ -1658,7 +1655,7 @@ class LineNumberValidator:
                             if candidates:
                                 print(f"[DEBUG] Keyword match found: line {candidates[0]}")
                                 return candidates[0], "FUZZY", candidates
-                            print(f"[DEBUG] Keyword match failed, falling back to AI reported line")
+                            print("[DEBUG] Keyword match failed, falling back to AI reported line")
                             return ai_reported_line, "FUZZY", []
                     else:
                         return ai_reported_line, "REPORTED", []
@@ -1668,7 +1665,7 @@ class LineNumberValidator:
                     )
                     fallback_matched = False
                     if extracted_identifiers and file_content:
-                        print(f"[DEBUG] Trying identifier-based matching after rejection...")
+                        print("[DEBUG] Trying identifier-based matching after rejection...")
                         candidates = self._find_lines_by_keywords(
                             [], file_content, ai_reported_line, extracted_identifiers
                         )
@@ -1679,16 +1676,16 @@ class LineNumberValidator:
                             return candidates[0], "FUZZY", candidates
                         else:
                             fallback_matched = True
-                            print(f"[DEBUG] Fallback identifier matching returned no candidates")
+                            print("[DEBUG] Fallback identifier matching returned no candidates")
 
                     if fallback_matched or not extracted_identifiers:
                         print(
-                            f"[DEBUG] No valid match found after AI line rejected, continuing to keyword search..."
+                            "[DEBUG] No valid match found after AI line rejected, continuing to keyword search..."
                         )
 
         if self._is_configuration_vulnerability(vulnerability):
             print(
-                f"[DEBUG] Configuration vulnerability detected, trying joint keyword verification..."
+                "[DEBUG] Configuration vulnerability detected, trying joint keyword verification..."
             )
             joint_candidates = self._find_lines_by_joint_keywords(
                 vulnerability, file_content, ai_reported_line
@@ -1697,7 +1694,7 @@ class LineNumberValidator:
                 print(
                     f"[DEBUG] Joint verification matched: line {joint_candidates[0]}, candidates {joint_candidates}"
                 )
-                print(f"[DEBUG] ====== find_actual_line END ======\n")
+                print("[DEBUG] ====== find_actual_line END ======\n")
                 return joint_candidates[0], "FUZZY", joint_candidates
 
         description = vulnerability.get("description", "")
@@ -1714,17 +1711,17 @@ class LineNumberValidator:
             keywords = list(set(keywords + security_keywords))
 
         if keywords and file_content:
-            print(f"[DEBUG] Trying keyword fuzzy match...")
+            print("[DEBUG] Trying keyword fuzzy match...")
             candidates = self._find_lines_by_keywords(
                 keywords, file_content, ai_reported_line, extracted_identifiers
             )
             if candidates:
                 print(f"[DEBUG] Keyword matched: line {candidates[0]}, candidates {candidates}")
-                print(f"[DEBUG] ====== find_actual_line END ======\n")
+                print("[DEBUG] ====== find_actual_line END ======\n")
                 return candidates[0], "FUZZY", candidates
 
         if not keywords and extracted_identifiers and file_content:
-            print(f"[DEBUG] No keywords but identifiers found, trying identifier-only match...")
+            print("[DEBUG] No keywords but identifiers found, trying identifier-only match...")
             candidates = self._find_lines_by_keywords(
                 [], file_content, ai_reported_line, extracted_identifiers
             )
@@ -1732,12 +1729,12 @@ class LineNumberValidator:
                 print(
                     f"[DEBUG] Identifier-only matched: line {candidates[0]}, candidates {candidates}"
                 )
-                print(f"[DEBUG] ====== find_actual_line END ======\n")
+                print("[DEBUG] ====== find_actual_line END ======\n")
                 return candidates[0], "FUZZY", candidates
 
-        print(f"[DEBUG] No match found, returning NOT_FOUND")
-        print(f"[DEBUG] Keywords or file_content empty, cannot use AI reported line directly")
-        print(f"[DEBUG] ====== find_actual_line END ======\n")
+        print("[DEBUG] No match found, returning NOT_FOUND")
+        print("[DEBUG] Keywords or file_content empty, cannot use AI reported line directly")
+        print("[DEBUG] ====== find_actual_line END ======\n")
         return -1, "NOT_FOUND", []
 
     def _extract_keywords(self, vulnerability: dict) -> list:
@@ -1876,7 +1873,7 @@ class LineNumberValidator:
 
         if not keywords:
             print(
-                f"[DEBUG] Keywords still empty after extraction, using identifiers as fallback keywords"
+                "[DEBUG] Keywords still empty after extraction, using identifiers as fallback keywords"
             )
             identifiers = self._extract_identifiers_from_description(
                 vulnerability.get("description", "")
@@ -1897,9 +1894,9 @@ class LineNumberValidator:
         vuln_type = vulnerability.get("vulnerability_type", vulnerability.get("type", "")).lower()
         rule_name = vulnerability.get("rule_name", "").lower()
 
-        csrf_patterns = ["csrf", "cross-site request forgery", "跨站请求伪造"]
+        csrf_patterns = ["csr", "cross-site request forgery", "跨站请求伪造"]
         if any(p in desc_lower or p in vuln_type or p in rule_name for p in csrf_patterns):
-            keywords.extend(["csrf", "disable", "csrfdisable", "csrf().disable", "httpsecurity"])
+            keywords.extend(["csr", "disable", "csrfdisable", "csrf().disable", "httpsecurity"])
 
         clickjack_patterns = [
             "clickjack",
@@ -1944,7 +1941,7 @@ class LineNumberValidator:
                 ]
             )
 
-        ssrf_patterns = ["ssrf", "server-side request forgery", "服务端请求伪造"]
+        ssrf_patterns = ["ssr", "server-side request forgery", "服务端请求伪造"]
         if any(p in desc_lower or p in vuln_type or p in rule_name for p in ssrf_patterns):
             keywords.extend(["resttemplate", "httpclient", "urlconnection", "fetch", "request"])
 
@@ -2303,7 +2300,7 @@ class LineNumberValidator:
             return []
 
         if not keywords and identifiers:
-            print(f"[DEBUG] Keyword-only mode: using identifiers only (no keywords provided)")
+            print("[DEBUG] Keyword-only mode: using identifiers only (no keywords provided)")
 
         lines = file_content.split("\n")
         scored_lines = []
@@ -2359,7 +2356,7 @@ class LineNumberValidator:
             best_match = scored_lines[0][0]
             best_score = scored_lines[0][1]
             best_identifier_bonus = scored_lines[0][3]
-            best_proximity = scored_lines[0][4]
+            # best_proximity = scored_lines[0][4]
             tolerance = self.tolerance if self.tolerance > 0 else 5
 
             if preferred_line:
@@ -2393,12 +2390,12 @@ class LineNumberValidator:
                                 f"[DEBUG] Best match has very high keyword score ({best_score} >= {high_score_threshold * 2}), accepting despite offset {offset}"
                             )
                             return [best_match]
-                        print(f"[DEBUG] No candidates within tolerance, returning best available")
+                        print("[DEBUG] No candidates within tolerance, returning best available")
                         top_candidates = [ln for ln, _, _, _, _ in scored_lines[:5]]
                         print(f"[DEBUG] Returning top 5 candidates: {top_candidates}")
                         return top_candidates
             elif best_identifier_bonus > 0:
-                print(f"[DEBUG] Identifier match found (no preferred_line), accepting match")
+                print("[DEBUG] Identifier match found (no preferred_line), accepting match")
                 return [best_match]
 
             if identifiers:
@@ -2415,7 +2412,7 @@ class LineNumberValidator:
                     )
                     return [best_target[0]]
                 else:
-                    print(f"[DEBUG] No target identifier found in candidates")
+                    print("[DEBUG] No target identifier found in candidates")
 
             top_candidates = [ln for ln, _, _, _, _ in scored_lines[:5]]
             print(f"[DEBUG] Returning top 5 candidates: {top_candidates}")
@@ -2475,7 +2472,7 @@ class LineNumberValidator:
 
         rule_name = vulnerability.get("rule_name", "")
         description = vulnerability.get("description", "")
-        vulnerability_type = vulnerability.get("vulnerability_type", "")
+        # vulnerability_type = vulnerability.get("vulnerability_type", "")
 
         if "routerfunction" in rule_name.lower() or "routerfunction" in description.lower():
             router_patterns = [
@@ -2600,7 +2597,7 @@ class LineNumberValidator:
             )
             return [ln for ln, _, _, _ in joint_candidates]
 
-        print(f"[DEBUG] Joint verification failed, falling back to standard keyword search")
+        print("[DEBUG] Joint verification failed, falling back to standard keyword search")
         return self._find_lines_by_keywords(
             required_kws + optional_kws, file_content, preferred_line, None
         )

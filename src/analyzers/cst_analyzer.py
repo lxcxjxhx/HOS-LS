@@ -3,23 +3,17 @@
 基于 libcst 的具体语法树分析器。
 """
 
-import re
-import time
-from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
 import libcst as cst
-from libcst import CSTNode, Module
+from libcst import CSTNode
 
 from src.analyzers.base import (
     AnalysisContext,
-    AnalysisError,
-    AnalysisIssue,
     AnalysisResult,
     AnalysisStatus,
     AnalysisType,
     BaseAnalyzer,
-    Severity,
 )
 
 
@@ -839,7 +833,7 @@ class CSTAnalyzer(BaseAnalyzer):
         for arg in node.args:
             if isinstance(arg, cst.Arg):
                 arg_code = arg.value.code
-                if "+" in arg_code or 'f"' in arg_code or ".format" in arg_code:
+                if "+" in arg_code or '"' in arg_code or ".format" in arg_code:
                     position = self._get_position(wrapper, node)
                     issue = self.create_issue(
                         rule_id="CST-SQL-INJECTION",

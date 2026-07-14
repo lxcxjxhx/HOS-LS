@@ -14,7 +14,7 @@ from rich.console import Console
 
 from src.ai.entity.extractor import AIEntityExtractor
 from src.ai.intent.classifier import AIIntentClassifier
-from src.ai.intent.intent_model import IntentEntity, IntentType
+from src.ai.intent.intent_model import IntentType
 
 console = Console()
 

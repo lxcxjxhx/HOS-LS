@@ -239,7 +239,6 @@ class BaseAnalyzer(ABC):
         Returns:
             分析结果
         """
-        pass
 
     def analyze_with_metrics(self, context: AnalysisContext) -> AnalysisResult:
         """执行分析并记录性能指标

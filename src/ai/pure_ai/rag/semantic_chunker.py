@@ -4,7 +4,7 @@
 """
 
 import re
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 from src.utils.logger import get_logger
 
@@ -160,14 +160,14 @@ class SemanticChunker:
         if "functions" in ast_data:
             for func in ast_data["functions"]:
                 chunks.append(
-                    {"type": "function_def", "content": func, "metadata": {"part": "function_def"}}
+                    {"type": "function_de", "content": func, "metadata": {"part": "function_def"}}
                 )
 
         # 变量定义分块
         if "variables" in ast_data:
             for var in ast_data["variables"]:
                 chunks.append(
-                    {"type": "variable_def", "content": var, "metadata": {"part": "variable_def"}}
+                    {"type": "variable_de", "content": var, "metadata": {"part": "variable_def"}}
                 )
 
         return chunks

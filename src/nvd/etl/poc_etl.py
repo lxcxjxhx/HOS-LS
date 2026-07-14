@@ -37,14 +37,14 @@ class PoCETL(BaseETL):
         json_files = list(data_dir.glob("**/*.json"))
 
         if not json_files:
-            print(f"╔══════════════════════════════════════════════════════════════╗")
+            print("╔══════════════════════════════════════════════════════════════╗")
             print(f"║  ✗ 未找到PoC JSON文件: {data_path:<36} ║")
-            print(f"╚══════════════════════════════════════════════════════════════╝")
+            print("╚══════════════════════════════════════════════════════════════╝")
             return False
 
-        print(f"╔══════════════════════════════════════════════════════════════╗")
+        print("╔══════════════════════════════════════════════════════════════╗")
         print(f"║  📂 发现 {len(json_files)} 个PoC文件                                  ║")
-        print(f"╚══════════════════════════════════════════════════════════════╝")
+        print("╚══════════════════════════════════════════════════════════════╝")
 
         batch_size = 1000
         batch = []
@@ -160,52 +160,6 @@ class PoCETL(BaseETL):
         print(f"║  跳过:   {skipped:>6} 条                                              ║")
         print("╚══════════════════════════════════════════════════════════════╝")
         print()
-
-    def _batch_insert(self, batch: List[Dict]) -> int:
-        """批量插入PoC数据，返回插入数量"""
-        if not batch:
-            return 0
-
-        query = """
-            INSERT INTO poc (cve_id, repo_url, stars, language, description, last_updated)
-            VALUES (%(cve_id)s, %(repo_url)s, %(stars)s, %(language)s, %(description)s, %(last_updated)s)
-            ON CONFLICT (cve_id, repo_url) DO UPDATE SET
-                stars = EXCLUDED.stars,
-                language = EXCLUDED.language,
-                description = EXCLUDED.description,
-                last_updated = EXCLUDED.last_updated
-        """
-
-        try:
-            with self.conn.get_cursor() as cursor:
-                cursor.executemany(query, batch)
-            return len(batch)
-        except Exception:
-            count = 0
-            for item in batch:
-                try:
-                    if self._insert_or_update_poc(item):
-                        count += 1
-                except:
-                    pass
-            return count
-
-    def _insert_or_update_poc(self, poc_data: Dict) -> bool:
-        """插入或更新PoC数据"""
-        query = """
-            INSERT INTO poc (cve_id, repo_url, stars, language, description, last_updated)
-            VALUES (%(cve_id)s, %(repo_url)s, %(stars)s, %(language)s, %(description)s, %(last_updated)s)
-            ON CONFLICT (cve_id, repo_url) DO UPDATE SET
-                stars = EXCLUDED.stars,
-                language = EXCLUDED.language,
-                description = EXCLUDED.description,
-                last_updated = EXCLUDED.last_updated
-        """
-        try:
-            self.conn.execute(query, poc_data)
-            return True
-        except Exception:
-            return False
 
     def _batch_insert(self, batch: List[Dict]) -> int:
         """批量插入PoC数据，返回插入数量 - SQLite兼容"""

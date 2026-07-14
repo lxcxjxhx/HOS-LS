@@ -5,7 +5,6 @@
 """
 
 import os
-import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -33,7 +32,7 @@ class NVDQueryAdapter:
 
         if use_cache:
             try:
-                from src.nvd.query_cache import NVDQueryCache, get_global_cache
+                from src.nvd.query_cache import get_global_cache
 
                 self._cache = get_global_cache()
             except Exception:

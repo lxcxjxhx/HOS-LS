@@ -3,7 +3,6 @@
 统一管理所有配置，支持 YAML 配置文件加载和热更新。
 """
 
-import os
 from functools import lru_cache
 from pathlib import Path
 from typing import Any, Dict, Optional

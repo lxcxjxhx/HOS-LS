@@ -3,10 +3,8 @@
 从 NVD JSON Feed 和 GitHub 镜像获取 CVE 数据。
 """
 
-import asyncio
-import json
 import os
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -165,14 +163,14 @@ class NVDFeedFetcher:
                 published_str = nvd_item.get("publishedDate")
                 if published_str:
                     published_date = datetime.strptime(published_str, "%Y-%m-%dT%H:%MZ")
-            except:
+            except BaseException:
                 pass
 
             try:
                 modified_str = nvd_item.get("lastModifiedDate")
                 if modified_str:
                     last_modified_date = datetime.strptime(modified_str, "%Y-%m-%dT%H:%MZ")
-            except:
+            except BaseException:
                 pass
 
             attack_vector = None

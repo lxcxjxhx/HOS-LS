@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from datetime import datetime
-from typing import Any, Dict, Optional
+from typing import Optional
 
 from ..db.sqlite_connection import SQLiteConnection
 
@@ -22,7 +22,6 @@ class BaseETL(ABC):
     @abstractmethod
     def process(self, data_path: str) -> bool:
         """处理数据的抽象方法"""
-        pass
 
     def _start_etl(self) -> int:
         """开始ETL记录"""

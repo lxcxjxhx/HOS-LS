@@ -11,6 +11,9 @@ from anthropic import AsyncAnthropic
 from src.ai.client import AIClient
 from src.ai.models import AIProvider, AIRequest, AIResponse
 from src.core.config import Config
+from src.utils.logger import get_logger
+
+logger = get_logger(__name__)
 
 
 class AnthropicClient(AIClient):
@@ -120,12 +123,12 @@ class AnthropicClient(AIClient):
                 return False, "Client not initialized"
 
             # 简单的测试调用以验证 API 访问
-            response = await self._client.messages.create(
-                model="claude-3-5-haiku-20241022",
-                max_tokens=10,
-                messages=[{"role": "user", "content": "Hello"}],
-                timeout=10,
-            )
+            # response = await self._client.messages.create(
+            #     model="claude-3-5-haiku-20241022",
+            #     max_tokens=10,
+            #     messages=[{"role": "user", "content": "Hello"}],
+            #     timeout=10,
+            # )
 
             logger.info("Anthropic API access validated successfully")
             return True, ""

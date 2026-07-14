@@ -208,11 +208,6 @@ class RuleDefinition:
             author=data.get("author", ""),
         )
 
-    def matches_language(self, language: str) -> bool:
-        if not self.languages:
-            return True
-        return language.lower() in [l.lower() for l in self.languages]
-
     def get_severity_value(self) -> float:
         severity_map = {
             "critical": 10.0,
@@ -222,9 +217,6 @@ class RuleDefinition:
             "info": 1.0,
         }
         return severity_map.get(self.severity.lower(), 5.0)
-
-    def is_enabled(self) -> bool:
-        return self.enabled
 
     @property
     def severity(self) -> RuleSeverity:
@@ -251,7 +243,6 @@ class RuleDefinition:
         Returns:
             规则执行结果列表
         """
-        pass
 
     def is_enabled(self) -> bool:
         """检查规则是否启用"""
@@ -267,24 +258,6 @@ class RuleDefinition:
             是否匹配
         """
         return self.metadata.language.lower() == language.lower() or self.metadata.language == "*"
-
-    def to_dict(self) -> Dict[str, Any]:
-        """转换为字典"""
-        return {
-            "id": self.metadata.id,
-            "name": self.metadata.name,
-            "description": self.metadata.description,
-            "severity": self.metadata.severity.value,
-            "category": self.metadata.category.value,
-            "language": self.metadata.language,
-            "version": self.metadata.version,
-            "author": self.metadata.author,
-            "references": self.metadata.references,
-            "tags": self.metadata.tags,
-            "enabled": self.metadata.enabled,
-            "deprecated": self.metadata.deprecated,
-            "replacement": self.metadata.replacement,
-        }
 
 
 class PatternRule(BaseRule):
@@ -390,4 +363,3 @@ class ASTRule(BaseRule):
         Returns:
             规则执行结果，如果没有问题则返回 None
         """
-        pass

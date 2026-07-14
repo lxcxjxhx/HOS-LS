@@ -4,9 +4,9 @@
 """
 
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Type, Union
+from typing import Any, Dict, List, Optional, Union
 
-from src.rules.base import BaseRule, RuleCategory, RuleDefinition, RuleMetadata, RuleSeverity
+from src.rules.base import BaseRule, RuleCategory, RuleSeverity
 
 
 class RuleRegistry:

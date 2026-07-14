@@ -1,7 +1,6 @@
-import os
 import re
 import sys
-from abc import ABC, abstractmethod
+from abc import ABC
 from datetime import datetime
 from typing import Any, Callable, Dict, List, Optional, Set, Union
 
@@ -459,7 +458,7 @@ class MockBufferedReader(MockJavaClass):
         data = self._reader.read_all()
         try:
             return data.decode("utf-8").split("\n")[0]
-        except:
+        except BaseException:
             return None
 
 
@@ -732,7 +731,7 @@ class MyBatisParameterHandler(MockJavaClass):
         param_index = 0
         for match in re.findall(pattern, sql):
             key = match.strip()
-            value = params.get(key, f"?")
+            value = params.get(key, "?")
             if value == "?":
                 param_index += 1
                 result = result.replace(f"#{{{match}}}", "?", 1)
@@ -756,7 +755,7 @@ class MockSqlSession(MockJavaClass):
 
     def selectOne(self, sql: str, params: Optional[Dict[str, Any]] = None) -> Any:
         params = params or {}
-        safe_sql = MyBatisParameterHandler.handle_hash_brace(sql, params)
+        # safe_sql = MyBatisParameterHandler.handle_hash_brace(sql, params)
         return self._mapper_results.get(sql)
 
     def selectList(self, sql: str, params: Optional[Dict[str, Any]] = None) -> ArrayList:
@@ -970,7 +969,7 @@ class MockPreparedStatement(MockJavaClass):
         sql = self._sql
         for i, param in enumerate(self._params):
             if param is not None:
-                sql = sql.replace(f"?", f"'{param}'" if isinstance(param, str) else str(param), 1)
+                sql = sql.replace("?", f"'{param}'" if isinstance(param, str) else str(param), 1)
         return MockResultSet()
 
     def executeUpdate(self) -> int:

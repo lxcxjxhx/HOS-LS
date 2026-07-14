@@ -10,7 +10,7 @@
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 from langgraph.graph import END, StateGraph
 
@@ -18,7 +18,6 @@ from src.assessment.risk_engine import Severity as RiskSeverity
 from src.assessment.risk_engine import VulnerabilityCandidate, get_risk_engine
 from src.cache.manager import CacheManagerV2
 from src.core.engine import Finding, Location, ScanResult, Severity
-from src.core.langgraph_state import ScanState
 from src.core.plan_generator import ScanPlan, ScanPriority, ScanStrategy, get_plan_generator
 from src.taint.engine import TaintPath, get_taint_engine
 

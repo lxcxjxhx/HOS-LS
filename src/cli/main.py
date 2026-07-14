@@ -8,16 +8,21 @@ import os
 import sys
 import warnings
 from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime
 from pathlib import Path
 from queue import Queue
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 import click
+from pydantic import BaseModel
 from rich.console import Console
 from rich.live import Live
 from rich.panel import Panel
 from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn
 from rich.table import Table
+
+from src import __version__
+from src.core.config import Config, ConfigManager
 
 warnings.filterwarnings("ignore", message="Failed to find CUDA.")
 warnings.filterwarnings(
@@ -35,10 +40,6 @@ warnings.filterwarnings("ignore", message="Skipping import of cpp extensions.*")
 
 os.environ["PYTHONWARNINGS"] = "ignore"
 
-from pydantic import BaseModel
-
-from src import __version__
-from src.core.config import Config, ConfigManager
 
 console = Console(emoji=False, force_terminal=True)
 
@@ -277,11 +278,11 @@ def cli(ctx: click.Context, config: Optional[str], verbose: bool, quiet: bool, d
 @cli.command()
 @click.argument("target", required=False, default=".", type=click.Path(exists=True))
 @click.option(
-    "--format", "-f", "output_format", default="html", help="输出格式 (html, markdown, json, sarif)"
+    "--format", "-", "output_format", default="html", help="输出格式 (html, markdown, json, sarif)"
 )
 @click.option("--output", "-o", help="输出文件路径")
 @click.option("--ruleset", "-r", help="规则集")
-@click.option("--diff", is_flag=True, help="扫描 Git 差异")
+@click.option("--dif", is_flag=True, help="扫描 Git 差异")
 @click.option("--workers", "-w", type=int, default=4, help="工作线程数")
 @click.option("--ai", is_flag=True, help="启用 AI 分析")
 @click.option("--pure-ai", is_flag=True, help="启用纯AI深度语义解析模式，只执行AI分析和报告导出")
@@ -491,7 +492,7 @@ def scan(
             if not config.quiet:
                 console.print(f"[bold cyan][PORT] 端口扫描已启用, 范围: {port_range}[/bold cyan]")
             if ports_only:
-                console.print(f"[bold yellow][PORT] 警告: 仅执行端口扫描模式，不进行漏洞扫描[/bold yellow]")
+                console.print("[bold yellow][PORT] 警告: 仅执行端口扫描模式，不进行漏洞扫描[/bold yellow]")
 
         # 优先级策略配置
         if priority != "full-scan":
@@ -681,7 +682,7 @@ def scan(
         if not config.quiet:
             console.print(f"[bold cyan][PORT] 端口扫描已启用, 范围: {port_range}[/bold cyan]")
         if ports_only:
-            console.print(f"[bold yellow][PORT] 警告: 仅执行端口扫描模式，不进行漏洞扫描[/bold yellow]")
+            console.print("[bold yellow][PORT] 警告: 仅执行端口扫描模式，不进行漏洞扫描[/bold yellow]")
 
     # 优先级策略配置
     if priority != "full-scan":
@@ -738,7 +739,7 @@ def scan(
                     console.print(
                         f"[green]CVE候选数量: {len(report.get('cve_candidates', []))}[/green]"
                     )
-                    console.print(f"[green]攻击链长度: {len(report.get('attack_chain', {}))}[/green]")
+                    console.print("[green]攻击链长度: {len(report.get('attack_chain', {}))}[/green]")
                     console.print("[bold]分析结果:[/bold]")
                     console.print(report.get("analysis", ""))
                     if "fix_suggestions" in report:
@@ -861,7 +862,7 @@ def config(ctx: click.Context, export: str, import_file: str, output: str) -> No
             with open(import_file, "r", encoding="utf-8") as f:
                 imported_config = json.load(f)
         else:
-            console.print(f"[red]不支持的文件格式，请使用 .yaml/.yml 或 .json 文件[/red]")
+            console.print("[red]不支持的文件格式，请使用 .yaml/.yml 或 .json 文件[/red]")
             return
 
         if imported_config:
@@ -870,9 +871,9 @@ def config(ctx: click.Context, export: str, import_file: str, output: str) -> No
 
             config_manager = ConfigManager()
             config_manager.save_config(cfg)
-            console.print(f"[green]配置已保存[/green]")
+            console.print("[green]配置已保存[/green]")
         else:
-            console.print(f"[red]导入的配置为空[/red]")
+            console.print("[red]导入的配置为空[/red]")
         return
 
     # 处理导出
@@ -1295,7 +1296,7 @@ def panel(ctx: click.Context) -> None:
         console.print("[yellow]交互式配置面板正在启动...[/yellow]")
         console.print("[yellow]请使用方向键导航，Space/Tab 切换选项，Q 退出[/yellow]")
 
-        result = config_panel.run()
+        # result = config_panel.run()
 
         if config_panel.is_modified():
             console.print("[green]配置已修改[/green]")
@@ -1370,7 +1371,6 @@ def chat(ctx: click.Context) -> None:
 @cli.group()
 def index() -> None:
     """增量索引管理命令"""
-    pass
 
 
 @index.command(name="status")
@@ -1378,7 +1378,7 @@ def index() -> None:
 @click.pass_context
 def index_status(ctx: click.Context, target: str) -> None:
     """显示项目增量索引状态"""
-    config: Config = ctx.obj["config"]
+    # config: Config = ctx.obj["config"]
 
     try:
         from src.ai.pure_ai.incremental_index import IncrementalIndexManager
@@ -1411,7 +1411,7 @@ def index_status(ctx: click.Context, target: str) -> None:
 @click.pass_context
 def index_rebuild(ctx: click.Context, target: str) -> None:
     """重建项目增量索引"""
-    config: Config = ctx.obj["config"]
+    # config: Config = ctx.obj["config"]
 
     console.print(f"[bold blue]正在重建索引: {target}[/bold blue]")
 
@@ -1440,7 +1440,7 @@ def rules(ctx: click.Context) -> None:
     # 导入get_registry
     from src.rules.registry import get_registry
 
-    cfg: Config = ctx.obj["config"]
+    # cfg: Config = ctx.obj["config"]
     registry = get_registry()
 
     # 加载内置规则
@@ -1486,7 +1486,6 @@ def init() -> None:
 @cli.group()
 def nvd() -> None:
     """NVD漏洞库管理命令"""
-    pass
 
 
 @nvd.command()
@@ -1516,7 +1515,7 @@ def nvd() -> None:
 @click.pass_context
 def update(ctx, zip, dir, limit, no_rag, batch_size, resume, model) -> None:
     """更新NVD漏洞库，解压并同步到本地RAG库"""
-    config: Config = ctx.obj["config"]
+    # config: Config = ctx.obj["config"]
 
     # 自动检测 temp_data 目录
     temp_data_base = Path(r"c:\1AAA_PROJECT\HOS\HOS-LS\All Vulnerabilities\temp_data")
@@ -1537,8 +1536,8 @@ def update(ctx, zip, dir, limit, no_rag, batch_size, resume, model) -> None:
                 console.print(
                     "[bold yellow]未检测到数据源，请先执行 'hos-ls data-preload run' 下载数据[/bold yellow]"
                 )
-                console.print(f"[dim]或者使用 --dir 参数指定数据目录[/dim]")
-                console.print(f"[dim]或者使用 --zip 参数指定压缩包路径[/dim]")
+                console.print("[dim]或者使用 --dir 参数指定数据目录[/dim]")
+                console.print("[dim]或者使用 --zip 参数指定压缩包路径[/dim]")
                 return
 
     # 确定输入路径
@@ -1674,7 +1673,7 @@ def show_checkpoint(ctx) -> None:
             try:
                 dt = datetime.fromisoformat(timestamp)
                 table.add_row("保存时间", dt.strftime("%Y-%m-%d %H:%M:%S"))
-            except:
+            except BaseException:
                 table.add_row("保存时间", timestamp)
 
         console.print(table)
@@ -1717,7 +1716,7 @@ def show_checkpoint(ctx) -> None:
 
 
 @nvd.command()
-@click.option("--force", "-f", is_flag=True, help="强制清理，无需确认")
+@click.option("--force", "-", is_flag=True, help="强制清理，无需确认")
 @click.pass_context
 def clean_checkpoints(ctx, force) -> None:
     """清理断点残留文件"""
@@ -1730,7 +1729,7 @@ def clean_checkpoints(ctx, force) -> None:
         "nvd_batch_checkpoint.txt",
     ]
 
-    temp_dir_pattern = "nvd_update_*"
+    # temp_dir_pattern = "nvd_update_*"
 
     console.print(Panel("[bold red]清理断点残留文件[/bold red]"))
 
@@ -1816,18 +1815,16 @@ def clean_checkpoints(ctx, force) -> None:
 @cli.group()
 def model() -> None:
     """模型管理命令"""
-    pass
 
 
 @cli.group()
 def data_preload() -> None:
     """数据预加载管理命令"""
-    pass
 
 
 @data_preload.command(name="run")
 @click.option("--incremental", is_flag=True, help="启用增量下载（默认启用智能检测）")
-@click.option("--force", "-f", is_flag=True, help="强制重新下载所有数据源")
+@click.option("--force", "-", is_flag=True, help="强制重新下载所有数据源")
 @click.option("--source", "-s", help="指定单个数据源")
 @click.option("--check-only", is_flag=True, help="仅检查状态，不执行下载")
 @click.pass_context
@@ -1891,7 +1888,7 @@ def data_preload_run(
         sys.exit(1)
 
 
-def _show_check_status(preloader: "DataPreloader", source_filter: Optional[str] = None) -> None:
+def _show_check_status(preloader: Any, source_filter: Optional[str] = None) -> None:
     """显示检查状态
 
     Args:
@@ -1931,7 +1928,7 @@ def _show_check_status(preloader: "DataPreloader", source_filter: Optional[str] 
     console.print(table)
 
     stats = preloader.get_statistics()
-    console.print(f"\n[cyan]统计信息:[/cyan]")
+    console.print("\n[cyan]统计信息:[/cyan]")
     console.print(f"  配置数据源: {stats.get('configured_sources', 0)}")
     console.print(f"  已下载ZIP: {stats.get('downloaded_zips', 0)}")
     console.print(f"  已解压目录: {stats.get('extracted_dirs', 0)}")
@@ -2006,7 +2003,7 @@ def data_preload_status(ctx: click.Context) -> None:
 
 
 @data_preload.command(name="clean")
-@click.option("--force", "-f", is_flag=True, help="强制清理，无需确认")
+@click.option("--force", "-", is_flag=True, help="强制清理，无需确认")
 @click.pass_context
 def data_preload_clean(ctx: click.Context, force: bool) -> None:
     """清理缓存数据"""
@@ -2078,7 +2075,7 @@ def data_preload_clean(ctx: click.Context, force: bool) -> None:
 @click.pass_context
 def download(ctx, model, output, force, token) -> None:
     """下载模型"""
-    config: Config = ctx.obj["config"]
+    # config: Config = ctx.obj["config"]
 
     console.print(f"[bold blue]开始下载模型: {model}[/bold blue]")
 
@@ -2133,7 +2130,6 @@ def download(ctx, model, output, force, token) -> None:
 def _display_result(result) -> None:
     """显示扫描结果"""
     # 导入Severity
-    from src.core.engine import Severity
 
     summary = result.to_dict()["summary"]
 
@@ -2143,7 +2139,7 @@ def _display_result(result) -> None:
     high_risk = summary.get("high", 0) + critical_count
     medium_risk = summary.get("medium", 0)
     low_risk = summary.get("low", 0)
-    info_count = summary.get("info", 0)
+    # info_count = summary.get("info", 0)
 
     # 计算非INFO问题数量作为风险评估基数
     significant_issues = high_risk + medium_risk + low_risk
@@ -2283,7 +2279,6 @@ def _display_result(result) -> None:
 def _generate_report(result, output: str, format: str, config=None) -> None:
     """生成报告"""
     # 导入报告生成器
-    from pathlib import Path
 
     from src.reporting.generator import ReportGenerator
 
@@ -2455,7 +2450,7 @@ def import_scan(cache_file: str, output_file: str, report_format: str, show_prog
     session = cache_manager.import_session(cache_file)
 
     if not session:
-        console.print(f"[bold red]导入失败: 无法读取缓存文件[/bold red]")
+        console.print("[bold red]导入失败: 无法读取缓存文件[/bold red]")
         return
 
     console.print(f"[green]会话ID: {session.session_id}[/green]")
@@ -2467,7 +2462,7 @@ def import_scan(cache_file: str, output_file: str, report_format: str, show_prog
     console.print(f"[green]发现漏洞: {len(session.results)}[/green]")
 
     if session.progress.completed_files == 0:
-        console.print(f"[bold yellow]警告: 缓存中没有扫描结果[/bold yellow]")
+        console.print("[bold yellow]警告: 缓存中没有扫描结果[/bold yellow]")
         return
 
     findings = []
@@ -2717,7 +2712,7 @@ def replay(log_file: str, speed: float, color: bool) -> None:
             sys.stdout.write("\n")
 
         console.print("-" * 60)
-        console.print(f"[bold green]日志重放完成[/bold green]")
+        console.print("[bold green]日志重放完成[/bold green]")
 
     except KeyboardInterrupt:
         console.print("\n[yellow]重放已中断[/yellow]")

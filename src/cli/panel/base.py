@@ -4,10 +4,9 @@
 """
 
 import os
-import sys
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, List, Optional
 
 
 class Key(Enum):
@@ -94,11 +93,9 @@ class InteractivePanel:
 
     def navigate_left(self) -> None:
         """向左导航（子类可重写）"""
-        pass
 
     def navigate_right(self) -> None:
         """向右导航（子类可重写）"""
-        pass
 
     def handle_enter(self) -> Optional["InteractivePanel"]:
         """处理回车键（子类可重写）"""
@@ -176,7 +173,7 @@ class InteractivePanel:
         else:
             try:
                 return Key(char.decode("utf-8"))
-            except:
+            except BaseException:
                 return Key.UNKNOWN
 
     def _get_key_unix(self) -> Key:

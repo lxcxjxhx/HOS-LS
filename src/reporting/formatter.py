@@ -9,15 +9,13 @@ APTS合规增强:
 - APTS-RP-004: 发现溯源 (规则来源、分析器来源)
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 from src.utils.translation import (
     SEVERITY_MAP,
     STATUS_MAP,
-    VERDICT_MAP,
     translate_recommendation,
     translate_severity,
-    translate_verdict,
     translate_vulnerability_title,
 )
 

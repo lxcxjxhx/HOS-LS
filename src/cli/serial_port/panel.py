@@ -3,22 +3,17 @@
 提供交互式串口工具界面。
 """
 
-import os
-import time
 from datetime import datetime
 from typing import List, Optional
 
-from ..panel.base import InteractivePanel, PanelItem, clear_screen, print_divider
+from ..panel.base import InteractivePanel, clear_screen, print_divider
 from .manager import (
-    Parity,
     SerialConfig,
     SerialManager,
     SerialPortInfo,
-    StopBits,
     ascii_encode,
     hex_decode,
     hex_encode,
-    is_hex_string,
 )
 
 
@@ -149,7 +144,7 @@ class SerialPortPanel(InteractivePanel):
 
     def _add_receive_line(self, data: bytes) -> None:
         """添加接收数据行"""
-        timestamp = datetime.now().strftime("%H:%M:%S.%f")[:-3] if self.show_timestamp else ""
+        timestamp = datetime.now().strftime("%H:%M:%S.%")[:-3] if self.show_timestamp else ""
 
         if self.show_hex:
             hex_str = hex_encode(data)
@@ -192,7 +187,7 @@ class SerialPortPanel(InteractivePanel):
             self.send_input_buffer = ""
             self.send_index = -1
 
-            timestamp = datetime.now().strftime("%H:%M:%S.%f")[:-3] if self.show_timestamp else ""
+            timestamp = datetime.now().strftime("%H:%M:%S.%")[:-3] if self.show_timestamp else ""
             tx_line = (
                 f"[{timestamp}] TX: {self.send_input_buffer}"
                 if timestamp

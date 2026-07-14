@@ -3,7 +3,6 @@
 提供 SQLite 数据库连接管理功能，支持 WAL 模式和连接池。
 """
 
-import asyncio
 from pathlib import Path
 from typing import Optional
 

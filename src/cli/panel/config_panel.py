@@ -3,9 +3,9 @@
 提供交互式配置面板功能。
 """
 
-from typing import Any, Optional
+from typing import Optional
 
-from .base import InteractivePanel, Key, PanelItem, clear_screen, print_divider
+from .base import InteractivePanel, PanelItem, clear_screen, print_divider
 
 
 class ConfigPanel(InteractivePanel):

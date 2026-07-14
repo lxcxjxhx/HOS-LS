@@ -6,7 +6,7 @@
 import json
 import time
 from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List
 
 import requests
 from bs4 import BeautifulSoup
@@ -17,8 +17,7 @@ logger = get_logger(__name__)
 
 # 尝试导入 scikit-learn 和 numpy，如果不可用则禁用趋势预测
 try:
-    import numpy as np
-    from sklearn.linear_model import LinearRegression
+    pass
 
     SKLEARN_AVAILABLE = True
 except ImportError:
@@ -60,7 +59,7 @@ class ThreatIntelligenceAnalyzer:
                     continue
 
                 name = title_elem.text.strip()
-                link = title_elem.find("a")["href"] if title_elem.find("a") else ""
+                link = title_elem.find("a")["hre"] if title_elem.find("a") else ""
 
                 # 提取描述
                 desc_elem = item.find("p", class_="desc")
@@ -109,7 +108,7 @@ class ThreatIntelligenceAnalyzer:
                     continue
 
                 name = title_elem.text.strip()
-                link = title_elem.find("a")["href"] if title_elem.find("a") else ""
+                link = title_elem.find("a")["hre"] if title_elem.find("a") else ""
 
                 # 提取描述
                 desc_elem = item.find("p", class_="post-content")

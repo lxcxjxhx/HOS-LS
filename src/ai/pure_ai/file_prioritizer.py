@@ -1,7 +1,7 @@
 import asyncio
 import json
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 from src.ai.client import AIProvider, get_model_manager
 from src.ai.models import AIRequest
@@ -56,7 +56,6 @@ class FilePrioritizer:
 
         # 文件名重要性关键词
         self.file_name_keywords = {
-            "api": 0.8,
             "auth": 0.95,
             "key": 0.95,
             "token": 0.9,
@@ -72,7 +71,6 @@ class FilePrioritizer:
             "admin": 0.85,
             "permission": 0.85,
             "role": 0.8,
-            "session": 0.8,
             "jwt": 0.9,
             "oauth": 0.85,
             "encryption": 0.9,
@@ -309,7 +307,7 @@ class FilePrioritizer:
                 "html_safe",
             ],
             "command_injection": ["exec", "system", "subprocess", "shell_exec", "passthru"],
-            "csrf": ["csrf", "token", "session", "cookie"],
+            "csr": ["csr", "token", "session", "cookie"],
             "authentication": ["password", "login", "auth", "authenticate"],
             "authorization": ["permission", "role", "access", "privilege"],
             "sensitive_data": ["password", "secret", "key", "token", "credential"],
@@ -489,7 +487,7 @@ class FilePrioritizer:
         }
 
         # Token流分析关键词定义（语言无关）
-        TOKEN_FLOW_PATTERNS = {
+        self.TOKEN_FLOW_PATTERNS = {
             "source": {
                 "keywords": [
                     "request",
@@ -584,7 +582,7 @@ class FilePrioritizer:
             },
         }
 
-        DANGEROUS_FLOW_PATTERNS = [
+        self.DANGEROUS_FLOW_PATTERNS = [
             ("source", "transform", "sink"),
             ("source", "sink"),
             ("source", "transform", "transform", "sink"),
@@ -810,7 +808,7 @@ class FilePrioritizer:
             path = Path(file_path)
 
             if fast_mode:
-                file_preview = self._get_file_preview(path)
+                # file_preview = self._get_file_preview(path)
                 project_root = path.parent
                 while project_root.parent != project_root:
                     if (
@@ -820,9 +818,9 @@ class FilePrioritizer:
                     ):
                         break
                     project_root = project_root.parent
-                project_structure = self._get_project_structure_summary(project_root)
+                # project_structure = self._get_project_structure_summary(project_root)
 
-                prompt = f"""快速评估文件安全优先级：
+                prompt = """快速评估文件安全优先级：
 
 文件路径: {file_path}
 文件预览（前10行）:
@@ -835,7 +833,7 @@ class FilePrioritizer:
 
                 timeout = 2.0
             else:
-                prompt = f'评估文件路径 \'{file_path}\' 的安全优先级。\n\n返回：{{"priority_score":0-1数字,"priority_level":"high"|"medium"|"low","analysis_summary":"分析"}}'
+                prompt = '评估文件路径 \'{file_path}\' 的安全优先级。\n\n返回：{{"priority_score":0-1数字,"priority_level":"high"|"medium"|"low","analysis_summary":"分析"}}'
                 timeout = 10.0
 
             response = await self._generate_with_retry(prompt, timeout=timeout)
@@ -1508,7 +1506,7 @@ class FilePrioritizer:
                 with open(path, "r", encoding="utf-8", errors="ignore") as f:
                     for line_no, line in enumerate(f, 1):
                         line_lower = line.lower()
-                        for category, pattern in TOKEN_FLOW_PATTERNS.items():
+                        for category, pattern in self.TOKEN_FLOW_PATTERNS.items():
                             for keyword in pattern["keywords"]:
                                 if keyword.lower() in line_lower:
                                     tokens.append(
@@ -1541,7 +1539,7 @@ class FilePrioritizer:
 
         sorted_tokens = sorted(tokens, key=lambda x: x["line"])
 
-        for pattern in DANGEROUS_FLOW_PATTERNS:
+        for pattern in self.DANGEROUS_FLOW_PATTERNS:
             pattern_len = len(pattern)
             for i in range(len(sorted_tokens) - pattern_len + 1):
                 window = [t["category"] for t in sorted_tokens[i : i + pattern_len]]

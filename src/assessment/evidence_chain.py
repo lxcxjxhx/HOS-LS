@@ -3,9 +3,8 @@
 提供证据链的构建、验证和绑定功能。
 """
 
-from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Tuple
+from typing import List, Optional, Tuple
 
 from src.core.engine import Evidence, Finding
 

@@ -71,7 +71,7 @@ class RegexRulesPlugin(ScanPlugin):
                                 "plugin": self.name,
                             }
                         )
-                except Exception as e:
+                except Exception:
                     # 规则执行失败，继续下一个
                     pass
 

@@ -4,14 +4,9 @@ import threading
 import time
 import traceback
 from types import ModuleType
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
-from .transpiler_quality_verifier import (
-    QualityReport,
-    TestCase,
-    TranspilerQualityVerifier,
-    VerificationResult,
-)
+from .transpiler_quality_verifier import QualityReport, TestCase, VerificationResult
 from .virtual_runtime import VirtualRuntimeEnvironment, setup_java_runtime, teardown_java_runtime
 
 
@@ -52,7 +47,7 @@ class PythonTestExecutor:
                 try:
                     exec(compiled_code, {"__builtins__": __builtins__})
                     self._execution_result["success"] = True
-                except Exception as e:
+                except Exception:
                     tb = traceback.format_exc()
                     self._execution_result["error"] = tb
 
@@ -277,7 +272,7 @@ class PythonTestExecutor:
                 return MockResponse(text="")
 
         mock_requests_instance = MockRequestsModule()
-        mock_requests.__dict__.update(vars(mock_requests_instance))
+        mock.__dict__.update(vars(mock_requests_instance))
 
         return mock
 

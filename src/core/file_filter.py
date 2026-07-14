@@ -4,11 +4,10 @@
 """
 
 import fnmatch
-import re
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
-from typing import Dict, List, Set, Tuple
+from typing import Dict, List, Tuple
 
 
 class RiskLevel(Enum):
@@ -119,7 +118,7 @@ class SecurityFileFilter:
         """
         file_name = Path(file_path).name
         file_path_str = str(file_path)
-        file_path_lower = file_path_str.lower()
+        # file_path_lower = file_path_str.lower()
 
         reasons = []
         expected_vulns = []
@@ -213,7 +212,7 @@ class SecurityFileFilter:
             try:
                 with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
                     content_map[file_path] = f.read()
-            except:
+            except BaseException:
                 pass
 
         filtered = self.filter_files(files, content_map)
@@ -250,7 +249,7 @@ class SecurityFileFilter:
                 try:
                     with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
                         content_map[file_path] = f.read()
-                except:
+                except BaseException:
                     pass
 
         filtered = self.filter_files(files, content_map)
@@ -312,7 +311,7 @@ class SecurityFileFilter:
                 try:
                     with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
                         content_map[file_path] = f.read()
-                except:
+                except BaseException:
                     pass
 
         filtered = self.filter_files(files, content_map)

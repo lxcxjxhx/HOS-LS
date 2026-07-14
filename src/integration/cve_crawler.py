@@ -5,7 +5,7 @@
 
 import asyncio
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
@@ -190,7 +190,7 @@ class CVECrawler:
         if date_match:
             try:
                 details["published_date"] = datetime.strptime(date_match.group(1), "%Y-%m-%d")
-            except:
+            except BaseException:
                 pass
 
         modified_pattern = r"Last Modified:<\/td><td>([^<]+)<\/td>"
@@ -200,7 +200,7 @@ class CVECrawler:
                 details["last_modified_date"] = datetime.strptime(
                     modified_match.group(1), "%Y-%m-%d"
                 )
-            except:
+            except BaseException:
                 pass
 
         # 解析CVSS分数

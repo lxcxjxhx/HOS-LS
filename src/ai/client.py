@@ -6,7 +6,7 @@
 import asyncio
 import time
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional, Tuple, Type
+from typing import Any, Dict, List, Optional, Tuple
 
 from src.ai.models import AIProvider, AIRequest, AIResponse
 from src.core.config import Config, get_config
@@ -26,17 +26,14 @@ class AIClient(ABC):
     @abstractmethod
     def provider(self) -> AIProvider:
         """提供商"""
-        pass
 
     @abstractmethod
     async def initialize(self) -> None:
         """初始化客户端"""
-        pass
 
     @abstractmethod
     async def close(self) -> None:
         """关闭客户端"""
-        pass
 
     @abstractmethod
     async def generate(self, request: AIRequest) -> AIResponse:
@@ -48,7 +45,6 @@ class AIClient(ABC):
         Returns:
             AI 响应
         """
-        pass
 
     async def generate_with_retry(self, request: AIRequest, max_retries: int = 3) -> AIResponse:
         """生成响应（带重试机制）
@@ -121,7 +117,6 @@ class AIClient(ABC):
     @abstractmethod
     def is_available(self) -> bool:
         """检查客户端是否可用"""
-        pass
 
     @abstractmethod
     async def validate_api_access(self) -> Tuple[bool, str]:
@@ -130,7 +125,6 @@ class AIClient(ABC):
         Returns:
             Tuple[bool, str]: (是否成功, 错误信息)
         """
-        pass
 
     async def __aenter__(self):
         await self.initialize()

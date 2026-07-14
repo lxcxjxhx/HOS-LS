@@ -6,7 +6,6 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 from rich.console import Console
-from rich.progress import Progress, SpinnerColumn, TextColumn
 
 from src.ai.models import AIRequest
 from src.ai.prompt_engine import PromptEngine, get_prompt_engine
@@ -29,8 +28,6 @@ console = Console()
 
 class SemanticConsistencyError(Exception):
     """语义一致性异常"""
-
-    pass
 
 
 HIGH_SEVERITY_RISK_TYPES = [
@@ -503,7 +500,7 @@ class EvidenceChain:
 
         if signal_id in self.signals:
             old_state = self.signals[signal_id]["current_state"]
-            old_agent = self.signals[signal_id].get("original_agent", "")
+            # old_agent = self.signals[signal_id].get("original_agent", "")
 
             state_change_count = len(self.signals[signal_id]["state_history"])
             if state_change_count >= self.MAX_STATE_CHANGES and new_state != "REFINED":
@@ -821,7 +818,7 @@ class MultiAgentPipeline:
             return "JSON"
         elif file_path.endswith(".toml"):
             return "TOML"
-        elif file_path.endswith((".ini", ".conf", ".cfg")):
+        elif file_path.endswith((".ini", ".con", ".cfg")):
             return "Config"
 
         # Web文件格式
@@ -1163,7 +1160,7 @@ class MultiAgentPipeline:
             )
 
             if total_token_usage["total_tokens"] > 0:
-                avg_tokens_per_agent = total_token_usage["total_tokens"] / 6 if 6 > 0 else 0
+                # avg_tokens_per_agent = total_token_usage["total_tokens"] / 6 if 6 > 0 else 0
                 console.print(
                     f"[dim]  [TOKEN] Token: {total_token_usage['total_tokens']:,} (提示词: {total_token_usage['prompt_tokens']:,}, 补全: {total_token_usage['completion_tokens']:,})[/dim]"
                 )
@@ -1409,12 +1406,12 @@ class MultiAgentPipeline:
             )
             print(f"[WARN] Signals from Agent-2 not verified by Agent-3: {unverified_signals}")
             print(
-                f"[WARN] Agent-3 verification coverage: {len(processed_signal_ids)}/{len(all_signal_ids)} ({coverage_ratio*100:.1f}%)"
+                f"[WARN] Agent-3 verification coverage: {len(processed_signal_ids)}/{len(all_signal_ids)} ({coverage_ratio * 100:.1f}%)"
             )
 
             if coverage_ratio < 0.5:
                 print(
-                    f"[WARN] [完整性警告] Agent-3 验证覆盖率低于50%阈值 ({coverage_ratio*100:.1f}%)，尝试从风险列表匹配..."
+                    f"[WARN] [完整性警告] Agent-3 验证覆盖率低于50%阈值 ({coverage_ratio * 100:.1f}%)，尝试从风险列表匹配..."
                 )
                 matched_count = self._match_unverified_signals(
                     unverified_signals, vulnerability_verification
@@ -1425,14 +1422,14 @@ class MultiAgentPipeline:
                     else 0
                 )
                 print(
-                    f"[DEBUG] 匹配后调整覆盖率: {len(processed_signal_ids) + matched_count}/{len(all_signal_ids)} ({adjusted_coverage*100:.1f}%)"
+                    f"[DEBUG] 匹配后调整覆盖率: {len(processed_signal_ids) + matched_count}/{len(all_signal_ids)} ({adjusted_coverage * 100:.1f}%)"
                 )
                 if adjusted_coverage >= 0.5:
-                    print(f"[INFO] 匹配成功，覆盖率已提升至 {adjusted_coverage*100:.1f}%")
+                    print(f"[INFO] 匹配成功，覆盖率已提升至 {adjusted_coverage * 100:.1f}%")
                     coverage_ratio = adjusted_coverage
 
             if coverage_ratio < 0.5:
-                print(f"[WARN] [覆盖率修复] 将相关风险标记为需要人工复核")
+                print("[WARN] [覆盖率修复] 将相关风险标记为需要人工复核")
                 for signal_id in unverified_signals:
                     signal = self.evidence_chain_tracker.get_signal(signal_id)
                     if signal:
@@ -2047,14 +2044,14 @@ class MultiAgentPipeline:
 
         if total >= critical_threshold and not self._token_budget_warned:
             console.print(
-                f"[bold yellow][TOKEN-WARNING] Token消耗达到 {total:,}/{budget:,} ({(total/budget)*100:.1f}%)，即将跳过 Agent-4/5[/bold yellow]"
+                f"[bold yellow][TOKEN-WARNING] Token消耗达到 {total:,}/{budget:,} ({(total / budget) * 100:.1f}%)，即将跳过 Agent-4/5[/bold yellow]"
             )
             self._token_budget_warned = True
             return False
 
         if total >= warning_threshold and not self._token_budget_warned:
             console.print(
-                f"[yellow][TOKEN-WARNING] Token消耗较高: {total:,}/{budget:,} ({(total/budget)*100:.1f}%) - Agent: {agent_name}[/yellow]"
+                f"[yellow][TOKEN-WARNING] Token消耗较高: {total:,}/{budget:,} ({(total / budget) * 100:.1f}%) - Agent: {agent_name}[/yellow]"
             )
             self._token_budget_warned = True
 
@@ -2348,7 +2345,7 @@ class MultiAgentPipeline:
 
         print(f"[DEBUG] [Agent-3] 从 risk_enumeration 获取到 {len(risks)} 个风险")
         if len(risks) == 0:
-            print(f"[WARN] [Agent-3] risk_enumeration 返回空风险列表，检查原始数据...")
+            print("[WARN] [Agent-3] risk_enumeration 返回空风险列表，检查原始数据...")
 
         self._init_signal_queue()
         for risk in risks:
@@ -2516,7 +2513,7 @@ class MultiAgentPipeline:
             return "无风险信号"
         lines = []
         for i, risk in enumerate(risks):
-            signal_id = risk.get("signal_id", f"RISK-{i+1}")
+            signal_id = risk.get("signal_id", f"RISK-{i + 1}")
             title = risk.get("title", risk.get("risk_type", "未知风险"))
             location = risk.get("location", "未知位置")
             confidence = risk.get("confidence", "")
@@ -2908,17 +2905,17 @@ class MultiAgentPipeline:
                     f"[bold cyan][PURE-AI][/bold cyan] [red][ERROR] API错误 (Agent: {agent_name}): {e.message}[/red]"
                 )
                 if e.should_truncate:
-                    console.print(f"[bold yellow][!] 检测到需立即截断的错误，不进行重试[/bold yellow]")
+                    console.print("[bold yellow][!] 检测到需立即截断的错误，不进行重试[/bold yellow]")
                     raise
                 console.print(
-                    f"[bold cyan][PURE-AI][/bold cyan] [yellow]生成失败 (Agent: {agent_name}, 尝试 {i+1}/{self.max_retries}): {e.message}[/yellow]"
+                    f"[bold cyan][PURE-AI][/bold cyan] [yellow]生成失败 (Agent: {agent_name}, 尝试 {i + 1}/{self.max_retries}): {e.message}[/yellow]"
                 )
                 if i == self.max_retries - 1:
                     raise
                 await asyncio.sleep(2)
             except Exception as e:
                 console.print(
-                    f"[bold cyan][PURE-AI][/bold cyan] [yellow]生成失败 (Agent: {agent_name}, 尝试 {i+1}/{self.max_retries}): {e}[/yellow]"
+                    f"[bold cyan][PURE-AI][/bold cyan] [yellow]生成失败 (Agent: {agent_name}, 尝试 {i + 1}/{self.max_retries}): {e}[/yellow]"
                 )
                 if i == self.max_retries - 1:
                     raise
@@ -2949,12 +2946,12 @@ class MultiAgentPipeline:
                 if "vulnerabilities" not in result or not isinstance(
                     result.get("vulnerabilities"), list
                 ):
-                    print(f"[DEBUG] [Schema Fix] _parse_json_response 确保 vulnerabilities 字段存在")
+                    print("[DEBUG] [Schema Fix] _parse_json_response 确保 vulnerabilities 字段存在")
                     result["vulnerabilities"] = []
                 if "signal_tracking" not in result or not isinstance(
                     result.get("signal_tracking"), dict
                 ):
-                    print(f"[DEBUG] [Schema Fix] _parse_json_response 确保 signal_tracking 字段存在")
+                    print("[DEBUG] [Schema Fix] _parse_json_response 确保 signal_tracking 字段存在")
                     result["signal_tracking"] = {
                         "signals_new": 0,
                         "signals_confirmed": 0,
@@ -2963,12 +2960,12 @@ class MultiAgentPipeline:
                     }
             elif schema_name == "risk_enumeration":
                 if "risks" not in result or not isinstance(result.get("risks"), list):
-                    print(f"[DEBUG] [Schema Fix] _parse_json_response 确保 risks 字段存在")
+                    print("[DEBUG] [Schema Fix] _parse_json_response 确保 risks 字段存在")
                     result["risks"] = []
                 if "signal_tracking" not in result or not isinstance(
                     result.get("signal_tracking"), dict
                 ):
-                    print(f"[DEBUG] [Schema Fix] _parse_json_response 确保 signal_tracking 字段存在")
+                    print("[DEBUG] [Schema Fix] _parse_json_response 确保 signal_tracking 字段存在")
                     result["signal_tracking"] = {
                         "signals_new": 0,
                         "signals_confirmed": 0,
@@ -2979,25 +2976,23 @@ class MultiAgentPipeline:
                 if "adversarial_analysis" not in result or not isinstance(
                     result.get("adversarial_analysis"), list
                 ):
-                    print(f"[DEBUG] [Schema Fix] _parse_json_response 确保 adversarial_analysis 字段存在")
+                    print("[DEBUG] [Schema Fix] _parse_json_response 确保 adversarial_analysis 字段存在")
                     result["adversarial_analysis"] = []
                 if "cross_agent_agreement" not in result or not isinstance(
                     result.get("cross_agent_agreement"), list
                 ):
-                    print(
-                        f"[DEBUG] [Schema Fix] _parse_json_response 确保 cross_agent_agreement 字段存在"
-                    )
+                    print("[DEBUG] [Schema Fix] _parse_json_response 确保 cross_agent_agreement 字段存在")
                     result["cross_agent_agreement"] = []
             elif schema_name == "attack_chain":
                 if "attack_chains" not in result or not isinstance(
                     result.get("attack_chains"), list
                 ):
-                    print(f"[DEBUG] [Schema Fix] _parse_json_response 确保 attack_chains 字段存在")
+                    print("[DEBUG] [Schema Fix] _parse_json_response 确保 attack_chains 字段存在")
                     result["attack_chains"] = []
                 if "signal_tracking" not in result or not isinstance(
                     result.get("signal_tracking"), dict
                 ):
-                    print(f"[DEBUG] [Schema Fix] _parse_json_response 确保 signal_tracking 字段存在")
+                    print("[DEBUG] [Schema Fix] _parse_json_response 确保 signal_tracking 字段存在")
                     result["signal_tracking"] = {
                         "signals_new": 0,
                         "signals_confirmed": 0,
@@ -3017,7 +3012,7 @@ class MultiAgentPipeline:
                         result = _ensure_schema_compliance(validated_data, schema_name)
                         if not is_valid:
                             print(
-                                f"[WARN] [PURE-AI] validate_with_fallback 返回 is_valid=False，schema 修复后返回"
+                                "[WARN] [PURE-AI] validate_with_fallback 返回 is_valid=False，schema 修复后返回"
                             )
                         return result
                     print(
@@ -3048,7 +3043,7 @@ class MultiAgentPipeline:
                             result = _ensure_schema_compliance(validated_data, schema_name)
                             if not is_valid:
                                 print(
-                                    f"[WARN] [PURE-AI] validate_with_fallback(json_code_block) 返回 is_valid=False，schema 修复后返回"
+                                    "[WARN] [PURE-AI] validate_with_fallback(json_code_block) 返回 is_valid=False，schema 修复后返回"
                                 )
                             return result
                         print(
@@ -3081,7 +3076,7 @@ class MultiAgentPipeline:
                             result = _ensure_schema_compliance(validated_data, schema_name)
                             if not is_valid:
                                 print(
-                                    f"[WARN] [PURE-AI] validate_with_fallback(code_block) 返回 is_valid=False，schema 修复后返回"
+                                    "[WARN] [PURE-AI] validate_with_fallback(code_block) 返回 is_valid=False，schema 修复后返回"
                                 )
                             return result
                         print(
@@ -3112,7 +3107,7 @@ class MultiAgentPipeline:
                             result = _ensure_schema_compliance(validated_data, schema_name)
                             if not is_valid:
                                 print(
-                                    f"[WARN] [PURE-AI] validate_with_fallback(curly_brace) 返回 is_valid=False，schema 修复后返回"
+                                    "[WARN] [PURE-AI] validate_with_fallback(curly_brace) 返回 is_valid=False，schema 修复后返回"
                                 )
                             return result
                         print(
@@ -3148,7 +3143,7 @@ class MultiAgentPipeline:
                             result = _ensure_schema_compliance(validated_data, schema_name)
                             if not is_valid:
                                 print(
-                                    f"[WARN] [PURE-AI] validate_with_fallback(last_brace) 返回 is_valid=False，schema 修复后返回"
+                                    "[WARN] [PURE-AI] validate_with_fallback(last_brace) 返回 is_valid=False，schema 修复后返回"
                                 )
                             return result
                         print(
@@ -3172,7 +3167,7 @@ class MultiAgentPipeline:
                 )
                 if isinstance(validated_data, dict):
                     result = _ensure_schema_compliance(validated_data, schema_name)
-                    print(f"[WARN] [PURE-AI] JSON 解析失败，使用 fallback 并修复 schema")
+                    print("[WARN] [PURE-AI] JSON 解析失败，使用 fallback 并修复 schema")
                     return result
                 print(
                     f"[WARN] [PURE-AI] validate_with_fallback(fallback) 返回非字典类型: {type(validated_data).__name__}"
@@ -3202,7 +3197,7 @@ class MultiAgentPipeline:
             各 Agent 结果的字典
         """
         print(f"[DEBUG] 并行运行 Agents: {agents}")
-        start_time = time.time()
+        # start_time = time.time()
 
         tasks = []
         agent_names = []

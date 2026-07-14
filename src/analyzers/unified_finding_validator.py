@@ -12,7 +12,7 @@
 """
 
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional
+from typing import Dict, List, Optional
 
 from src.analyzers.finding_verifier import FindingVerification, FindingVerifier
 

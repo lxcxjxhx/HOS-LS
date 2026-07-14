@@ -1,6 +1,4 @@
 import ast
-import inspect
-import random
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Set, Tuple
 
@@ -45,7 +43,7 @@ class ASTTranspilerEngine:
 
 
 class TranspilerQualityVerifier:
-    def __init__(self, ast_transpiler: ASTTranspilerEngine, executor: "PythonTestExecutor"):
+    def __init__(self, ast_transpiler: ASTTranspilerEngine, executor: Any):
         self.ast_transpiler = ast_transpiler
         self.executor = executor
         self._supported_languages: Set[SupportedLanguage] = {
@@ -511,20 +509,18 @@ class TranspilerQualityVerifier:
         )
 
     def _create_execution_wrapper(self, code: str, input_data: Any) -> str:
-        input_repr = repr(input_data)
-        return f"""
+        # input_repr = repr(input_data)
+        return """
 {code}
 
 result = main({input_repr}) if 'main' in dir() else None
 print(repr(result))
 """
 
-    def are_equivalent(self, output1: Any, output2: Any, tolerance: float = 1e-9) -> bool:
-        is_eq, _ = self.deep_compare(output1, output2)
-        return is_eq
-
-    def deep_compare(self, obj1: Any, obj2: Any, path: str = "") -> Tuple[bool, str]:
-        if type(obj1) != type(obj2):
+    def deep_compare(
+        self, obj1: Any, obj2: Any, path: str = "", tolerance: float = 1e-9
+    ) -> Tuple[bool, str]:
+        if not isinstance(obj1, type(obj2)):
             if isinstance(obj1, (int, float)) and isinstance(obj2, (int, float)):
                 if abs(float(obj1) - float(obj2)) <= tolerance:
                     return True, ""
@@ -597,7 +593,7 @@ print(repr(result))
                     value = getattr(obj, attr_name)
                     if not callable(value):
                         comparable[attr_name] = value
-                except:
+                except BaseException:
                     pass
         return comparable
 
@@ -666,13 +662,13 @@ print(repr(result))
         if not result.test_case:
             return "无法分析：测试用例信息缺失"
 
-        input_type = self._get_input_type(result.test_case.input_data)
+        # input_type = self._get_input_type(result.test_case.input_data)
         issue_categories = []
 
         if "Type coercion" in result.error_message or (
             result.original_output is not None
             and result.transpiled_output is not None
-            and type(result.original_output) != type(result.transpiled_output)
+            and not isinstance(result.original_output, type(result.transpiled_output))
         ):
             issue_categories.append("类型转换差异：转换过程中可能丢失了类型信息")
 

@@ -2,7 +2,6 @@ import atexit
 import logging
 import os
 import random
-import re
 import shutil
 import subprocess
 import tempfile
@@ -11,7 +10,6 @@ import time
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from .java_to_python_converter import JavaToPythonConverter

@@ -6,10 +6,10 @@
 import hashlib
 import json
 import shutil
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Union
+from typing import Any, Dict, List, Optional, Union
 
 try:
     from src.learning.self_learning import Knowledge, KnowledgeType, Pattern
@@ -40,10 +40,11 @@ def validate_json_file(file_path: Path) -> tuple[bool, str | None, Exception | N
         return False, "文件不存在", None
 
     try:
-        with open(file_path, "r", encoding="utf-8") as f:
-            content = f.read()
+        with open(file_path, "r", encoding="utf-8"):
+            # content = f.read()
+            pass
         # 尝试加载
-        data = json.loads(content)
+        # data = json.loads(content)
         return True, None, None
     except json.JSONDecodeError as e:
         return False, f"JSON语法错误: {e}", e

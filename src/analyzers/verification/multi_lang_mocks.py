@@ -1,4 +1,4 @@
-from abc import ABC, abstractmethod
+from abc import ABC
 from typing import Any, Callable, Dict, Generic, List, Optional, TypeVar, Union
 
 K = TypeVar("K")

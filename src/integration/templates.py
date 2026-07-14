@@ -210,7 +210,7 @@ class TemplateExecutor:
         """执行钩子"""
         # 简单的钩子执行实现
         if hook == "notify":
-            print(f"通知: 扫描完成")
+            print("通知: 扫描完成")
         elif hook == "cleanup":
             print("清理临时文件")
         elif hook.startswith("script:"):

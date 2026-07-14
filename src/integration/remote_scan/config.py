@@ -3,7 +3,7 @@
 远程扫描配置模型。
 """
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Optional
 
 

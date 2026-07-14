@@ -193,7 +193,7 @@ class PRCommenter:
 
         # 扫描信息链接
         if scan_info and scan_info.get("report_url"):
-            comment += f"\n### 📄 Full Report\n\n"
+            comment += "\n### 📄 Full Report\n\n"
             comment += f"[View detailed security report]({scan_info['report_url']})\n"
 
         return self.truncate_comment(comment)

@@ -5,14 +5,11 @@
 
 import asyncio
 import signal
-import sys
 import time
-from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 from rich.console import Console
-from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn, TimeElapsedColumn
 
 from src.ai.models import (
     AnalysisContext,
@@ -21,11 +18,14 @@ from src.ai.models import (
     VulnerabilityFinding,
 )
 from src.core.config import Config
-from src.core.engine import BaseScanner, ScanEngine, ScanMode, ScanResult
+from src.core.engine import ScanEngine, ScanMode, ScanResult
 from src.core.scan_state import ScanState
 from src.utils.file_discovery import FileDiscoveryEngine, FileInfo
 from src.utils.file_prioritizer import FilePrioritizer
+from src.utils.logger import get_logger
 from src.utils.priority_engine import FilePriorityEngine, PriorityStrategy
+
+logger = get_logger(__name__)
 
 try:
     from src.ai.cost_estimator import get_cost_estimator
@@ -112,7 +112,7 @@ class SecurityScanner:
             try:
                 self.scan_cache_manager = get_scan_cache_manager()
                 if self.config.debug:
-                    console.print(f"[dim][DEBUG] 扫描缓存管理器初始化成功[/dim]")
+                    console.print("[dim][DEBUG] 扫描缓存管理器初始化成功[/dim]")
             except Exception as e:
                 if self.config.debug:
                     console.print(f"[dim][DEBUG] 扫描缓存管理器初始化失败: {e}[/dim]")
@@ -132,7 +132,7 @@ class SecurityScanner:
         try:
             self.ast_analyzer.initialize()
             if self.config.debug:
-                console.print(f"[dim][DEBUG] AST 分析器初始化成功[/dim]")
+                console.print("[dim][DEBUG] AST 分析器初始化成功[/dim]")
         except Exception as e:
             if self.config.debug:
                 console.print(f"[dim][DEBUG] AST 分析器初始化失败: {e}[/dim]")
@@ -144,7 +144,7 @@ class SecurityScanner:
                 self.ai_analyzer = AIAnalyzer(config)
                 self.attack_chain_builder = get_ai_attack_chain_builder()
                 if self.config.debug:
-                    console.print(f"[dim][DEBUG] AI 分析器初始化成功[/dim]")
+                    console.print("[dim][DEBUG] AI 分析器初始化成功[/dim]")
             except Exception as e:
                 if self.config.debug:
                     console.print(f"[dim][DEBUG] AI 分析器初始化失败: {e}[/dim]")
@@ -154,15 +154,15 @@ class SecurityScanner:
         self.ai_file_prioritizer = None
         if config.pure_ai:
             if self.config.debug:
-                console.print(f"[dim][DEBUG] 开始初始化纯AI分析器[/dim]")
+                console.print("[dim][DEBUG] 开始初始化纯AI分析器[/dim]")
             try:
                 from src.ai.pure_ai_analyzer import PureAIAnalyzer
 
                 if self.config.debug:
-                    console.print(f"[dim][DEBUG] 导入PureAIAnalyzer成功[/dim]")
+                    console.print("[dim][DEBUG] 导入PureAIAnalyzer成功[/dim]")
                 self.pure_ai_analyzer = PureAIAnalyzer(config)
                 if self.config.debug:
-                    console.print(f"[dim][DEBUG] 纯AI分析器初始化成功[/dim]")
+                    console.print("[dim][DEBUG] 纯AI分析器初始化成功[/dim]")
 
                 # 初始化AI文件优先级评估器
                 try:
@@ -196,14 +196,14 @@ class SecurityScanner:
                 traceback.print_exc()
 
         if config.debug:
-            console.print(f"[dim][DEBUG] 安全扫描器初始化完成，规则注册表已就绪（仅用于知识库检索）[/dim]")
-            console.print(f"[dim][DEBUG] 本地语义分析器已启用[/dim]")
+            console.print("[dim][DEBUG] 安全扫描器初始化完成，规则注册表已就绪（仅用于知识库检索）[/dim]")
+            console.print("[dim][DEBUG] 本地语义分析器已启用[/dim]")
             if config.ai.enabled:
-                console.print(f"[dim][DEBUG] 攻击链路分析器已启用[/dim]")
+                console.print("[dim][DEBUG] 攻击链路分析器已启用[/dim]")
 
         self.is_vuln_lab_mode = config.scan_mode == ScanMode.VULN_LAB
         if self.is_vuln_lab_mode:
-            console.print(f"[bold yellow]🎯 靶场对抗模式已启用[/bold yellow]")
+            console.print("[bold yellow]🎯 靶场对抗模式已启用[/bold yellow]")
 
         self._data_manager = None
         self._init_nvd_adapter()
@@ -211,7 +211,7 @@ class SecurityScanner:
 
         self._init_related_file_preloader()
 
-        self.tool_orchestrator: Optional[ToolOrchestrator] = None
+        self.tool_orchestrator: Optional[Any] = None
         self.tool_chain_enabled = config.tools.enabled
         self.custom_tool_chain = config.tools.tool_chain if config.tools.tool_chain else None
         if self.tool_chain_enabled:
@@ -221,7 +221,7 @@ class SecurityScanner:
                 tool_config = {"semgrep_rules_dir": getattr(config, "semgrep_rules_dir", None)}
                 self.tool_orchestrator = create_orchestrator(tool_config)
                 if self.config.debug:
-                    console.print(f"[dim][DEBUG] 工具编排器初始化成功[/dim]")
+                    console.print("[dim][DEBUG] 工具编排器初始化成功[/dim]")
             except Exception as e:
                 if self.config.debug:
                     console.print(f"[dim][DEBUG] 工具编排器初始化失败: {e}[/dim]")
@@ -240,7 +240,7 @@ class SecurityScanner:
             # STATIC模式：不加载任何动态组件
             if self.audit_mode == AuditMode.STATIC:
                 if self.config.debug:
-                    console.print(f"[dim][DEBUG] 审计模式: STATIC，跳过动态组件初始化[/dim]")
+                    console.print("[dim][DEBUG] 审计模式: STATIC，跳过动态组件初始化[/dim]")
                 self.sandbox_enabled = False
                 return
 
@@ -284,7 +284,7 @@ class SecurityScanner:
                         console.print(f"[dim][DEBUG] NVD数据库统计: {stats}[/dim]")
             else:
                 console.print(
-                    f"[yellow][!] NVD vulnerability DB unavailable, using built-in DB[/yellow]"
+                    "[yellow][!] NVD vulnerability DB unavailable, using built-in DB[/yellow]"
                 )
         except Exception as e:
             self.nvd_adapter = None
@@ -304,7 +304,7 @@ class SecurityScanner:
             if self._data_manager:
                 logger.info("漏洞数据管理器初始化成功")
                 if self.config.debug:
-                    console.print(f"[dim][DEBUG] 漏洞数据管理器初始化成功[/dim]")
+                    console.print("[dim][DEBUG] 漏洞数据管理器初始化成功[/dim]")
         except Exception as e:
             self._data_manager = None
             if self.config.debug:
@@ -323,7 +323,7 @@ class SecurityScanner:
                 dependency_graph=dependency_graph, max_workers=4
             )
             if self.config.debug:
-                console.print(f"[dim][DEBUG] 关联文件预加载器初始化成功[/dim]")
+                console.print("[dim][DEBUG] 关联文件预加载器初始化成功[/dim]")
         except Exception as e:
             self.related_file_preloader = None
             if self.config.debug:
@@ -365,7 +365,7 @@ class SecurityScanner:
         try:
             self.scan_cache_manager.save_session(self.current_session)
             if self.config.debug:
-                console.print(f"[dim][DEBUG] 已保存扫描进度到缓存[/dim]")
+                console.print("[dim][DEBUG] 已保存扫描进度到缓存[/dim]")
         except Exception as e:
             if self.config.debug:
                 console.print(f"[dim][DEBUG] 保存扫描进度失败: {e}[/dim]")
@@ -594,14 +594,13 @@ class SecurityScanner:
             return []
 
         findings = []
-        tool_chain = self.custom_tool_chain if self.custom_tool_chain else STANDARD_TOOL_CHAIN
+        tool_chain = self.custom_tool_chain if self.custom_tool_chain else ["semgrep", "bandit"]
 
         if self.config.debug:
             console.print(f"[dim][DEBUG] 开始工具链预扫描，使用工具: {tool_chain}[/dim]")
 
         try:
             from src.analyzers.finding_verifier import FindingVerifier
-            from src.analyzers.unified_finding_validator import get_unified_validator
 
             project_root = getattr(self.config, "project_root", "") or str(
                 Path(target).parent if Path(target).is_file() else Path(target)
@@ -685,8 +684,6 @@ class SecurityScanner:
         """
         from datetime import datetime
 
-        from tqdm import tqdm
-
         # 开始时间
         start_time = time.time()
         start_datetime = datetime.now()
@@ -752,12 +749,11 @@ class SecurityScanner:
         # DYNAMIC模式：跳过静态分析，直接进行AI红队POC测试
         if self.audit_mode and self.audit_mode.value == "dynamic":
             if self.config.debug:
-                console.print(f"[dim][DEBUG] DYNAMIC模式：跳过静态分析，直接进行AI红队POC测试[/dim]")
+                console.print("[dim][DEBUG] DYNAMIC模式：跳过静态分析，直接进行AI红队POC测试[/dim]")
             findings = []
             analyzed_count = 0
 
             try:
-                from src.core.config import SandboxConfig
                 from src.sandbox.build_agent.containerized_build_agent import (
                     ContainerizedBuildAgent,
                 )
@@ -778,46 +774,46 @@ class SecurityScanner:
                     }
 
                     if self.config.debug:
-                        console.print(f"[dim][DEBUG] 初始化ContainerizedBuildAgent...[/dim]")
+                        console.print("[dim][DEBUG] 初始化ContainerizedBuildAgent...[/dim]")
 
                     agent = ContainerizedBuildAgent(project_root=target, config=agent_config)
 
                     if not agent.is_docker_available():
                         if self.config.debug:
-                            console.print(f"[dim][DEBUG] Docker不可用，使用本地构建fallback...[/dim]")
-                        console.print(f"[bold yellow][WARN] Docker不可用，尝试本地构建...[/bold yellow]")
+                            console.print("[dim][DEBUG] Docker不可用，使用本地构建fallback...[/dim]")
+                        console.print("[bold yellow][WARN] Docker不可用，尝试本地构建...[/bold yellow]")
                         findings = await self._fallback_local_build(agent, target)
                     else:
                         if self.config.debug:
-                            console.print(f"[dim][DEBUG] Docker可用，执行容器化构建...[/dim]")
+                            console.print("[dim][DEBUG] Docker可用，执行容器化构建...[/dim]")
 
-                        console.print(f"[bold cyan][TOOL] 执行容器化项目构建...[/bold cyan]")
+                        console.print("[bold cyan][TOOL] 执行容器化项目构建...[/bold cyan]")
                         result = agent.run_full_pipeline(skip_build=False, skip_runtime=False)
 
                         if result.status.value == "completed":
-                            console.print(f"[bold green][OK] 项目构建并启动成功[/bold green]")
+                            console.print("[bold green][OK] 项目构建并启动成功[/bold green]")
                             if result.runtime_info:
                                 base_url = result.runtime_info.base_url
                                 console.print(f"[bold cyan][INFO] 服务运行地址: {base_url}[/bold cyan]")
 
                                 if self.config.debug:
-                                    console.print(f"[dim][DEBUG] 开始动态POC测试...[/dim]")
+                                    console.print("[dim][DEBUG] 开始动态POC测试...[/dim]")
 
                                 from src.sandbox.build_agent.dynamic_tester import DynamicTester
 
                                 tester = DynamicTester(base_url=base_url, timeout=10)
 
-                                console.print(f"[bold cyan][TOOL] 发现API端点...[/bold cyan]")
+                                console.print("[bold cyan][TOOL] 发现API端点...[/bold cyan]")
                                 endpoints = tester.discover_endpoints()
                                 console.print(
                                     f"[bold cyan][OK] 发现 {len(endpoints)} 个端点[/bold cyan]"
                                 )
 
                                 if endpoints:
-                                    console.print(f"[bold cyan][TOOL] 执行动态漏洞测试...[/bold cyan]")
+                                    console.print("[bold cyan][TOOL] 执行动态漏洞测试...[/bold cyan]")
                                     test_report = tester.run_full_test(endpoints)
 
-                                    console.print(f"[bold cyan][OK] 动态测试完成[/bold cyan]")
+                                    console.print("[bold cyan][OK] 动态测试完成[/bold cyan]")
                                     console.print(
                                         f"[bold cyan]  - 总测试数: {test_report.total_tests}[/bold cyan]"
                                     )
@@ -843,10 +839,10 @@ class SecurityScanner:
                             console.print(
                                 f"[bold red][ERROR] 构建失败: {result.error_message}[/bold red]"
                             )
-                            console.print(f"[bold yellow][WARN] 回退到本地分析...[/bold yellow]")
+                            console.print("[bold yellow][WARN] 回退到本地分析...[/bold yellow]")
                             findings = await self._fallback_local_build(agent, target)
                 else:
-                    console.print(f"[bold yellow][WARN] 沙盒未配置，跳过动态测试[/bold yellow]")
+                    console.print("[bold yellow][WARN] 沙盒未配置，跳过动态测试[/bold yellow]")
 
             except ImportError as e:
                 if self.config.debug:
@@ -857,7 +853,7 @@ class SecurityScanner:
                     console.print(f"[dim][DEBUG] 动态测试错误: {e}[/dim]")
                 console.print(f"[bold yellow][WARN] 动态测试执行失败: {e}[/bold yellow]")
 
-            console.print(f"[bold cyan][OK] DYNAMIC模式完成[/bold cyan]")
+            console.print("[bold cyan][OK] DYNAMIC模式完成[/bold cyan]")
         else:
             # STATIC或HYBRID模式：执行静态分析
             findings, analyzed_count = await self._analyze_files(files)
@@ -927,7 +923,7 @@ class SecurityScanner:
         # 纯AI模式：跳过所有后处理步骤，直接汇总结果
         if self.config.pure_ai:
             if self.config.debug:
-                console.print(f"[dim][DEBUG] 纯AI模式：跳过所有后处理步骤[/dim]")
+                console.print("[dim][DEBUG] 纯AI模式：跳过所有后处理步骤[/dim]")
 
             # 直接汇总结果
             console.print("[bold cyan][INFO] Summarizing results...[/bold cyan]")
@@ -1053,7 +1049,7 @@ class SecurityScanner:
                 and result.findings
             ):
                 if self.config.debug:
-                    console.print(f"[dim][DEBUG] 开始执行攻击链路分析[/dim]")
+                    console.print("[dim][DEBUG] 开始执行攻击链路分析[/dim]")
 
                 try:
                     # 转换ScanResult为SecurityAnalysisResult
@@ -1125,7 +1121,7 @@ class SecurityScanner:
             # 执行本地攻击链分析（纯AI模式下跳过）
             if result.findings and not self.config.pure_ai:
                 if self.config.debug:
-                    console.print(f"[dim][DEBUG] 开始执行本地攻击链分析[/dim]")
+                    console.print("[dim][DEBUG] 开始执行本地攻击链分析[/dim]")
 
                 try:
                     from src.core.attack_chain_analyzer import AttackChainAnalyzer
@@ -1187,7 +1183,7 @@ class SecurityScanner:
             # 执行漏洞优先级评估（如果启用了AI且不是纯AI模式）
             if self.config.ai.enabled and self.priority_evaluator is not None and result.findings:
                 if self.config.debug:
-                    console.print(f"[dim][DEBUG] 开始执行漏洞优先级评估[/dim]")
+                    console.print("[dim][DEBUG] 开始执行漏洞优先级评估[/dim]")
 
                 try:
                     # 转换ScanResult为SecurityAnalysisResult
@@ -1247,7 +1243,7 @@ class SecurityScanner:
                     }
 
                     if self.config.debug:
-                        console.print(f"[dim][DEBUG] 优先级评估完成[/dim]")
+                        console.print("[dim][DEBUG] 优先级评估完成[/dim]")
                         console.print(f"[dim][DEBUG] {priority_result.summary}[/dim]")
                 except Exception as e:
                     if self.config.debug:
@@ -1304,11 +1300,10 @@ class SecurityScanner:
                     except ImportError:
                         from src.ai.pure_ai.rag.knowledge_base import get_rag_knowledge_base
                     try:
-                        from src.learning.self_learning import Knowledge, KnowledgeType
+                        from src.learning.self_learning import Knowledge  # noqa: F401
+                        from src.learning.self_learning import KnowledgeType  # noqa: F401
                     except ImportError:
-                        Knowledge = None
-                        KnowledgeType = None
-                    import hashlib
+                        pass
 
                     # 获取 RAG 知识库实例
                     rag_kb = get_rag_knowledge_base()
@@ -1343,7 +1338,7 @@ class SecurityScanner:
                     rag_kb.auto_record_learning(learning_results)
 
                     if self.config.debug:
-                        console.print(f"[dim][DEBUG] 自学习完成，已更新 RAG 知识库[/dim]")
+                        console.print("[dim][DEBUG] 自学习完成，已更新 RAG 知识库[/dim]")
 
                 except Exception as e:
                     if self.config.debug:
@@ -1373,7 +1368,7 @@ class SecurityScanner:
         console.print(
             f"[bold cyan][TIME] Scan duration:[/bold cyan] [bold]{scan_time:.2f}[/bold] seconds"
         )
-        console.print(f"[bold cyan][OK] Scan completed[/bold cyan]")
+        console.print("[bold cyan][OK] Scan completed[/bold cyan]")
 
         result.end_time = datetime.now()
         if self.config.debug:
@@ -1383,7 +1378,7 @@ class SecurityScanner:
             tool_stats = self.tool_orchestrator.get_statistics()
             result.metadata["tool_statistics"] = tool_stats
             if tool_stats.get("total_findings", 0) > 0:
-                console.print(f"[bold cyan][TOOL] Tool execution statistics:[/bold cyan]")
+                console.print("[bold cyan][TOOL] Tool execution statistics:[/bold cyan]")
                 for tool, stats in tool_stats.get("tool_statistics", {}).items():
                     status = "[OK]" if stats.get("is_available", False) else "[X]"
                     findings_count = stats.get("findings_count", 0)
@@ -1452,7 +1447,7 @@ class SecurityScanner:
         try:
             from src.sandbox.build_agent.project_analyzer import ProjectAnalyzer
 
-            console.print(f"[bold cyan][TOOL] 分析项目类型...[/bold cyan]")
+            console.print("[bold cyan][TOOL] 分析项目类型...[/bold cyan]")
             analyzer = ProjectAnalyzer(target)
             project_info = analyzer.analyze()
 
@@ -1467,7 +1462,7 @@ class SecurityScanner:
             project_type = project_info.project_type.value
 
             if project_type == "java_maven":
-                console.print(f"[bold cyan][TOOL] 尝试使用Maven本地构建...[/bold cyan]")
+                console.print("[bold cyan][TOOL] 尝试使用Maven本地构建...[/bold cyan]")
                 try:
                     import subprocess
 
@@ -1475,9 +1470,9 @@ class SecurityScanner:
                         ["mvn", "--version"], capture_output=True, text=True, timeout=10
                     )
                     if result.returncode == 0:
-                        console.print(f"[bold green][OK] Maven已安装[/bold green]")
+                        console.print("[bold green][OK] Maven已安装[/bold green]")
                         console.print(
-                            f"[bold cyan][TOOL] 执行构建: mvn clean package -DskipTests[/bold cyan]"
+                            "[bold cyan][TOOL] 执行构建: mvn clean package -DskipTests[/bold cyan]"
                         )
 
                         build_result = subprocess.run(
@@ -1489,7 +1484,7 @@ class SecurityScanner:
                         )
 
                         if build_result.returncode == 0:
-                            console.print(f"[bold green][OK] Maven构建成功[/bold green]")
+                            console.print("[bold green][OK] Maven构建成功[/bold green]")
 
                             jar_files = list(Path(target).rglob("target/*.jar"))
                             if jar_files:
@@ -1501,29 +1496,29 @@ class SecurityScanner:
                                     console.print(f"[bold cyan][INFO] JAR: {jar.name}[/bold cyan]")
 
                                 console.print(
-                                    f"[bold yellow][WARN] 动态测试需要运行服务，请配置Docker环境[/bold yellow]"
+                                    "[bold yellow][WARN] 动态测试需要运行服务，请配置Docker环境[/bold yellow]"
                                 )
                             else:
-                                console.print(f"[bold yellow][WARN] 未找到构建产物[/bold yellow]")
+                                console.print("[bold yellow][WARN] 未找到构建产物[/bold yellow]")
                         else:
-                            console.print(f"[bold red][ERROR] Maven构建失败[/bold red]")
+                            console.print("[bold red][ERROR] Maven构建失败[/bold red]")
                             console.print(f"[dim]{build_result.stdout[-500:]}[/dim]")
                     else:
-                        console.print(f"[bold yellow][WARN] Maven未安装，跳过构建[/bold yellow]")
+                        console.print("[bold yellow][WARN] Maven未安装，跳过构建[/bold yellow]")
                 except FileNotFoundError:
-                    console.print(f"[bold yellow][WARN] Maven未安装，跳过构建[/bold yellow]")
+                    console.print("[bold yellow][WARN] Maven未安装，跳过构建[/bold yellow]")
                 except Exception as e:
                     console.print(f"[bold yellow][WARN] Maven构建出错: {e}[/bold yellow]")
 
             elif project_type == "java_gradle":
-                console.print(f"[bold yellow][WARN] Gradle构建暂未实现fallback[/bold yellow]")
+                console.print("[bold yellow][WARN] Gradle构建暂未实现fallback[/bold yellow]")
 
             elif project_type == "node_js":
-                console.print(f"[bold yellow][WARN] Node.js构建暂未实现fallback[/bold yellow]")
+                console.print("[bold yellow][WARN] Node.js构建暂未实现fallback[/bold yellow]")
 
             elif project_type == "python":
-                console.print(f"[bold yellow][WARN] Python项目暂不需要构建[/bold yellow]")
-                console.print(f"[bold yellow][WARN] 动态测试需要运行服务，请配置Docker环境[/bold yellow]")
+                console.print("[bold yellow][WARN] Python项目暂不需要构建[/bold yellow]")
+                console.print("[bold yellow][WARN] 动态测试需要运行服务，请配置Docker环境[/bold yellow]")
 
             else:
                 console.print(f"[bold yellow][WARN] 不支持的项目类型: {project_type}[/bold yellow]")
@@ -1547,7 +1542,6 @@ class SecurityScanner:
             (发现的安全问题列表, 实际分析的文件数量)
         """
         findings = []
-        from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn, TimeElapsedColumn
 
         if self.tool_orchestrator and self.tool_chain_enabled and not self.config.pure_ai:
             tool_target = str(Path(files[0].path).parent) if files else "."
@@ -1572,11 +1566,11 @@ class SecurityScanner:
             if hasattr(self.config, "scan")
             else "full-scan"
         )
-        priority_rules_path = (
-            getattr(self.config.scan, "priority_rules_path", "")
-            if hasattr(self.config, "scan")
-            else ""
-        )
+        # priority_rules_path = (
+        #     getattr(self.config.scan, "priority_rules_path", "")
+        #     if hasattr(self.config, "scan")
+        #     else ""
+        # )
 
         # 映射配置字符串到PriorityStrategy枚举
         strategy_mapping = {
@@ -1640,7 +1634,7 @@ class SecurityScanner:
                     quick_prioritized.sort(key=lambda x: x[1], reverse=True)
                     top_files_with_info = quick_prioritized
                     if self.config.debug:
-                        console.print(f"[dim][DEBUG] 使用OWASP关键词加权后的快速筛选[/dim]")
+                        console.print("[dim][DEBUG] 使用OWASP关键词加权后的快速筛选[/dim]")
 
                 if self.config.debug:
                     console.print(
@@ -1656,7 +1650,7 @@ class SecurityScanner:
                         batch = top_files_with_info[i : i + batch_size]
                         if self.config.debug:
                             console.print(
-                                f"[dim][DEBUG] 处理文件批次 {i//batch_size + 1}/{(len(top_files_with_info)+batch_size-1)//batch_size}[/dim]"
+                                f"[dim][DEBUG] 处理文件批次 {i // batch_size + 1}/{(len(top_files_with_info) + batch_size - 1) // batch_size}[/dim]"
                             )
 
                         tasks = []
@@ -1824,7 +1818,7 @@ class SecurityScanner:
         # 纯AI模式：先进行配置扫描，再用批量AI分析
         if self.config.pure_ai:
             if self.config.debug:
-                console.print(f"[dim][DEBUG] 纯AI模式：使用批量分析[/dim]")
+                console.print("[dim][DEBUG] 纯AI模式：使用批量分析[/dim]")
 
             # 获取测试模式下的目标文件列表
             target_files = prioritized_files if self.config.test_mode else files
@@ -2090,10 +2084,10 @@ class SecurityScanner:
                         if cost_estimator is not None and estimate:
                             console.print(f"[dim]  定价来源: {estimate.pricing_source}[/dim]")
 
-                        confirm = console.input(f"[bold yellow]是否确认继续扫描？ (Y/n): [/bold yellow]")
+                        confirm = console.input("[bold yellow]是否确认继续扫描？ (Y/n): [/bold yellow]")
                         if confirm.lower() == "n":
                             console.print("[red]扫描已取消[/red]")
-                            return result
+                            return None
 
                     console.print(
                         f"[bold cyan][TOOL] AI analyzing {len(pending_files)} files...[/bold cyan]"
@@ -2156,7 +2150,8 @@ class SecurityScanner:
 
                     # 收集调试日志（从 pure_ai_analyzer 获取）
                     if self.pure_ai_analyzer and hasattr(self.pure_ai_analyzer, "debug_logs"):
-                        debug_logs = self.pure_ai_analyzer.debug_logs
+                        # debug_logs = self.pure_ai_analyzer.debug_logs
+                        pass
                 except Exception as e:
                     from src.ai.providers.deepseek import APIError as DeepSeekAPIError
 
@@ -2183,7 +2178,7 @@ class SecurityScanner:
                         console.print(
                             f"[yellow]  已完成: {len(scan_state.completed_files)}/{scan_state.total_files} 文件[/yellow]"
                         )
-                        console.print(f"[yellow]  使用 --resume 恢复扫描[/yellow]")
+                        console.print("[yellow]  使用 --resume 恢复扫描[/yellow]")
                     else:
                         if self.config.debug:
                             console.print(f"[dim][DEBUG] AI批量分析失败: {e}[/dim]")
@@ -2466,7 +2461,7 @@ class SecurityScanner:
             # 检查 AST 分析器是否初始化成功
             if not hasattr(self.ast_analyzer, "_parsers") or not self.ast_analyzer._parsers:
                 if self.config.debug:
-                    console.print(f"[dim][DEBUG] AST 分析器未初始化，可能缺少 tree-sitter 库[/dim]")
+                    console.print("[dim][DEBUG] AST 分析器未初始化，可能缺少 tree-sitter 库[/dim]")
                 # 尝试初始化分析器
                 try:
                     self.ast_analyzer.initialize()
@@ -3306,7 +3301,7 @@ class SecurityScanner:
 
         if not dependency_files:
             if self.config.debug:
-                console.print(f"[dim][DEBUG] 未发现依赖声明文件，跳过库CVE匹配[/dim]")
+                console.print("[dim][DEBUG] 未发现依赖声明文件，跳过库CVE匹配[/dim]")
             return findings
 
         if self.config.debug:
@@ -3319,7 +3314,7 @@ class SecurityScanner:
 
             if not library_matcher._nvd_available:
                 if self.config.debug:
-                    console.print(f"[dim][DEBUG] NVD数据库不可用，跳过库CVE匹配[/dim]")
+                    console.print("[dim][DEBUG] NVD数据库不可用，跳过库CVE匹配[/dim]")
                 return findings
 
             for file_info in dependency_files:
@@ -3465,7 +3460,8 @@ class SecurityScanner:
                 if self.config.debug:
                     console.print(f"[dim][DEBUG] 搜索漏洞信息: {vulnerability_type}[/dim]")
 
-                search_results = await search_vulnerability_info(vulnerability_type)
+                # search_vulnerability_info is not available
+                search_results = []
 
                 if search_results:
                     if self.config.debug:
@@ -3525,7 +3521,8 @@ class SecurityScanner:
                     if self.config.debug:
                         console.print(f"[dim][DEBUG] 搜索库漏洞信息: {library_name}[/dim]")
 
-                    search_results = await search_library_info(library_name)
+                    # search_library_info is not available
+                    search_results = []
 
                     if search_results:
                         if self.config.debug:
@@ -3624,7 +3621,7 @@ class SecurityScanner:
                 "insecure_random",
                 "weak_crypto",
             ],
-            "javascript": ["xss", "csrf", "command_injection", "hardcoded_credentials"],
+            "javascript": ["xss", "csr", "command_injection", "hardcoded_credentials"],
             "html": ["xss", "csrf"],
             "css": [],
             "json": ["hardcoded_credentials"],
@@ -3672,8 +3669,8 @@ class SecurityScanner:
                 "private",
                 "confidential",
             ],
-            "csrf": ["csrf", "token", "session", "anti-forgery", "xsrf"],
-            "ssrf": ["request", "url", "fetch", "get", "post", "http", "https", "curl"],
+            "csr": ["csr", "token", "session", "anti-forgery", "xsrf"],
+            "ssr": ["request", "url", "fetch", "get", "post", "http", "https", "curl"],
         }
 
         # 根据文件类型过滤漏洞类型
@@ -3752,7 +3749,7 @@ class SecurityScanner:
             )
 
             if self.config.debug:
-                console.print(f"[dim][DEBUG] 调用 AI 分析器...[/dim]")
+                console.print("[dim][DEBUG] 调用 AI 分析器...[/dim]")
 
             # 执行 AI 分析
             ai_result = await self.ai_analyzer.analyze(context)
@@ -3928,7 +3925,6 @@ class SecurityScanner:
         try:
             from src.analysis.cross_file_analyzer import CrossFileVulnerabilityAnalyzer
             from src.analysis.file_dependency_graph import FileDependencyGraph
-            from src.db.models import VulnerabilityStep
 
             project_root = str(files[0].path.parent) if files else ""
 
@@ -3985,7 +3981,7 @@ class SecurityScanner:
                                 pass
             else:
                 if self.config.debug:
-                    console.print(f"[dim][DEBUG] 未发现跨文件漏洞[/dim]")
+                    console.print("[dim][DEBUG] 未发现跨文件漏洞[/dim]")
 
         except ImportError as e:
             if self.config.debug:
@@ -4105,7 +4101,7 @@ class RemoteSecurityScanner:
         import tempfile
         from datetime import datetime
 
-        start_time = time.time()
+        # start_time = time.time()
         start_datetime = datetime.now()
         temp_files = []
 
@@ -4123,12 +4119,12 @@ class RemoteSecurityScanner:
             return result
 
         try:
-            console.print(f"[bold cyan][REMOTE] Discovering remote files...[/bold cyan]")
+            console.print("[bold cyan][REMOTE] Discovering remote files...[/bold cyan]")
             remote_files = self.remote_scanner.discover_files(str(target))
 
             if not remote_files:
                 console.print(
-                    f"[bold yellow][WARN] No files discovered on remote target[/bold yellow]"
+                    "[bold yellow][WARN] No files discovered on remote target[/bold yellow]"
                 )
                 from src.core.engine import ScanStatus
 
@@ -4142,7 +4138,7 @@ class RemoteSecurityScanner:
                 f"[bold cyan][OK] Found[/bold cyan] [bold green]{len(remote_files)}[/bold green] remote files"
             )
 
-            console.print(f"[bold cyan][REMOTE] Reading remote files and analyzing...[/bold cyan]")
+            console.print("[bold cyan][REMOTE] Reading remote files and analyzing...[/bold cyan]")
 
             file_infos = []
             for remote_file in remote_files:

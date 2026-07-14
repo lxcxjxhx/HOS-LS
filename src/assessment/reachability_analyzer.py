@@ -6,10 +6,10 @@
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set
+from typing import Any, Dict, List, Optional
 
 from src.core.config import Config, get_config
-from src.taint.engine import CallGraphBuilder, TaintSink, TaintSource
+from src.taint.engine import CallGraphBuilder
 from src.utils.logger import get_logger
 
 logger = get_logger(__name__)

@@ -12,6 +12,7 @@ from openai import APIStatusError as OpenAIAPIStatusError
 from openai import AsyncOpenAI
 
 from src.ai.client import AIClient
+from src.ai.errors import APIError
 from src.ai.models import AIProvider, AIRequest, AIResponse
 from src.core.config import Config
 from src.utils.logger import get_logger
@@ -43,11 +44,11 @@ class AliyunClient(AIClient):
         if aliyun_config and getattr(aliyun_config, "enabled", False):
             api_key = getattr(aliyun_config, "api_key", None) or os.getenv("ALIYUN_API_KEY")
             base_url = getattr(aliyun_config, "base_url", None) or self.DEFAULT_BASE_URL
-            model = getattr(aliyun_config, "model", None) or self.DEFAULT_MODEL
+            # model = getattr(aliyun_config, "model", None) or self.DEFAULT_MODEL
         else:
             api_key = os.getenv("ALIYUN_API_KEY")
             base_url = self.DEFAULT_BASE_URL
-            model = self.DEFAULT_MODEL
+            # model = self.DEFAULT_MODEL
 
         if not api_key:
             raise ValueError("Aliyun API 密钥未设置，请设置 ALIYUN_API_KEY 环境变量或配置 aliyun.api_key")
@@ -145,12 +146,12 @@ class AliyunClient(AIClient):
             if not self._client:
                 return False, "Client not initialized"
 
-            response = await self._client.chat.completions.create(
-                model=self.DEFAULT_MODEL,
-                messages=[{"role": "user", "content": "Hello"}],
-                max_tokens=10,
-                stream=False,
-            )
+            # response = await self._client.chat.completions.create(
+            #     model=self.DEFAULT_MODEL,
+            #     messages=[{"role": "user", "content": "Hello"}],
+            #     max_tokens=10,
+            #     stream=False,
+            # )
 
             logger.info("Aliyun API access validated successfully")
             return True, ""

@@ -3,7 +3,6 @@
 提供插件管理功能。
 """
 
-from pathlib import Path
 from typing import Any, Dict, Optional
 
 from src.plugins.base import PluginManager
@@ -55,6 +54,6 @@ def _register_builtin_plugins(manager: PluginManager) -> None:
         manager.register(ASTAnalysisPlugin())
         manager.register(SemanticAnalysisPlugin())
 
-    except ImportError as e:
+    except ImportError:
         # 插件可能尚未创建，忽略错误
         pass

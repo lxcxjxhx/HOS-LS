@@ -8,7 +8,7 @@ import re
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, List, Optional
 
 from src.utils.logger import get_logger
 
@@ -186,8 +186,8 @@ class InputTracer:
         Returns:
             ControllabilityResult: 可控性分析结果
         """
-        trace_path: List[Dict] = []
-        attack_prerequisites: List[str] = []
+        # trace_path: List[Dict] = []
+        # attack_prerequisites: List[str] = []
 
         language = self._detect_language(file_path)
 
@@ -273,7 +273,7 @@ class InputTracer:
                         source_type = InputSourceType.INDIRECT_USER_INPUT
                     confidence = max(confidence, 0.6)
 
-        current_line = line_number
+        # current_line = line_number
         variable_refs = self._extract_variable_references(code_snippet)
 
         for var_ref in variable_refs:
@@ -362,7 +362,7 @@ class InputTracer:
         if not content:
             return self._create_unknown_result()
 
-        lines = content.split("\n")
+        # lines = content.split("\n")
 
         for pattern, description in self.USER_INPUT_ANNOTATIONS["python"].items():
             if pattern in code_snippet:
@@ -700,7 +700,7 @@ class InputTracer:
         if line_number > len(lines):
             return self._create_unknown_result()
 
-        current_line = lines[line_number - 1]
+        # current_line = lines[line_number - 1]
 
         if "RestTemplate" not in content:
             return ControllabilityResult(
@@ -899,7 +899,7 @@ class InputTracer:
             line = lines[i]
 
             if re.search(rf"\b{var_name}\b\s*=", line):
-                assign_match = re.search(rf"(\w+)\s*=\s*(.+)", line)
+                assign_match = re.search(r"(\w+)\s*=\s*(.+)", line)
                 if assign_match:
                     rhs = assign_match.group(2).strip()
 
@@ -1018,8 +1018,8 @@ class InputTracer:
                 line,
             )
 
-            if method_match and not any(kw in line for kw in ["if", "for", "while", "switch"]):
-                modifiers = method_match.group(1) or ""
+            if method_match and not any(kw in line for kw in ["i", "for", "while", "switch"]):
+                # modifiers = method_match.group(1) or ""
                 method_name = method_match.group(2)
                 params_str = method_match.group(3)
 

@@ -6,7 +6,7 @@
 
 import re
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Union
+from typing import Any, Dict, List, Optional, Union
 
 from src.rules.base import BaseRule, RuleCategory, RuleMetadata, RuleResult, RuleSeverity
 
@@ -316,10 +316,10 @@ class InsufficientAuditTrailRule(BaseRule):
         Returns:
             是否有所需字段
         """
-        context_window = 500
-        search_start = max(0, start - context_window)
-        search_end = min(len(content), end + context_window)
-        context = content[search_start:search_end]
+        # context_window = 500
+        # search_start = max(0, start - context_window)
+        # search_end = min(len(content), end + context_window)
+        # context = content[search_start:search_end]
 
         found_fields = 0
         for field_pattern in self._required_audit_fields:

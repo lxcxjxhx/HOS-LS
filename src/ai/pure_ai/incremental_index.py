@@ -2,8 +2,7 @@ import hashlib
 import json
 import os
 import time
-from dataclasses import asdict, dataclass, field
-from datetime import datetime
+from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set
 
@@ -199,7 +198,7 @@ class IncrementalIndexManager:
 
         elapsed = time.time() - start_time
         if elapsed > 0.1 and len(current_files) >= 1000:
-            print(f"[IncrementalIndex] 变更检测耗时: {elapsed*1000:.2f}ms (文件数: {len(current_files)})")
+            print(f"[IncrementalIndex] 变更检测耗时: {elapsed * 1000:.2f}ms (文件数: {len(current_files)})")
 
         return {"changed": changed, "added": added, "removed": removed}
 

@@ -146,7 +146,7 @@ class TreeSitterAdapter:
             from tree_sitter import Language, Parser
 
             lang_enum = self._get_language_enum(language)
-            lang_name = LANGUAGE_MAP.get(language.lower())
+            # lang_name = LANGUAGE_MAP.get(language.lower())
 
             parser = Parser()
             lang_instance = Language(tree_sitter.Language.library(), lang_enum.value)

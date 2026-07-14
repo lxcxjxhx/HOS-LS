@@ -66,7 +66,7 @@ class ImportManager:
             try:
                 with open(self.checkpoint_path, "r", encoding="utf-8") as f:
                     self._checkpoint = json.load(f)
-                logger.info(f"加载检查点成功")
+                logger.info("加载检查点成功")
             except Exception as e:
                 logger.error(f"加载检查点失败: {e}")
                 self._checkpoint = self._get_default_checkpoint()

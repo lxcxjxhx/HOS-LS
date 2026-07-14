@@ -3,10 +3,8 @@
 自动创建和管理隔离的 Python 虚拟环境，支持缓存和自动清理。
 """
 
-import os
 import shutil
 import subprocess
-import time
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Dict, List, Optional
@@ -146,7 +144,7 @@ class VenvManager:
         venv_path = self._get_venv_path(env_name)
 
         if venv_path.exists():
-            logger.debug(f"Reusing existing virtual environment: {env_path}")
+            logger.debug(f"Reusing existing virtual environment: {venv_path}")
             return str(venv_path)
 
         venv_hash = self._get_venv_hash(dependencies)
@@ -207,11 +205,11 @@ class VenvManager:
                 logger.error(f"Failed to install packages: {result.stderr}")
                 return False
 
-            logger.info(f"Packages installed successfully")
+            logger.info("Packages installed successfully")
             return True
 
         except subprocess.TimeoutExpired:
-            logger.error(f"Timeout while installing packages")
+            logger.error("Timeout while installing packages")
             return False
         except Exception as e:
             logger.error(f"Failed to install packages: {e}")

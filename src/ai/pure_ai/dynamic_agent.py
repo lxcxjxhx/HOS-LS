@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 
 @dataclass
@@ -67,7 +67,7 @@ class DynamicAgent:
             return {"test_cases": [], "analysis": f"Failed to parse LLM response: {response}"}
 
     def analyze_result(self, execution_result: str, expected_result: str) -> str:
-        analysis_prompt = f"""分析以下动态验证执行结果：
+        analysis_prompt = """分析以下动态验证执行结果：
 
 执行结果:
 {execution_result}

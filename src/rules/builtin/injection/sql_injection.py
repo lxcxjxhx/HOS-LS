@@ -5,7 +5,7 @@
 
 import re
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Union
+from typing import Any, Dict, List, Optional, Union
 
 from src.rules.base import BaseRule, RuleCategory, RuleMetadata, RuleResult, RuleSeverity
 
@@ -230,10 +230,10 @@ class SQLInjectionRule(BaseRule):
             是否是硬编码的测试数据
         """
         # 如果整行都是硬编码字符串，可能是误报
-        hardcoded_patterns = [
-            r"execute\s*\(\s*['\"]SELECT\s+\*\s+FROM\s+\w+\s+WHERE\s+\w+\s*=\s*['\"]\s*\+",
-            r"execute\s*\(\s*f['\"]\s*SELECT\s+\*\s+FROM\s+\w+",
-        ]
+        # hardcoded_patterns = [
+        #     r"execute\s*\(\s*['\"]SELECT\s+\*\s+FROM\s+\w+\s+WHERE\s+\w+\s*=\s*['\"]\s*\+",
+        #     r"execute\s*\(\s*f['\"]\s*SELECT\s+\*\s+FROM\s+\w+",
+        # ]
 
         # 检查是否包含明显的测试数据
         test_data_indicators = [

@@ -5,7 +5,7 @@
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, List, Set, Tuple
 
 
 class Severity(Enum):
@@ -93,7 +93,7 @@ class AggregatedFinding:
             return "SQL_INJECTION"
         if "xss" in rule_id_lower or "crosssite" in rule_id_lower:
             return "XSS"
-        if "csrf" in rule_id_lower or "crosssite" in rule_id_lower:
+        if "csr" in rule_id_lower or "crosssite" in rule_id_lower:
             return "CSRF"
         if "path" in rule_id_lower and "traversal" in rule_id_lower:
             return "PATH_TRAVERSAL"
@@ -369,7 +369,6 @@ class ResultAggregator:
 
         基于漏洞类型和关键描述生成唯一键
         """
-        import hashlib
 
         # 提取漏洞关键词
         rule_normalized = finding._normalize_rule_id()

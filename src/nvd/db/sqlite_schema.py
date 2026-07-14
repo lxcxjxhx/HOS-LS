@@ -1,5 +1,3 @@
-from typing import List, Optional
-
 from .sqlite_connection import SQLiteConnection
 
 
@@ -250,7 +248,7 @@ class SQLiteSche:
                     cursor.execute(f"SELECT COUNT(*) FROM {table}")
                     count = cursor.fetchone()[0]
                     stats[table] = count
-                except:
+                except BaseException:
                     stats[table] = 0
 
         return stats

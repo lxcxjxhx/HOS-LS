@@ -1,5 +1,5 @@
 import re
-from typing import Any, Dict, List
+from typing import Any, Dict
 
 
 class SecurityChecker:
@@ -149,12 +149,12 @@ class SecurityChecker:
         """生成安全报告"""
         result = self.run_all_checks(prompt)
 
-        report = f"# 安全检查报告\n\n"
-        report += f"## 总体风险评估\n"
+        report = "# 安全检查报告\n\n"
+        report += "## 总体风险评估\n"
         report += f"- 总体风险: {result['overall_risk']}\n"
         report += f"- 总得分: {result['total_score']}\n\n"
 
-        report += f"## 详细检查结果\n"
+        report += "## 详细检查结果\n"
         for check_name, check_result in result["checks"].items():
             report += f"### {check_name.replace('_', ' ').title()}\n"
             report += f"- 风险等级: {check_result['risk']}\n"

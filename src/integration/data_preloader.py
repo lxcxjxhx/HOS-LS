@@ -6,8 +6,6 @@
 
 import concurrent.futures
 import hashlib
-import os
-import re
 import zipfile
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -483,18 +481,14 @@ class SourceDownloader:
             return False
 
         try:
-            conn = NVDConnection.get_instance()
+            # Use SQLiteConnection instead of NVDConnection
+            conn = SQLiteConnection.get_instance()
             file_size = self.zip_path.stat().st_size
             checksum = self.calculate_checksum(self.zip_path)
 
             query = """
                 INSERT INTO download_records (source, file_name, file_size, checksum, downloaded_at)
-                VALUES (%s, %s, %s, %s, %s)
-                ON CONFLICT (source, file_name)
-                DO UPDATE SET
-                    file_size = EXCLUDED.file_size,
-                    checksum = EXCLUDED.checksum,
-                    downloaded_at = EXCLUDED.downloaded_at
+                VALUES (?, ?, ?, ?, ?)
             """
             conn.execute(
                 query, (self.source_name, self.zip_file_name, file_size, checksum, datetime.now())
@@ -712,7 +706,7 @@ class DataPreloader:
         Returns:
             下载状态信息
         """
-        conn = NVDConnection.get_instance()
+        conn = SQLiteConnection.get_instance()
 
         query = """
             SELECT source, file_name, file_size, checksum, downloaded_at
@@ -780,7 +774,7 @@ class DataPreloader:
         zip_count = len(list(self.temp_zip_dir.glob("*.zip"))) if self.temp_zip_dir.exists() else 0
         data_dir_count = len(self.get_temp_data_dirs())
 
-        conn = NVDConnection.get_instance()
+        conn = SQLiteConnection.get_instance()
         query = "SELECT COUNT(*) FROM download_records"
         record_count = conn.fetch_one(query)
         total_records = record_count[0] if record_count else 0

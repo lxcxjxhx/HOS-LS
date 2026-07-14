@@ -10,7 +10,6 @@ from .sync import NVDDataSync
 @click.group()
 def cli():
     """NVD漏洞数据库管理系统"""
-    pass
 
 
 @cli.command()
@@ -169,7 +168,7 @@ def detail(cve_id):
         click.echo(f"PoC数量: {detail.poc_count}")
 
         if detail.cwe_ids:
-            click.echo(f"\n关联CWE:")
+            click.echo("\n关联CWE:")
             for cwe_id, cwe_name in zip(detail.cwe_ids, detail.cwe_names):
                 click.echo(f"  - {cwe_id}: {cwe_name}")
 
@@ -177,13 +176,13 @@ def detail(cve_id):
 
         exploits = engine.get_exploits(cve_id)
         if exploits:
-            click.echo(f"\nExploits:")
+            click.echo("\nExploits:")
             for exp in exploits[:5]:
                 click.echo(f"  - [{exp['source']}] {exp['description'][:60]}...")
 
         pocs = engine.get_pocs(cve_id)
         if pocs:
-            click.echo(f"\nPoCs:")
+            click.echo("\nPoCs:")
             for poc in pocs[:5]:
                 click.echo(f"  - {poc['repo_url']} (★{poc['stars']})")
 

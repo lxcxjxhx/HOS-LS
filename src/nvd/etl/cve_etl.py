@@ -2,7 +2,7 @@ import json
 import re
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Dict, List, Optional
 
 from tqdm import tqdm
 
@@ -41,14 +41,14 @@ class CVEETL(BaseETL):
         json_files = list(cves_dir.glob("**/CVE-*.json"))
 
         if not json_files:
-            print(f"╔══════════════════════════════════════════════════════════════╗")
+            print("╔══════════════════════════════════════════════════════════════╗")
             print(f"║  ✗ 未找到CVE JSON文件: {data_path:<36} ║")
-            print(f"╚══════════════════════════════════════════════════════════════╝")
+            print("╚══════════════════════════════════════════════════════════════╝")
             return False
 
-        print(f"╔══════════════════════════════════════════════════════════════╗")
+        print("╔══════════════════════════════════════════════════════════════╗")
         print(f"║  📂 发现 {len(json_files)} 个CVE文件                              ║")
-        print(f"╚══════════════════════════════════════════════════════════════╝")
+        print("╚══════════════════════════════════════════════════════════════╝")
 
         batch_size = 1000
         batch = []
@@ -97,7 +97,7 @@ class CVEETL(BaseETL):
             with open(json_file, "r", encoding="utf-8") as f:
                 data = json.load(f)
             return self._extract_cve_data(data)
-        except:
+        except BaseException:
             return None
 
     def _extract_cve_data(self, data: Dict) -> Optional[Dict]:
@@ -137,7 +137,7 @@ class CVEETL(BaseETL):
             return None
         try:
             return datetime.fromisoformat(date_str.replace("Z", "+00:00"))
-        except:
+        except BaseException:
             return None
 
     def _batch_insert(self, batch: List[Dict]) -> int:

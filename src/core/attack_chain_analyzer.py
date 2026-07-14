@@ -6,8 +6,7 @@
 3. exploit知识注入
 """
 
-from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 from src.utils.logger import get_logger
 

@@ -1,12 +1,7 @@
 import re
 from typing import Dict, List, Optional, Set
 
-from .ast_transpiler_engine import (
-    ASTTranspilerEngine,
-    IntermediateRepresentation,
-    JavaASTParser,
-    PythonASTParser,
-)
+from .ast_transpiler_engine import JavaASTParser
 
 
 class JavaToPythonConverter:
@@ -124,7 +119,7 @@ class JavaToPythonConverter:
                     if remaining:
                         fstring_parts.append(f'"{remaining}"')
 
-                    return 'f"' + "".join(fstring_parts).replace('"{', "{").replace('}"', "}") + '"'
+                    return '"' + "".join(fstring_parts).replace('"{', "{").replace('}"', "}") + '"'
 
             return f'"{format_str}"'
 
@@ -239,7 +234,7 @@ class JavaToPythonConverter:
         pattern = r"(public|private|protected)?\s*(static)?\s*(\w+)\s+(\w+)\s*\(([^)]*)\)"
 
         def replace_method(match):
-            visibility = match.group(1) or ""
+            # visibility = match.group(1) or ""
             is_static = match.group(2) is not None
             return_type = match.group(3)
             method_name = match.group(4)
@@ -258,7 +253,7 @@ class JavaToPythonConverter:
                     if param:
                         parts = param.split()
                         if len(parts) >= 2:
-                            param_type, param_name = parts[-2], parts[-1]
+                            param_name = parts[-1]
                             param_list.append(f"{param_name}")
                         else:
                             param_list.append(param)

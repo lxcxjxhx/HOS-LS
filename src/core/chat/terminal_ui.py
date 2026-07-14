@@ -1,7 +1,6 @@
 from typing import Any, Dict, List, Optional
 
 from rich.console import Console
-from rich.live import Live
 from rich.markdown import Markdown
 from rich.panel import Panel
 from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn, TimeElapsedColumn
@@ -100,7 +99,7 @@ class TerminalUI:
             console=self.console,
         )
         progress.start()
-        task_id = progress.add_task(f"[cyan]{description}[/cyan]", total=total)
+        # task_id = progress.add_task(f"[cyan]{description}[/cyan]", total=total)
         return progress
 
     def update_progress(self, progress: Progress, task_id: int, advance: int = 1, **kwargs) -> None:

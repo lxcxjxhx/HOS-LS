@@ -95,7 +95,7 @@ class CodeTranslator:
             },
             {
                 "pattern": r'string\.format\("([^"]+)",\s*([^)]+)\)',
-                "replacement": r'f"\1".format(\2)',
+                "replacement": r'"\1".format(\2)',
                 "description": "String.format to f-string",
             },
         ],

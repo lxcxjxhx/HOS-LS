@@ -5,8 +5,7 @@
 """
 
 from dataclasses import dataclass, field
-from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, Type, Union
+from typing import Any, Dict, List, Tuple
 
 from src.analyzers.finding_verifier import FindingVerification
 from src.analyzers.unified_finding_validator import UnifiedFindingValidator
@@ -194,7 +193,7 @@ class VerificationAdapter:
         Returns:
             统一格式字典
         """
-        root = project_root or self.project_root
+        # root = project_root or self.project_root
 
         if hasattr(finding, "vuln_type"):
             return self.converter.from_code_vuln_finding(finding)

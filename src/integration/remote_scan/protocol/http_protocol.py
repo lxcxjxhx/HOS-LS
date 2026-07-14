@@ -301,7 +301,7 @@ class HTTPProtocol(BaseProtocol):
                 result["content_type"] = content_type
 
         except TimeoutError:
-            logger.warning(f"Timeout while detecting web service")
+            logger.warning("Timeout while detecting web service")
             result["error"] = "timeout"
         except ConnectionError as e:
             logger.warning(f"Connection error while detecting web service: {e}")
@@ -334,7 +334,7 @@ class HTTPProtocol(BaseProtocol):
             logger.info(f"Connection refused - HTTPS not supported on {self.host}:{https_port}")
             return False
         except requests.exceptions.Timeout:
-            logger.warning(f"Timeout while checking HTTPS support")
+            logger.warning("Timeout while checking HTTPS support")
             return False
         except requests.exceptions.RequestException as e:
             logger.warning(f"Error checking HTTPS support: {e}")

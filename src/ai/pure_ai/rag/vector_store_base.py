@@ -25,7 +25,6 @@ class VectorStoreBase(ABC):
             content: 文档内容
             metadata: 文档元数据
         """
-        pass
 
     @abstractmethod
     def add_documents(self, documents: List[Dict[str, Any]], build_index: bool = True) -> None:
@@ -35,7 +34,6 @@ class VectorStoreBase(ABC):
             documents: 文档列表，每个文档包含 document_id, content, metadata
             build_index: 是否立即构建索引并保存
         """
-        pass
 
     @abstractmethod
     def update_document(self, document_id: str, content: str, metadata: Dict[str, Any]) -> None:
@@ -46,7 +44,6 @@ class VectorStoreBase(ABC):
             content: 文档内容
             metadata: 文档元数据
         """
-        pass
 
     @abstractmethod
     def delete_document(self, document_id: str) -> None:
@@ -55,7 +52,6 @@ class VectorStoreBase(ABC):
         Args:
             document_id: 文档ID
         """
-        pass
 
     @abstractmethod
     def search(self, query: str, top_k: int = 5) -> List[Dict[str, Any]]:
@@ -68,7 +64,6 @@ class VectorStoreBase(ABC):
         Returns:
             搜索结果列表
         """
-        pass
 
     @abstractmethod
     def get_document(self, document_id: str) -> Optional[Dict[str, Any]]:
@@ -80,7 +75,6 @@ class VectorStoreBase(ABC):
         Returns:
             文档信息
         """
-        pass
 
     @abstractmethod
     def get_all_documents(self) -> List[Dict[str, Any]]:
@@ -89,27 +83,22 @@ class VectorStoreBase(ABC):
         Returns:
             文档列表
         """
-        pass
 
     @abstractmethod
     def clear(self) -> None:
         """清空向量存储"""
-        pass
 
     @abstractmethod
     def save(self) -> None:
         """保存向量存储"""
-        pass
 
     @abstractmethod
     def load(self) -> None:
         """加载向量存储"""
-        pass
 
     @abstractmethod
     def __len__(self) -> int:
         """获取文档数量"""
-        pass
 
     @abstractmethod
     def __contains__(self, document_id: str) -> bool:
@@ -121,7 +110,6 @@ class VectorStoreBase(ABC):
         Returns:
             是否存在
         """
-        pass
 
 
 class VectorStoreFactory:
@@ -207,7 +195,7 @@ class VectorStoreFactory:
         """
         if prefer_faiss:
             try:
-                import faiss
+                pass
 
                 return cls.create("faiss", storage_path=storage_path, **kwargs)
             except ImportError:

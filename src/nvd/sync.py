@@ -1,7 +1,5 @@
 from pathlib import Path
-from typing import Dict, Optional
-
-import click
+from typing import Dict
 
 from .db.connection import NVDConnection
 from .db.schema import NVDSche

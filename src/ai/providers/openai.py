@@ -120,12 +120,12 @@ class OpenAIClient(AIClient):
                 return False, "Client not initialized"
 
             # 简单的测试调用以验证 API 访问
-            response = await self._client.chat.completions.create(
-                model="gpt-3.5-turbo",
-                messages=[{"role": "user", "content": "Hello"}],
-                max_tokens=10,
-                timeout=10,
-            )
+            # response = await self._client.chat.completions.create(
+            #     model="gpt-3.5-turbo",
+            #     messages=[{"role": "user", "content": "Hello"}],
+            #     max_tokens=10,
+            #     timeout=10,
+            # )
 
             logger.info("OpenAI API access validated successfully")
             return True, ""

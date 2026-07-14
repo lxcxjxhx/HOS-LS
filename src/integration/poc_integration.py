@@ -31,7 +31,7 @@ class POCIntegration:
 
             method_storage = MethodStorage(str(storage_path))
             self.poc_generator = AIPOCGenerator(method_storage, str(pocs_output))
-        except Exception as e:
+        except Exception:
             self.poc_generator = None
 
         try:
@@ -83,7 +83,7 @@ class POCIntegration:
                         "line_number": context["line_number"],
                     }
                 )
-            except Exception as e:
+            except Exception:
                 results["failed"] += 1
 
         return results
@@ -132,7 +132,7 @@ class POCIntegration:
                     results["vulnerable"] += 1
                 results["details"].append(result)
 
-            except Exception as e:
+            except Exception:
                 results["errors"] += 1
 
         return results

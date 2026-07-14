@@ -168,12 +168,12 @@ class JavaParser:
 
     def _init_parser(self):
         try:
-            import javalang
+            pass
 
             self._parser = "javalang"
         except ImportError:
             try:
-                import javaast
+                pass
 
                 self._parser = "javaast"
             except ImportError:
@@ -236,10 +236,9 @@ class CppParser:
             pass
 
         try:
-            import tree_sitter
-            from tree_sitter_languages import get_language, get_parser
+            from tree_sitter_languages import get_parser
 
-            language = get_language("cpp")
+            # language = get_language("cpp")
             parser = get_parser()
             tree = parser.parse(bytes(source_code, "utf8"))
             return ParserResult(ast_tree=tree, success=True, metadata={"parser": "tree_sitter"})
@@ -264,10 +263,9 @@ class GoParser:
             pass
 
         try:
-            import tree_sitter
-            from tree_sitter_languages import get_language, get_parser
+            from tree_sitter_languages import get_parser
 
-            language = get_language("go")
+            # language = get_language("go")
             parser = get_parser()
             tree = parser.parse(bytes(source_code, "utf8"))
             return ParserResult(ast_tree=tree, success=True, metadata={"parser": "tree_sitter"})
@@ -282,10 +280,9 @@ class GoParser:
 class RustParser:
     def parse(self, source_code: str) -> ParserResult:
         try:
-            import tree_sitter
-            from tree_sitter_languages import get_language, get_parser
+            from tree_sitter_languages import get_parser
 
-            language = get_language("rust")
+            # language = get_language("rust")
             parser = get_parser()
             tree = parser.parse(bytes(source_code, "utf8"))
             return ParserResult(ast_tree=tree, success=True, metadata={"parser": "tree_sitter"})
@@ -300,10 +297,9 @@ class RustParser:
 class CSharpParser:
     def parse(self, source_code: str) -> ParserResult:
         try:
-            import tree_sitter
-            from tree_sitter_languages import get_language, get_parser
+            from tree_sitter_languages import get_parser
 
-            language = get_language("csharp")
+            # language = get_language("csharp")
             parser = get_parser()
             tree = parser.parse(bytes(source_code, "utf8"))
             return ParserResult(ast_tree=tree, success=True, metadata={"parser": "tree_sitter"})
@@ -318,10 +314,9 @@ class CSharpParser:
 class KotlinParser:
     def parse(self, source_code: str) -> ParserResult:
         try:
-            import tree_sitter
-            from tree_sitter_languages import get_language, get_parser
+            from tree_sitter_languages import get_parser
 
-            language = get_language("kotlin")
+            # language = get_language("kotlin")
             parser = get_parser()
             tree = parser.parse(bytes(source_code, "utf8"))
             return ParserResult(ast_tree=tree, success=True, metadata={"parser": "tree_sitter"})
@@ -336,10 +331,9 @@ class KotlinParser:
 class RubyParser:
     def parse(self, source_code: str) -> ParserResult:
         try:
-            import tree_sitter
-            from tree_sitter_languages import get_language, get_parser
+            from tree_sitter_languages import get_parser
 
-            language = get_language("ruby")
+            # language = get_language("ruby")
             parser = get_parser()
             tree = parser.parse(bytes(source_code, "utf8"))
             return ParserResult(ast_tree=tree, success=True, metadata={"parser": "tree_sitter"})

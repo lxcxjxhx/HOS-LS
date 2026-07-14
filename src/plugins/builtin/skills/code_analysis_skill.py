@@ -3,7 +3,7 @@
 提供代码分析相关的提示词模板和执行逻辑。
 """
 
-from typing import Any, Dict, List
+from typing import Any, Dict
 
 from ..base import PluginMetadata, SkillPlugin, SkillPrompt
 

@@ -2,13 +2,12 @@ import asyncio
 import re
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, List, Optional
 
 from src.ai.entity.extractor import AIEntityExtractor
 from src.ai.intent.classifier import AIIntentClassifier
 from src.ai.pipeline.configurator import AIPipelineConfigurator
 from src.ai.pure_ai.context_memory import ContextMemoryManager
-from src.ai.pure_ai.multi_agent_pipeline import MultiAgentPipeline
 from src.core.chat.pipeline_builder import PipelineBuilder
 from src.core.chat.terminal_ui import TerminalUI
 from src.core.config import Config
@@ -252,8 +251,8 @@ class ChatMain:
 
     async def _get_input(self) -> Optional[str]:
         try:
-            loop = asyncio.get_event_loop()
-            reader = asyncio.StreamReader()
+            # loop = asyncio.get_event_loop()
+            # reader = asyncio.StreamReader()
 
             if sys.platform == "win32":
                 import os
@@ -310,7 +309,7 @@ class ChatMain:
                 elif cmd_name in ("@search", "@grep"):
                     return self._handle_search_command(arg)
 
-        return f"Unknown codebase command. Use @file, @func, @search, or @grep."
+        return "Unknown codebase command. Use @file, @func, @search, or @grep."
 
     def _handle_file_command(self, file_path: str) -> str:
         try:

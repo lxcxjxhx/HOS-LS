@@ -3,11 +3,9 @@
 计算文件的扫描优先级，基于业务关键度、代码复杂度、安全敏感度和变更频率等多维度评分。
 """
 
-import re
 from dataclasses import dataclass, field
 from enum import Enum
-from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional
 
 from .file_discovery import FileInfo, FileType, Language
 
@@ -1474,39 +1472,39 @@ class FilePriorityEngine:
             "gateway",
         ]
 
-        data_access_patterns = [
-            "repository",
-            "mapper",
-            "dao",
-            "data",
-            "database",
-            "db.",
-            "jpa",
-            "mybatis",
-            "hibernate",
-            "jdbc",
-            "sql",
-            "query",
-            "crud",
-            "storage",
-            "cache",
-            "redis",
-            "mongodb",
-        ]
+        # data_access_patterns = [
+        #     "repository",
+        #     "mapper",
+        #     "dao",
+        #     "data",
+        #     "database",
+        #     "db.",
+        #     "jpa",
+        #     "mybatis",
+        #     "hibernate",
+        #     "jdbc",
+        #     "sql",
+        #     "query",
+        #     "crud",
+        #     "storage",
+        #     "cache",
+        #     "redis",
+        #     "mongodb",
+        # ]
 
-        business_patterns = [
-            "service",
-            "manager",
-            "business",
-            "logic",
-            "core",
-            "engine",
-            "processor",
-            "executor",
-            "workflow",
-            "transaction",
-            "validator",
-        ]
+        # business_patterns = [
+        #     "service",
+        #     "manager",
+        #     "business",
+        #     "logic",
+        #     "core",
+        #     "engine",
+        #     "processor",
+        #     "executor",
+        #     "workflow",
+        #     "transaction",
+        #     "validator",
+        # ]
 
         utility_patterns = [
             "util",
