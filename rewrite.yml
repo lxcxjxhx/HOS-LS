@@ -1,0 +1,36 @@
+type: specs.openrewrite.org/v1beta/recipe
+name: com.hosls.cleanup.UnusedImports
+displayName: Remove unused imports
+description: Remove all unused imports.
+tags:
+  - cleanup
+recipeList:
+  - org.openrewrite.python.RemoveUnusedImports
+---
+type: specs.openrewrite.org/v1beta/recipe
+name: com.hosls.cleanup.CodeFormat
+displayName: Format code
+description: Format Python code according to project standards.
+tags:
+  - format
+recipeList:
+  - org.openrewrite.python.format.FormatCode
+---
+type: specs.openrewrite.org/v1beta/recipe
+name: com.hosls.quality.UnifyExceptionHandling
+displayName: Unify exception handling
+description: Standardize exception handling patterns across the codebase.
+tags:
+  - quality
+  - exception-handling
+recipeList:
+  - org.openrewrite.python.cleanup.EmptyExceptionBlock
+---
+type: specs.openrewrite.org/v1beta/recipe
+name: com.hosls.quality.RemoveUnusedVariables
+displayName: Remove unused variables
+description: Remove all unused local variables.
+tags:
+  - cleanup
+recipeList:
+  - org.openrewrite.python.RemoveUnusedVariables

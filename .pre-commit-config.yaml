@@ -9,6 +9,7 @@ repos:
       - id: trailing-whitespace
       - id: end-of-file-fixer
       - id: check-yaml
+        exclude: ^rewrite\.yml$
       - id: check-added-large-files
       - id: check-merge-conflict
       - id: debug-statements
