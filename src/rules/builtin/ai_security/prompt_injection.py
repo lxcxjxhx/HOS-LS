@@ -100,7 +100,7 @@ class DirectPromptInjectionRule(BaseRule):
                     + "|".join(self._user_input_patterns)
                     + r")[^\"']*[\"']|"
                     + "|".join(self._user_input_patterns)
-                    + r")",
+                    + r")))",
                     re.IGNORECASE | re.DOTALL,
                 ),
                 "消息列表包含用户输入",
