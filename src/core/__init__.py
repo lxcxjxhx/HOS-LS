@@ -3,7 +3,7 @@
 提供 HOS-LS 的核心扫描功能，包括配置管理、扫描引擎和主扫描器。
 """
 
-from src.config.config import Config, ConfigManager
+from src.core.config import Config, ConfigManager
 from src.core.engine import ScanEngine
 from src.core.registry import DependencyInjector, ModuleRegistry
 from src.core.scanner import SecurityScanner
