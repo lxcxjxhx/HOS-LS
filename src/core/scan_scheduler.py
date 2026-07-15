@@ -6,19 +6,10 @@
 import asyncio
 import time
 from dataclasses import dataclass, field
-from enum import Enum
 from functools import wraps
 from typing import Any, Awaitable, Callable, Dict, List, Optional
 
-
-class ScanStatus(Enum):
-    """扫描任务状态"""
-
-    PENDING = "pending"
-    RUNNING = "running"
-    COMPLETED = "completed"
-    FAILED = "failed"
-    RETRYING = "retrying"
+from src.core.engine import ScanStatus
 
 
 @dataclass
