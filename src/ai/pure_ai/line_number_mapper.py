@@ -674,11 +674,11 @@ class LineNumberValidator:
                 result["ai_hallucination_warning"] = True
                 result["warning_message"] = "🚨 AI幻觉警告：代码片段在文件中不存在，请人工复核"
         else:
-            result["line_match_status"] = "UNVERIFIED"
+            result["line_match_status"] = "NO_SNIPPET"
             result["verified_line"] = ai_line
-            result["is_valid"] = False
+            result["is_valid"] = True
             result["ai_hallucination_warning"] = True
-            result["warning_message"] = "🚨 AI幻觉警告：未提供代码片段，无法验证行号准确性，已拒绝该发现"
+            result["warning_message"] = "🚨 AI幻觉警告：未提供代码片段，无法验证行号准确性，已标记为需人工复核"
 
         return result
 
