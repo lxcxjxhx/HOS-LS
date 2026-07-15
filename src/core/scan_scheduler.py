@@ -9,7 +9,7 @@ from dataclasses import dataclass, field
 from functools import wraps
 from typing import Any, Awaitable, Callable, Dict, List, Optional
 
-from src.core.engine import ScanStatus
+from src.core.types import ScanStatus
 
 
 @dataclass
