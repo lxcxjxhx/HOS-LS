@@ -161,10 +161,13 @@ class VectorStoreFactory:
         if cache_key in cls._instance_cache:
             return cls._instance_cache[cache_key]
 
+        instance: VectorStoreBase
         if implementation == "numpy":
             from src.ai.pure_ai.rag.vector_store import VectorStore
 
-            instance = VectorStore(
+            if storage_path is None:
+                raise ValueError("storage_path is required for numpy implementation")
+            instance = VectorStore(  # type: ignore[assignment]
                 storage_path=storage_path,
                 model_name=model_name,
                 custom_model_path=custom_model_path,
@@ -172,9 +175,13 @@ class VectorStoreFactory:
         elif implementation == "faiss":
             from src.ai.pure_ai.rag.faiss_vector_store import FAISSVectorStore
 
-            instance = FAISSVectorStore(
+            if storage_path is None:
+                raise ValueError("storage_path is required for faiss implementation")
+            instance = FAISSVectorStore(  # type: ignore[assignment]
                 storage_path=storage_path, embed_config=embed_config, neo4j_config=neo4j_config
             )
+        else:
+            raise ValueError(f"Unsupported implementation: {implementation}")
 
         cls._instance_cache[cache_key] = instance
         return instance

@@ -73,7 +73,7 @@ class PoCETL(BaseETL):
 
     def _process_single_file(self, json_file: Path) -> List[Optional[Dict]]:
         """处理单个PoC JSON文件 - 可能包含多个PoC仓库"""
-        results = []
+        results: List[Optional[Dict]] = []
         try:
             with open(json_file, "r", encoding="utf-8", errors="ignore") as f:
                 data = json.load(f)
@@ -172,23 +172,24 @@ class PoCETL(BaseETL):
         """
 
         try:
-            with self.conn.get_connection() as conn:
-                cursor = conn.cursor()
-                for item in batch:
-                    try:
-                        cursor.execute(
-                            query,
-                            (
-                                item.get("cve_id"),
-                                item.get("repo_url"),
-                                item.get("stars", 0),
-                                item.get("language", ""),
-                                item.get("description", ""),
-                                item.get("last_updated"),
-                            ),
-                        )
-                    except Exception:
-                        pass
+            conn = self.conn
+            cursor = conn.get_cursor()
+            for item in batch:
+                try:
+                    cursor.execute(
+                        query,
+                        (
+                            item.get("cve_id"),
+                            item.get("repo_url"),
+                            item.get("stars", 0),
+                            item.get("language", ""),
+                            item.get("description", ""),
+                            item.get("last_updated"),
+                        ),
+                    )
+                except Exception:
+                    pass
+            cursor.close()
             return len(batch)
         except Exception as e:
             print(f"    ⚠ 批量插入失败: {e}")

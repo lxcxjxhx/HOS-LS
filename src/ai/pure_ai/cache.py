@@ -12,7 +12,7 @@ class CacheManager:
     管理分析结果的缓存，提高性能
     """
 
-    def __init__(self, config: Dict[str, Any] = None):
+    def __init__(self, config: Optional[Dict[str, Any]] = None):
         """初始化缓存管理器
 
         Args:
@@ -21,9 +21,9 @@ class CacheManager:
         self.config = config or {}
         self.cache_dir = Path(self.config.get("cache_dir", ".cache/hos-ls/pure-ai"))
         self.cache_dir.mkdir(parents=True, exist_ok=True)
-        self.cache_ttl = self.config.get("cache_ttl", 86400)  # 24小时
+        self.cache_ttl = int(self.config.get("cache_ttl", 86400))  # 24小时
 
-    def get_file_hash(self, file_path: str) -> str:
+    def get_file_hash(self, file_path: str) -> Optional[str]:
         """计算文件哈希值
 
         Args:
@@ -39,7 +39,7 @@ class CacheManager:
         except Exception:
             return None
 
-    def get_cache_key(self, file_path: str) -> str:
+    def get_cache_key(self, file_path: str) -> Optional[str]:
         """生成缓存键
 
         Args:
@@ -95,7 +95,8 @@ class CacheManager:
                     pass
                 return None
 
-            return data.get("result")
+            result: Optional[Dict[str, Any]] = data.get("result")
+            return result
         except Exception:
             # 缓存文件损坏，删除
             if cache_file.exists():
@@ -152,13 +153,13 @@ class CacheManager:
         """
         # 小文件（< 10KB）缓存时间较短
         if file_size < 10240:
-            return self.cache_ttl // 2  # 12小时
+            return int(self.cache_ttl // 2)  # 12小时
         # 大文件（> 1MB）缓存时间较长
         elif file_size > 1048576:
-            return self.cache_ttl * 2  # 48小时
+            return int(self.cache_ttl * 2)  # 48小时
         # 中等文件使用默认缓存时间
         else:
-            return self.cache_ttl
+            return int(self.cache_ttl)
 
     def _clean_old_cache_files(self, file_path: str) -> None:
         """清理旧的缓存文件

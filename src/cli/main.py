@@ -49,7 +49,7 @@ class AsyncWorker:
 
     def __init__(self, max_workers: int = 4):
         self.executor = ThreadPoolExecutor(max_workers=max_workers)
-        self.queue = Queue()
+        self.queue: Queue = Queue()
         self.running = False
 
     def start(self):
@@ -542,26 +542,27 @@ def scan(
             from src.core.config import AuditMode, SandboxConfig
 
             # 参数优先级: --static-only > --dynamic-only > --audit-mode
+            audit_mode_enum: AuditMode
             if static_only:
-                mode = AuditMode.STATIC
+                audit_mode_enum = AuditMode.STATIC
                 if not config.quiet:
                     console.print("[bold yellow][!] 审计模式: STATIC (纯静态分析)[/bold yellow]")
             elif dynamic_only:
-                mode = AuditMode.DYNAMIC
+                audit_mode_enum = AuditMode.DYNAMIC
                 if not config.quiet:
                     console.print("[bold yellow][!] 审计模式: DYNAMIC (纯动态AI红队POC测试)[/bold yellow]")
             else:
-                mode = AuditMode(audit_mode)
+                audit_mode_enum = AuditMode(audit_mode)
                 if not config.quiet:
                     mode_display = {"static": "STATIC", "dynamic": "DYNAMIC", "hybrid": "HYBRID"}
                     console.print(
                         f"[bold yellow][!] 审计模式: {mode_display.get(audit_mode, audit_mode.upper())}[/bold yellow]"
                     )
 
-            sandbox_cfg = SandboxConfig(enabled=True, mode=mode)
+            sandbox_cfg = SandboxConfig(enabled=True, mode=audit_mode_enum)
             config.sandbox = sandbox_cfg
 
-            if not config.quiet and mode != AuditMode.STATIC:
+            if not config.quiet and audit_mode_enum != AuditMode.STATIC:
                 console.print("[bold yellow][!] 沙盒动态验证已启用（实验性功能）[/bold yellow]")
 
         if truncate_output:
@@ -642,7 +643,6 @@ def scan(
         except Exception as e:
             console.print(f"[bold red]扫描失败: {e}[/bold red]")
             sys.exit(2)
-        return
 
     # 非纯AI模式
     if not config.quiet:
@@ -660,8 +660,6 @@ def scan(
     config.pure_ai = False
     if mode:
         config.scan_mode = mode
-    elif pure_ai:
-        config.scan_mode = "pure-ai"
 
     if ai_provider:
         config.ai.provider = ai_provider
@@ -670,9 +668,9 @@ def scan(
         config.ai.model = ai_model
 
     if tool_chain:
-        config.tools_enabled = True
-        config.tool_chain = [t.strip() for t in tool_chain.split(",") if t.strip()]
-        console.print(f"[bold cyan]🔧 工具链已启用: {config.tool_chain}[/bold cyan]")
+        config.tools.enabled = True
+        config.tools.tool_chain = [t.strip() for t in tool_chain.split(",") if t.strip()]
+        console.print(f"[bold cyan]🔧 工具链已启用: {config.tools.tool_chain}[/bold cyan]")
 
     # 端口扫描配置
     if scan_ports:
@@ -870,7 +868,7 @@ def config(ctx: click.Context, export: str, import_file: str, output: str) -> No
             console.print(f"[green]配置已从 {import_file} 导入[/green]")
 
             config_manager = ConfigManager()
-            config_manager.save_config(cfg)
+            config_manager.save_to_file("./hos-ls.yaml", cfg)
             console.print("[green]配置已保存[/green]")
         else:
             console.print("[red]导入的配置为空[/red]")
@@ -932,7 +930,7 @@ def config(ctx: click.Context, export: str, import_file: str, output: str) -> No
         [
             ("提供商 (provider)", cfg.ai.provider, "deepseek", "AI服务提供商"),
             ("模型 (model)", cfg.ai.model, "deepseek-v4-flash", "AI模型"),
-            ("API Key", mask_api_key(cfg.ai.api_key), "-", "API密钥"),
+            ("API Key", mask_api_key(cfg.ai.api_key or ""), "-", "API密钥"),
             ("最大Token (max_tokens)", str(cfg.ai.max_tokens), "4096", "单次请求最大Token数"),
             ("温度参数 (temperature)", str(cfg.ai.temperature), "0.1", "生成随机性，0-1"),
             ("超时 (timeout)", str(cfg.ai.timeout), "60", "请求超时秒数"),
@@ -943,7 +941,7 @@ def config(ctx: click.Context, export: str, import_file: str, output: str) -> No
         "AI - 阿里云配置",
         [
             ("启用", str(cfg.ai.aliyun.enabled), "False", "是否启用阿里云API"),
-            ("API Key", mask_api_key(cfg.ai.aliyun.api_key), "-", "阿里云API密钥"),
+            ("API Key", mask_api_key(cfg.ai.aliyun.api_key or ""), "-", "阿里云API密钥"),
             ("模型", cfg.ai.aliyun.model, "qwen3-coder-next", "阿里云模型"),
         ],
     )
@@ -953,31 +951,23 @@ def config(ctx: click.Context, export: str, import_file: str, output: str) -> No
         [
             (
                 "启用",
-                str(
-                    cfg.ai.modules.get("pure_ai", {}).get("enabled", True)
-                    if cfg.ai.modules
-                    else True
-                ),
+                str(cfg.ai.modules["pure_ai"].enabled if "pure_ai" in cfg.ai.modules else True),
                 "True",
                 "纯AI模块启用",
             ),
             (
                 "模型",
-                (
-                    cfg.ai.modules.get("pure_ai", {}).get("model", "deepseek-v4-flash")
-                    if cfg.ai.modules
-                    else "deepseek-v4-flash"
-                ),
+                cfg.ai.modules["pure_ai"].model
+                if "pure_ai" in cfg.ai.modules and cfg.ai.modules["pure_ai"].model
+                else "deepseek-v4-flash",
                 "deepseek-v4-flash",
                 "pure_ai专用模型",
             ),
             (
                 "提供商",
-                (
-                    cfg.ai.modules.get("pure_ai", {}).get("provider", "deepseek")
-                    if cfg.ai.modules
-                    else "deepseek"
-                ),
+                cfg.ai.modules["pure_ai"].provider
+                if "pure_ai" in cfg.ai.modules and cfg.ai.modules["pure_ai"].provider
+                else "deepseek",
                 "deepseek",
                 "pure_ai专用提供商",
             ),
@@ -987,9 +977,9 @@ def config(ctx: click.Context, export: str, import_file: str, output: str) -> No
     _print_config_table(
         "AI - RAG配置",
         [
-            ("启用", str(cfg.ai.rag.enabled), "True", "RAG检索启用"),
-            ("嵌入模型", cfg.ai.rag.embedding_model, "Qwen/Qwen3-Embedding-0.6B", "嵌入模型"),
-            ("重排模型", cfg.ai.rag.rerank_model, "BAAI/bge-reranker-large", "重排模型"),
+            ("启用", str(cfg.rag.hybrid.enabled), "True", "RAG检索启用"),
+            ("混合检索权重", str(cfg.rag.hybrid.hybrid_search_weight), "0.7", "混合搜索权重"),
+            ("返回结果数", str(cfg.rag.hybrid.top_k), "10", "返回结果数量"),
         ],
     )
 
@@ -1006,8 +996,8 @@ def config(ctx: click.Context, export: str, import_file: str, output: str) -> No
         "规则配置",
         [
             ("规则集 (ruleset)", cfg.rules.ruleset, "default", "使用的规则集"),
-            ("自定义规则数", str(len(cfg.rules.custom_rules)), "0", "自定义规则数量"),
-            ("排除路径数", str(len(cfg.rules.exclude_paths)), "0", "排除的路径数量"),
+            ("严重级别阈值", cfg.rules.severity_threshold, "low", "严重级别阈值"),
+            ("置信度阈值", str(cfg.rules.confidence_threshold), "0.5", "置信度阈值"),
         ],
     )
 
@@ -1016,7 +1006,7 @@ def config(ctx: click.Context, export: str, import_file: str, output: str) -> No
         [
             ("格式 (format)", cfg.report.format, "html", "报告格式"),
             ("输出路径 (output)", cfg.report.output or "(未设置)", "", "报告输出路径"),
-            ("包含代码片段", str(cfg.report.include_snippets), "True", "报告中包含代码片段"),
+            ("包含代码片段", str(cfg.report.include_code_snippets), "True", "报告中包含代码片段"),
             ("包含修复建议", str(cfg.report.include_fix_suggestions), "True", "报告中包含修复建议"),
         ],
     )
@@ -1047,7 +1037,7 @@ def config(ctx: click.Context, export: str, import_file: str, output: str) -> No
                 "自动验证中置信度漏洞",
             ),
             ("最小置信度阈值", str(cfg.validation.min_confidence_threshold), "0.7", "置信度阈值"),
-            ("行号偏差容忍度", str(cfg.validation.line_number_tolerance), "5", "行号偏差容忍行数"),
+            ("幻觉阈值", str(cfg.validation.hallucination_threshold), "0.2", "幻觉阈值"),
         ],
     )
 
@@ -1064,7 +1054,7 @@ def config(ctx: click.Context, export: str, import_file: str, output: str) -> No
         "沙盒配置",
         [
             ("启用 (enabled)", str(cfg.sandbox.enabled), "False", "沙盒动态验证"),
-            ("超时 (timeout)", str(cfg.sandbox.timeout), "30", "沙盒执行超时秒数"),
+            ("最大CPU时间", str(cfg.sandbox.max_cpu_time), "30", "沙盒最大CPU时间（秒）"),
         ],
     )
 
@@ -1205,15 +1195,13 @@ def _apply_imported_config(cfg: Config, imported: dict) -> None:
             cfg.validation.auto_validate_medium = bool(val_config["auto_validate_medium"])
         if "min_confidence_threshold" in val_config:
             cfg.validation.min_confidence_threshold = float(val_config["min_confidence_threshold"])
-        if "line_number_tolerance" in val_config:
-            cfg.validation.line_number_tolerance = int(val_config["line_number_tolerance"])
 
     if "sandbox" in imported and isinstance(imported["sandbox"], dict):
         sandbox_config = imported["sandbox"]
         if "enabled" in sandbox_config:
             cfg.sandbox.enabled = bool(sandbox_config["enabled"])
-        if "timeout" in sandbox_config:
-            cfg.sandbox.timeout = int(sandbox_config["timeout"])
+        if "max_cpu_time" in sandbox_config:
+            cfg.sandbox.max_cpu_time = int(sandbox_config["max_cpu_time"])
 
     console.print("[cyan]已应用的配置项:[/cyan]")
     for key in imported.keys():
@@ -1257,7 +1245,7 @@ def panel(ctx: click.Context) -> None:
                 "cache_enabled": cfg.scan.cache_enabled,
             },
             "validation": {
-                "line_number_tolerance": cfg.validation.line_number_tolerance,
+                "hallucination_threshold": cfg.validation.hallucination_threshold,
                 "min_confidence_threshold": cfg.validation.min_confidence_threshold,
             },
         }
@@ -2082,8 +2070,6 @@ def download(ctx, model, output, force, token) -> None:
     # 设置输出目录
     if not output:
         # 默认保存到模型缓存目录，为每个模型创建独立的子目录
-        from pathlib import Path
-
         model_cache = Path.home() / ".cache" / "huggingface" / "hub"
         # 为模型创建标准的 Hugging Face 目录结构
         model_dir_name = f"models--{model.replace('/', '--')}"
@@ -2426,7 +2412,9 @@ def _check_data_preload_status(config: Config) -> None:
     help="报告格式",
 )
 @click.option("--show-progress", is_flag=True, default=False, help="显示扫描进度")
-def import_scan(cache_file: str, output_file: str, report_format: str, show_progress: bool) -> None:
+def import_scan(
+    cache_file: str, output_file: Optional[str], report_format: str, show_progress: bool
+) -> None:
     """从扫描缓存导入结果并生成报告
 
     当模板修复后或需要重新生成报告时，使用此命令导入已有的扫描缓存，
@@ -2522,9 +2510,9 @@ def import_scan(cache_file: str, output_file: str, report_format: str, show_prog
                         else getattr(vuln, "rule_id", "UNKNOWN")
                     ),
                     rule_name=(
-                        vuln.get("rule_name", vuln.get("title", "Unknown"))
+                        str(vuln.get("rule_name", vuln.get("title", "Unknown")))
                         if isinstance(vuln, dict)
-                        else getattr(vuln, "rule_name", getattr(vuln, "title", "Unknown"))
+                        else str(getattr(vuln, "rule_name", getattr(vuln, "title", "Unknown")))
                     ),
                     description=(
                         vuln.get("description", "")
@@ -2539,9 +2527,9 @@ def import_scan(cache_file: str, output_file: str, report_format: str, show_prog
                         else getattr(vuln, "confidence", 0.5)
                     ),
                     message=(
-                        vuln.get("message", vuln.get("description", ""))
+                        str(vuln.get("message", vuln.get("description", "")))
                         if isinstance(vuln, dict)
-                        else getattr(vuln, "message", getattr(vuln, "description", ""))
+                        else str(getattr(vuln, "message", getattr(vuln, "description", "")))
                     ),
                     code_snippet=(
                         vuln.get("code_snippet", "")

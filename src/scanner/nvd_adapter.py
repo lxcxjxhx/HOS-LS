@@ -86,6 +86,8 @@ class NVDAdapter:
         if not self.is_available():
             return []
 
+        assert self._query_adapter is not None
+
         try:
             keywords = [product]
             if vendor:
@@ -129,6 +131,8 @@ class NVDAdapter:
         if not self.is_available():
             return []
 
+        assert self._query_adapter is not None
+
         try:
             cve_results = self._query_adapter.search_vulnerabilities(severity="HIGH", limit=limit)
 
@@ -159,6 +163,8 @@ class NVDAdapter:
         if not self.is_available():
             return None
 
+        assert self._query_adapter is not None
+
         try:
             cve_results = self._query_adapter.search_vulnerabilities(limit=100)
             for cve in cve_results:
@@ -188,10 +194,12 @@ class NVDAdapter:
         if not self.is_available():
             return []
 
+        assert self._query_adapter is not None
+
         try:
             cwe_info = self._query_adapter.get_cwe_with_cves(cve_id, limit=10)
             if cwe_info and "related_cves" in cwe_info:
-                return cwe_info["related_cves"]
+                return list(cwe_info["related_cves"])
         except Exception as e:
             logger.debug(f"获取Exploit列表失败: {e}")
 
@@ -202,10 +210,12 @@ class NVDAdapter:
         if not self.is_available():
             return []
 
+        assert self._query_adapter is not None
+
         try:
             cwe_info = self._query_adapter.get_cwe_with_cves(cve_id, limit=10)
             if cwe_info and "related_cves" in cwe_info:
-                return cwe_info["related_cves"]
+                return list(cwe_info["related_cves"])
         except Exception as e:
             logger.debug(f"获取PoC列表失败: {e}")
 
@@ -227,8 +237,10 @@ class NVDAdapter:
         if not keywords:
             return []
 
+        assert self._query_adapter is not None
+
         try:
-            return self._query_adapter.match_cwe(keywords, limit)
+            return list(self._query_adapter.match_cwe(keywords, limit))
         except Exception as e:
             logger.debug(f"CWE匹配失败: {e}")
             return []
@@ -248,6 +260,8 @@ class NVDAdapter:
         """
         if not self.is_available():
             return []
+
+        assert self._query_adapter is not None
 
         try:
             cve_results = self._query_adapter.search_vulnerabilities(cwe_id=cwe_id, limit=limit)

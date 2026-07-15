@@ -47,14 +47,14 @@ class ConversationalSecurityAgent:
     """
 
     def __init__(self, config: Optional[Any] = None):
-        self.config = config
-        self.context_memory = None
-        self.pipeline = None
-        self.ui = None
+        self.config: Optional[Any] = config
+        self.context_memory: Optional[Any] = None
+        self.pipeline: Optional[Any] = None
+        self.ui: Optional[Any] = None
         self._conversation_history: List[ConversationMessage] = []
         self._last_scan_target: Optional[str] = None
-        self._checkpoint_manager = None
-        self._incremental_index = None
+        self._checkpoint_manager: Optional[Any] = None
+        self._incremental_index: Optional[Any] = None
         self._intent_classifier: Optional[AIIntentClassifier] = None
         self._entity_extractor: Optional[AIEntityExtractor] = None
         self._use_ai = True
@@ -98,7 +98,7 @@ class ConversationalSecurityAgent:
 
         intent = await self.analyze_intent(user_input)
 
-        entities = []
+        entities: List[Any] = []
         if self.context_memory:
             entities = self.context_memory.extract_entities(user_input)
             for entity in entities:
@@ -217,7 +217,7 @@ class ConversationalSecurityAgent:
                 )
                 result = extractor.extract(user_input)
                 if result.target_path:
-                    return result.target_path
+                    return str(result.target_path)
             except Exception:
                 pass
 
@@ -236,7 +236,7 @@ class ConversationalSecurityAgent:
             entities = self.context_memory.extract_entities(user_input)
             for entity in entities:
                 if entity.type == "file":
-                    return entity.value
+                    return str(entity.value)
 
         return "."
 
@@ -281,6 +281,7 @@ class ConversationalSecurityAgent:
 
             from src.core.scanner import create_scanner
 
+            assert self.config is not None
             scanner = create_scanner(self.config)
 
             result = await asyncio.wait_for(scanner.scan(target), timeout=300.0)
@@ -536,7 +537,6 @@ class ConversationalSecurityAgent:
 
     def should_resume_scan(self) -> bool:
         """检查是否应该恢复扫描"""
-        return (
-            self._checkpoint_manager is not None
-            and len(self._checkpoint_manager.list_checkpoints()) > 0
-        )
+        if self._checkpoint_manager is None:
+            return False
+        return len(self._checkpoint_manager.list_checkpoints()) > 0

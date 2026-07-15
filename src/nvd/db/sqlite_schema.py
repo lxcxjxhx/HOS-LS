@@ -1,3 +1,5 @@
+from typing import Any, Dict, Optional
+
 from .sqlite_connection import SQLiteConnection
 
 
@@ -187,7 +189,7 @@ class SQLiteSche:
         "CREATE INDEX IF NOT EXISTS idx_inference_cwe ON language_inference(cwe_id)",
     ]
 
-    def __init__(self, connection: SQLiteConnection = None):
+    def __init__(self, connection: Optional[SQLiteConnection] = None):
         self.conn = connection or SQLiteConnection.get_instance()
 
     def create_all_tables(self) -> None:
@@ -208,16 +210,20 @@ class SQLiteSche:
             self.LANGUAGE_INFERENCE_TABLE,
         ]
 
-        with self.conn.get_cursor() as cursor:
+        cursor = self.conn.get_cursor()
+        try:
             for table_sql in tables:
                 cursor.execute(table_sql)
 
             for index_sql in self.INDEXES:
                 cursor.execute(index_sql)
+        finally:
+            cursor.close()
 
     def drop_all(self) -> None:
         """删除所有表和视图（谨慎使用）"""
-        with self.conn.get_cursor() as cursor:
+        cursor = self.conn.get_cursor()
+        try:
             cursor.execute(
                 """
                 DROP TABLE IF EXISTS cve;
@@ -232,17 +238,20 @@ class SQLiteSche:
                 DROP TABLE IF EXISTS etl_progress;
             """
             )
+        finally:
+            cursor.close()
 
     def init_schema(self) -> None:
         """初始化数据库Schema"""
         self.create_all_tables()
 
-    def get_stats(self) -> dict:
+    def get_stats(self) -> Dict[str, Any]:
         """获取数据库统计信息"""
-        stats = {}
+        stats: Dict[str, Any] = {}
         tables = ["cve", "cvss", "cpe", "cwe", "cve_cwe", "kev", "exploit", "poc"]
 
-        with self.conn.get_cursor() as cursor:
+        cursor = self.conn.get_cursor()
+        try:
             for table in tables:
                 try:
                     cursor.execute(f"SELECT COUNT(*) FROM {table}")
@@ -250,5 +259,7 @@ class SQLiteSche:
                     stats[table] = count
                 except BaseException:
                     stats[table] = 0
+        finally:
+            cursor.close()
 
         return stats

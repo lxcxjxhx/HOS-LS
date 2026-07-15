@@ -193,7 +193,7 @@ class ContextBuilder:
         self.config = config
         self.priority_parser = priority_parser
         self._file_cache: Dict[str, str] = {}
-        if hasattr(config, "get"):
+        if isinstance(config, dict):
             self.max_related_files = config.get("max_related_files", 3)
         else:
             self.max_related_files = getattr(config, "max_related_files", 3)
@@ -424,7 +424,7 @@ class ContextBuilder:
         Returns:
             相关文件列表
         """
-        related_files = []
+        related_files: List[Dict[str, str]] = []
         try:
             if hasattr(self.priority_parser, "get_priority_rules"):
                 rules = self.priority_parser.get_priority_rules(file_path)
@@ -470,7 +470,11 @@ class ContextBuilder:
         return related_files
 
     def _load_related_files_default(
-        self, current_dir: Path, current_path: Path, imports: List[str], max_files: int = None
+        self,
+        current_dir: Path,
+        current_path: Path,
+        imports: List[str],
+        max_files: Optional[int] = None,
     ) -> List[Dict[str, str]]:
         """默认的相关文件加载逻辑
 
@@ -483,7 +487,7 @@ class ContextBuilder:
         Returns:
             相关文件列表
         """
-        related_files = []
+        related_files: List[Dict[str, str]] = []
         limit = max_files if max_files is not None else self.max_related_files
 
         for imp in imports:
@@ -573,7 +577,7 @@ class ContextBuilder:
         Returns:
             文件结构信息
         """
-        structure = {
+        structure: Dict[str, Any] = {
             "functions": [],
             "classes": [],
             "variables": [],
@@ -675,7 +679,7 @@ class ContextBuilder:
 
     def _build_generic_context(self, file_path: str) -> Dict[str, Any]:
         """构建通用（Python）文件上下文"""
-        context = {
+        context: Dict[str, Any] = {
             "current_file": file_path,
             "file_content": self._read_file(file_path),
             "imports": [],
@@ -777,9 +781,9 @@ class ContextBuilder:
                     {
                         "type": "spring_mapping",
                         "mapping_type": (
-                            match.group(1) if match.lastindex >= 1 else "RequestMapping"
+                            match.group(1) if (match.lastindex or 0) >= 1 else "RequestMapping"
                         ),
-                        "path": match.group(2) if match.lastindex >= 2 else match.group(1),
+                        "path": match.group(2) if (match.lastindex or 0) >= 2 else match.group(1),
                         "line": line_num,
                         "match": match.group(0),
                     }
@@ -815,7 +819,7 @@ class ContextBuilder:
         for pattern, route_type in router_lambda_patterns:
             for match in re.finditer(pattern, content, re.DOTALL):
                 line_num = content[: match.start()].count("\n") + 1
-                path = match.group(1) if match.lastindex >= 1 else match.group(0)
+                path = match.group(1) if (match.lastindex or 0) >= 1 else match.group(0)
                 results.append(
                     {
                         "type": "lambda_mapping",
@@ -868,7 +872,7 @@ class ContextBuilder:
             for match in re.finditer(pattern, content, re.DOTALL):
                 line_num = content[: match.start()].count("\n") + 1
                 if ref_type == "resource":
-                    if match.lastindex >= 4:
+                    if (match.lastindex or 0) >= 4:
                         results.append(
                             {
                                 "type": "bean_reference",
@@ -879,7 +883,7 @@ class ContextBuilder:
                             }
                         )
                 elif ref_type == "bean_definition":
-                    if match.lastindex >= 2:
+                    if (match.lastindex or 0) >= 2:
                         results.append(
                             {
                                 "type": "bean_definition",
@@ -889,7 +893,7 @@ class ContextBuilder:
                             }
                         )
                 else:
-                    if match.lastindex >= 2:
+                    if (match.lastindex or 0) >= 2:
                         results.append(
                             {
                                 "type": "bean_reference",
@@ -911,7 +915,7 @@ class ContextBuilder:
         Returns:
             包含 extends 和 implements 关系的字典
         """
-        result = {"extends": [], "implements": []}
+        result: Dict[str, List[Dict[str, Any]]] = {"extends": [], "implements": []}
 
         extends_pattern = r"(?:public|private|protected)?\s*class\s+(\w+)\s+extends\s+([\w.<>]+)"
         for match in re.finditer(extends_pattern, content):
@@ -1002,7 +1006,7 @@ class ContextBuilder:
             数据流链路信息
         """
 
-        chain = {
+        chain: Dict[str, Any] = {
             "sources": [],
             "transforms": [],
             "sinks": [],
@@ -1335,7 +1339,7 @@ class ContextBuilder:
         Returns:
             调用链相关文件列表
         """
-        related_files = []
+        related_files: List[Dict[str, str]] = []
         try:
             content = self._read_file(file_path)
             # current_dir = Path(file_path).parent
@@ -1423,7 +1427,12 @@ class ContextBuilder:
         Returns:
             数据流分析结果
         """
-        data_flow = {"entry_points": [], "service_calls": [], "data_access": [], "flow_paths": []}
+        data_flow: Dict[str, Any] = {
+            "entry_points": [],
+            "service_calls": [],
+            "data_access": [],
+            "flow_paths": [],
+        }
 
         try:
             ext = Path(file_path).suffix.lower()

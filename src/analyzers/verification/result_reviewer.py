@@ -55,7 +55,7 @@ class ResultReviewer:
     def _load_sandbox_config(self) -> None:
         """加载沙箱配置"""
         try:
-            config = self.config_loader.get_config()
+            config = self.config_loader.config
             global_config = config.get("global", {})
 
             sandbox_config = {
@@ -76,7 +76,7 @@ class ResultReviewer:
     def _load_ai_config(self) -> None:
         """加载 AI 配置"""
         try:
-            config = self.config_loader.get_config()
+            config = self.config_loader.config
             global_config = config.get("global", {})
             self.ai_enabled = global_config.get("ai_verification_enabled", False)
             self.ai_fallback_threshold = global_config.get("ai_fallback_threshold", 0.6)
@@ -94,21 +94,21 @@ class ResultReviewer:
         Returns:
             是否加载成功
         """
-        report_path = Path(report_path)
+        report_file = Path(report_path)
 
-        if not report_path.exists():
-            print(f"Report file not found: {report_path}")
+        if not report_file.exists():
+            print(f"Report file not found: {report_file}")
             return False
 
         try:
-            if report_path.suffix == ".json":
-                with open(report_path, "r", encoding="utf-8") as f:
+            if report_file.suffix == ".json":
+                with open(report_file, "r", encoding="utf-8") as f:
                     self.scan_report = json.load(f)
-            elif report_path.suffix in [".yaml", ".yml"]:
-                with open(report_path, "r", encoding="utf-8") as f:
+            elif report_file.suffix in [".yaml", ".yml"]:
+                with open(report_file, "r", encoding="utf-8") as f:
                     self.scan_report = yaml.safe_load(f)
             else:
-                print(f"Unsupported report format: {report_path.suffix}")
+                print(f"Unsupported report format: {report_file.suffix}")
                 return False
 
             return True
@@ -134,13 +134,13 @@ class ResultReviewer:
             发现列表
         """
         if "findings" in self.scan_report:
-            return self.scan_report["findings"]
+            return list(self.scan_report["findings"])
         elif "vulnerabilities" in self.scan_report:
-            return self.scan_report["vulnerabilities"]
+            return list(self.scan_report["vulnerabilities"])
         else:
             return []
 
-    def select_validators(self, vuln_type: str = None) -> List[Any]:
+    def select_validators(self, vuln_type: Optional[str] = None) -> List[Any]:
         """
         选择验证器
 
@@ -159,8 +159,8 @@ class ResultReviewer:
 
     def run_verification(
         self,
-        findings: List[Dict[str, Any]] = None,
-        vuln_type: str = None,
+        findings: Optional[List[Dict[str, Any]]] = None,
+        vuln_type: Optional[str] = None,
         use_ai_fallback: bool = True,
         use_sandbox: bool = False,
     ) -> List[Dict[str, Any]]:
@@ -279,7 +279,7 @@ class ResultReviewer:
                 evidence={"finding": finding},
             )
 
-        best_result = None
+        best_result: Optional[ValidationResult] = None
         best_confidence = -1
 
         for validator in applicable_validators:
@@ -314,6 +314,7 @@ class ResultReviewer:
                 if ai_result and ai_result.confidence > best_result.confidence:
                     return ai_result
 
+        assert best_result is not None
         return best_result
 
     def verify_with_ai(
@@ -355,7 +356,7 @@ class ResultReviewer:
 - 原因: 详细解释
 """
 
-            response = openai.ChatCompletion.create(
+            response = openai.ChatCompletion.create(  # type: ignore[attr-defined]
                 model="gpt-3.5-turbo",
                 messages=[
                     {"role": "system", "content": "You are a professional security researcher."},
@@ -385,7 +386,7 @@ class ResultReviewer:
                 reason=f"[AI辅助] {ai_response}",
                 evidence={"fallback_reason": fallback_reason, "ai_response": ai_response},
             )
-            result.ai_assisted = True
+            result.ai_assisted = True  # type: ignore[attr-defined]
 
             return result
 
@@ -403,7 +404,7 @@ class ResultReviewer:
         )
 
     def generate_final_report(
-        self, output_path: str = None, include_poc: bool = True
+        self, output_path: Optional[str] = None, include_poc: bool = True
     ) -> Dict[str, Any]:
         """
         生成最终验证报告
@@ -446,15 +447,15 @@ class ResultReviewer:
             final_report["generated_pocs"] = pocs
 
         if output_path:
-            output_path = Path(output_path)
-            output_path.parent.mkdir(parents=True, exist_ok=True)
+            output_file = Path(output_path)
+            output_file.parent.mkdir(parents=True, exist_ok=True)
 
-            with open(output_path, "w", encoding="utf-8") as f:
+            with open(output_file, "w", encoding="utf-8") as f:
                 json.dump(final_report, f, ensure_ascii=False, indent=2)
 
         return final_report
 
-    def generate_markdown_report(self, output_path: str = None) -> str:
+    def generate_markdown_report(self, output_path: Optional[str] = None) -> str:
         """
         生成 Markdown 格式的报告
 
@@ -513,9 +514,9 @@ class ResultReviewer:
         md_content = "\n".join(md_lines)
 
         if output_path:
-            output_path = Path(output_path)
-            output_path.parent.mkdir(parents=True, exist_ok=True)
-            with open(output_path, "w", encoding="utf-8") as f:
+            output_file = Path(output_path)
+            output_file.parent.mkdir(parents=True, exist_ok=True)
+            with open(output_file, "w", encoding="utf-8") as f:
                 f.write(md_content)
 
         return md_content
@@ -616,8 +617,8 @@ class ResultReviewer:
             reason=f"POC执行{'成功' if poc_executed else '失败'}",
             evidence={"poc_method_id": poc_method_id, "exec_result": exec_result},
         )
-        result.poc_executed = poc_executed
-        result.poc_result = poc_confirmed
+        result.poc_executed = poc_executed  # type: ignore[attr-defined]
+        result.poc_result = poc_confirmed  # type: ignore[attr-defined]
 
         return result
 
@@ -632,11 +633,11 @@ class ResultReviewer:
         Returns:
             POC 执行结果，超时或失败返回 None
         """
-        result_holder = {"result": None, "error": None}
+        result_holder: List[Optional[Any]] = [None, None]
 
-        def _run_poc():
+        def _run_poc() -> None:
             try:
-                local_vars = {
+                local_vars: Dict[str, Any] = {
                     "context": context,
                     "VulnContext": VulnContext,
                     "ValidationResult": ValidationResult,
@@ -645,9 +646,9 @@ class ResultReviewer:
                 exec(poc_code, local_vars)
                 func_name = [k for k in local_vars.keys() if k.startswith("verify_")]
                 if func_name:
-                    result_holder["result"] = local_vars[func_name[0]](context)
+                    result_holder[0] = local_vars[func_name[0]](context)
             except Exception as e:
-                result_holder["error"] = str(e)
+                result_holder[1] = str(e)
                 logger.error(f"POC execution error: {e}")
 
         thread = threading.Thread(target=_run_poc, daemon=True)
@@ -658,11 +659,11 @@ class ResultReviewer:
             logger.warning(f"POC execution timed out after {self.poc_execution_timeout}s")
             return None
 
-        if result_holder["error"]:
-            logger.error(f"POC execution failed: {result_holder['error']}")
+        if result_holder[1]:
+            logger.error(f"POC execution failed: {result_holder[1]}")
             return None
 
-        return result_holder["result"]
+        return result_holder[0]
 
     def save_poc_adjustment(
         self, poc_method_id: str, adjustment_data: Dict[str, Any]
@@ -744,7 +745,7 @@ class ResultReviewer:
         if not poc_method_id:
             return
 
-        if poc_result.poc_result is False:
+        if getattr(poc_result, "poc_result", None) is False:
             adjustment_data = {
                 "type": "false_positive",
                 "details": f"POC执行确认漏洞不存在，置信度从 {poc_result.confidence} 降至低置信度",

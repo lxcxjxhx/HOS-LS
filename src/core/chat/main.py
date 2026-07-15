@@ -88,7 +88,9 @@ class ChatMain:
         self._entity_extractor: Optional[AIEntityExtractor] = None
         self._pipeline_configurator: Optional[AIPipelineConfigurator] = None
 
-    async def _get_ai_components(self) -> tuple:
+    async def _get_ai_components(
+        self,
+    ) -> tuple[AIIntentClassifier, AIEntityExtractor, AIPipelineConfigurator]:
         """获取AI组件（延迟初始化）"""
         if self._intent_classifier is None:
             self._intent_classifier = AIIntentClassifier(self.config)
@@ -151,7 +153,7 @@ class ChatMain:
                     IntentType.ANALYZE: self._execute_ai_analysis,
                     IntentType.EXPLAIN: self._execute_ai_explain,
                     IntentType.SEARCH: self._execute_ai_search,
-                    IntentType.RESUME: self._execute_resume,
+                    IntentType.RESUME: self._execute_scan,  # RESUME复用scan
                     IntentType.HELP: lambda: self._format_help(),
                     IntentType.EXIT: lambda: "Goodbye!",
                     IntentType.STATUS: self._format_status,
@@ -162,9 +164,11 @@ class ChatMain:
                     target = entity_result.target_path if entity_result.target_path else "."
                     if callable(handler):
                         if asyncio.iscoroutinefunction(handler):
-                            return await handler(target)
+                            result = await handler(target)
+                            return str(result)
                         else:
-                            return handler()
+                            result = handler()
+                            return str(result)
 
             return await self.agent.process_message(user_input)
 
@@ -255,21 +259,22 @@ class ChatMain:
             # reader = asyncio.StreamReader()
 
             if sys.platform == "win32":
-                import os
+                import os as _os
 
-                os.system("")
+                _os.system("")
 
             prompt = self.ui.get_prompt()
             print(prompt, end="", flush=True)
 
-            line = await asyncio.get_event_loop().run_in_executor(None, sys.stdin.readline)
+            loop = asyncio.get_event_loop()
+            line: str = await loop.run_in_executor(None, sys.stdin.readline)
 
             return line.rstrip("\n\r") if line else None
 
         except Exception:
             return None
 
-    async def _handle_command(self, command: str) -> Optional[str]:
+    async def _handle_command(self, command: str) -> str:
         cmd_lower = command.lower()
 
         if cmd_lower in ("/exit", "/quit"):

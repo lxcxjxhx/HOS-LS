@@ -39,7 +39,7 @@ try:
     from src.ai.token_tracker import get_token_tracker
 except ImportError:
 
-    def get_token_tracker(*args, **kwargs):
+    def get_token_tracker(*args, **kwargs):  # type: ignore[misc]
         return None
 
 
@@ -49,7 +49,7 @@ try:
     SCAN_CACHE_AVAILABLE = True
 except ImportError:
     SCAN_CACHE_AVAILABLE = False
-    ScanSession = None
+    ScanSession = None  # type: ignore[misc,assignment]
 
 console = Console()
 
@@ -91,23 +91,23 @@ class SecurityScanner:
 
         self.config = config
         self.remote_mode = False
-        self.remote_scanner = None
+        self.remote_scanner: Optional[Any] = None
         self.scan_engine = ScanEngine(config)
         self.file_discovery = FileDiscoveryEngine()
         self.file_prioritizer = FilePrioritizer()  # 文件优先级评估器
         self.ast_analyzer = ASTAnalyzer()
         self.cst_analyzer = CSTAnalyzer()
-        self.ai_analyzer = None
+        self.ai_analyzer: Optional[Any] = None
         self.local_analyzer = get_local_analyzer()  # 本地语义分析器
         self.library_matcher = get_library_matcher()  # 库匹配器
-        self.priority_evaluator = None
-        self.web_searcher = None
+        self.priority_evaluator: Optional[Any] = None
+        self.web_searcher: Optional[Any] = None
 
         # 扫描缓存管理初始化
-        self.scan_cache_manager = None
-        self.current_session = None
+        self.scan_cache_manager: Optional[Any] = None
+        self.current_session: Optional[Any] = None
         self._scan_interrupted = False
-        self._original_sigint_handler = None
+        self._original_sigint_handler: Optional[Any] = None
         if SCAN_CACHE_AVAILABLE:
             try:
                 self.scan_cache_manager = get_scan_cache_manager()
@@ -201,11 +201,12 @@ class SecurityScanner:
             if config.ai.enabled:
                 console.print("[dim][DEBUG] 攻击链路分析器已启用[/dim]")
 
-        self.is_vuln_lab_mode = config.scan_mode == ScanMode.VULN_LAB
+        self.is_vuln_lab_mode = config.scan_mode == ScanMode.VULN_LAB.value
         if self.is_vuln_lab_mode:
             console.print("[bold yellow]🎯 靶场对抗模式已启用[/bold yellow]")
 
-        self._data_manager = None
+        self._data_manager: Optional[Any] = None
+        self.nvd_adapter: Optional[Any] = None
         self._init_nvd_adapter()
         self._init_data_manager()
 
@@ -389,7 +390,7 @@ class SecurityScanner:
             self.current_session = session
             if self.config.debug:
                 console.print(f"[dim][DEBUG] 创建扫描会话: {session.session_id}[/dim]")
-            return session.session_id
+            return str(session.session_id)
         except Exception as e:
             if self.config.debug:
                 console.print(f"[dim][DEBUG] 创建扫描会话失败: {e}[/dim]")
@@ -397,7 +398,7 @@ class SecurityScanner:
 
     def _end_session(self) -> None:
         """结束当前扫描会话"""
-        if self.current_session:
+        if self.current_session and self.scan_cache_manager:
             try:
                 self.scan_cache_manager.save_session(self.current_session)
             except Exception:
@@ -564,7 +565,7 @@ class SecurityScanner:
                         lib_info = LibraryInfo(name=lib.name, version=getattr(lib, "version", None))
                         library_infos.append(lib_info)
 
-                    context["libraries"] = library_infos
+                    context["libraries"] = library_infos  # type: ignore[assignment]
                 except Exception as e:
                     if self.config.debug:
                         console.print(f"[dim][DEBUG] 提取库信息失败: {e}[/dim]")
@@ -577,7 +578,7 @@ class SecurityScanner:
                         f"[dim][DEBUG] NVD回退补充了 {len(supplemented) - len(current_results)} 个结果[/dim]"
                     )
 
-            return supplemented
+            return supplemented  # type: ignore[no-any-return]
 
         return current_results
 
@@ -606,15 +607,15 @@ class SecurityScanner:
                 Path(target).parent if Path(target).is_file() else Path(target)
             )
 
-            nvd_db_path = None
+            nvd_db_path: Optional[str] = None
             if (
                 hasattr(self, "nvd_adapter")
                 and self.nvd_adapter
                 and hasattr(self.nvd_adapter, "db_path")
             ):
-                nvd_db_path = self.nvd_adapter.db_path
+                nvd_db_path = str(self.nvd_adapter.db_path) if self.nvd_adapter.db_path else None
 
-            finding_verifier = FindingVerifier(project_root, nvd_db_path)
+            finding_verifier = FindingVerifier(project_root, nvd_db_path or "")
             self.tool_orchestrator.set_verifier(finding_verifier)
             self.tool_orchestrator.set_project_root(project_root)
 
@@ -782,7 +783,7 @@ class SecurityScanner:
                         if self.config.debug:
                             console.print("[dim][DEBUG] Docker不可用，使用本地构建fallback...[/dim]")
                         console.print("[bold yellow][WARN] Docker不可用，尝试本地构建...[/bold yellow]")
-                        findings = await self._fallback_local_build(agent, target)
+                        findings = await self._fallback_local_build(agent, str(target))
                     else:
                         if self.config.debug:
                             console.print("[dim][DEBUG] Docker可用，执行容器化构建...[/dim]")
@@ -840,7 +841,7 @@ class SecurityScanner:
                                 f"[bold red][ERROR] 构建失败: {result.error_message}[/bold red]"
                             )
                             console.print("[bold yellow][WARN] 回退到本地分析...[/bold yellow]")
-                            findings = await self._fallback_local_build(agent, target)
+                            findings = await self._fallback_local_build(agent, str(target))
                 else:
                     console.print("[bold yellow][WARN] 沙盒未配置，跳过动态测试[/bold yellow]")
 
@@ -1135,7 +1136,7 @@ class SecurityScanner:
                             rule_id=finding.rule_id,
                             rule_name=finding.rule_name,
                             description=finding.description,
-                            severity=finding.severity,
+                            severity=finding.severity,  # type: ignore[arg-type]
                             file_path=finding.location.file,
                             line=finding.location.line,
                             column=finding.location.column,
@@ -1149,8 +1150,8 @@ class SecurityScanner:
                         aggregated_findings.append(agg_finding)
 
                     # 执行攻击链分析
-                    analyzer = AttackChainAnalyzer()
-                    chain_result = analyzer.analyze(aggregated_findings)
+                    analyzer = AttackChainAnalyzer()  # type: ignore[call-arg]
+                    chain_result = analyzer.analyze(aggregated_findings)  # type: ignore[attr-defined]
 
                     # 将攻击链分析结果添加到ScanResult中
                     result.metadata["local_attack_chain"] = {
@@ -1442,7 +1443,7 @@ class SecurityScanner:
         Returns:
             发现的问题列表
         """
-        findings = []
+        findings: list = []
 
         try:
             from src.sandbox.build_agent.project_analyzer import ProjectAnalyzer
@@ -1655,7 +1656,9 @@ class SecurityScanner:
 
                         tasks = []
                         for file_info, _, _ in batch:
-                            tasks.append(pure_ai_prioritizer.calculate_priority(file_info.path))
+                            tasks.append(
+                                pure_ai_prioritizer.calculate_priority(str(file_info.path))
+                            )
 
                         # 处理当前批次
                         batch_results = await asyncio.gather(*tasks, return_exceptions=True)
@@ -1828,13 +1831,17 @@ class SecurityScanner:
                 from src.analyzers.config_scanner import ConfigScanner
 
                 config_scanner = ConfigScanner()
-                config_files = [f for f in target_files if config_scanner.is_config_file(f.path)]
+                # Normalize target_files to list of FileInfo
+                normalized_targets = [f[0] if isinstance(f, tuple) else f for f in target_files]
+                config_files = [
+                    f for f in normalized_targets if config_scanner.is_config_file(str(f.path))
+                ]
 
                 if config_files:
                     console.print(
                         f"[yellow][SCAN] Scanning {len(config_files)} config files...[/yellow]"
                     )
-                    config_result = config_scanner.scan_files([f.path for f in config_files])
+                    config_result = config_scanner.scan_files([str(f.path) for f in config_files])
 
                     if config_result.findings:
                         console.print(
@@ -1887,7 +1894,7 @@ class SecurityScanner:
 
                 # 智能筛选：只对可疑文件进行完整扫描
                 for file_info, _, _ in prioritized_files:
-                    file_path = file_info.path
+                    file_path = str(file_info.path)
                     if code_vuln_scanner.is_code_file(
                         file_path
                     ) or code_vuln_scanner.is_mybatis_mapper(file_path):
@@ -2028,7 +2035,7 @@ class SecurityScanner:
                     for i, (file_info, _, _) in enumerate(prioritized_files):
                         if (
                             scan_state.completed_files
-                            and file_info.path in scan_state.completed_files
+                            and str(file_info.path) in scan_state.completed_files
                         ):
                             if self.config.debug:
                                 console.print(
@@ -2061,6 +2068,8 @@ class SecurityScanner:
                             estimated_cost = 0.0
 
                         token_tracker = get_token_tracker()
+                        historical_total = 0
+                        recent_tokens = 0
                         if token_tracker is not None:
                             usage_stats = token_tracker.get_usage_stats()
                             historical_total = usage_stats.get("total_tokens", 0)
@@ -2069,10 +2078,7 @@ class SecurityScanner:
                                 if token_tracker._token_usage
                                 else None
                             )
-                            recent_tokens = recent_usage["total_tokens"] if recent_usage else 0
-                        else:
-                            historical_total = 0
-                            recent_tokens = 0
+                            recent_tokens = recent_usage["total_tokens"] if recent_usage else 0  # type: ignore[index]
 
                         console.print(f"[bold yellow]⚠ 文件数量 {file_count} 超过100[/bold yellow]")
                         console.print(
@@ -2087,7 +2093,7 @@ class SecurityScanner:
                         confirm = console.input("[bold yellow]是否确认继续扫描？ (Y/n): [/bold yellow]")
                         if confirm.lower() == "n":
                             console.print("[red]扫描已取消[/red]")
-                            return None
+                            return None  # type: ignore[return-value]
 
                     console.print(
                         f"[bold cyan][TOOL] AI analyzing {len(pending_files)} files...[/bold cyan]"
@@ -2105,37 +2111,44 @@ class SecurityScanner:
                             ai_findings.extend(result)
 
                             # 保存文件分析结果到缓存
-                            self._save_file_result(file_info.path, result)
+                            self._save_file_result(str(file_info.path), result)
 
                             # 更新扫描状态
                             findings_dicts = []
-                            for f in result:
-                                if hasattr(f, "to_dict"):
-                                    findings_dicts.append(f.to_dict())
-                                elif hasattr(f, "__dict__"):
-                                    findings_dicts.append(f.__dict__)
-                            scan_state.add_completed_file(file_info.path, findings_dicts)
+                            for item in result:
+                                if hasattr(item, "to_dict"):
+                                    findings_dicts.append(item.to_dict())
+                                elif hasattr(item, "__dict__"):
+                                    findings_dicts.append(item.__dict__)
+                            scan_state.add_completed_file(str(file_info.path), findings_dicts)
 
                             # 实时显示发现的问题
                             if result:
                                 console.print(f"Scanning file: {Path(file_info.path).name}")
-                                for finding in result:
+                                for finding_item in result:
+                                    sev_val = str(getattr(finding_item, "severity", ""))
                                     severity_color = (
                                         "red"
-                                        if finding.severity in ["critical", "high"]
+                                        if sev_val
+                                        in [
+                                            "critical",
+                                            "high",
+                                            "Severity.CRITICAL",
+                                            "Severity.HIGH",
+                                        ]
                                         else "yellow"
-                                        if finding.severity == "medium"
+                                        if sev_val in ["medium", "Severity.MEDIUM"]
                                         else "blue"
                                     )
                                     console.print(
-                                        f"→ [{severity_color}]Found {finding.rule_name}[/{severity_color}]"
+                                        f"→ [{severity_color}]Found {finding_item.rule_name}[/{severity_color}]"
                                     )
 
                             # 检查是否需要截断
                             if truncate_mode:
                                 should_trunc, reason = scan_state.should_truncate()
                                 if should_trunc:
-                                    scan_state.mark_truncated(reason)
+                                    scan_state.mark_truncated(reason or "")
                                     console.print(
                                         f"[yellow][!] Scan truncated: {reason} after {len(scan_state.completed_files)} files[/yellow]"
                                     )
@@ -2453,7 +2466,7 @@ class SecurityScanner:
             from src.analyzers.base import AnalysisContext
 
             context = AnalysisContext(
-                file_path=str(file_info.path),
+                file_path=file_info.path,
                 file_content=file_content,
                 language=file_info.language.value,
             )
@@ -2581,7 +2594,7 @@ class SecurityScanner:
 
         return findings
 
-    def _rule_analyze(self, file_info: FileInfo, ai_findings: List = None) -> List:
+    def _rule_analyze(self, file_info: FileInfo, ai_findings: Optional[List] = None) -> List:
         """基于 RAG 知识库检索的漏洞检测
 
         仅用于 RAG 知识库检索和类似漏洞检测，减少纯 AI 扫描的 token 消耗
@@ -2884,7 +2897,7 @@ class SecurityScanner:
             if metadata is None:
                 return ""
             if isinstance(metadata, dict):
-                return metadata.get("source", "")
+                return str(metadata.get("source", ""))
             return ""
 
         def get_metadata(finding) -> dict:
@@ -2920,7 +2933,7 @@ class SecurityScanner:
 
         return result
 
-    def _convert_to_finding(self, issue) -> Optional:
+    def _convert_to_finding(self, issue) -> Optional[Any]:
         """将分析问题转换为标准 Finding 对象
 
         Args:
@@ -3060,7 +3073,7 @@ class SecurityScanner:
                 references = []
 
             # 处理 metadata 字段
-            metadata = {}
+            metadata: dict = {}
             if hasattr(issue, "metadata"):
                 metadata = getattr(issue, "metadata", {})
             elif isinstance(issue, dict) and "metadata" in issue:
@@ -3268,7 +3281,7 @@ class SecurityScanner:
         Returns:
             发现的安全问题列表
         """
-        findings = []
+        findings: list = []
 
         DEPENDENCY_FILES = {
             "pom.xml",
@@ -3461,7 +3474,7 @@ class SecurityScanner:
                     console.print(f"[dim][DEBUG] 搜索漏洞信息: {vulnerability_type}[/dim]")
 
                 # search_vulnerability_info is not available
-                search_results = []
+                search_results: list = []
 
                 if search_results:
                     if self.config.debug:
@@ -3752,6 +3765,7 @@ class SecurityScanner:
                 console.print("[dim][DEBUG] 调用 AI 分析器...[/dim]")
 
             # 执行 AI 分析
+            assert self.ai_analyzer is not None
             ai_result = await self.ai_analyzer.analyze(context)
 
             if self.config.debug:
@@ -3798,11 +3812,11 @@ class SecurityScanner:
 
             if verification_level == "unknown" and project_root:
                 verification = validator.validate_finding(finding, project_root)
-                verification_level = verification.verification_level
-                is_hallucination = verification.is_hallucination
+                verification_level = verification.get("verification_level", "unknown")
+                is_hallucination = verification.get("is_hallucination", False)
                 metadata["verification_level"] = verification_level
                 metadata["is_hallucination"] = is_hallucination
-                metadata["confidence_score"] = verification.confidence
+                metadata["confidence_score"] = verification.get("confidence", 0.0)
                 finding.metadata = metadata
 
             if is_hallucination and getattr(self.config, "filter_hallucinations", True):
@@ -3895,13 +3909,13 @@ class SecurityScanner:
             finding.metadata["priority_score"] = score
             prioritized_findings.append(finding)
 
+        # Sort by: hallucination (asc), multi-file (desc), priority_score (desc)
         prioritized_findings.sort(
             key=lambda x: (
                 x.metadata.get("is_hallucination", False),
                 not (getattr(x, "is_multi_file", False) or len(getattr(x, "files", [])) > 1),
                 -x.metadata.get("priority_score", 0),
             ),
-            reverse=[False, False, True],
         )
 
         return prioritized_findings
@@ -4075,7 +4089,7 @@ class RemoteSecurityScanner:
             self.remote_scanner = NetworkScanner(remote_config)
 
         self._scanner = SecurityScanner(config)
-        self.findings = []
+        self.findings: list = []
 
     def scan_sync(self, target: Union[str, Path]) -> ScanResult:
         """执行同步远程扫描
@@ -4162,7 +4176,7 @@ class RemoteSecurityScanner:
                         path=Path(temp_path),
                         size=len(content),
                         language=Language.UNKNOWN,
-                        file_type=FileType.UNKNOWN,
+                        file_type=getattr(FileType, "UNKNOWN", "unknown"),  # type: ignore[arg-type]
                         extension=Path(remote_file.path).suffix.lower(),
                         encoding="utf-8",
                         line_count=len(content_str.splitlines()),

@@ -42,12 +42,12 @@ class DatabaseManager:
         # 解析数据库 URL
         db_url = self._config.database.url
         if db_url.startswith("sqlite:///"):
-            db_path = db_url[10:]
+            db_path_str = db_url[10:]
         else:
-            db_path = db_url
+            db_path_str = db_url
 
         # 创建数据库目录
-        db_path = Path(db_path).expanduser().resolve()
+        db_path = Path(db_path_str).expanduser().resolve()
         db_path.parent.mkdir(parents=True, exist_ok=True)
 
         # 连接数据库
@@ -174,7 +174,8 @@ class DatabaseManager:
             记录元组
         """
         cursor = await self.execute(sql, parameters)
-        return await cursor.fetchone()
+        row = await cursor.fetchone()
+        return tuple(row) if row is not None else None
 
     async def fetchall(self, sql: str, parameters: Optional[tuple] = None) -> list:
         """获取所有记录
@@ -187,7 +188,8 @@ class DatabaseManager:
             记录列表
         """
         cursor = await self.execute(sql, parameters)
-        return await cursor.fetchall()
+        rows = await cursor.fetchall()
+        return [tuple(row) for row in rows]
 
     async def commit(self) -> None:
         """提交事务"""

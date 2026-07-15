@@ -3,7 +3,7 @@ import sys
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Dict, Optional, Type
 
 from .db.sqlite_connection import SQLiteConnection
 from .db.sqlite_schema import SQLiteSche
@@ -31,7 +31,7 @@ class ETLProgress:
 class BatchImportManager:
     """批量入库管理器 - SQLite版本"""
 
-    ETL_MODULES = {
+    ETL_MODULES: Dict[str, Type] = {
         "cve": CVEETL,
         "kev": KEVETL,
         "nvd": NVDETL,
@@ -60,7 +60,7 @@ class BatchImportManager:
         self.schema = SQLiteSche(self.conn)
         self.progress: Dict[str, ETLProgress] = {}
         self._shutdown_requested = False
-        self._current_etl = None
+        self._current_etl: Optional[str] = None
 
         signal.signal(signal.SIGINT, self._signal_handler)
         signal.signal(signal.SIGTERM, self._signal_handler)
@@ -137,13 +137,13 @@ class BatchImportManager:
     def _save_checkpoint(
         self,
         etl_name: str,
-        last_file: str = None,
+        last_file: Optional[str] = None,
         last_index: int = 0,
         processed: int = 0,
         inserted: int = 0,
         skipped: int = 0,
         status: str = "running",
-        error: str = None,
+        error: Optional[str] = None,
     ) -> None:
         """保存断点 - SQLite版本"""
         now = datetime.now().isoformat()
@@ -176,7 +176,7 @@ class BatchImportManager:
                 (last_file, last_index, processed, inserted, skipped, status, now, error, etl_name),
             )
 
-    def reset_progress(self, etl_name: str = None) -> None:
+    def reset_progress(self, etl_name: Optional[str] = None) -> None:
         """重置进度"""
         if etl_name:
             query = "DELETE FROM etl_progress WHERE etl_name = ?"
@@ -237,7 +237,7 @@ class BatchImportManager:
             else:
                 print(f"\n║  ⏸ {etl_name} 入库暂停                                        ║")
 
-            return result
+            return bool(result)
 
         except Exception as e:
             import traceback

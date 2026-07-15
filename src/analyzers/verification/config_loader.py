@@ -200,7 +200,8 @@ class ConfigLoader:
         Returns:
             规则配置
         """
-        return self.rules_config.get(vuln_type, {})
+        result: Dict[str, Any] = self.rules_config.get(vuln_type, {})
+        return result
 
     def get_confidence_threshold(self, vuln_type: str) -> float:
         """
@@ -213,7 +214,8 @@ class ConfigLoader:
             置信度阈值
         """
         rule = self.rules_config.get(vuln_type, {})
-        return rule.get("confidence_threshold", 0.7)
+        threshold: float = rule.get("confidence_threshold", 0.7)
+        return threshold
 
     def get_global_config(self, key: str, default: Any = None) -> Any:
         """
@@ -242,7 +244,8 @@ class ConfigLoader:
 
     def is_verification_enabled(self) -> bool:
         """检查是否启用验证"""
-        return self.global_config.get("verification_enabled", False)
+        result: bool = self.global_config.get("verification_enabled", False)
+        return result
 
     def set_verification_enabled(self, enabled: bool):
         """
@@ -264,12 +267,15 @@ class ConfigLoader:
 
     def get_pocs_output_dir(self) -> str:
         """获取 POC 输出目录"""
-        return self.global_config.get("pocs_output_dir", "dynamic_code/pocs/generated")
+        result: str = self.global_config.get("pocs_output_dir", "dynamic_code/pocs/generated")
+        return result
 
     def get_methods_storage_dir(self) -> str:
         """获取方法存储目录"""
-        return self.global_config.get("methods_storage_dir", "dynamic_code/methods")
+        result: str = self.global_config.get("methods_storage_dir", "dynamic_code/methods")
+        return result
 
     def get_reports_output_dir(self) -> str:
         """获取报告输出目录"""
-        return self.global_config.get("output_reports_dir", "reports/verified")
+        result: str = self.global_config.get("output_reports_dir", "reports/verified")
+        return result

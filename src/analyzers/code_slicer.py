@@ -250,8 +250,8 @@ class JavaScriptSlicer(BaseCodeSlicer):
 
         self.slices = []
         context_lines = []
-        function_stack = []
-        class_stack = []
+        function_stack: List[Dict[str, Any]] = []
+        class_stack: List[Dict[str, Any]] = []
         brace_count = 0
 
         for i, line in enumerate(self.lines):

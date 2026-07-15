@@ -9,7 +9,7 @@ import os
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 from src.db.models import CVECollection
 from src.exploit.exploitdb_mapper import ExploitDBConfig, ExploitDBMapper
@@ -134,6 +134,7 @@ class CVESyncManager:
         if not since:
             since = datetime.now() - timedelta(days=7)
 
+        assert self.nvd_fetcher is not None
         collection = await self.nvd_fetcher.incremental_sync(since)
 
         if self.exploitdb_mapper:
@@ -159,11 +160,12 @@ class CVESyncManager:
         await self._initialize_nvd()
         await self._initialize_exploitdb()
 
-        all_cves = []
+        all_cves: List[Any] = []
 
         current_year = datetime.now().year
         for year in range(2002, current_year + 1):
             logger.info(f"Fetching CVE feed for {year}")
+            assert self.nvd_fetcher is not None
             collection = await self.nvd_fetcher.fetch_and_parse_feed("year", year)
             all_cves.extend(collection.cves)
             await asyncio.sleep(1)
@@ -215,7 +217,8 @@ class CVESyncManager:
             if full_sync_file.exists():
                 with open(full_sync_file, "r", encoding="utf-8") as f:
                     content = f.read()
-                return CVECollection.from_json(content)
+                result: Optional[CVECollection] = CVECollection.from_json(content)  # type: ignore[attr-defined]
+                return result
             return None
         except Exception as e:
             logger.error(f"Failed to load latest collection: {e}")

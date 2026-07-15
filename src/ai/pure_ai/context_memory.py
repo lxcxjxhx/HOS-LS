@@ -368,10 +368,10 @@ class ContextMemoryManager:
         lower_input = user_input.lower()
 
         best_intent: Optional[str] = None
-        best_score = 0
+        best_score: float = 0
 
         for intent, keywords in self._intent_patterns.items():
-            score = 0
+            score: float = 0
             for keyword in keywords:
                 if keyword in lower_input:
                     score += 1
@@ -459,15 +459,15 @@ class ContextMemoryManager:
                     print(f"[DEBUG] 引用解析结果: {entity.name}")
                     return entity.name
 
-        entity = self.get_entity(reference)
-        if entity:
-            print(f"[DEBUG] 引用解析结果: {entity.name}")
-            return entity.name
+        resolved_entity: Optional[Entity] = self.get_entity(reference)
+        if resolved_entity:
+            print(f"[DEBUG] 引用解析结果: {resolved_entity.name}")
+            return resolved_entity.name
 
-        for entity_key, entity in self._entities.items():
-            if reference_lower in entity.name.lower():
-                print(f"[DEBUG] 引用解析结果(模糊匹配): {entity.name}")
-                return entity.name
+        for entity_key, entity_obj in self._entities.items():
+            if reference_lower in entity_obj.name.lower():
+                print(f"[DEBUG] 引用解析结果(模糊匹配): {entity_obj.name}")
+                return entity_obj.name
 
         return None
 
@@ -499,7 +499,7 @@ class ContextMemoryManager:
         return len(keys_to_delete)
 
     def get_entity_stats(self) -> Dict[str, Any]:
-        stats = {
+        stats: Dict[str, Any] = {
             "total_entities": len(self._entities),
             "total_history": len(self._conversation_history),
             "by_type": {},
@@ -507,10 +507,12 @@ class ContextMemoryManager:
             "recent_intent": self._current_intent,
         }
 
+        by_type: Dict[str, int] = {}
         for entity in self._entities.values():
-            if entity.type not in stats["by_type"]:
-                stats["by_type"][entity.type] = 0
-            stats["by_type"][entity.type] += 1
+            if entity.type not in by_type:
+                by_type[entity.type] = 0
+            by_type[entity.type] += 1
+        stats["by_type"] = by_type
 
         sorted_entities = sorted(
             self._entities.values(), key=lambda e: e.mention_count, reverse=True

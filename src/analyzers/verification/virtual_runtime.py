@@ -1,5 +1,6 @@
 import re
 import sys
+import types
 from abc import ABC
 from datetime import datetime
 from typing import Any, Callable, Dict, List, Optional, Set, Union
@@ -480,7 +481,8 @@ class MockHttpServletRequest(MockJavaClass):
         return self._request_uri
 
     def getHeader(self, name: str) -> Optional[str]:
-        return self._headers.get(name)
+        value = self._headers.get(name)
+        return value if isinstance(value, str) else None
 
     def getHeaders(self, name: str) -> ArrayList:
         value = self._headers.get(name)
@@ -489,7 +491,8 @@ class MockHttpServletRequest(MockJavaClass):
         return ArrayList()
 
     def getParameter(self, name: str) -> Optional[str]:
-        return self._parameters.get(name)
+        value = self._parameters.get(name)
+        return value if isinstance(value, str) else None
 
     def getParameterMap(self) -> HashMap:
         return self._parameters
@@ -539,7 +542,8 @@ class MockHttpServletResponse(MockJavaClass):
         self._headers.put(name, value)
 
     def getHeader(self, name: str) -> str:
-        return self._headers.get(name)
+        value = self._headers.get(name)
+        return value if isinstance(value, str) else ""
 
     def setContentType(self, content_type: str) -> None:
         self._content_type = content_type
@@ -612,7 +616,9 @@ class MockComponent:
         instance = self._cls(*args, **kwargs)
         class_name = self._cls.__name__
         MockComponent._registered_components[class_name] = instance
-        MockApplicationContext._instance.register_bean(class_name, instance)
+        ctx = MockApplicationContext._instance
+        assert ctx is not None
+        ctx.register_bean(class_name, instance)
         return instance
 
     @classmethod
@@ -822,7 +828,7 @@ class MockConfiguration(MockJavaClass):
     def registerTypeAlias(self, alias: str, cls: type) -> None:
         self._type_aliases[alias] = cls
 
-    def getTypeAlias(self, alias: str) -> type:
+    def getTypeAlias(self, alias: str) -> Optional[type]:
         return self._type_aliases.get(alias)
 
 
@@ -846,7 +852,9 @@ class MockResultSet(MockJavaClass):
             keys = list(row.keys())
             if column < len(keys):
                 return str(row[keys[column]])
-        return str(row.get(column, ""))
+        else:
+            return str(row.get(column, ""))
+        return None
 
     def getInt(self, column: Union[str, int]) -> int:
         value = self.getString(column)
@@ -984,7 +992,7 @@ class MockPreparedStatement(MockJavaClass):
 
 class VirtualRuntimeEnvironment:
     def __init__(self):
-        self._mock_classes: Dict[str, MockJavaClass] = {}
+        self._mock_classes: Dict[str, type] = {}
         self._original_modules: Dict[str, Any] = {}
         self._installed = False
         self._mock_registry = MockRegistry()
@@ -1072,14 +1080,14 @@ class VirtualRuntimeEnvironment:
 
             if module_name:
                 if module_name not in sys.modules:
-                    mock_module = type(sys)("_mock_" + module_name)
+                    mock_module = types.ModuleType("_mock_" + module_name)
                     mock_module.__path__ = []
                     sys.modules[module_name] = mock_module
 
                 actual_module = sys.modules[module_name]
                 setattr(actual_module, class_name, mock_class)
             else:
-                sys.modules[class_name] = mock_class
+                sys.modules[class_name] = mock_class  # type: ignore[assignment]
 
         if self._current_language:
             if self._current_language == "cpp":
@@ -1091,7 +1099,7 @@ class VirtualRuntimeEnvironment:
             elif self._current_language == "csharp":
                 self._setup_csharp_mocks()
 
-        setup_python_module_mocks(self._mock_registry)
+        setup_python_module_mocks(self._current_language or "python")
         self._install_string_concatenation()
         self._installed = True
 
@@ -1103,7 +1111,7 @@ class VirtualRuntimeEnvironment:
                 return original_str_add(self, str(other._value))
             return original_str_add(self, other)
 
-        str.__add__ = custom_str_add
+        str.__add__ = custom_str_add  # type: ignore
 
     def teardown_environment(self) -> None:
         if not self._installed:
@@ -1130,7 +1138,7 @@ class VirtualRuntimeEnvironment:
             sys.modules[module_name] = module
 
         self._original_modules.clear()
-        self._mock_registry.clear()
+        self._mock_registry._mocks.clear()
         self._current_language = None
         self._installed = False
 
@@ -1181,10 +1189,10 @@ def python_to_java(obj: Any) -> Any:
     if isinstance(obj, set):
         return MockSet({python_to_java(item) for item in obj})
     if isinstance(obj, dict):
-        result = HashMap()
+        result_map: Any = HashMap()
         for k, v in obj.items():
-            result.put(python_to_java(k), python_to_java(v))
-        return result
+            result_map.put(python_to_java(k), python_to_java(v))
+        return result_map
     return obj
 
 

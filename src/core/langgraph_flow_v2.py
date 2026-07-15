@@ -191,7 +191,7 @@ async def report_generation_node(state: V2ScanState) -> V2ScanState:
     将候选漏洞转换为最终报告。
     """
     try:
-        scan_result = ScanResult(target=state.target, status="running")
+        scan_result = ScanResult(target=state.target, status="running")  # type: ignore[arg-type]
 
         for candidate in state.candidates:
             severity_map = {
@@ -349,14 +349,15 @@ async def run_v2_scan(target: str, config: Any = None) -> ScanResult:
 
         if result.scan_result:
             print(f"📋 扫描完成，发现 {len(result.scan_result.findings)} 个问题")
-            return result.scan_result
+            scan_result_final: ScanResult = result.scan_result
+            return scan_result_final
         else:
-            scan_result = ScanResult(target=target, status="completed")
+            scan_result = ScanResult(target=target, status="completed")  # type: ignore[arg-type]
             scan_result.complete()
             return scan_result
 
     except Exception as e:
-        error_result = ScanResult(target=target, status="failed")
+        error_result = ScanResult(target=target, status="failed")  # type: ignore[arg-type]
         error_result.fail(str(e))
         print(f"❌ V2 扫描流程失败: {e}")
         return error_result

@@ -136,3 +136,7 @@ class TerminalUI:
             self.console.print(
                 f"[bold cyan]{agent_name}[/bold cyan] [bold {color}]{status}[/bold {color}]"
             )
+
+    def get_prompt(self) -> str:
+        """获取聊天提示符"""
+        return "[HOS-LS] > "

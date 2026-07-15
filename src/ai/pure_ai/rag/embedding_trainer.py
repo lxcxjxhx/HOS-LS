@@ -4,7 +4,7 @@
 """
 
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, cast
 
 import numpy as np
 import torch
@@ -113,7 +113,7 @@ class EmbeddingTrainer:
             per_device_eval_batch_size=batch_size,
             learning_rate=learning_rate,
             warmup_steps=warmup_steps,
-            evaluation_strategy="steps",
+            eval_strategy="steps",
             eval_steps=500,
             save_strategy="steps",
             save_steps=500,
@@ -127,6 +127,7 @@ class EmbeddingTrainer:
         )
 
         # 使用 MultipleNegativesRankingLoss
+        assert self.model is not None, "Model must be loaded before training"
         train_loss = losses.MultipleNegativesRankingLoss(self.model)
 
         # 准备评估器
@@ -137,9 +138,9 @@ class EmbeddingTrainer:
             negative_sentences = [triplet[2] for triplet in evaluation_data]
 
             evaluator = TripletEvaluator(
-                anchor_sentences=anchor_sentences,
-                positive_sentences=positive_sentences,
-                negative_sentences=negative_sentences,
+                anchors=anchor_sentences,
+                positives=positive_sentences,
+                negatives=negative_sentences,
                 name="eval",
             )
 
@@ -273,19 +274,19 @@ class EmbeddingTrainer:
 
             # 创建评估器
             evaluator = TripletEvaluator(
-                anchor_sentences=anchor_sentences,
-                positive_sentences=positive_sentences,
-                negative_sentences=negative_sentences,
+                anchors=anchor_sentences,
+                positives=positive_sentences,
+                negatives=negative_sentences,
                 name="eval",
             )
 
             # 评估
-            score = evaluator(model)
-            logger.info(f"评估得分: {score}")
+            score_result = evaluator(model)
+            logger.info(f"评估得分: {score_result}")
 
             # 计算额外指标
-            metrics = {
-                "score": score,
+            metrics: Dict[str, float] = {
+                "score": cast(float, score_result),
                 "recall@1": self._calculate_recall(model, evaluation_data, k=1),
                 "recall@5": self._calculate_recall(model, evaluation_data, k=5),
                 "mrr": self._calculate_mrr(model, evaluation_data),
@@ -371,7 +372,9 @@ class EmbeddingTrainer:
 
         return sum(reciprocal_ranks) / len(reciprocal_ranks) if reciprocal_ranks else 0
 
-    def _cosine_similarity(self, vec1: np.ndarray, vec2: np.ndarray) -> float:
+    def _cosine_similarity(
+        self, vec1: "np.ndarray | torch.Tensor", vec2: "np.ndarray | torch.Tensor"
+    ) -> float:
         """计算余弦相似度
 
         Args:
@@ -381,6 +384,12 @@ class EmbeddingTrainer:
         Returns:
             余弦相似度
         """
+        # 如果是 Tensor，先转换为 numpy
+        if isinstance(vec1, torch.Tensor):
+            vec1 = vec1.cpu().numpy()
+        if isinstance(vec2, torch.Tensor):
+            vec2 = vec2.cpu().numpy()
+
         dot_product = np.dot(vec1, vec2)
         norm1 = np.linalg.norm(vec1)
         norm2 = np.linalg.norm(vec2)
@@ -388,7 +397,7 @@ class EmbeddingTrainer:
         if norm1 == 0 or norm2 == 0:
             return 0.0
 
-        return dot_product / (norm1 * norm2)
+        return float(dot_product / (norm1 * norm2))
 
     def save_model(self, model_path: Path):
         """保存模型
@@ -431,7 +440,10 @@ class EmbeddingTrainer:
 
             # 导出为 ONNX
             onnx_path.mkdir(parents=True, exist_ok=True)
-            model.export_onnx(str(onnx_path / "model.onnx"))
+            # 使用类型转换避免 mypy 报错
+            export_fn = getattr(model, "export_onnx", None)
+            if export_fn:
+                export_fn(str(onnx_path / "model.onnx"))
             logger.info(f"模型已导出为 ONNX 格式到 {onnx_path}")
         except Exception as e:
             logger.error(f"导出 ONNX 失败: {e}")

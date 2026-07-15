@@ -4,7 +4,7 @@ from typing import Any, Dict, List, Optional, TypedDict
 from src.core.engine import ScanResult
 
 
-class AgentState(TypedDict):
+class AgentState(TypedDict, total=False):
     """Agent状态
 
     管理LangGraph流程中的所有状态数据
@@ -16,6 +16,11 @@ class AgentState(TypedDict):
     analysis_result: str  # 分析结果
     final_report: dict  # 最终报告
     iteration: int  # 用于Critic循环
+    security_alert: dict  # 安全告警
+    quality_score: int  # 质量分数
+    evaluation: dict  # 评估结果
+    feedback: str  # 反馈信息
+    improvement_suggestions: str  # 改进建议
 
 
 @dataclass
@@ -128,8 +133,10 @@ class ScanState:
         Returns:
             ScanState: 状态对象
         """
+        target = data.get("target")
+        assert target is not None
         return cls(
-            target=data.get("target"),
+            target=target,
             config=data.get("config"),
             cst=data.get("cst", []),
             ast=data.get("ast", []),

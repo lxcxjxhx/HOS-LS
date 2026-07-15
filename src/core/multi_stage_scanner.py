@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Set
 
 from src.ai.prompts import PromptManager, get_prompt_manager
-from src.analyzers.code_slicer import CodeSlicer
+from src.analyzers.code_slicer import CodeSlice
 from src.core.result_aggregator import AggregatedFinding, ResultAggregator
 from src.core.scan_scheduler import ScanScheduler
 from src.utils.logger import get_logger
@@ -220,7 +220,7 @@ class MultiStageScannerEngine:
             max_concurrent=self.config.max_concurrent
         )
         self.result_aggregator = result_aggregator or ResultAggregator()
-        self.code_slicer = CodeSlicer()
+        self.code_slicer: Optional[Any] = None
 
         self._search_agent_filter: Optional[SearchAgentFilter] = None
         self._parallel_executor: Optional[ParallelAgentExecutor] = None
@@ -322,8 +322,8 @@ class MultiStageScannerEngine:
 
         start_time = time.time()
 
-        candidates = []
-        findings = []
+        candidates: List[str] = []
+        findings: List[Any] = []
 
         for fp in file_paths:
             try:
@@ -333,7 +333,7 @@ class MultiStageScannerEngine:
 
                 language = self.detect_language(fp)  # noqa: F841 - 保留用于后续 prompt 调用
 
-                if self.config.use_code_slicing:
+                if self.config.use_code_slicing and self.code_slicer:
                     slices = self.code_slicer.slice_file(fp)
                     for code_slice in slices:
                         # prompt = self.prompt_manager.get_phase1_prompt(
@@ -638,7 +638,7 @@ class MultiStageScannerEngine:
         result = Phase1Result(file_path=file_path)
 
         try:
-            if self.config.use_code_slicing:
+            if self.config.use_code_slicing and self.code_slicer:
                 slices = self.code_slicer.slice_file(file_path)
                 for code_slice in slices:
                     # prompt = self.prompt_manager.get_phase1_prompt(
@@ -669,7 +669,7 @@ class MultiStageScannerEngine:
         Returns:
             List[AggregatedFinding]: 发现结果
         """
-        findings = []
+        findings: List[AggregatedFinding] = []
 
         for point in phase1_result.suspicious_points:
             try:
@@ -705,7 +705,7 @@ class MultiStageScannerEngine:
         Returns:
             List[AggregatedFinding]: 发现结果
         """
-        findings = []
+        findings: List[AggregatedFinding] = []
 
         try:
             # prompt = self.prompt_manager.get_rule_based_prompt(
@@ -733,14 +733,15 @@ class MultiStageScannerEngine:
         async def scan_task(file_path: str) -> ScanFileResult:
             return await self.scan_file(file_path, ai_client)
 
-        file_results = await self.scan_scheduler.schedule_tasks(
-            tasks=[(scan_task, (fp, ai_client)) for fp in file_paths]
-        )
+        # Schedule tasks manually using asyncio
+        tasks = [scan_task(fp) for fp in file_paths]
+        file_results_raw = await asyncio.gather(*tasks, return_exceptions=True)
+        file_results = [r for r in file_results_raw if isinstance(r, ScanFileResult)]
 
         result.file_results = file_results
         result.scanned_files = len(file_results)
 
-        all_findings = []
+        all_findings: List[AggregatedFinding] = []
         for fr in file_results:
             all_findings.extend(fr.phase2_findings)
             if fr.phase2_findings:

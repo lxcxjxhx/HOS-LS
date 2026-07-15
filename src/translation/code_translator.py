@@ -331,7 +331,7 @@ class CodeTranslator:
 
     def analyze_code_logic(self, code: str, source_lang: str) -> Dict[str, Any]:
         lang_lower = source_lang.lower()
-        analysis = {
+        analysis: Dict[str, Any] = {
             "language": source_lang,
             "requires_ai_assistance": False,
             "complexity": "unknown",

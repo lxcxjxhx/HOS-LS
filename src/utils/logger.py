@@ -42,18 +42,18 @@ def setup_logging(
 
     # 控制台处理程序
     if use_rich:
-        console_handler = RichHandler(
+        rich_handler = RichHandler(
             console=Console(stderr=True),
             show_time=False,
             show_path=False,
         )
-        console_handler.setLevel(getattr(logging, level.upper()))
-        logger.addHandler(console_handler)
+        rich_handler.setLevel(getattr(logging, level.upper()))
+        logger.addHandler(rich_handler)
     else:
-        console_handler = logging.StreamHandler(sys.stderr)
-        console_handler.setFormatter(formatter)
-        console_handler.setLevel(getattr(logging, level.upper()))
-        logger.addHandler(console_handler)
+        stream_handler = logging.StreamHandler(sys.stderr)
+        stream_handler.setFormatter(formatter)
+        stream_handler.setLevel(getattr(logging, level.upper()))
+        logger.addHandler(stream_handler)
 
     # 文件处理程序
     if log_file:

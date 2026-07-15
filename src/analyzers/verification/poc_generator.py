@@ -99,7 +99,7 @@ class AIPOCGenerator:
         self.pocs_output_path.mkdir(parents=True, exist_ok=True)
         self._poc_classes_cache: Dict[str, type] = {}
 
-    def generate_poc(self, context: VulnContext, validator_name: str = None) -> str:
+    def generate_poc(self, context: VulnContext, validator_name: Optional[str] = None) -> str:
         """
         为漏洞生成 POC 验证脚本
 
@@ -141,7 +141,7 @@ class AIPOCGenerator:
 
         return method_id
 
-    def generate_generalized_poc(self, vuln_type: str, pattern: str = None) -> str:
+    def generate_generalized_poc(self, vuln_type: str, pattern: Optional[str] = None) -> str:
         """
         生成泛化 POC 验证方法
 
@@ -263,7 +263,7 @@ class AIPOCGenerator:
 
         return steps
 
-    def auto_adjust_poc(self, poc_method_id: str, feedback: Dict[str, Any]) -> str:
+    def auto_adjust_poc(self, poc_method_id: str, feedback: Dict[str, Any]) -> Optional[str]:
         """
         根据反馈自动调整 POC
 
@@ -319,7 +319,7 @@ class AIPOCGenerator:
         return new_method_id
 
     def execute_poc(
-        self, poc_method_id: str, target: str, params: Dict[str, Any] = None
+        self, poc_method_id: str, target: str, params: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
         """
         执行生成的 POC
@@ -392,7 +392,8 @@ class AIPOCGenerator:
 
             if result.returncode == 0:
                 try:
-                    return json.loads(result.stdout)
+                    parsed: Dict[str, Any] = json.loads(result.stdout)
+                    return parsed
                 except json.JSONDecodeError:
                     return {
                         "output": result.stdout,
@@ -438,10 +439,16 @@ class AIPOCGenerator:
             "auth_bypass": module.AuthBypassPOC,
             "ssrf": module.SSrfPOC,
             "deserialization": module.DeserializationPOC,
-            "command_injection": getattr(module, "CommandInjectionPOC", None),
-            "xxe": getattr(module, "XXEPOC", None),
-            "xss": getattr(module, "XSSPOC", None),
         }
+        # Add optional POC classes if they exist
+        for vuln_type, class_name in [
+            ("command_injection", "CommandInjectionPOC"),
+            ("xxe", "XXEPOC"),
+            ("xss", "XSSPOC"),
+        ]:
+            poc_class = getattr(module, class_name, None)
+            if poc_class is not None:
+                self._poc_classes_cache[vuln_type] = poc_class
 
         return self._poc_classes_cache
 
@@ -544,7 +551,7 @@ class AIPOCGenerator:
         Returns:
             提取的参数信息
         """
-        params = {}
+        params: Dict[str, Any] = {}
 
         if vuln_type == "sql_injection":
             param_patterns = [
@@ -1201,7 +1208,7 @@ if __name__ == '__main__':
         with open(poc_file, "w", encoding="utf-8") as f:
             f.write(poc_code)
 
-    def list_generated_pocs(self, vuln_type: str = None) -> List[Dict[str, str]]:
+    def list_generated_pocs(self, vuln_type: Optional[str] = None) -> List[Dict[str, str]]:
         """
         列出已生成的 POC
 
@@ -1279,11 +1286,13 @@ if __name__ == '__main__':
         try:
             from base_poc_template import POCContext as BasePOCContext
 
+            metadata = method.metadata
+            assert metadata is not None
             context = BasePOCContext(
                 target=target,
                 vuln_type=vuln_type,
-                file_path=method.metadata.get("file_path", ""),
-                line_number=method.metadata.get("line_number", 0),
+                file_path=metadata.get("file_path", ""),
+                line_number=metadata.get("line_number", 0),
                 code_snippet="",
                 additional_params=kwargs,
             )

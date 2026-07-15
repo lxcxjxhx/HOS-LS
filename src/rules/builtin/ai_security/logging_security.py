@@ -25,7 +25,7 @@ class MissingSecurityEventLoggingRule(BaseRule):
         metadata = RuleMetadata(
             id="A09-001",
             name="Missing Security Event Logging",
-            description="检测敏感操作缺少安全事件日志记录，包括登录、注销、权限变更、账户锁定等。参考: OWASP Top 10 2021 A09:2021",
+            description="检测敏感操作缺少安全事件日志记录，包括登录、注销、权限变更、账户锁定等。参考 OWASP Top 10 2021 A09:2021",
             severity=RuleSeverity.MEDIUM,
             category=RuleCategory.AI_SECURITY,
             language="*",
@@ -107,7 +107,7 @@ class MissingSecurityEventLoggingRule(BaseRule):
         Returns:
             规则执行结果列表
         """
-        results = []
+        results: List[RuleResult] = []
 
         if isinstance(target, Path):
             try:
@@ -118,11 +118,9 @@ class MissingSecurityEventLoggingRule(BaseRule):
         elif isinstance(target, str):
             content = target
             file_path = "<string>"
-        elif isinstance(target, dict):
+        else:  # dict
             content = target.get("content", "")
             file_path = target.get("file_path", "<unknown>")
-        else:
-            return results
 
         lines = content.split("\n")
 
@@ -192,7 +190,7 @@ class InsufficientAuditTrailRule(BaseRule):
         metadata = RuleMetadata(
             id="A09-002",
             name="Insufficient Audit Trail",
-            description="检测审计日志缺少必要字段或信息不完整，如缺少时间戳、用户ID、IP地址等关键信息。参考: OWASP Top 10 2021 A09:2021",
+            description="检测审计日志缺少必要字段或信息不完整，如缺少时间戳、用户ID、IP地址等关键信息。参考 OWASP Top 10 2021 A09:2021",
             severity=RuleSeverity.MEDIUM,
             category=RuleCategory.AI_SECURITY,
             language="*",
@@ -255,7 +253,7 @@ class InsufficientAuditTrailRule(BaseRule):
         Returns:
             规则执行结果列表
         """
-        results = []
+        results: List[RuleResult] = []
 
         if isinstance(target, Path):
             try:
@@ -266,11 +264,9 @@ class InsufficientAuditTrailRule(BaseRule):
         elif isinstance(target, str):
             content = target
             file_path = "<string>"
-        elif isinstance(target, dict):
+        else:  # dict
             content = target.get("content", "")
             file_path = target.get("file_path", "<unknown>")
-        else:
-            return results
 
         lines = content.split("\n")
 
@@ -316,11 +312,6 @@ class InsufficientAuditTrailRule(BaseRule):
         Returns:
             是否有所需字段
         """
-        # context_window = 500
-        # search_start = max(0, start - context_window)
-        # search_end = min(len(content), end + context_window)
-        # context = content[search_start:search_end]
-
         found_fields = 0
         for field_pattern in self._required_audit_fields:
             if re.search(field_pattern, content, re.IGNORECASE):
@@ -342,7 +333,7 @@ class SensitiveDataInLogsRule(BaseRule):
         metadata = RuleMetadata(
             id="A09-003",
             name="Sensitive Data in Logs",
-            description="检测敏感数据被写入日志的安全问题，包括密码、API密钥、令牌、信用卡号、社会安全号等。参考: OWASP Top 10 2021 A09:2021",
+            description="检测敏感数据被写入日志的安全问题，包括密码、API密钥、令牌、信用卡号、社会安全号等。参考 OWASP Top 10 2021 A09:2021",
             severity=RuleSeverity.HIGH,
             category=RuleCategory.AI_SECURITY,
             language="*",
@@ -434,7 +425,7 @@ class SensitiveDataInLogsRule(BaseRule):
         Returns:
             规则执行结果列表
         """
-        results = []
+        results: List[RuleResult] = []
 
         if isinstance(target, Path):
             try:
@@ -445,11 +436,9 @@ class SensitiveDataInLogsRule(BaseRule):
         elif isinstance(target, str):
             content = target
             file_path = "<string>"
-        elif isinstance(target, dict):
+        else:  # dict
             content = target.get("content", "")
             file_path = target.get("file_path", "<unknown>")
-        else:
-            return results
 
         lines = content.split("\n")
 

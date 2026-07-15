@@ -6,6 +6,8 @@
 from typing import Any, Dict, List, Optional
 
 import psycopg2
+from psycopg2.extensions import connection as Connection
+from psycopg2.extensions import cursor as Cursor
 from psycopg2.extras import DictCursor
 
 from src.integration.nvd_processor import CVEStructuredData
@@ -18,10 +20,10 @@ class PostgresStorage:
     """PostgreSQL存储"""
 
     def __init__(self, config: Dict[str, Any]):
-        """初始化PostgreSQL存储
+        """初始化 PostgreSQL 存储
 
         Args:
-            config: PostgreSQL配置
+            config: PostgreSQL 配置
                 - host: 主机地址
                 - port: 端口
                 - user: 用户名
@@ -29,10 +31,10 @@ class PostgresStorage:
                 - database: 数据库名
         """
         self.config = config
-        self.connection = None
-        self.cursor = None
+        self.connection: Optional[Connection] = None
+        self.cursor: Optional[Cursor] = None
 
-    def connect(self):
+    def connect(self) -> None:
         """连接PostgreSQL数据库"""
         try:
             self.connection = psycopg2.connect(
@@ -50,7 +52,7 @@ class PostgresStorage:
             logger.error(f"连接PostgreSQL失败: {e}")
             raise
 
-    def close(self):
+    def close(self) -> None:
         """关闭数据库连接"""
         if self.cursor:
             self.cursor.close()
@@ -58,8 +60,10 @@ class PostgresStorage:
             self.connection.close()
         logger.info("PostgreSQL连接已关闭")
 
-    def _create_tables(self):
+    def _create_tables(self) -> None:
         """创建数据库表"""
+        assert self.cursor is not None, "Cursor must be initialized"
+        assert self.connection is not None, "Connection must be initialized"
         try:
             # CVE表
             self.cursor.execute(
@@ -155,6 +159,8 @@ class PostgresStorage:
         Returns:
             是否存储成功
         """
+        assert self.connection is not None, "Connection must be initialized"
+        assert self.cursor is not None, "Cursor must be initialized"
         try:
             # 开始事务
             self.connection.autocommit = False
@@ -273,6 +279,7 @@ class PostgresStorage:
             成功存储的数量
         """
         success_count = 0
+        assert self.connection is not None, "Connection must be initialized"
         try:
             self.connection.autocommit = False
 
@@ -301,6 +308,7 @@ class PostgresStorage:
         Returns:
             CVE结构化数据或None
         """
+        assert self.cursor is not None, "Cursor must be initialized"
         try:
             # 获取CVE基本信息
             self.cursor.execute(
@@ -369,6 +377,7 @@ class PostgresStorage:
         Returns:
             CVE结构化数据列表
         """
+        assert self.cursor is not None, "Cursor must be initialized"
         try:
             # 构建查询
             where_clauses = []
@@ -440,10 +449,11 @@ class PostgresStorage:
         Returns:
             CVE数量
         """
+        assert self.cursor is not None, "Cursor must be initialized"
         try:
             self.cursor.execute("SELECT COUNT(*) FROM cves")
             count = self.cursor.fetchone()[0]
-            return count
+            return int(count)
         except Exception as e:
             logger.error(f"获取CVE数量失败: {e}")
             return 0
@@ -457,6 +467,8 @@ class PostgresStorage:
         Returns:
             是否删除成功
         """
+        assert self.connection is not None, "Connection must be initialized"
+        assert self.cursor is not None, "Cursor must be initialized"
         try:
             self.connection.autocommit = False
 
@@ -470,7 +482,7 @@ class PostgresStorage:
             self.connection.commit()
             self.connection.autocommit = True
 
-            return affected > 0
+            return bool(affected > 0)
         except Exception as e:
             logger.error(f"删除CVE失败: {e}")
             if self.connection:
@@ -478,8 +490,10 @@ class PostgresStorage:
                 self.connection.autocommit = True
             return False
 
-    def vacuum(self):
+    def vacuum(self) -> None:
         """执行数据库清理"""
+        assert self.connection is not None, "Connection must be initialized"
+        assert self.cursor is not None, "Cursor must be initialized"
         try:
             self.cursor.execute("VACUUM ANALYZE")
             self.connection.commit()

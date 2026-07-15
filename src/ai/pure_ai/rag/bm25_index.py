@@ -17,7 +17,7 @@ try:
 except ImportError:
     logger.warning("rank-bm25 not installed, using fallback implementation")
 
-    class BM25Okapi:
+    class BM25Okapi:  # type: ignore[no-redef]
         """BM25 回退实现"""
 
         def __init__(self, corpus):
@@ -52,8 +52,8 @@ class BM25Index:
         """
         self.storage_path = storage_path
         if storage_path:
-            self.storage_path.mkdir(parents=True, exist_ok=True)
-            self.index_path = storage_path / "bm25_index.json"
+            storage_path.mkdir(parents=True, exist_ok=True)
+            self.index_path: Optional[Path] = storage_path / "bm25_index.json"
         else:
             self.index_path = None
 
@@ -61,7 +61,7 @@ class BM25Index:
         self._documents: Dict[str, Dict] = {}
         self._document_ids: List[str] = []
         self._corpus: List[str] = []
-        self._bm25 = None
+        self._bm25: Optional[Any] = None
 
         # 加载现有数据
         self.load()

@@ -7,7 +7,7 @@ import shutil
 import subprocess
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 import yaml
 
@@ -29,21 +29,21 @@ class VenvManager:
     ):
         if config_path is None:
             project_root = Path(__file__).parent.parent.parent.parent
-            config_path = project_root / "dynamic_code" / "config.yaml"
+            config_path = str(project_root / "dynamic_code" / "config.yaml")
 
-        self._config = self._load_config(config_path)
+        self._config = self._load_config(Path(config_path))
 
         sandbox_root = self._config.get("global", {}).get("sandbox_root", "temp/sandboxes")
         if venv_root is None:
             project_root = Path(__file__).parent.parent.parent.parent
-            venv_root = project_root / sandbox_root / "venvs"
+            venv_root = str(project_root / sandbox_root / "venvs")
 
         self.venv_root = Path(venv_root)
         self.venv_root.mkdir(parents=True, exist_ok=True)
 
         if cache_dir is None:
             project_root = Path(__file__).parent.parent.parent.parent
-            cache_dir = project_root / "temp" / "venv_cache"
+            cache_dir = str(project_root / "temp" / "venv_cache")
 
         self.cache_dir = Path(cache_dir)
         self.cache_dir.mkdir(parents=True, exist_ok=True)
@@ -221,7 +221,7 @@ class VenvManager:
         Returns:
             虚拟环境信息列表
         """
-        venvs = []
+        venvs: List[Dict[str, Any]] = []
 
         if not self.venv_root.exists():
             return venvs

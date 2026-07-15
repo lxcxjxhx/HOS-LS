@@ -361,6 +361,7 @@ class CustomPriorityParser:
         """
         if self._rules is None:
             self.parse()
+        assert self._rules is not None
 
         file_path = Path(file_path)
         file_content = ""
@@ -413,6 +414,7 @@ class CustomPriorityParser:
         Returns:
             (分数, 匹配的关键词列表)
         """
+        assert self._rules is not None
         if not self._rules.keywords:
             return 0.0, []
 
@@ -488,6 +490,7 @@ class CustomPriorityParser:
         Returns:
             (分数, 匹配的文件模式列表)
         """
+        assert self._rules is not None
         if not self._rules.file_patterns:
             return 0.0, []
 
@@ -546,6 +549,7 @@ class CustomPriorityParser:
         Returns:
             (分数, 匹配的路径规则列表)
         """
+        assert self._rules is not None
         if not self._rules.path_rules:
             return 0.0, []
 
@@ -641,6 +645,7 @@ class CustomPriorityParser:
         Returns:
             (相关性分数, 匹配的相关文件列表)
         """
+        assert self._rules is not None
         if (
             self._rules.related_file_rules is None
             and self._rules.call_chain_rules is None
@@ -747,6 +752,7 @@ class CustomPriorityParser:
             匹配的相关文件列表
         """
         matched: List[RelatedFileMatch] = []
+        assert self._rules is not None
         call_chain_rules = self._rules.call_chain_rules
         if not call_chain_rules:
             return matched
@@ -789,6 +795,7 @@ class CustomPriorityParser:
             匹配的相关文件列表
         """
         matched: List[RelatedFileMatch] = []
+        assert self._rules is not None
         data_flow_rules = self._rules.data_flow_rules
         if not data_flow_rules:
             return matched

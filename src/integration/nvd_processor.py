@@ -115,13 +115,13 @@ class NVDProcessor:
         """
         # 首先限制文本长度
         description = self.limit_text_length(description)
-        chunks = []
+        chunks: List[CVEChunk] = []
         if not description:
             return chunks
 
         # 按句子分割描述
         sentences = description.split(". ")
-        current_chunk = []
+        current_chunk: List[str] = []
         current_length = 0
         chunk_index = 1
 
@@ -133,8 +133,10 @@ class NVDProcessor:
                 # 生成当前数据块
                 if current_chunk:
                     chunk_content = "".join(current_chunk)
+                    chunk_id = f"{cve_id}#description#{chunk_index}"
                     chunk = CVEChunk(
                         cve_id=cve_id,
+                        chunk_id=chunk_id,
                         chunk_type="description",
                         content=f"CVE ID: {cve_id}\nDescription (part {chunk_index}): {chunk_content}",
                         metadata={"type": "description", "cve_id": cve_id, "part": chunk_index},
@@ -150,8 +152,10 @@ class NVDProcessor:
         # 处理最后一个数据块
         if current_chunk:
             chunk_content = "".join(current_chunk)
+            chunk_id = f"{cve_id}#description#{chunk_index}"
             chunk = CVEChunk(
                 cve_id=cve_id,
+                chunk_id=chunk_id,
                 chunk_type="description",
                 content=f"CVE ID: {cve_id}\nDescription (part {chunk_index}): {chunk_content}",
                 metadata={"type": "description", "cve_id": cve_id, "part": chunk_index},
@@ -174,13 +178,13 @@ class NVDProcessor:
         """
         # 首先限制文本长度
         text = self.limit_text_length(text)
-        chunks = []
+        chunks: List[CVEChunk] = []
         if not text:
             return chunks
 
         # 按句子分割文本
         sentences = text.split(". ")
-        current_chunk = []
+        current_chunk: List[str] = []
         current_length = 0
         chunk_index = 1
 
@@ -192,8 +196,10 @@ class NVDProcessor:
                 # 生成当前数据块
                 if current_chunk:
                     chunk_content = "".join(current_chunk)
+                    chunk_id = f"{cve_id}#{chunk_type}#{chunk_index}"
                     chunk = CVEChunk(
                         cve_id=cve_id,
+                        chunk_id=chunk_id,
                         chunk_type=chunk_type,
                         content=f"CVE ID: {cve_id}\n{chunk_type.capitalize()} (part {chunk_index}): {chunk_content}",
                         metadata={"type": chunk_type, "cve_id": cve_id, "part": chunk_index},
@@ -209,8 +215,10 @@ class NVDProcessor:
         # 处理最后一个数据块
         if current_chunk:
             chunk_content = "".join(current_chunk)
+            chunk_id = f"{cve_id}#{chunk_type}#{chunk_index}"
             chunk = CVEChunk(
                 cve_id=cve_id,
+                chunk_id=chunk_id,
                 chunk_type=chunk_type,
                 content=f"CVE ID: {cve_id}\n{chunk_type.capitalize()} (part {chunk_index}): {chunk_content}",
                 metadata={"type": chunk_type, "cve_id": cve_id, "part": chunk_index},
@@ -221,7 +229,7 @@ class NVDProcessor:
         return chunks
 
     def split_text_for_embedding(
-        self, text: str, chunk_size: int = None, chunk_overlap: int = None
+        self, text: str, chunk_size: Optional[int] = None, chunk_overlap: Optional[int] = None
     ) -> List[str]:
         """将长文本切分为指定大小的片段，用于embedding
 
@@ -251,8 +259,8 @@ class NVDProcessor:
 
         # 按语义切分（优先按句子）
         sentences = text.split(". ")
-        chunks = []
-        current_chunk = []
+        chunks: List[str] = []
+        current_chunk: List[str] = []
         current_length = 0
 
         for sentence in sentences:

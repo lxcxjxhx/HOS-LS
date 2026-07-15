@@ -210,10 +210,10 @@ class IncrementalIndexManager:
             all_files: 所有文件列表
 
         Returns:
-            未变更文件列表，可跳过扫描
+            未变更文件列表（仅包含已索引且未变更的文件），可跳过扫描
         """
         changed_set = set(changed_files)
-        return [f for f in all_files if f not in changed_set]
+        return [f for f in all_files if f not in changed_set and f in self._index]
 
     def update_index(self, file_path: str, file_hash: str, mtime: float, size: int) -> None:
         """更新索引条目

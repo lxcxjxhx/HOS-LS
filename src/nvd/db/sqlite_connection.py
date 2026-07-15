@@ -8,7 +8,7 @@ import gc
 import os
 import sqlite3
 from pathlib import Path
-from typing import Optional
+from typing import Any, List, Optional, Tuple
 
 from src.utils.logger import get_logger
 
@@ -253,3 +253,54 @@ class SQLiteConnection:
     def __del__(self):
         """析构时关闭连接"""
         self.close()
+
+    def execute(self, query: str, params: Optional[Tuple[Any, ...]] = None) -> sqlite3.Cursor:
+        """执行 SQL 语句
+
+        Args:
+            query: SQL 查询语句
+            params: 查询参数
+
+        Returns:
+            sqlite3.Cursor 实例
+        """
+        cursor = self.get_cursor()
+        if params:
+            cursor.execute(query, params)
+        else:
+            cursor.execute(query)
+        return cursor
+
+    def fetch_one(
+        self, query: str, params: Optional[Tuple[Any, ...]] = None
+    ) -> Optional[Tuple[Any, ...]]:
+        """执行查询并返回单条结果
+
+        Args:
+            query: SQL 查询语句
+            params: 查询参数
+
+        Returns:
+            单条结果元组或 None
+        """
+        cursor = self.execute(query, params)
+        result = cursor.fetchone()
+        cursor.close()
+        return result
+
+    def fetch_all(
+        self, query: str, params: Optional[Tuple[Any, ...]] = None
+    ) -> List[Tuple[Any, ...]]:
+        """执行查询并返回所有结果
+
+        Args:
+            query: SQL 查询语句
+            params: 查询参数
+
+        Returns:
+            结果元组列表
+        """
+        cursor = self.execute(query, params)
+        results = cursor.fetchall()
+        cursor.close()
+        return results

@@ -150,6 +150,7 @@ class CustomPriorityParser:
         """
         if self._rules is None:
             self.parse()
+        assert self._rules is not None
 
         file_path = Path(file_path)
         file_content = ""
@@ -194,6 +195,7 @@ class CustomPriorityParser:
         Returns:
             (分数, 匹配的关键词列表)
         """
+        assert self._rules is not None
         if not self._rules.keywords:
             return 0.0, []
 
@@ -269,6 +271,7 @@ class CustomPriorityParser:
         Returns:
             (分数, 匹配的文件模式列表)
         """
+        assert self._rules is not None
         if not self._rules.file_patterns:
             return 0.0, []
 
@@ -327,6 +330,7 @@ class CustomPriorityParser:
         Returns:
             (分数, 匹配的路径规则列表)
         """
+        assert self._rules is not None
         if not self._rules.path_rules:
             return 0.0, []
 

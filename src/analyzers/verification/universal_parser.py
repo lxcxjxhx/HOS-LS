@@ -58,7 +58,6 @@ class UniversalParser:
             return KotlinParser()
         elif language == SupportedLanguage.RUBY:
             return RubyParser()
-        return None
 
     def parse(self, source_code: str, language: Optional[SupportedLanguage] = None) -> ParserResult:
         if language is None:
@@ -74,7 +73,7 @@ class UniversalParser:
             )
 
         try:
-            result = parser.parse(source_code)
+            result: ParserResult = parser.parse(source_code)
             result.language = language
             result.source_code = source_code
             result.metadata["line_count"] = len(source_code.splitlines())
@@ -255,9 +254,9 @@ class CppParser:
 class GoParser:
     def parse(self, source_code: str) -> ParserResult:
         try:
-            import ast
+            import ast as go_ast
 
-            tree = ast.ParseFile(source_code, "")
+            tree = go_ast.parse(source_code)
             return ParserResult(ast_tree=tree, success=True, metadata={"parser": "go_ast"})
         except ImportError:
             pass

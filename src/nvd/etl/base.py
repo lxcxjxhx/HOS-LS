@@ -34,7 +34,7 @@ class BaseETL(ABC):
         return result[0] if result else 0
 
     def _complete_etl(
-        self, etl_id: int, status: str = "completed", error_message: str = None
+        self, etl_id: int, status: str = "completed", error_message: Optional[str] = None
     ) -> None:
         """完成ETL记录"""
         query = """
@@ -68,12 +68,15 @@ class BaseETL(ABC):
             return None
 
         try:
-            with self.conn.get_connection() as conn:
-                cursor = conn.cursor()
-                cursor.executemany(query, batch)
-                if fetch:
-                    return cursor.fetchall()
-                return None
+            # Use get_cursor to get a cursor, then executemany
+            cursor = self.conn.get_cursor()
+            cursor.executemany(query, batch)
+            if fetch:
+                result: Optional[list] = cursor.fetchall()
+                cursor.close()
+                return result
+            cursor.close()
+            return None
         except Exception as e:
             print(f"ERROR: [{self.ETL_NAME}] 批量执行失败: {e}")
             raise

@@ -35,15 +35,17 @@ class PythonTestExecutor:
 
         try:
             compiled_code = compile(python_code, "<string>", "exec")
-
-            self._original_stdout = sys.stdout
-            self._original_stderr = sys.stderr
+            # 保存原始输出流
+            self._original_stdout = sys.stdout  # type: ignore[assignment]
+            self._original_stderr = sys.stderr  # type: ignore[assignment]
             sys.stdout = stdout_capture
             sys.stderr = stderr_capture
 
             self._execution_result = {"success": False, "output": "", "error": ""}
 
             def run_code():
+                if self._execution_result is None:
+                    return
                 try:
                     exec(compiled_code, {"__builtins__": __builtins__})
                     self._execution_result["success"] = True
@@ -301,10 +303,11 @@ class PythonTestExecutor:
 
             json.dump(obj, fp, **kwargs)
 
-        mock_json_instance.loads = mock_loads
-        mock_json_instance.dumps = mock_dumps
-        mock_json_instance.load = mock_load
-        mock_json_instance.dump = mock_dump
+        # 添加 json 模块的方法
+        setattr(mock_json_instance, "loads", mock_loads)
+        setattr(mock_json_instance, "dumps", mock_dumps)
+        setattr(mock_json_instance, "load", mock_load)
+        setattr(mock_json_instance, "dump", mock_dump)
 
         mock.__dict__.update(vars(mock_json_instance))
 

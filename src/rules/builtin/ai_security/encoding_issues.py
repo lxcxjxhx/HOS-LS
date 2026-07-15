@@ -14,7 +14,7 @@ class HomoglyphAttackRule(BaseRule):
     """同形文字攻击检测规则
 
     检测视觉上相似的Unicode字符被用于欺骗的可能性。
-    例如： Cyrillic/Latin lookalikes, Greek letters等
+    例如: Cyrillic/Latin lookalikes, Greek letters等
 
     AISVS: v1.0-C2.2.1
     """
@@ -23,7 +23,7 @@ class HomoglyphAttackRule(BaseRule):
         metadata = RuleMetadata(
             id="AI-SEC-010",
             name="Homoglyph Attack Detection",
-            description="检测视觉上相似的Unicode字符（ Cyrillic/Latin lookalikes, Greek letters等）被用于欺骗的风险",
+            description="检测视觉上相似的Unicode字符（Cyrillic/Latin lookalikes, Greek letters等）被用于欺骗的风险",
             severity=RuleSeverity.HIGH,
             category=RuleCategory.AI_SECURITY,
             language="*",
@@ -40,24 +40,24 @@ class HomoglyphAttackRule(BaseRule):
 
         self._homoglyph_ranges = [
             (0x0041, 0x005A),  # Latin uppercase A-Z
-            (0x0410, 0x042F),  # Cyrillic uppercase А-Я
-            (0x0391, 0x03A9),  # Greek uppercase Α-Ω
+            (0x0410, 0x042F),  # Cyrillic uppercase
+            (0x0391, 0x03A9),  # Greek uppercase
             (0x0061, 0x007A),  # Latin lowercase a-z
-            (0x0430, 0x044F),  # Cyrillic lowercase а-я
-            (0x03B1, 0x03C9),  # Greek lowercase α-ω
+            (0x0430, 0x044F),  # Cyrillic lowercase
+            (0x03B1, 0x03C9),  # Greek lowercase
             (0x0030, 0x0039),  # Digits 0-9
-            (0x004F, 0x004F),  # Latin O (confusable with Cyrillic О)
-            (0x041E, 0x041E),  # Cyrillic О (confusable with Latin O)
-            (0x0043, 0x0043),  # Latin C (confusable with Cyrillic С)
-            (0x0421, 0x0421),  # Cyrillic С (confusable with Latin C)
-            (0x0050, 0x0050),  # Latin P (confusable with Cyrillic Р)
-            (0x0420, 0x0420),  # Cyrillic Р (confusable with Latin P)
-            (0x0056, 0x0056),  # Latin V (confusable with Cyrillic В)
-            (0x0412, 0x0412),  # Cyrillic В (confusable with Latin V)
-            (0x0045, 0x0045),  # Latin E (confusable with Cyrillic Е)
-            (0x0415, 0x0415),  # Cyrillic Е (confusable with Latin E)
-            (0x0054, 0x0054),  # Latin T (confusable with Cyrillic Т)
-            (0x0422, 0x0422),  # Cyrillic Т (confusable with Latin T)
+            (0x004F, 0x004F),  # Latin O (confusable with Cyrillic)
+            (0x041E, 0x041E),  # Cyrillic O (confusable with Latin O)
+            (0x0043, 0x0043),  # Latin C (confusable with Cyrillic)
+            (0x0421, 0x0421),  # Cyrillic (confusable with Latin C)
+            (0x0050, 0x0050),  # Latin P (confusable with Cyrillic)
+            (0x0420, 0x0420),  # Cyrillic (confusable with Latin P)
+            (0x0056, 0x0056),  # Latin V (confusable with Cyrillic)
+            (0x0412, 0x0412),  # Cyrillic (confusable with Latin V)
+            (0x0045, 0x0045),  # Latin E (confusable with Cyrillic)
+            (0x0415, 0x0415),  # Cyrillic (confusable with Latin E)
+            (0x0054, 0x0054),  # Latin T (confusable with Cyrillic)
+            (0x0422, 0x0422),  # Cyrillic (confusable with Latin T)
         ]
 
         self._confusable_patterns = [
@@ -92,7 +92,7 @@ class HomoglyphAttackRule(BaseRule):
         """
         from pathlib import Path
 
-        results = []
+        results: list[RuleResult] = []
 
         if isinstance(target, Path):
             try:
@@ -103,11 +103,9 @@ class HomoglyphAttackRule(BaseRule):
         elif isinstance(target, str):
             content = target
             file_path = "<string>"
-        elif isinstance(target, dict):
+        else:  # dict
             content = target.get("content", "")
             file_path = target.get("file_path", "<unknown>")
-        else:
-            return results
 
         lines = content.split("\n")
 
@@ -136,7 +134,7 @@ class HomoglyphAttackRule(BaseRule):
                             "column": col_num,
                         },
                         code_snippet=code_snippet,
-                        fix_suggestion="使用 unicodedata.normalize('NFC', text) 规范化字符串，或使用明确的字符列表验证输入",
+                        fix_suggestion="使用 unicodedata.normalize('NFC', text) 规范化字符串，或使用明确的字符列表验证输出。",
                         references=self.metadata.references,
                     )
                     results.append(result)
@@ -233,7 +231,7 @@ class UnicodeNormalizationRule(BaseRule):
         """
         from pathlib import Path
 
-        results = []
+        results: list[RuleResult] = []
 
         if isinstance(target, Path):
             try:
@@ -244,11 +242,9 @@ class UnicodeNormalizationRule(BaseRule):
         elif isinstance(target, str):
             content = target
             file_path = "<string>"
-        elif isinstance(target, dict):
+        else:  # dict
             content = target.get("content", "")
             file_path = target.get("file_path", "<unknown>")
-        else:
-            return results
 
         lines = content.split("\n")
 
@@ -271,7 +267,7 @@ class UnicodeNormalizationRule(BaseRule):
                     rule_id=self.metadata.id,
                     rule_name=self.metadata.name,
                     passed=False,
-                    message="检测到潜在的Unicode规范化问题: 字符串比较/操作可能未进行NFC规范化",
+                    message="检测到潜在的Unicode规范化问题: 字符串比较操作可能未进行NFC规范化。",
                     severity=self.metadata.severity,
                     confidence=0.65,
                     location={
@@ -300,7 +296,7 @@ class BidirectionalTextInjectionRule(BaseRule):
         metadata = RuleMetadata(
             id="AI-SEC-012",
             name="Bidirectional Text Injection Detection",
-            description="检测潜在的双向文本注入（ RTL/LTR 覆盖）， U+202E 等字符可能被用于改变文本显示方向进行欺骗",
+            description="检测潜在的双向文本注入（RTL/LTR 覆盖）， U+202E 等字符可能被用于改变文本显示方向进行欺骗",
             severity=RuleSeverity.MEDIUM,
             category=RuleCategory.AI_SECURITY,
             language="*",
@@ -364,7 +360,7 @@ class BidirectionalTextInjectionRule(BaseRule):
         """
         from pathlib import Path
 
-        results = []
+        results: list[RuleResult] = []
 
         if isinstance(target, Path):
             try:
@@ -375,11 +371,9 @@ class BidirectionalTextInjectionRule(BaseRule):
         elif isinstance(target, str):
             content = target
             file_path = "<string>"
-        elif isinstance(target, dict):
+        else:  # dict
             content = target.get("content", "")
             file_path = target.get("file_path", "<unknown>")
-        else:
-            return results
 
         lines = content.split("\n")
 
@@ -408,7 +402,7 @@ class BidirectionalTextInjectionRule(BaseRule):
                         "column": col_num,
                     },
                     code_snippet=code_snippet,
-                    fix_suggestion="避免使用双向覆盖字符，使用明确的文本方向标记或内容过滤",
+                    fix_suggestion="避免使用双向覆盖字符，使用明确的文本方向标记或内容过滤。",
                     references=self.metadata.references,
                 )
                 results.append(result)
@@ -438,7 +432,7 @@ class BidirectionalTextInjectionRule(BaseRule):
                         "column": col_num,
                     },
                     code_snippet=code_snippet,
-                    fix_suggestion="避免使用双向覆盖字符，使用明确的文本方向标记或内容过滤",
+                    fix_suggestion="避免使用双向覆盖字符，使用明确的文本方向标记或内容过滤。",
                     references=self.metadata.references,
                 )
                 results.append(result)

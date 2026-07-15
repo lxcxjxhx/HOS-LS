@@ -32,7 +32,7 @@ try:
     LINENUMBER_VALIDATOR_AVAILABLE = True
 except ImportError:
     LINENUMBER_VALIDATOR_AVAILABLE = False
-    LineMatchStatus = None
+    LineMatchStatus = None  # type: ignore[misc,assignment]
 
 # 尝试导入 Jinja2，如果没有安装则使用简单的字符串替换
 try:
@@ -418,7 +418,7 @@ class JSONReportGenerator(BaseReportGenerator):
         """
         total_findings = sum(len(r.findings) for r in results)
         severity_counts = {"critical": 0, "high": 0, "medium": 0, "low": 0, "info": 0}
-        source_counts = {}
+        source_counts: Dict[str, int] = {}
 
         for result in results:
             for finding in result.findings:
@@ -560,8 +560,8 @@ class HTMLReportGenerator(BaseReportGenerator):
         print(f"[DEBUG] 报告模板路径: {template_path}, 存在: {'是' if template_path.exists() else '否'}")
         if not template_path.exists():
             # 如果模板文件不存在，使用默认模板
-            return self._generate_default_html(
-                results, summary, status, status_text, total_duration
+            return str(
+                self._generate_default_html(results, summary, status, status_text, total_duration)
             )
 
         try:
@@ -817,7 +817,7 @@ class HTMLReportGenerator(BaseReportGenerator):
                                         "line_match_status",
                                         (
                                             LineMatchStatus.UNVERIFIED.value
-                                            if LineMatchStatus
+                                            if LineMatchStatus is not None
                                             else "UNVERIFIED"
                                         ),
                                     )
@@ -835,18 +835,18 @@ class HTMLReportGenerator(BaseReportGenerator):
                                 except Exception:
                                     processed_finding["line_match_status"] = (
                                         LineMatchStatus.UNVERIFIED.value
-                                        if LineMatchStatus
+                                        if LineMatchStatus is not None
                                         else "UNVERIFIED"
                                     )
                                     processed_finding["verified_line"] = -1
                             else:
                                 processed_finding["line_match_status"] = (
                                     LineMatchStatus.UNVERIFIED.value
-                                    if LineMatchStatus
+                                    if LineMatchStatus is not None
                                     else "UNVERIFIED"
                                 )
                                 processed_finding["verified_line"] = -1
-                        processed_result["findings"].append(processed_finding)
+                        processed_result["findings"].append(processed_finding)  # type: ignore[attr-defined]
                     processed_results.append(processed_result)
 
                 html = template.render(
@@ -897,8 +897,10 @@ class HTMLReportGenerator(BaseReportGenerator):
                 import re
 
                 if "template_content" not in dir():
-                    return self._generate_default_html(
-                        results, summary, status, status_text, total_duration
+                    return str(
+                        self._generate_default_html(
+                            results, summary, status, status_text, total_duration
+                        )
                     )
                 html = template_content
                 html = re.sub(r"\{\{.*?\}\}", "", html)
@@ -908,8 +910,10 @@ class HTMLReportGenerator(BaseReportGenerator):
                 return html
             except Exception as fallback_error:
                 print(f"[WARN] 备用方案也失败: {fallback_error}, 使用默认模板")
-                return self._generate_default_html(
-                    results, summary, status, status_text, total_duration
+                return str(
+                    self._generate_default_html(
+                        results, summary, status, status_text, total_duration
+                    )
                 )
 
     def _apply_simple_replacements(
@@ -1010,7 +1014,7 @@ class HTMLReportGenerator(BaseReportGenerator):
         """
         total_findings = sum(len(r.findings) for r in results)
         severity_counts = {"critical": 0, "high": 0, "medium": 0, "low": 0, "info": 0}
-        source_counts = {}
+        source_counts: Dict[str, int] = {}
 
         for result in results:
             for finding in result.findings:
@@ -1049,7 +1053,7 @@ class HTMLReportGenerator(BaseReportGenerator):
             "apts_false_positive_rate": apts_fpr,
         }
 
-    def _should_include_finding(self, finding, metadata: dict = None) -> tuple:
+    def _should_include_finding(self, finding, metadata: Optional[dict] = None) -> tuple:
         """判断漏洞是否应该包含在报告中
 
         Returns:
@@ -1241,7 +1245,7 @@ class MarkdownReportGenerator(BaseReportGenerator):
         """
         total_findings = sum(len(r.findings) for r in results)
         severity_counts = {"critical": 0, "high": 0, "medium": 0, "low": 0, "info": 0}
-        source_counts = {}
+        source_counts: Dict[str, int] = {}
 
         for result in results:
             for finding in result.findings:
@@ -1312,7 +1316,7 @@ class SARIFReportGenerator(BaseReportGenerator):
 
             # 添加结果
             for finding in result.findings:
-                run["results"].append(
+                run["results"].append(  # type: ignore[attr-defined]
                     {
                         "ruleId": finding.rule_id,
                         "message": {"text": finding.message},
@@ -1379,7 +1383,7 @@ class ReportGenerator:
             raise ValueError(f"不支持的报告格式: {fmt}")
 
         generator = generator_class(self.config)
-        return generator.generate(results, output_path)
+        return str(generator.generate(results, output_path))
 
     def register_generator(
         self,

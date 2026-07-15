@@ -29,8 +29,11 @@ def register_validator(cls: Type[Validator]) -> Type[Validator]:
     Returns:
         原始验证器类
     """
-    if hasattr(cls, "name") and cls.name:
-        _VALIDATOR_REGISTRY[cls.name] = cls
+    # 在类级别访问 name 属性时，需要处理 property 描述符
+    name_attr = getattr(cls, "name", None)
+    # 如果是 property 对象，跳过注册（因为类级别的 name 是 property 描述符）
+    if isinstance(name_attr, str):
+        _VALIDATOR_REGISTRY[name_attr] = cls
     return cls
 
 
@@ -117,7 +120,7 @@ class DynamicLoader:
         Returns:
             加载的验证器名称列表
         """
-        loaded = []
+        loaded: List[str] = []
 
         if not self.validators_dir.exists():
             print(f"Validators directory does not exist: {self.validators_dir}")
@@ -183,13 +186,13 @@ class DynamicLoader:
                         self._validator_modules[validator_name] = attr
                         self._register_global(validator_instance)
                         self._invalidate_cache()
-                        return validator_name
+                        return str(validator_name)
 
             if hasattr(module, "validate") and callable(getattr(module, "validate")):
                 default_name = f"{category_name}.{module_name}"
-                validator_instance = self._create_wrapper_validator(module, default_name)
-                if validator_instance:
-                    self.validators[default_name] = validator_instance
+                wrapper = self._create_wrapper_validator(module, default_name)
+                if wrapper is not None:
+                    self.validators[default_name] = wrapper
                     self._invalidate_cache()
                     return default_name
 
@@ -218,8 +221,15 @@ class DynamicLoader:
 
             def verify(self, context: Dict[str, Any]) -> Dict[str, Any]:
                 if validate_func:
-                    return validate_func(context)
+                    result = validate_func(context)
+                    return dict(result) if isinstance(result, dict) else {"result": result}
                 return {"status": "error", "message": "No validate function"}
+
+            def validate(self, context: Any) -> Any:
+                return self.verify(context if isinstance(context, dict) else {})
+
+            def check_applicability(self, context: Any) -> bool:
+                return True
 
         return WrappedValidator()
 
@@ -304,7 +314,8 @@ class DynamicLoader:
             验证结果
         """
         try:
-            return validator.verify(context)
+            result = validator.verify(context)
+            return dict(result) if isinstance(result, dict) else {"result": result}
         except Exception as e:
             return {
                 "validator": getattr(validator, "name", "unknown"),

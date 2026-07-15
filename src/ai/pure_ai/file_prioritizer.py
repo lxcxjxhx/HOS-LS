@@ -638,7 +638,7 @@ class FilePrioritizer:
             self.enabled = False
             self.ai_initialized = True
 
-    async def _async_initialize_ai(self):
+    async def _async_initialize_ai(self) -> None:
         """异步初始化AI客户端"""
         try:
             from src.core.config import get_config
@@ -646,7 +646,7 @@ class FilePrioritizer:
             config = get_config()
 
             # 初始化模型管理器
-            self.model_manager = get_model_manager()
+            self.model_manager = await get_model_manager()
             await self.model_manager.initialize(config)
 
             # 获取AI客户端
@@ -687,7 +687,7 @@ class FilePrioritizer:
                 response = await asyncio.wait_for(self.ai_client.generate(request), timeout=timeout)
 
                 if hasattr(response, "content"):
-                    return response.content
+                    return str(response.content)
                 else:
                     return str(response)
 
@@ -701,6 +701,8 @@ class FilePrioritizer:
                     print(f"[DEBUG] AI生成最终失败: {e}")
                     raise
                 continue
+
+        raise RuntimeError("AI生成失败：未获得有效响应")
 
     def _parse_json_response(self, response: str) -> Dict[str, Any]:
         """解析JSON响应
@@ -717,7 +719,8 @@ class FilePrioritizer:
 
             # 首先尝试直接解析
             try:
-                return json.loads(cleaned_response)
+                result: Dict[str, Any] = json.loads(cleaned_response)
+                return result
             except json.JSONDecodeError:
                 pass
 
@@ -729,7 +732,8 @@ class FilePrioritizer:
             if json_match:
                 json_str = json_match.group(1).strip()
                 try:
-                    return json.loads(json_str)
+                    result = json.loads(json_str)
+                    return result
                 except json.JSONDecodeError:
                     pass
 
@@ -738,7 +742,8 @@ class FilePrioritizer:
             if json_match:
                 json_str = json_match.group(1).strip()
                 try:
-                    return json.loads(json_str)
+                    result = json.loads(json_str)
+                    return result
                 except json.JSONDecodeError:
                     pass
 
@@ -747,7 +752,8 @@ class FilePrioritizer:
             if json_match:
                 json_str = json_match.group(0)
                 try:
-                    return json.loads(json_str)
+                    result = json.loads(json_str)
+                    return result
                 except json.JSONDecodeError:
                     pass
 
@@ -765,7 +771,8 @@ class FilePrioritizer:
                 # 2. 修复属性名缺少引号
                 json_str = re.sub(r"(\w+)\s*:", '"\1":', json_str)
                 try:
-                    return json.loads(json_str)
+                    result = json.loads(json_str)
+                    return result
                 except json.JSONDecodeError:
                     pass
 
@@ -1399,7 +1406,7 @@ class FilePrioritizer:
         if not paths:
             return []
 
-        initial_results = []
+        initial_results: List[Dict[str, Any]] = []
         for path_str in paths:
             path = Path(path_str)
             if not path.exists():
@@ -1435,16 +1442,17 @@ class FilePrioritizer:
                 }
             )
 
-        initial_results.sort(key=lambda x: x["rule_score"], reverse=True)
+        initial_results.sort(key=lambda x: float(x["rule_score"]), reverse=True)
         top_count = max(1, int(len(initial_results) * 0.35))
         top_results = initial_results[:top_count]
 
-        final_results = []
+        final_results: List[Dict[str, Any]] = []
 
         if use_ai:
             tasks = []
             for result in top_results:
-                task = self.calculate_priority(result["path"])
+                path_val: str = str(result["path"])
+                task = self.calculate_priority(path_val)
                 tasks.append(task)
 
             if tasks:
@@ -1459,8 +1467,9 @@ class FilePrioritizer:
                             }
                         )
                     else:
-                        res["stage"] = "full_ai"
-                        final_results.append(res)
+                        res_dict: Dict[str, Any] = res  # type: ignore[assignment]
+                        res_dict["stage"] = "full_ai"
+                        final_results.append(res_dict)
         else:
             for result in top_results:
                 result["file_path"] = result["path"]
@@ -1476,7 +1485,7 @@ class FilePrioritizer:
                 result["stage"] = "rule_only"
                 final_results.append(result)
 
-        final_results.sort(key=lambda x: x.get("priority_score", 0), reverse=True)
+        final_results.sort(key=lambda x: float(x.get("priority_score", 0)), reverse=True)
 
         return final_results
 
@@ -1507,7 +1516,9 @@ class FilePrioritizer:
                     for line_no, line in enumerate(f, 1):
                         line_lower = line.lower()
                         for category, pattern in self.TOKEN_FLOW_PATTERNS.items():
-                            for keyword in pattern["keywords"]:
+                            keywords = pattern["keywords"]
+                            assert isinstance(keywords, list)
+                            for keyword in keywords:
                                 if keyword.lower() in line_lower:
                                     tokens.append(
                                         {

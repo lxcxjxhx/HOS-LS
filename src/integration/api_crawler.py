@@ -6,7 +6,7 @@
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 
 @dataclass
@@ -29,7 +29,7 @@ class APICrawler:
     """
 
     # 常见框架的路由模式
-    ROUTE_PATTERNS = {
+    ROUTE_PATTERNS: Dict[str, List[Tuple[str, List[str]]]] = {
         "flask": [
             (r'@app\.route\s*\(\s*["\']([^"\']+)["\'].*?\)', ["GET", "POST"]),
             (r'@app\.get\s*\(\s*["\']([^"\']+)["\'].*?\)', ["GET"]),
@@ -225,7 +225,7 @@ class APICrawler:
         if endpoints is None:
             endpoints = self.endpoints
 
-        analysis = {
+        analysis: Dict[str, Any] = {
             "total_endpoints": len(endpoints),
             "by_method": {},
             "potential_issues": [],

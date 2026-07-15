@@ -105,7 +105,7 @@ class UnvalidatedModelOutputRule(BaseRule):
         ]
 
     def check(self, target: Union[str, Path, Dict[str, Any]]) -> List[RuleResult]:
-        results = []
+        results: list[RuleResult] = []
 
         if isinstance(target, Path):
             try:
@@ -119,8 +119,6 @@ class UnvalidatedModelOutputRule(BaseRule):
         elif isinstance(target, dict):
             content = target.get("content", "")
             file_path = target.get("file_path", "<unknown>")
-        else:
-            return results
 
         lines = content.split("\n")
 
@@ -220,7 +218,7 @@ class SchemaValidationMissingRule(BaseRule):
         ]
 
     def check(self, target: Union[str, Path, Dict[str, Any]]) -> List[RuleResult]:
-        results = []
+        results: list[RuleResult] = []
 
         if isinstance(target, Path):
             try:
@@ -234,12 +232,10 @@ class SchemaValidationMissingRule(BaseRule):
         elif isinstance(target, dict):
             content = target.get("content", "")
             file_path = target.get("file_path", "<unknown>")
-        else:
-            return results
 
         lines = content.split("\n")
 
-        llm_call_lines = []
+        llm_call_lines: list[tuple[int, str]] = []
         for line_num, line in enumerate(lines, 1):
             if any(pattern.search(line) for pattern in self._compiled_llm_patterns):
                 llm_call_lines.append((line_num, line))
@@ -369,7 +365,7 @@ class HallucinationRiskRule(BaseRule):
         ]
 
     def check(self, target: Union[str, Path, Dict[str, Any]]) -> List[RuleResult]:
-        results = []
+        results: List[RuleResult] = []
 
         if isinstance(target, Path):
             try:
@@ -383,8 +379,6 @@ class HallucinationRiskRule(BaseRule):
         elif isinstance(target, dict):
             content = target.get("content", "")
             file_path = target.get("file_path", "<unknown>")
-        else:
-            return results
 
         lines = content.split("\n")
 
@@ -516,7 +510,7 @@ class OutputSafetyFilterMissingRule(BaseRule):
         ]
 
     def check(self, target: Union[str, Path, Dict[str, Any]]) -> List[RuleResult]:
-        results = []
+        results: list[RuleResult] = []
 
         if isinstance(target, Path):
             try:
@@ -530,8 +524,6 @@ class OutputSafetyFilterMissingRule(BaseRule):
         elif isinstance(target, dict):
             content = target.get("content", "")
             file_path = target.get("file_path", "<unknown>")
-        else:
-            return results
 
         lines = content.split("\n")
 

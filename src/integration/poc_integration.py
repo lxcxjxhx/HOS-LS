@@ -51,7 +51,7 @@ class POCIntegration:
         Returns:
             POC 生成结果
         """
-        results = {"total": len(findings), "generated": 0, "failed": 0, "pocs": []}
+        results: Dict[str, Any] = {"total": len(findings), "generated": 0, "failed": 0, "pocs": []}
 
         if not self.poc_generator:
             results["error"] = "POC Generator not initialized"
@@ -98,7 +98,7 @@ class POCIntegration:
         Returns:
             执行结果
         """
-        results = {
+        results: Dict[str, Any] = {
             "total": len(poc_list),
             "executed": 0,
             "vulnerable": 0,
@@ -148,4 +148,5 @@ class POCIntegration:
         """
         if not self.poc_generator:
             return None
-        return self.poc_generator.get_poc_script(method_id)
+        result = self.poc_generator.get_poc_script(method_id)
+        return str(result) if result is not None else None

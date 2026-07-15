@@ -63,8 +63,10 @@ class AIClient(ABC):
             from src.ai.token_tracker import get_token_tracker
         except ImportError:
 
-            def get_token_tracker(*args, **kwargs):
+            def get_token_tracker_fallback(*args: Any, **kwargs: Any) -> Any:
                 return None
+
+            get_token_tracker = get_token_tracker_fallback
 
         token_tracker = get_token_tracker()
         retries = 0
@@ -112,6 +114,7 @@ class AIClient(ABC):
 
         # 所有重试都失败
         logger.error(f"AI API call failed after {max_retries + 1} attempts")
+        assert last_error is not None
         raise last_error
 
     @abstractmethod
@@ -197,6 +200,7 @@ class AIModelManager:
             return
 
         # 延迟导入以避免循环依赖
+        client: Optional[AIClient] = None
         if provider == AIProvider.ANTHROPIC:
             from src.ai.providers.anthropic import AnthropicClient
 
@@ -215,6 +219,8 @@ class AIModelManager:
             client = AliyunClient(config)
         else:
             return
+
+        assert client is not None
 
         await client.initialize()
         self._clients[provider] = client
@@ -276,6 +282,7 @@ class AIModelManager:
         )
         if cached_response:
             logger.info("Using cached AI response")
+            assert isinstance(cached_response, AIResponse)
             return cached_response
 
         # 尝试使用指定的提供商或默认提供商

@@ -138,7 +138,7 @@ class DirectPromptInjectionRule(BaseRule):
         Returns:
             规则执行结果列表
         """
-        results = []
+        results: list[RuleResult] = []
 
         if isinstance(target, Path):
             try:
@@ -149,11 +149,9 @@ class DirectPromptInjectionRule(BaseRule):
         elif isinstance(target, str):
             content = target
             file_path = "<string>"
-        elif isinstance(target, dict):
+        else:  # dict
             content = target.get("content", "")
             file_path = target.get("file_path", "<unknown>")
-        else:
-            return results
 
         lines = content.split("\n")
 
@@ -280,7 +278,7 @@ class InstructionOverrideRule(BaseRule):
         Returns:
             规则执行结果列表
         """
-        results = []
+        results: list[RuleResult] = []
 
         if isinstance(target, Path):
             try:
@@ -291,11 +289,9 @@ class InstructionOverrideRule(BaseRule):
         elif isinstance(target, str):
             content = target
             file_path = "<string>"
-        elif isinstance(target, dict):
+        else:  # dict
             content = target.get("content", "")
             file_path = target.get("file_path", "<unknown>")
-        else:
-            return results
 
         lines = content.split("\n")
 
@@ -438,7 +434,7 @@ class ContextOverflowRule(BaseRule):
         Returns:
             规则执行结果列表
         """
-        results = []
+        results: list[RuleResult] = []
 
         if isinstance(target, Path):
             try:
@@ -449,11 +445,9 @@ class ContextOverflowRule(BaseRule):
         elif isinstance(target, str):
             content = target
             file_path = "<string>"
-        elif isinstance(target, dict):
+        else:  # dict
             content = target.get("content", "")
             file_path = target.get("file_path", "<unknown>")
-        else:
-            return results
 
         lines = content.split("\n")
 

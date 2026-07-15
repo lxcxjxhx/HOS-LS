@@ -5,7 +5,7 @@
 
 import asyncio
 import os
-from typing import Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, cast
 
 from aiohttp import ClientError as AiohttpClientError
 from openai import APIStatusError as OpenAIAPIStatusError
@@ -82,7 +82,7 @@ class AliyunClient(AIClient):
         else:
             model = request.model or self.DEFAULT_MODEL
 
-        messages = []
+        messages: List[Dict[str, Any]] = []
         if request.system_prompt:
             messages.append({"role": "system", "content": request.system_prompt})
 
@@ -100,16 +100,22 @@ class AliyunClient(AIClient):
         try:
             response = await self._client.chat.completions.create(
                 model=model,
-                messages=messages,
+                messages=cast(Any, messages),
                 max_tokens=request.max_tokens,
                 temperature=request.temperature,
                 stream=False,
             )
 
+            # 类型断言：确保 response 不是流式响应
+            assert hasattr(response, "choices")
+            assert hasattr(response, "usage")
+            assert response.usage is not None
+
             choice = response.choices[0]
+            content = choice.message.content or ""
 
             return AIResponse(
-                content=choice.message.content,
+                content=content,
                 model=model,
                 provider=AIProvider.ALIYUN,
                 usage={

@@ -98,7 +98,7 @@ class AIConfig(BaseModel):
             raise ValueError(f"provider must be one of {allowed}")
         return v
 
-    def get_model(self, module: str = None) -> str:
+    def get_model(self, module: Optional[str] = None) -> str:
         """获取模块对应的模型，优先使用模块特定配置
 
         Args:
@@ -118,7 +118,7 @@ class AIConfig(BaseModel):
 
         return self.model
 
-    def get_provider(self, module: str = None) -> str:
+    def get_provider(self, module: Optional[str] = None) -> str:
         """获取模块对应的提供商
 
         Args:
@@ -138,7 +138,7 @@ class AIConfig(BaseModel):
 
         return self.provider
 
-    def get_temperature(self, module: str = None) -> float:
+    def get_temperature(self, module: Optional[str] = None) -> float:
         """获取模块对应的温度参数"""
         if module and module in self.modules:
             module_config = self.modules[module]
@@ -146,7 +146,7 @@ class AIConfig(BaseModel):
                 return module_config.temperature
         return self.temperature
 
-    def get_max_tokens(self, module: str = None) -> int:
+    def get_max_tokens(self, module: Optional[str] = None) -> int:
         """获取模块对应的最大token数"""
         if module and module in self.modules:
             module_config = self.modules[module]

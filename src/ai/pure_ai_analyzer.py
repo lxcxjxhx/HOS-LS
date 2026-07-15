@@ -7,7 +7,7 @@ import asyncio
 import json
 import os
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from rich.console import Console
 
@@ -36,9 +36,9 @@ class PureAIAnalyzer:
         self.config = config
         self.ai_provider = config.ai.get_provider("pure_ai")
         self.ai_model = config.ai.get_model("pure_ai")
-        self.model_manager = None
-        self.client = None
-        self.pipeline = None
+        self.model_manager: Optional[Any] = None
+        self.client: Optional[Any] = None
+        self.pipeline: Optional[Any] = None
         self.cache_manager = CacheManager()
         self.initialized = False
         self.debug_logs: List[str] = []
@@ -98,6 +98,7 @@ class PureAIAnalyzer:
                 console.print(f"[dim][DEBUG] 使用提供商: {provider}[/dim]")
 
             # 获取客户端
+            assert self.model_manager is not None
             self.client = self.model_manager.get_client(provider)
             if self.config.debug:
                 console.print(f"[dim][DEBUG] 获取客户端: {self.client}[/dim]")
@@ -161,7 +162,9 @@ class PureAIAnalyzer:
             return findings
 
         # 执行多Agent分析（使用优化版流水线，Agent 3-5 并行执行）
-        result = await self.pipeline.run_pipeline_optimized(file_path, enable_parallel=True)
+        pipeline = self.pipeline
+        assert pipeline is not None
+        result = await pipeline.run_pipeline_optimized(file_path, enable_parallel=True)
         print(f"[DEBUG] 多Agent分析完成，结果类型: {type(result)}")
 
         # 收集 pipeline 的 debug_logs (过滤掉WARN消息)
@@ -270,7 +273,7 @@ class PureAIAnalyzer:
 
         mean = sum(confidence_values) / len(confidence_values)
         variance = sum((x - mean) ** 2 for x in confidence_values) / len(confidence_values)
-        return variance**0.5
+        return float(variance**0.5)
 
     def normalize_severity(self, severity: str) -> str:
         """确保严重等级合法
@@ -1124,7 +1127,7 @@ class PureAIAnalyzer:
                 prompt=prompt, model=self.ai_model, temperature=0.1, max_tokens=100
             )
             response = await self.client.generate(ai_request)
-            translation = response.content.strip()
+            translation = str(response.content).strip()
             if translation and translation != vulnerability:
                 return translation
             return self._normalize_vulnerability_name(vulnerability)
@@ -2058,6 +2061,7 @@ class PureAIAnalyzer:
                         if hasattr(self, "pipeline") and hasattr(
                             self.pipeline, "evidence_chain_tracker"
                         ):
+                            assert self.pipeline is not None
                             tracker = self.pipeline.evidence_chain_tracker
                             all_tracker_signals = (
                                 tracker.get_all_signals()
@@ -2329,14 +2333,6 @@ class PureAIAnalyzer:
                             f"[WARN] 拒绝 hallucination 漏洞发现: {vulnerability_name} - 原因: {hallucination_reasons}"
                         )
                         continue
-
-                    if ai_hallucination_warning:
-                        print(
-                            f"[DEBUG] [Hallucination Warning] {vulnerability_name}: {hallucination_reasons}"
-                        )
-                        self.debug_logs.append(
-                            f"[DEBUG] [Hallucination Warning] {vulnerability_name}: {hallucination_reasons}"
-                        )
 
                     # 计算 end_line：根据代码片段实际行数计算
                     snippet_lines = code_snippet.count("\n") + 1 if code_snippet else 1
@@ -2802,7 +2798,7 @@ class PureAIAnalyzer:
             ai_results[idx] = result
 
         # Step 3: 组装结果
-        results = [[] for _ in file_infos]
+        results: List[List[Any]] = [[] for _ in file_infos]
 
         file_to_vuln_libs = {}
         if vulnerable_library_names and library_matcher:
@@ -2952,6 +2948,7 @@ class PureAIAnalyzer:
                             with open(file_info.path, "r", encoding="utf-8") as f:
                                 content = f.read()
                             language = file_info.language.value if file_info.language else "java"
+                            assert library_matcher is not None
                             imported_libs = library_matcher.detect_libraries(content, language)
                             imported_names = {lib.name for lib in imported_libs}
                             if vuln.library_name in imported_names:
@@ -3117,7 +3114,7 @@ class PureAIAnalyzer:
                 await self._initialize()
                 if not self.initialized:
                     console.print("[red][X] 纯AI分析器初始化失败，无法恢复扫描[/red]")
-                    return results
+                    return []
 
             # 继续处理未完成的部分
             for file_info in pending_files:
@@ -3151,7 +3148,7 @@ class PureAIAnalyzer:
             if self.config.debug:
                 console.print(f"[dim][DEBUG] 断点恢复完成，共处理 {len(processed_files)} 个文件[/dim]")
 
-            return results
+            return results  # type: ignore[no-any-return]
 
         except Exception as e:
             console.print(f"[red][X] 断点恢复失败: {e}[/red]")

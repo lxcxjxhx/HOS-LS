@@ -12,6 +12,7 @@ import numpy as np
 from src.ai.pure_ai.rag.code_embedder import CodeEmbedder, EmbedConfig
 from src.utils.logger import get_logger
 
+LLAMA_INDEX_AVAILABLE: bool
 try:
     from llama_index.core import Document, VectorStoreIndex
     from llama_index.core.graph_stores import SimpleGraphStore
@@ -25,6 +26,8 @@ except ImportError:
 
 logger = get_logger(__name__)
 
+FAISS_AVAILABLE: bool
+GPU_AVAILABLE: bool
 try:
     import faiss
 
@@ -114,7 +117,8 @@ class FAISSVectorStore:
                 # 创建索引
                 self._create_index()
             # 添加到索引
-            self._index.add(np.array([embedding_np]))
+            assert self._index is not None
+            self._index.add(np.array([embedding_np]))  # type: ignore[unreachable]
 
         # 更新文档信息
         self._documents[document_id] = {
@@ -125,7 +129,7 @@ class FAISSVectorStore:
 
         # 更新 LlamaIndex
         if LLAMA_INDEX_AVAILABLE and self._llama_index:
-            try:
+            try:  # type: ignore[unreachable]
                 # 创建 LlamaIndex Document
                 doc = Document(text=content, id_=document_id, metadata=metadata)
                 # 添加到 LlamaIndex
@@ -176,19 +180,20 @@ class FAISSVectorStore:
 
             # 创建 LlamaIndex Document
             if LLAMA_INDEX_AVAILABLE and self._llama_index:
-                llama_doc = Document(text=content, id_=document_id, metadata=metadata)
+                llama_doc = Document(text=content, id_=document_id, metadata=metadata)  # type: ignore[unreachable]
                 llama_documents.append(llama_doc)
 
         # 批量更新索引
         if new_embeddings:
             if self._index is None:
                 self._create_index()
-            embeddings_np = np.array(new_embeddings, dtype=np.float32)
+            assert self._index is not None
+            embeddings_np = np.array(new_embeddings, dtype=np.float32)  # type: ignore[unreachable]
             self._index.add(embeddings_np)
 
         # 批量更新 LlamaIndex
-        if LLAMA_INDEX_AVAILABLE and self._llama_index and llama_documents:
-            try:
+        if LLAMA_INDEX_AVAILABLE and self._llama_index and llama_documents:  # type: ignore[unreachable]
+            try:  # type: ignore[unreachable]
                 for doc in llama_documents:
                     self._llama_index.insert(doc)
                 # 保存 LlamaIndex
@@ -244,7 +249,7 @@ class FAISSVectorStore:
             return []
 
         # 生成查询嵌入
-        query_embedding = self._embedder.embed_code(query)
+        query_embedding = self._embedder.embed_code(query)  # type: ignore[unreachable]
         query_embedding_np = np.array([query_embedding], dtype=np.float32)
 
         # 搜索
@@ -284,9 +289,9 @@ class FAISSVectorStore:
         faiss_results = self.search(query, top_k)
 
         # 2. 使用 LlamaIndex 进行混合检索（如果可用）
-        llama_results = []
+        llama_results: List[Dict[str, Any]] = []
         if LLAMA_INDEX_AVAILABLE and self._llama_index:
-            try:
+            try:  # type: ignore[unreachable]
                 # 构建查询引擎
                 query_engine = self._llama_index.as_query_engine(
                     similarity_top_k=top_k, vector_store_query_mode="hybrid"
@@ -378,7 +383,7 @@ class FAISSVectorStore:
 
         # 保存索引
         if self._index is not None:
-            try:
+            try:  # type: ignore[unreachable]
                 # 如果是 GPU 索引，先转换为 CPU 索引
                 if GPU_AVAILABLE and hasattr(self._index, "index"):
                     cpu_index = faiss.index_gpu_to_cpu(self._index)
@@ -512,7 +517,8 @@ class FAISSVectorStore:
 
             if embeddings:
                 embeddings_np = np.array(embeddings, dtype=np.float32)
-                self._index.add(embeddings_np)
+                assert self._index is not None
+                self._index.add(embeddings_np)  # type: ignore[unreachable]
                 logger.info(f"✅ Index rebuilt with {len(embeddings)} documents")
 
     def __len__(self) -> int:
@@ -724,7 +730,8 @@ class FAISSVectorStore:
         if self._index is None:
             self._create_index()
 
-        self._index.add(embeddings_np)
+        assert self._index is not None
+        self._index.add(embeddings_np)  # type: ignore[unreachable]
 
         distances, indices = self._index.search(query_np, min(top_k, len(chunk_ids)))
 

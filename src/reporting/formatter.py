@@ -51,7 +51,7 @@ class OutputFormatter:
         if self.lang != "zh":
             return vuln
 
-        formatted = {}
+        formatted: Dict[str, Any] = {}
 
         if include_raw:
             formatted["raw"] = vuln.copy()
@@ -381,9 +381,6 @@ class OutputFormatter:
         Returns:
             格式化后的覆盖率字典
         """
-        if not isinstance(coverage, dict):
-            return {}
-
         return {
             "total_rules_checked": coverage.get("total_rules_checked", 0),
             "rules_with_findings": coverage.get("rules_with_findings", 0),

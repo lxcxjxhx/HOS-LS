@@ -49,9 +49,9 @@ class HybridStore:
 
         # 初始化BM25
         self.bm25 = None
-        self.bm25_documents = []
-        self.bm25_cve_ids = []
-        self.bm25_contents = []
+        self.bm25_documents: List[str] = []
+        self.bm25_cve_ids: List[str] = []
+        self.bm25_contents: List[str] = []
         self.bm25_index_built = False
 
         # 初始化语义引擎（用于rerank）
@@ -253,7 +253,7 @@ class HybridStore:
         # 3. 融合结果
         # 创建CVE ID到结果的映射
         cve_results = {}
-        cve_chunks = {}
+        cve_chunks: Dict[str, List[Any]] = {}
 
         # 添加语义结果
         for result in semantic_results:
@@ -326,9 +326,9 @@ class HybridStore:
 
         # 4. Rerank结果
 
-        reranked_results = await self.semantic_engine.rerank_results(query, sorted_results)
+        reranked_results: Any = await self.semantic_engine.rerank_results(query, sorted_results)
 
-        return reranked_results
+        return list(reranked_results)
 
     def delete_cve(self, cve_id: str) -> bool:
         """删除CVE
@@ -393,7 +393,7 @@ class HybridStore:
         """
         try:
             # 使用CodeEmbedder生成嵌入
-            return self.vector_store.embedder.embed_batch(texts, batch_size=batch_size)
+            return self.vector_store.embedder.embed_batch(texts)
         except Exception as e:
             logger.error(f"生成嵌入失败: {e}")
             return []
@@ -473,7 +473,7 @@ class HybridStore:
                 return []
 
             # 执行BM25搜索
-            scores = self.bm25.get_scores(query_tokens)
+            scores = self.bm25.get_scores(query_tokens)  # type: ignore[unreachable]
             sorted_indices = np.argsort(scores)[::-1][:top_k]
 
             results = []

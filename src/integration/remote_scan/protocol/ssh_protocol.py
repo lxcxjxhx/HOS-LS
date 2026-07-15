@@ -49,7 +49,7 @@ class SSHProtocol:
         self.timeout = timeout
         self._client: Optional[SSHClient] = None
         self._sftp: Optional[SFTPClient] = None
-        self._transport = None
+        self._transport: Optional[Any] = None
 
     def connect(self) -> bool:
         """建立SSH连接"""
@@ -164,6 +164,7 @@ class SSHProtocol:
             raise RemoteConnectionError("Not connected to SSH server")
 
         try:
+            assert self._client is not None
             stdin, stdout, stderr = self._client.exec_command("")
             channel = stdout.channel
             channel.sendall(data)
@@ -178,9 +179,11 @@ class SSHProtocol:
             raise RemoteConnectionError("Not connected to SSH server")
 
         try:
+            assert self._client is not None
             stdin, stdout, stderr = self._client.exec_command("")
             channel = stdout.channel
-            return channel.recv(size)
+            result: bytes = channel.recv(size)
+            return result
         except Exception as e:
             logger.error(f"Error receiving data: {e}")
             raise RemoteConnectionError(f"Error receiving data: {e}") from e
@@ -194,6 +197,7 @@ class SSHProtocol:
             timeout = self.timeout
 
         try:
+            assert self._client is not None
             stdin, stdout, stderr = self._client.exec_command(command, timeout=timeout)
 
             stdout_data = stdout.read()
@@ -223,6 +227,7 @@ class SSHProtocol:
 
         if self._sftp is None:
             try:
+                assert self._client is not None
                 self._sftp = self._client.open_sftp()
             except Exception as e:
                 logger.error(f"Failed to open SFTP session: {e}")
@@ -238,7 +243,7 @@ class SSHProtocol:
         try:
             sftp = self._get_sftp()
             with sftp.file(remote_path, "rb") as f:
-                data = f.read()
+                data: bytes = f.read()
             return data
         except FileNotFoundError:
             logger.error(f"Remote file not found: {remote_path}")

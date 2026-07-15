@@ -64,7 +64,7 @@ class ChunkProcessor:
         """
         lines = content.split("\n")
         total_lines = len(lines)
-        chunks = []
+        chunks: list = []
 
         start_line = 1
         while start_line <= total_lines:
@@ -112,7 +112,7 @@ class ChunkProcessor:
         Returns:
             合并后的分析结果
         """
-        merged = {
+        merged: Dict[str, Any] = {
             "findings": [],
             "evidence": [],
             "attack_paths": [],

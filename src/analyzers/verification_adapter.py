@@ -5,7 +5,7 @@
 """
 
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from src.analyzers.finding_verifier import FindingVerification
 from src.analyzers.unified_finding_validator import UnifiedFindingValidator
@@ -124,7 +124,7 @@ class FindingConverter:
 
     @staticmethod
     def to_standard_finding(
-        finding: Dict[str, Any], verification: FindingVerification
+        finding: Dict[str, Any], verification: Dict[str, Any]
     ) -> Dict[str, Any]:
         """转换为包含验证信息的标准格式
 
@@ -138,16 +138,16 @@ class FindingConverter:
         result = finding.copy()
         result["metadata"] = result.get("metadata", {})
 
-        result["metadata"]["verification_level"] = verification.verification_level
-        result["metadata"]["is_hallucination"] = verification.is_hallucination
-        result["metadata"]["confidence_score"] = verification.confidence
-        result["metadata"]["path_verified"] = verification.path_verified
-        result["metadata"]["code_verified"] = verification.code_verified
+        result["metadata"]["verification_level"] = verification["verification_level"]
+        result["metadata"]["is_hallucination"] = verification["is_hallucination"]
+        result["metadata"]["confidence_score"] = verification["confidence"]
+        result["metadata"]["path_verified"] = verification["path_verified"]
+        result["metadata"]["code_verified"] = verification["code_verified"]
 
-        if verification.best_match:
-            result["metadata"]["matched_cwe"] = verification.best_match
+        if verification.get("best_match"):
+            result["metadata"]["matched_cwe"] = verification["best_match"]
 
-        result["confidence"] = verification.confidence
+        result["confidence"] = verification["confidence"]
 
         return result
 
@@ -159,31 +159,33 @@ class VerificationAdapter:
     并通过 UnifiedFindingValidator 进行验证。
     """
 
-    def __init__(self, project_root: str = "", nvd_db_path: str = None):
+    def __init__(self, project_root: str = "", nvd_db_path: Optional[str] = None):
         self.project_root = project_root
         self.validator = UnifiedFindingValidator(project_root)
         self.converter = FindingConverter()
-        self._nvd_adapter = None
+        self._nvd_adapter: Optional[Any] = None
 
         if nvd_db_path:
             self._init_nvd_adapter(nvd_db_path)
         else:
             self._init_nvd_adapter()
 
-    def _init_nvd_adapter(self, db_path: str = None) -> None:
+    def _init_nvd_adapter(self, db_path: Optional[str] = None) -> None:
         """初始化 NVD 适配器"""
         try:
             from src.nvd.nvd_query_adapter import NVDQueryAdapter
 
-            self._nvd_adapter = NVDQueryAdapter(db_path)
-            if not self._nvd_adapter.is_available():
+            adapter = NVDQueryAdapter(db_path)
+            if not adapter.is_available():
                 self._nvd_adapter = None
                 logger.warning("NVD数据库不可用，模糊匹配将使用基础模式")
+            else:
+                self._nvd_adapter = adapter
         except Exception as e:
             logger.warning(f"NVD适配器初始化失败: {e}")
             self._nvd_adapter = None
 
-    def adapt_finding(self, finding: Any, project_root: str = None) -> Dict[str, Any]:
+    def adapt_finding(self, finding: Any, project_root: Optional[str] = None) -> Dict[str, Any]:
         """适配单个发现
 
         Args:
@@ -219,7 +221,7 @@ class VerificationAdapter:
         self,
         findings: List[Any],
         scanner_name: str,
-        project_root: str = None,
+        project_root: Optional[str] = None,
         filter_hallucinations: bool = True,
         hallucination_threshold: float = 0.2,
         scanner_threshold: float = 0.5,
@@ -253,9 +255,9 @@ class VerificationAdapter:
 
             adapted["metadata"]["source_scanner"] = scanner_name
 
-            all_confidences.append(verification.confidence)
+            all_confidences.append(verification["confidence"])
 
-            level = verification.verification_level
+            level = verification["verification_level"]
             if level == "triple_verified":
                 stats.triple_verified += 1
             elif level == "double_verified":
@@ -271,13 +273,13 @@ class VerificationAdapter:
 
             if (
                 filter_hallucinations
-                and verification.is_hallucination
-                and verification.confidence < hallucination_threshold
+                and verification["is_hallucination"]
+                and verification["confidence"] < hallucination_threshold
             ):
                 stats.hallucinations_filtered += 1
                 continue
 
-            if verification.confidence >= scanner_threshold:
+            if verification["confidence"] >= scanner_threshold:
                 verified_findings.append(adapted)
 
         stats.confidence_scores = all_confidences
@@ -330,7 +332,7 @@ class VerificationAdapter:
 
 
 def get_verification_adapter(
-    project_root: str = "", nvd_db_path: str = None
+    project_root: str = "", nvd_db_path: Optional[str] = None
 ) -> VerificationAdapter:
     """获取验证适配器实例
 

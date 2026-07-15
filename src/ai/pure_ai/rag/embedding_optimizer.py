@@ -7,7 +7,7 @@ import json
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, cast
 
 try:
     from src.storage.embedding_evaluator import EmbeddingEvaluator
@@ -88,7 +88,7 @@ class EmbeddingOptimizer:
             self._save_failures(failures)
             logger.info(f"检测到 {len(failures)} 个 RAG 失败案例，已保存")
 
-        return metrics
+        return cast(Dict[str, float], metrics)
 
     def generate_training_data_from_failures(self) -> List[tuple]:
         """从失败案例生成训练数据
@@ -127,7 +127,7 @@ class EmbeddingOptimizer:
         # 保存训练数据
         self.data_aug.save_training_data(valid_triplets, self.training_data_path)
 
-        return valid_triplets
+        return cast(List[tuple], valid_triplets)
 
     def retrain_model(
         self, epochs: int = 3, batch_size: int = 32, learning_rate: float = 1e-5
@@ -287,7 +287,7 @@ class EmbeddingOptimizer:
             with open(self.failures_path, "r", encoding="utf-8") as f:
                 failures = json.load(f)
             logger.info(f"加载了 {len(failures)} 个失败案例")
-            return failures
+            return cast(List[Dict[str, Any]], failures)
         except Exception as e:
             logger.error(f"加载失败案例失败: {e}")
             return []
@@ -346,7 +346,7 @@ class EmbeddingOptimizer:
         try:
             with open(history_path, "r", encoding="utf-8") as f:
                 history = json.load(f)
-            return history
+            return cast(List[Dict[str, Any]], history)
         except Exception as e:
             logger.error(f"加载优化历史失败: {e}")
             return []

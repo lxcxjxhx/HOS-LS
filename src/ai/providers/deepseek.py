@@ -5,7 +5,7 @@
 
 import asyncio
 import os
-from typing import Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, cast
 
 from aiohttp import ClientError as AiohttpClientError
 from openai import APIStatusError as OpenAIAPIStatusError
@@ -111,7 +111,7 @@ class DeepSeekClient(AIClient):
 
         model = request.model or self.config.ai.model or "deepseek-v4-flash"
 
-        messages = []
+        messages: List[Dict[str, Any]] = []
         if request.system_prompt:
             messages.append({"role": "system", "content": request.system_prompt})
 
@@ -134,17 +134,23 @@ class DeepSeekClient(AIClient):
             # 使用 OpenAI SDK 调用 API
             response = await self._client.chat.completions.create(
                 model=model,
-                messages=messages,
+                messages=cast(Any, messages),
                 max_tokens=request.max_tokens,
                 temperature=request.temperature,
                 stream=False,
             )
 
+            # 类型断言：确保 response 不是流式响应
+            assert hasattr(response, "choices")
+            assert hasattr(response, "usage")
+            assert response.usage is not None
+
             # 处理响应
             choice = response.choices[0]
+            content = choice.message.content or ""
 
             return AIResponse(
-                content=choice.message.content,
+                content=content,
                 model=model,
                 provider=AIProvider.DEEPSEEK,
                 usage={

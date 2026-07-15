@@ -164,7 +164,7 @@ class CVECrawler:
         Returns:
             CVE详情
         """
-        details = {
+        details: Dict[str, Any] = {
             "id": cve_id,
             "description": "",
             "published_date": None,
@@ -189,7 +189,9 @@ class CVECrawler:
         date_match = re.search(date_pattern, html)
         if date_match:
             try:
-                details["published_date"] = datetime.strptime(date_match.group(1), "%Y-%m-%d")
+                details["published_date"] = datetime.strptime(
+                    date_match.group(1), "%Y-%m-%d"
+                ).isoformat()
             except BaseException:
                 pass
 
@@ -199,7 +201,7 @@ class CVECrawler:
             try:
                 details["last_modified_date"] = datetime.strptime(
                     modified_match.group(1), "%Y-%m-%d"
-                )
+                ).isoformat()
             except BaseException:
                 pass
 
@@ -212,9 +214,11 @@ class CVECrawler:
         # 解析参考链接
         ref_pattern = r'<a href="([^"]+)"[^>]*>([^<]+)</a>'
         ref_matches = re.findall(ref_pattern, html)
+        references_list: List[Dict[str, str]] = []
         for url, text in ref_matches:
             if url.startswith("http"):
-                details["references"].append({"url": url, "text": text})
+                references_list.append({"url": url, "text": text})
+        details["references"] = references_list
 
         return details
 
@@ -265,12 +269,12 @@ class CVECrawler:
                 metadata={
                     "cve_id": cve_details["id"],
                     "published_date": (
-                        cve_details.get("published_date").isoformat()
+                        cve_details["published_date"].isoformat()
                         if cve_details.get("published_date")
                         else None
                     ),
                     "last_modified_date": (
-                        cve_details.get("last_modified_date").isoformat()
+                        cve_details["last_modified_date"].isoformat()
                         if cve_details.get("last_modified_date")
                         else None
                     ),

@@ -52,7 +52,7 @@ class ConfigCenter:
                 data = yaml.safe_load(f)
                 config_name = path.stem
                 self._configs[config_name] = data
-                return data
+                return data if isinstance(data, dict) else {}
         except Exception as e:
             logger.error(f"Failed to load {path}: {e}")
             return {}
@@ -84,19 +84,29 @@ class ConfigCenter:
 
     def get_llm_config(self) -> Dict[str, Any]:
         """获取 LLM 配置"""
-        return self._configs.get("llm_config", {}).get("llm", {})
+        result = self._configs.get("llm_config", {})
+        return result.get("llm", {}) if isinstance(result, dict) else {}
 
     def get_provider_config(self, provider: str) -> Dict[str, Any]:
         """获取指定 provider 配置"""
-        return self._configs.get("llm_config", {}).get("providers", {}).get(provider, {})
+        llm_config = self._configs.get("llm_config", {})
+        if not isinstance(llm_config, dict):
+            return {}
+        providers = llm_config.get("providers", {})
+        return providers.get(provider, {}) if isinstance(providers, dict) else {}
 
     def get_prompt_config(self) -> Dict[str, Any]:
         """获取 Prompt 配置"""
-        return self._configs.get("prompt_config", {}).get("prompt", {})
+        result = self._configs.get("prompt_config", {})
+        return result.get("prompt", {}) if isinstance(result, dict) else {}
 
     def get_agent_config(self, agent_name: str) -> Dict[str, Any]:
         """获取指定 Agent 配置"""
-        return self._configs.get("prompt_config", {}).get("agents", {}).get(agent_name, {})
+        prompt_config = self._configs.get("prompt_config", {})
+        if not isinstance(prompt_config, dict):
+            return {}
+        agents = prompt_config.get("agents", {})
+        return agents.get(agent_name, {}) if isinstance(agents, dict) else {}
 
     def reload(self) -> None:
         """重新加载所有配置"""

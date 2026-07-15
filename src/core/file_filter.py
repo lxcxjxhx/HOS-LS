@@ -7,7 +7,7 @@ import fnmatch
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple
 
 
 class RiskLevel(Enum):
@@ -106,7 +106,7 @@ class SecurityFileFilter:
         self.high_patterns = self.HIGH_RISK_PATTERNS
         self.config_patterns = self.CONFIG_FILE_PATTERNS
 
-    def classify_file(self, file_path: str, content: str = None) -> SuspiciousFile:
+    def classify_file(self, file_path: str, content: Optional[str] = None) -> SuspiciousFile:
         """分类单个文件
 
         Args:
@@ -161,7 +161,7 @@ class SecurityFileFilter:
         )
 
     def filter_files(
-        self, files: List[str], content_map: Dict[str, str] = None
+        self, files: List[str], content_map: Optional[Dict[str, str]] = None
     ) -> Dict[str, List[SuspiciousFile]]:
         """过滤文件
 
@@ -178,7 +178,13 @@ class SecurityFileFilter:
                 "safe": [...]  # 被忽略的文件
             }
         """
-        result = {"critical": [], "high": [], "medium": [], "low": [], "safe": []}
+        result: Dict[str, List[SuspiciousFile]] = {
+            "critical": [],
+            "high": [],
+            "medium": [],
+            "low": [],
+            "safe": [],
+        }
 
         for file_path in files:
             content = content_map.get(file_path) if content_map else None
@@ -230,7 +236,7 @@ class SecurityFileFilter:
         return result
 
     def get_target_files_for_scan(
-        self, files: List[str], limit: int = None
+        self, files: List[str], limit: Optional[int] = None
     ) -> Tuple[List[str], Dict[str, SuspiciousFile]]:
         """获取扫描目标文件
 

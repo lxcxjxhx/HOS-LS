@@ -172,12 +172,11 @@ class SerialPortPanel(InteractivePanel):
         if not self.send_input_buffer.strip():
             return
 
-        data = self.send_input_buffer
-
+        data: bytes
         if self.hex_mode:
-            data = hex_decode(data)
+            data = hex_decode(self.send_input_buffer)
         else:
-            data = data.encode("utf-8")
+            data = self.send_input_buffer.encode("utf-8")
             if self.add_newline:
                 data += b"\r\n"
 

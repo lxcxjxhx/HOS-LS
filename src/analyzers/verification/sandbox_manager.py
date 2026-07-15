@@ -294,7 +294,7 @@ class SandboxEnvironmentManager:
         Returns:
             dict with keys: success, converted_code, output, error, execution_time
         """
-        result = {
+        result: Dict[str, Any] = {
             "success": False,
             "converted_code": None,
             "output": None,

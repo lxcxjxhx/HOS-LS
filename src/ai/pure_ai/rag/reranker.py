@@ -3,7 +3,7 @@
 实现基于 bge-reranker 或 cross-encoder 的结果重排序，提高检索结果的相关性。
 """
 
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from src.utils.logger import get_logger
 
@@ -15,8 +15,8 @@ try:
     from sentence_transformers import CrossEncoder
 except ImportError:
     logger.warning("sentence-transformers not installed, using fallback implementation")
-    torch = None
-    CrossEncoder = None
+    torch = None  # type: ignore[assignment]
+    CrossEncoder = None  # type: ignore[misc]
 
 
 class Reranker:
@@ -25,7 +25,7 @@ class Reranker:
     使用 bge-reranker 或 cross-encoder 对检索结果进行精排，提高命中率。
     """
 
-    def __init__(self, model_name: str = None, device: str = "auto"):
+    def __init__(self, model_name: Optional[str] = None, device: str = "auto"):
         """初始化重排序器
 
         Args:
@@ -36,7 +36,7 @@ class Reranker:
         self.device = (
             device if device != "auto" else ("cuda" if torch.cuda.is_available() else "cpu")
         )
-        self.model = None
+        self.model: Optional[Any] = None
         if model_name:
             self._load_model()
 
@@ -71,7 +71,8 @@ class Reranker:
             return []
 
         # 使用模型进行重排序（如果可用）
-        if self.model is not None:
+        model = self.model
+        if model is not None:
             try:
                 return self._model_rerank(query, candidates)
             except Exception as e:
@@ -97,6 +98,7 @@ class Reranker:
             input_pairs = [(query, candidate["content"]) for candidate in candidates]
 
             # 计算得分
+            assert self.model is not None
             scores = self.model.predict(input_pairs)
 
             # 按得分排序
@@ -161,10 +163,11 @@ class Reranker:
         if not texts:
             return []
 
-        if self.model is not None:
+        model = self.model
+        if model is not None:
             try:
                 input_pairs = [(query, text) for text in texts]
-                scores = self.model.predict(input_pairs)
+                scores = model.predict(input_pairs)
                 return [float(score) for score in scores]
             except Exception as e:
                 logger.error(f"模型评分失败: {e}")

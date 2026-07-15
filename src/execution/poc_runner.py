@@ -123,7 +123,7 @@ class POCRunner:
         poc_script: str,
         target: str,
         vuln_type: str,
-        dependencies: List[str] = None,
+        dependencies: Optional[List[str]] = None,
         poc_id: Optional[str] = None,
     ) -> Dict[str, Any]:
         start_time = time.time()
@@ -310,7 +310,9 @@ class POCRunner:
             result["evidence"] = evidence_list if isinstance(evidence_list, list) else []
             result["target"] = data.get("target", "")
             result["vuln_type"] = data.get("vuln_type", vuln_type)
-            result["poc_id"] = self._generate_poc_id(result["target"], result["vuln_type"])
+            result["poc_id"] = self._generate_poc_id(
+                str(result["target"]), str(result["vuln_type"])
+            )
 
         except json.JSONDecodeError:
             result["error"] = f"Failed to parse POC output: {output[:200]}"

@@ -113,7 +113,7 @@ class SchemaValidator:
 
         return len(errors) == 0, errors
 
-    def _check_forbidden_patterns(self, data: Dict[str, Any], path: str = "") -> List[str]:
+    def _check_forbidden_patterns(self, data: Any, path: str = "") -> List[str]:
         """检查禁止的输出模式
 
         Args:
@@ -137,12 +137,16 @@ class SchemaValidator:
                                 errors.append(
                                     f"Forbidden pattern at {current_path}: '{value}' - use STRUCTURED_TAGS instead"
                                 )
-                elif isinstance(value, (dict, list)):
+                elif isinstance(value, dict):
+                    errors.extend(self._check_forbidden_patterns(value, current_path))
+                elif isinstance(value, list):
                     errors.extend(self._check_forbidden_patterns(value, current_path))
         elif isinstance(data, list):
             for i, item in enumerate(data):
                 current_path = f"{path}[{i}]"
-                if isinstance(item, (dict, list)):
+                if isinstance(item, dict):
+                    errors.extend(self._check_forbidden_patterns(item, current_path))
+                elif isinstance(item, list):
                     errors.extend(self._check_forbidden_patterns(item, current_path))
 
         return errors
@@ -157,7 +161,7 @@ class SchemaValidator:
         Returns:
             错误列表
         """
-        errors = []
+        errors: List[str] = []
 
         evidence_required_schemas = {
             "final_decision": ["final_findings"],
@@ -199,7 +203,7 @@ class SchemaValidator:
         Returns:
             错误列表
         """
-        errors = []
+        errors: List[str] = []
 
         signal_tracking_schemas = {
             "vulnerability": ["vulnerabilities"],
@@ -242,7 +246,7 @@ class SchemaValidator:
                 return "SUSPICIOUS_PATTERN"
         return value
 
-    def fix_unknown_outputs(self, data: Dict[str, Any]) -> Dict[str, Any]:
+    def fix_unknown_outputs(self, data: Any) -> Any:
         """修复禁止的Unknown输出
 
         Args:
@@ -275,7 +279,7 @@ class SchemaValidator:
         return data
 
     def fix_invalid_locations(
-        self, data: Dict[str, Any], schema_name: str = None
+        self, data: Dict[str, Any], schema_name: Optional[str] = None
     ) -> Dict[str, Any]:
         """修复无效的位置信息
 
@@ -289,7 +293,7 @@ class SchemaValidator:
             修复后的数据
         """
         if not isinstance(data, (dict, list)):
-            return data
+            return data  # type: ignore
 
         invalid_patterns = [
             (r":line$", ":1"),
@@ -302,7 +306,7 @@ class SchemaValidator:
             (r":Unknown$", ":1"),
         ]
 
-        def fix_location(location_str: str) -> str:
+        def fix_location(location_str: Any) -> Any:
             """修复单个location字符串"""
             if not isinstance(location_str, str):
                 return location_str
@@ -336,7 +340,7 @@ class SchemaValidator:
                 ]
             return item
 
-        return fix_item(data)
+        return fix_item(data)  # type: ignore[no-any-return]
 
     def _validate_object(self, data: Dict, schema: Dict, path: str) -> List[str]:
         """递归验证对象
@@ -581,11 +585,14 @@ class SchemaValidator:
         """
         schema = self.schemas.get(schema_name)
         if not schema or not isinstance(data, dict):
-            return data
+            return data  # type: ignore[no-any-return]
 
         fixed = {}
 
-        for field, field_schema in schema.get("properties", {}).items():
+        properties = schema.get("properties", {})
+        if not isinstance(properties, dict):
+            properties = {}
+        for field, field_schema in properties.items():
             field_type = field_schema.get("type")
             is_required = field in schema.get("required", [])
             field_value = data.get(field)
@@ -605,15 +612,19 @@ class SchemaValidator:
                 if field_type == "array" and isinstance(field_value, list):
                     item_schema = field_schema.get("items", {})
                     if "properties" in item_schema:
-                        for i, item in enumerate(fixed[field]):
-                            if isinstance(item, dict):
-                                fixed[field][i] = self._fix_item_structure(
-                                    item, item_schema, schema_name
-                                )
+                        field_list = fixed[field]
+                        if isinstance(field_list, list):
+                            for i, item in enumerate(field_list):
+                                if isinstance(item, dict):
+                                    field_list[i] = self._fix_item_structure(
+                                        item, item_schema, schema_name
+                                    )
             elif is_required:
                 if field == "signal_tracking":
                     if schema_name == "attack_chain":
                         items = data.get("attack_chains", [])
+                        if not isinstance(items, list):
+                            items = []
                         confirmed = sum(
                             1
                             for v in items
@@ -638,6 +649,8 @@ class SchemaValidator:
                         }
                     else:
                         items = data.get("vulnerabilities", data.get("risks", []))
+                        if not isinstance(items, list):
+                            items = []
                         confirmed = sum(
                             1
                             for v in items
@@ -694,6 +707,8 @@ class SchemaValidator:
             ):
                 if schema_name == "attack_chain":
                     items = data.get("attack_chains", [])
+                    if not isinstance(items, list):
+                        items = []
                     confirmed = sum(
                         1
                         for v in items
@@ -715,6 +730,8 @@ class SchemaValidator:
                     }
                 else:
                     items = data.get("vulnerabilities", data.get("risks", []))
+                    if not isinstance(items, list):
+                        items = []
                     confirmed = sum(
                         1
                         for v in items
@@ -764,7 +781,7 @@ class SchemaValidator:
         return risks
 
     def _fix_item_structure(
-        self, item: Dict[str, Any], item_schema: Dict[str, Any], schema_name: str = None
+        self, item: Dict[str, Any], item_schema: Dict[str, Any], schema_name: Optional[str] = None
     ) -> Dict[str, Any]:
         """修复数组项的结构
 
@@ -1059,7 +1076,7 @@ class SchemaValidator:
             for match in matches:
                 try:
                     json.loads(match)
-                    return match
+                    return str(match)
                 except BaseException:
                     continue
 
@@ -1399,7 +1416,7 @@ def retry_with_validation(max_retries: int = 3):
 
     def decorator(func: Callable):
         async def wrapper(*args, **kwargs):
-            last_error = None
+            last_error: Optional[Exception] = None
             for attempt in range(max_retries):
                 try:
                     result = await func(*args, **kwargs)
@@ -1408,7 +1425,7 @@ def retry_with_validation(max_retries: int = 3):
                     if is_valid:
                         return result
                     print(f"[WARN] Attempt {attempt + 1} validation failed: {error}")
-                    last_error = error
+                    last_error = Exception(error) if error else None
                 except Exception as e:
                     last_error = e
                     print(f"[WARN] Attempt {attempt + 1} failed: {e}")
@@ -1429,11 +1446,11 @@ class LineNumberValidator:
 
     DEFAULT_CONFIG_PATH = "hos-ls.yaml"
 
-    def __init__(self, tolerance: int = None):
+    def __init__(self, tolerance: Optional[int] = None):
         self.tolerance = self._load_tolerance(tolerance)
         self.mapper = LineNumberMapper()
 
-    def _load_tolerance(self, tolerance: int = None) -> int:
+    def _load_tolerance(self, tolerance: Optional[int] = None) -> int:
         """从配置文件加载tolerance值
 
         Args:
@@ -1459,7 +1476,7 @@ class LineNumberValidator:
                     validation_config = config.get("validation", {})
                     tolerance_value = validation_config.get("line_number_tolerance", None)
                     if tolerance_value is not None and tolerance_value > 0:
-                        return tolerance_value
+                        return int(tolerance_value)
         except Exception:
             pass
 
@@ -2039,7 +2056,10 @@ class LineNumberValidator:
         return False, ""
 
     def _is_valid_ai_reported_line(
-        self, line_content: str, line_number: int = None, file_content: str = None
+        self,
+        line_content: str,
+        line_number: Optional[int] = None,
+        file_content: Optional[str] = None,
     ) -> tuple[bool, str]:
         """检查AI报告的行是否为有效的漏洞位置
 
@@ -2113,7 +2133,7 @@ class LineNumberValidator:
         Returns:
             提取的标识符列表
         """
-        identifiers = []
+        identifiers: list[str] = []
 
         if not description:
             return identifiers
@@ -2281,8 +2301,8 @@ class LineNumberValidator:
         self,
         keywords: list,
         file_content: str,
-        preferred_line: int = None,
-        extracted_identifiers: list = None,
+        preferred_line: Optional[int] = None,
+        extracted_identifiers: Optional[list] = None,
     ) -> list:
         """根据关键词查找可能的匹配行
 
@@ -2418,6 +2438,8 @@ class LineNumberValidator:
             print(f"[DEBUG] Returning top 5 candidates: {top_candidates}")
             return top_candidates
 
+        return []
+
     def _is_configuration_vulnerability(self, vulnerability: dict) -> bool:
         """检查是否为配置类漏洞（需要联合关键词验证）
 
@@ -2530,7 +2552,7 @@ class LineNumberValidator:
         return required_keywords, optional_keywords
 
     def _find_lines_by_joint_keywords(
-        self, vulnerability: dict, file_content: str, preferred_line: int = None
+        self, vulnerability: dict, file_content: str, preferred_line: Optional[int] = None
     ) -> list:
         """根据联合关键词查找匹配行（所有必需关键词必须同时出现）
 
@@ -2635,7 +2657,9 @@ class LineNumberValidator:
         pattern = r"\b" + re.escape(word) + r"\b"
         return bool(re.search(pattern, text))
 
-    def _is_field_identifier_match(self, word: str, line: str, line_lower: str = None) -> bool:
+    def _is_field_identifier_match(
+        self, word: str, line: str, line_lower: Optional[str] = None
+    ) -> bool:
         """检查单词是否作为字段标识符出现在行中
 
         字段标识符匹配的情况：

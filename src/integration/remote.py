@@ -99,12 +99,14 @@ class RemoteExecutor:
 
     async def _execute_scan(self, parameters: Dict[str, Any]) -> Dict[str, Any]:
         """执行扫描"""
+        from src.core.config import get_config
         from src.core.scanner import create_scanner
 
         target = parameters.get("target", ".")
         # config = parameters.get("config", {})
 
-        scanner = create_scanner()
+        config = get_config()
+        scanner = create_scanner(config)
         result = scanner.scan_sync(target)
 
         return result.to_dict()
@@ -206,11 +208,13 @@ class SessionManager:
     """会话管理器"""
 
     _instance: Optional["SessionManager"] = None
+    _sessions: Dict[str, BackgroundSession]
+    _counter: int
 
     def __new__(cls) -> "SessionManager":
         if cls._instance is None:
             cls._instance = super().__new__(cls)
-            cls._instance._sessions: Dict[str, BackgroundSession] = {}
+            cls._instance._sessions = {}
             cls._instance._counter = 0
         return cls._instance
 

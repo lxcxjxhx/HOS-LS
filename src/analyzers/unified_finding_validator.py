@@ -12,7 +12,7 @@
 """
 
 from dataclasses import dataclass
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from src.analyzers.finding_verifier import FindingVerification, FindingVerifier
 
@@ -37,7 +37,7 @@ class UnifiedFindingValidator:
         self.project_root = project_root
         self._verifier = FindingVerifier(project_root)
 
-    def validate_finding(self, finding, project_root: Optional[str] = None) -> FindingVerification:
+    def validate_finding(self, finding: Any, project_root: Optional[str] = None) -> Dict[str, Any]:
         """验证单个发现
 
         Args:
@@ -53,7 +53,10 @@ class UnifiedFindingValidator:
             finding_dict = finding
 
             class DictFinding:
-                def __init__(self, d):
+                metadata: Dict[str, Any]
+                location: Any
+
+                def __init__(self, d: Dict[str, Any]) -> None:
                     for k, v in d.items():
                         setattr(self, k, v)
                     self.metadata = d.get("metadata", {})
@@ -65,22 +68,22 @@ class UnifiedFindingValidator:
 
             finding = DictFinding(finding_dict)
 
-        verification = self._verifier.verify_and_annotate(finding, root)
+        verification: Dict[str, Any] = self._verifier.verify_and_annotate(finding, root)
 
         if hasattr(finding, "metadata"):
-            finding.metadata["verification_level"] = verification.verification_level
-            finding.metadata["is_hallucination"] = verification.is_hallucination
-            finding.metadata["confidence_score"] = verification.confidence
-            finding.metadata["path_verified"] = verification.path_verified
-            finding.metadata["code_verified"] = verification.code_verified
-            if verification.best_match:
-                finding.metadata["matched_cwe"] = verification.best_match
+            finding.metadata["verification_level"] = verification["verification_level"]
+            finding.metadata["is_hallucination"] = verification["is_hallucination"]
+            finding.metadata["confidence_score"] = verification["confidence"]
+            finding.metadata["path_verified"] = verification["path_verified"]
+            finding.metadata["code_verified"] = verification["code_verified"]
+            if verification.get("best_match"):
+                finding.metadata["matched_cwe"] = verification["best_match"]
 
         return verification
 
     def validate_findings(
-        self, findings: List, project_root: Optional[str] = None
-    ) -> List[FindingVerification]:
+        self, findings: List[Any], project_root: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
         """批量验证发现
 
         Args:
@@ -91,7 +94,7 @@ class UnifiedFindingValidator:
             验证结果列表
         """
         root = project_root or self.project_root
-        verifications = []
+        verifications: List[Dict[str, Any]] = []
 
         for finding in findings:
             verification = self.validate_finding(finding, root)

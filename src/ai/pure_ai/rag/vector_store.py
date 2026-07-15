@@ -41,18 +41,24 @@ class VectorStore:
         core_config = get_config()
         self.pure_ai = hasattr(core_config, "pure_ai") and core_config.pure_ai
 
+        # 内存存储（公共初始化，避免重复定义）
+        self._embeddings: Optional[np.ndarray] = None
+        self._documents: Dict[str, Dict] = {}
+        self._document_ids: List[str] = []
+        self._embedding_cache: Dict[str, List[float]] = {}  # 文本哈希到embedding的缓存
+
+        # 访问频率监控
+        self._access_stats: Dict[str, Dict] = {}  # 文档ID到访问统计的映射
+
+        # 冷热分层定期检查时间戳
+        self._last_check_time: float = 0.0
+
         if self.pure_ai:
             # 纯AI模式下，跳过所有存储初始化
             self.storage_path = storage_path
-            # 初始化空的内存存储
-            self._embeddings: Optional[np.ndarray] = None
-            self._documents: Dict[str, Dict] = {}
-            self._document_ids: List[str] = []
-            self._embedding_cache: Dict[str, List[float]] = {}
-            self._access_stats: Dict[str, Dict] = {}
             # 初始化一个简单的嵌入器
             config = EmbedConfig()
-            config.pure_ai = True
+            setattr(config, "pure_ai", True)
             self.embedder = create_embedder(config, custom_model_path=custom_model_path)
             return
 
@@ -70,15 +76,6 @@ class VectorStore:
         self.cold_storage_path = self.storage_path / "cold"
         self.hot_storage_path.mkdir(exist_ok=True)
         self.cold_storage_path.mkdir(exist_ok=True)
-
-        # 内存存储
-        self._embeddings: Optional[np.ndarray] = None
-        self._documents: Dict[str, Dict] = {}
-        self._document_ids: List[str] = []
-        self._embedding_cache: Dict[str, List[float]] = {}  # 文本哈希到embedding的缓存
-
-        # 访问频率监控
-        self._access_stats: Dict[str, Dict] = {}  # 文档ID到访问统计的映射
 
         # 初始化 CodeEmbedder（使用单例模式）
         config = EmbedConfig()
@@ -130,6 +127,7 @@ class VectorStore:
         if document_id in self._documents:
             # 更新现有文档
             index = self._document_ids.index(document_id)
+            assert self._embeddings is not None
             self._embeddings[index] = embedding
         else:
             # 添加新文档
@@ -186,7 +184,7 @@ class VectorStore:
             if self.embedder.is_available() and contents:
                 try:
                     # 使用 CodeEmbedder 的批量嵌入功能
-                    batch_embeddings = self.embedder.embed_batch(contents, batch_size=BATCH_SIZE)
+                    batch_embeddings = self.embedder.embed_batch(contents)
                     new_embeddings = [np.array(embedding) for embedding in batch_embeddings]
                 except Exception as e:
                     logger.error(f"批量嵌入失败: {e}")
@@ -277,6 +275,7 @@ class VectorStore:
             # 移除文档
             index = self._document_ids.index(document_id)
             self._document_ids.pop(index)
+            assert self._embeddings is not None
             self._embeddings = np.delete(self._embeddings, index, axis=0)
             del self._documents[document_id]
 
@@ -617,18 +616,19 @@ class VectorStore:
 
         # 检查缓存
         if text_hash in self._embedding_cache:
-            embedding = np.array(self._embedding_cache[text_hash])
-            if self.is_valid(embedding):
-                return embedding
+            cached_embedding = np.array(self._embedding_cache[text_hash])
+            if self.is_valid(cached_embedding):
+                return cached_embedding
             else:
                 # 缓存中的向量无效，删除并重新生成
                 del self._embedding_cache[text_hash]
 
         # 使用 CodeEmbedder 生成嵌入
+        embedding: np.ndarray
         if self.embedder.is_available():
             try:
-                embedding = self.embedder.embed_code(text)
-                embedding = np.array(embedding)
+                embed_result = self.embedder.embed_code(text)
+                embedding = np.array(embed_result)
 
                 # 确保嵌入维度为256维
                 embedding = self._ensure_embedding_dimension(embedding, 256)
@@ -647,16 +647,16 @@ class VectorStore:
         else:
             # 降级方案：使用简单的哈希嵌入，生成256维向量
             hash_value = text_hash
-            embedding = []
+            embed_list: List[float] = []
 
             # 生成256维向量，与模型一致
             for i in range(0, 256):
                 if i < len(hash_value):
-                    embedding.append(int(hash_value[i % len(hash_value)], 16) / 15.0)
+                    embed_list.append(int(hash_value[i % len(hash_value)], 16) / 15.0)
                 else:
-                    embedding.append(0.0)
+                    embed_list.append(0.0)
 
-            embedding = np.array(embedding)
+            embedding = np.array(embed_list)
             norm = np.linalg.norm(embedding)
             if norm > 0:
                 embedding = embedding / norm
@@ -714,9 +714,10 @@ class VectorStore:
 
         # 避免除零
         norms[norms == 0] = 1e-10
-        query_norm = max(query_norm, 1e-10)
+        query_norm_val = float(query_norm)
+        query_norm_val = max(query_norm_val, 1e-10)
 
-        similarities = dot_products / (norms * query_norm)
+        similarities: np.ndarray = dot_products / (norms * query_norm_val)
         return similarities
 
     def __len__(self) -> int:

@@ -21,10 +21,10 @@ class TokenUsageRecord:
         duration: float,
         success: bool,
         cached: bool = False,
-        prompt: str = None,
-        response: str = None,
-        agent_name: str = None,
-        file_path: str = None,
+        prompt: Optional[str] = None,
+        response: Optional[str] = None,
+        agent_name: Optional[str] = None,
+        file_path: Optional[str] = None,
         **kwargs,
     ):
         self.provider = provider
@@ -79,10 +79,10 @@ class TokenTracker:
         duration: float,
         success: bool,
         cached: bool = False,
-        prompt: str = None,
-        response: str = None,
-        agent_name: str = None,
-        file_path: str = None,
+        prompt: Optional[str] = None,
+        response: Optional[str] = None,
+        agent_name: Optional[str] = None,
+        file_path: Optional[str] = None,
         **kwargs,
     ) -> None:
         """记录一次token使用"""
@@ -168,6 +168,16 @@ class TokenTracker:
         self._request_count = 0
         self._success_count = 0
         self._failure_count = 0
+
+    def check_cache(self, prompt: str, system_prompt: Optional[str] = None) -> Optional[Any]:
+        """检查缓存（当前未实现）"""
+        return None
+
+    def add_to_cache(
+        self, prompt: str, system_prompt: Optional[str] = None, result: Any = None
+    ) -> None:
+        """添加到缓存（当前未实现）"""
+        pass
 
 
 _global_tracker: Optional[TokenTracker] = None

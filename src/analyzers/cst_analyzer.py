@@ -3,10 +3,11 @@
 基于 libcst 的具体语法树分析器。
 """
 
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Sequence, Union
 
 import libcst as cst
 from libcst import CSTNode
+from libcst.metadata import PositionProvider
 
 from src.analyzers.base import (
     AnalysisContext,
@@ -172,9 +173,10 @@ class CSTAnalyzer(BaseAnalyzer):
 
         # 递归检查复合语句
         elif hasattr(node, "body"):
-            if isinstance(node.body, cst.IndentedBlock):
-                for stmt in node.body.body:
-                    self._analyze_statement(wrapper, stmt, context, result)
+            body = getattr(node, "body", None)
+            if isinstance(body, cst.IndentedBlock):
+                for stmt_node in body.body:
+                    self._analyze_statement(wrapper, stmt_node, context, result)
 
     def _check_import(
         self,
@@ -282,21 +284,23 @@ class CSTAnalyzer(BaseAnalyzer):
 
         # 检查是否从危险模块导入
         if node.module:
-            module_name = "".join([part.value for part in node.module])
-            dangerous_modules = ["os", "subprocess", "eval", "exec", "pickle"]
-            if module_name in dangerous_modules:
-                position = self._get_position(wrapper, node)
-                issue = self.create_issue(
-                    rule_id="CST-DANGEROUS-MODULE",
-                    message=f"从潜在的危险模块导入: {module_name}",
-                    line=position.start.line,
-                    column=position.start.column,
-                    end_line=position.end.line,
-                    end_column=position.end.column,
-                    severity="medium",
-                    confidence=0.7,
-                )
-                result.add_issue(issue)
+            module_attr = node.module
+            if isinstance(module_attr, (cst.Attribute, cst.Name)):
+                module_name = self._get_node_code(wrapper, module_attr)
+                dangerous_modules = ["os", "subprocess", "eval", "exec", "pickle"]
+                if module_name in dangerous_modules:
+                    position = self._get_position(wrapper, node)
+                    issue = self.create_issue(
+                        rule_id="CST-DANGEROUS-MODULE",
+                        message=f"从潜在的危险模块导入: {module_name}",
+                        line=position.start.line,
+                        column=position.start.column,
+                        end_line=position.end.line,
+                        end_column=position.end.column,
+                        severity="medium",
+                        confidence=0.7,
+                    )
+                    result.add_issue(issue)
 
     def _check_assignment(
         self,
@@ -626,7 +630,7 @@ class CSTAnalyzer(BaseAnalyzer):
         """
         # 检查条件是否总是为真或假
         condition = node.test
-        condition_code = condition.code
+        condition_code = self._get_node_code(wrapper, condition)
         if condition_code in ["True", "False"]:
             position = self._get_position(wrapper, node)
             issue = self.create_issue(
@@ -650,9 +654,12 @@ class CSTAnalyzer(BaseAnalyzer):
         if node.orelse:
             if isinstance(node.orelse, cst.If):
                 self._check_if_statement(wrapper, node.orelse, context, result)
-            elif isinstance(node.orelse, cst.IndentedBlock):
-                for stmt in node.orelse.body:
-                    self._analyze_statement(wrapper, stmt, context, result)
+            else:
+                # else 分支是 Else 节点，包含 body 属性
+                else_body = node.orelse.body
+                if isinstance(else_body, cst.IndentedBlock):
+                    for stmt in else_body.body:
+                        self._analyze_statement(wrapper, stmt, context, result)
 
     def _check_loop_statement(
         self,
@@ -672,7 +679,7 @@ class CSTAnalyzer(BaseAnalyzer):
         # 检查循环条件是否可能导致无限循环
         if isinstance(node, cst.While):
             condition = node.test
-            condition_code = condition.code
+            condition_code = self._get_node_code(wrapper, condition)
             if condition_code == "True":
                 position = self._get_position(wrapper, node)
                 issue = self.create_issue(
@@ -736,14 +743,16 @@ class CSTAnalyzer(BaseAnalyzer):
 
         # 递归检查 else 块
         if node.orelse:
-            if isinstance(node.orelse, cst.IndentedBlock):
-                for stmt in node.orelse.body:
+            else_body = node.orelse.body
+            if isinstance(else_body, cst.IndentedBlock):
+                for stmt in else_body.body:
                     self._analyze_statement(wrapper, stmt, context, result)
 
         # 递归检查 finally 块
         if node.finalbody:
-            if isinstance(node.finalbody, cst.IndentedBlock):
-                for stmt in node.finalbody.body:
+            finally_body = node.finalbody.body
+            if isinstance(finally_body, cst.IndentedBlock):
+                for stmt in finally_body.body:
                     self._analyze_statement(wrapper, stmt, context, result)
 
     def _check_raise_statement(
@@ -763,7 +772,7 @@ class CSTAnalyzer(BaseAnalyzer):
         """
         # 检查是否抛出通用异常
         if node.exc:
-            exc_code = node.exc.code
+            exc_code = self._get_node_code(wrapper, node.exc)
             if "Exception" in exc_code or "Error" in exc_code:
                 position = self._get_position(wrapper, node)
                 issue = self.create_issue(
@@ -795,7 +804,7 @@ class CSTAnalyzer(BaseAnalyzer):
         """
         # 检查是否返回敏感信息
         if node.value:
-            return_code = node.value.code
+            return_code = self._get_node_code(wrapper, node.value)
             sensitive_patterns = ["password", "secret", "token", "key", "api_key"]
             for pattern in sensitive_patterns:
                 if pattern in return_code.lower():
@@ -832,7 +841,7 @@ class CSTAnalyzer(BaseAnalyzer):
         # 检查是否使用字符串拼接构建 SQL
         for arg in node.args:
             if isinstance(arg, cst.Arg):
-                arg_code = arg.value.code
+                arg_code = self._get_node_code(wrapper, arg.value)
                 if "+" in arg_code or '"' in arg_code or ".format" in arg_code:
                     position = self._get_position(wrapper, node)
                     issue = self.create_issue(
@@ -873,14 +882,52 @@ class CSTAnalyzer(BaseAnalyzer):
         Returns:
             属性部分列表
         """
-        parts = []
-        current = node
+        parts: List[cst.Name] = []
+        current: Union[cst.Attribute, cst.BaseExpression] = node
         while isinstance(current, cst.Attribute):
             parts.insert(0, current.attr)
             current = current.value
         if isinstance(current, cst.Name):
             parts.insert(0, current)
         return parts
+
+    def _get_node_code(self, wrapper: cst.MetadataWrapper, node: CSTNode) -> str:
+        """获取节点的代码表示
+
+        Args:
+            wrapper: 元数据包装器
+            node: 节点
+
+        Returns:
+            节点的代码字符串
+        """
+        # 使用 libcst 的 Module 来获取代码
+        module = wrapper.module
+        # 创建一个简化的代码提取器
+        try:
+            # 尝试直接获取代码属性
+            if hasattr(node, "value"):
+                attr = node.value
+                if hasattr(attr, "value"):
+                    return str(attr.value)
+            # 对于 Name 节点
+            if isinstance(node, cst.Name):
+                return node.value
+            # 对于 Attribute 节点
+            if isinstance(node, cst.Attribute):
+                # 递归获取属性链
+                parts: List[str] = []
+                current: Union[cst.Attribute, cst.BaseExpression] = node
+                while isinstance(current, cst.Attribute):
+                    parts.insert(0, current.attr.value)
+                    current = current.value
+                if isinstance(current, cst.Name):
+                    parts.insert(0, current.value)
+                return ".".join(parts)
+            # 对于其他表达式，尝试获取字符串表示
+            return str(node)
+        except Exception:
+            return str(node)
 
     def _get_position(self, wrapper: cst.MetadataWrapper, node: CSTNode):
         """获取节点位置
@@ -892,7 +939,7 @@ class CSTAnalyzer(BaseAnalyzer):
         Returns:
             代码范围
         """
-        position_provider = wrapper.resolve(cst.metadata.PositionProvider)
+        position_provider = wrapper.resolve(PositionProvider)
         return position_provider[node]
 
     def _has_docstring(self, node: Union[cst.FunctionDef, cst.ClassDef]) -> bool:

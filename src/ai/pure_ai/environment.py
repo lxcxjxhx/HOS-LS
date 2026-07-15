@@ -1,7 +1,7 @@
 import os
 import platform
 import sys
-from typing import Any, Dict
+from typing import Any, Dict, Optional, cast
 
 
 class EnvironmentDetector:
@@ -45,7 +45,7 @@ class EnvironmentDetector:
                 memory_status = MEMORYSTATUS()
                 memory_status.dwLength = ctypes.sizeof(MEMORYSTATUS)
                 ctypes.windll.kernel32.GlobalMemoryStatus(ctypes.byref(memory_status))
-                return memory_status.dwAvailPhys // (1024 * 1024)
+                return cast(int, memory_status.dwAvailPhys) // (1024 * 1024)
             elif self.is_linux or self.is_macos:
                 with open("/proc/meminfo", "r") as f:
                     for line in f:
@@ -54,6 +54,7 @@ class EnvironmentDetector:
                 return 4096  # 默认值
         except Exception:
             return 4096  # 默认值
+        return 4096  # 默认值
 
     def get_environment_info(self) -> Dict[str, Any]:
         """获取环境信息
@@ -73,7 +74,7 @@ class EnvironmentDetector:
             "current_directory": os.getcwd(),
         }
 
-    def get_optimized_config(self, base_config: Dict[str, Any] = None) -> Dict[str, Any]:
+    def get_optimized_config(self, base_config: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """根据环境获取优化的配置
 
         Args:
@@ -172,7 +173,7 @@ def get_environment_info() -> Dict[str, Any]:
     return env_detector.get_environment_info()
 
 
-def get_optimized_config(base_config: Dict[str, Any] = None) -> Dict[str, Any]:
+def get_optimized_config(base_config: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """根据环境获取优化的配置
 
     Args:

@@ -198,14 +198,17 @@ class RAGGraphIntegrator:
             攻击链列表
         """
         if chain_type == "rce":
-            return self._attack_chain_analyzer.find_rce_chains(limit)
+            result: List[Dict[str, Any]] = self._attack_chain_analyzer.find_rce_chains(limit)
+            return result
         elif chain_type == "sql":
-            return self._attack_chain_analyzer.find_sql_injection_chains(limit)
+            result = self._attack_chain_analyzer.find_sql_injection_chains(limit)
+            return result
         elif chain_type == "xss":
-            return self._attack_chain_analyzer.find_xss_chains(limit)
+            result = self._attack_chain_analyzer.find_xss_chains(limit)
+            return result
         else:
             # 返回所有类型的攻击链
-            chains = []
+            chains: List[Dict[str, Any]] = []
             chains.extend(self._attack_chain_analyzer.find_rce_chains(limit))
             chains.extend(self._attack_chain_analyzer.find_sql_injection_chains(limit))
             chains.extend(self._attack_chain_analyzer.find_xss_chains(limit))
@@ -220,7 +223,7 @@ class RAGGraphIntegrator:
         Returns:
             漏洞上下文信息
         """
-        context = {}
+        context: Dict[str, Any] = {}
 
         # 从图数据库获取信息
         query = """
@@ -243,16 +246,19 @@ class RAGGraphIntegrator:
                 "source": data["cve"].get("source"),
                 "published_date": data["cve"].get("published_date"),
             }
-            context["cwes"] = [w.get("id") for w in data["cwes"]]
-            context["products"] = [p.get("name") for p in data["products"]]
-            context["sinks"] = [s.get("type") for s in data["sinks"]]
+            cwes: List[Any] = [w.get("id") for w in data["cwes"]]
+            products: List[Any] = [p.get("name") for p in data["products"]]
+            sinks: List[Any] = [s.get("type") for s in data["sinks"]]
+            context["cwes"] = cwes
+            context["products"] = products
+            context["sinks"] = sinks
 
         # 从向量存储获取相似漏洞
         if self._vector_store:
             similar_vulns = self._vector_store.search(
                 context.get("cve", {}).get("description", ""), top_k=3
             )
-            context["similar_vulnerabilities"] = [
+            similar_vulnerabilities: List[Dict[str, Any]] = [
                 {
                     "id": vuln["document_id"],
                     "title": vuln["metadata"].get("title"),
@@ -261,6 +267,7 @@ class RAGGraphIntegrator:
                 for vuln in similar_vulns
                 if vuln["document_id"] != cve_id
             ]
+            context["similar_vulnerabilities"] = similar_vulnerabilities
 
         return context
 
@@ -270,7 +277,8 @@ class RAGGraphIntegrator:
         Returns:
             统计信息
         """
-        return self._attack_chain_analyzer.get_attack_chain_statistics()
+        result: Dict[str, Any] = self._attack_chain_analyzer.get_attack_chain_statistics()
+        return result
 
     def export_attack_chains(
         self, chain_type: str = "all", file_path: str = "attack_chains.json"
@@ -284,7 +292,8 @@ class RAGGraphIntegrator:
         Returns:
             是否成功
         """
-        return self._attack_chain_analyzer.export_attack_chains(chain_type, file_path)
+        result: bool = self._attack_chain_analyzer.export_attack_chains(chain_type, file_path)
+        return result
 
     def _build_local_subgraph(self, search_results: List[Dict[str, Any]], top_k: int = 5) -> None:
         """动态构建局部子图（LazyGraphRAG 核心功能）
@@ -305,6 +314,8 @@ class RAGGraphIntegrator:
             # 为每个 CVE 构建局部子图
             for cve_id in cve_ids[:5]:  # 只处理前 5 个结果，避免过度构建
                 # 1. 查找相似 CVE
+                if cve_id is None:
+                    continue
                 similar_cves = self._neo4j_manager.find_similar_cves(cve_id, limit=top_k)
 
                 # 2. 构建相似性连接

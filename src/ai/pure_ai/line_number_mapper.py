@@ -21,7 +21,7 @@ class LineNumberMapper:
     def __init__(self):
         self._snapshots: Dict[str, str] = {}
 
-    def record_file_snapshot(self, file_path: str, file_content: str = None) -> None:
+    def record_file_snapshot(self, file_path: str, file_content: Optional[str] = None) -> None:
         """记录文件快照
 
         Args:
@@ -113,7 +113,7 @@ class LineNumberMapper:
         self,
         code_snippet: str,
         file_content: str,
-        ai_reported_line: int = None,
+        ai_reported_line: Optional[int] = None,
         search_range: int = 200,
     ) -> Tuple[int, str, List[int]]:
         """在文件内容中查找与代码片段匹配的行
@@ -407,7 +407,7 @@ class LineNumberMapper:
         return deviation <= tolerance
 
     def _is_valid_vulnerability_line(
-        self, line_content: str, line_number: int, total_lines: int = None
+        self, line_content: str, line_number: int, total_lines: Optional[int] = None
     ) -> tuple[bool, str]:
         """检查行内容是否为有效的漏洞位置
 
@@ -544,7 +544,7 @@ class LineNumberValidator:
 
     DEFAULT_TOLERANCE = 5
 
-    def __init__(self, mapper: LineNumberMapper, tolerance: int = None):
+    def __init__(self, mapper: LineNumberMapper, tolerance: Optional[int] = None):
         """初始化验证器
 
         Args:
@@ -559,7 +559,7 @@ class LineNumberValidator:
     def tolerance(self) -> int:
         return self._tolerance
 
-    def record_file_snapshot(self, file_path: str, file_content: str = None) -> None:
+    def record_file_snapshot(self, file_path: str, file_content: Optional[str] = None) -> None:
         """记录文件快照
 
         Args:
@@ -587,7 +587,7 @@ class LineNumberValidator:
         return self._snapshots.get(file_path, "")
 
     def verify_and_correct(
-        self, location: str, code_snippet: str = None, tolerance: int = None
+        self, location: str, code_snippet: Optional[str] = None, tolerance: Optional[int] = None
     ) -> Dict[str, Any]:
         """验证并校正行号（校正优先模式）
 
@@ -616,7 +616,7 @@ class LineNumberValidator:
 
         file_path, ai_line = self.mapper.parse_location(location)
 
-        result = {
+        result: Dict[str, Any] = {
             "ai_reported_line": ai_line,
             "verified_line": ai_line,
             "line_match_status": "NOT_FOUND",
@@ -634,6 +634,7 @@ class LineNumberValidator:
             result["warning_message"] = "无效的位置格式，请人工复核"
             return result
 
+        assert file_path is not None
         file_content = self.get_file_content(file_path)
         if not file_content:
             result["line_match_status"] = "NO_SNAPSHOT"

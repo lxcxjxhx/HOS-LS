@@ -129,7 +129,7 @@ class IDORRule(BaseRule):
         Returns:
             规则执行结果列表
         """
-        results = []
+        results: List[RuleResult] = []
 
         if isinstance(target, Path):
             try:
@@ -140,11 +140,9 @@ class IDORRule(BaseRule):
         elif isinstance(target, str):
             content = target
             file_path = "<string>"
-        elif isinstance(target, dict):
+        else:  # dict
             content = target.get("content", "")
             file_path = target.get("file_path", "<unknown>")
-        else:
-            return results
 
         lines = content.split("\n")
 
@@ -269,7 +267,7 @@ class BusinessLogicFlawRule(BaseRule):
         Returns:
             规则执行结果列表
         """
-        results = []
+        results: List[RuleResult] = []
 
         if isinstance(target, Path):
             try:
@@ -280,11 +278,9 @@ class BusinessLogicFlawRule(BaseRule):
         elif isinstance(target, str):
             content = target
             file_path = "<string>"
-        elif isinstance(target, dict):
+        else:  # dict
             content = target.get("content", "")
             file_path = target.get("file_path", "<unknown>")
-        else:
-            return results
 
         lines = content.split("\n")
 
@@ -348,26 +344,29 @@ class RaceConditionRule(BaseRule):
         )
         super().__init__(metadata, config)
 
-        self._toctou_patterns = [
+        self._toctou_patterns: List[tuple] = [
             (
                 re.compile(
                     r"(?:if|while|assert)\s*\([^)]*file_exists|os\.path\.exists|"
                     + r"is_file|is_dir|exists|stat|get_status",
                     re.IGNORECASE,
                 ),
-                r"(?:open|read|write|execute|chmod|chown|delete|remove|unlink)\s*\(",
+                re.compile(
+                    r"(?:open|read|write|execute|chmod|chown|delete|remove|unlink)\s*\(",
+                    re.IGNORECASE,
+                ),
                 "文件存在性检查与使用之间存在竞态窗口",
             ),
             (
                 re.compile(
                     r"(?:if|while|assert)\s*\([^)]*lock|acquire|semaphore|mutex", re.IGNORECASE
                 ),
-                r"(?:unlock|release|exit|return)\s*\(",
+                re.compile(r"(?:unlock|release|exit|return)\s*\(", re.IGNORECASE),
                 "锁检查后释放前存在竞态窗口",
             ),
             (
                 re.compile(r"(?:balance|stock|quantity|count|available)\s*[<>]=", re.IGNORECASE),
-                r"(?:balance|stock|quantity|count|available)\s*[+\-]=",
+                re.compile(r"(?:balance|stock|quantity|count|available)\s*[+\-]=", re.IGNORECASE),
                 "余额/库存检查与修改之间存在竞态窗口",
             ),
         ]
@@ -381,7 +380,7 @@ class RaceConditionRule(BaseRule):
         Returns:
             规则执行结果列表
         """
-        results = []
+        results: List[RuleResult] = []
 
         if isinstance(target, Path):
             try:
@@ -392,11 +391,9 @@ class RaceConditionRule(BaseRule):
         elif isinstance(target, str):
             content = target
             file_path = "<string>"
-        elif isinstance(target, dict):
+        else:  # dict
             content = target.get("content", "")
             file_path = target.get("file_path", "<unknown>")
-        else:
-            return results
 
         lines = content.split("\n")
 

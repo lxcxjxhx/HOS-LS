@@ -37,7 +37,10 @@ class SmartJSONParser:
         """
         # 首先尝试直接解析
         try:
-            return json.loads(content)
+            result = json.loads(content)
+            if isinstance(result, dict):
+                return result
+            return None
         except json.JSONDecodeError:
             pass
 
@@ -52,7 +55,9 @@ class SmartJSONParser:
         # 尝试清理并解析
         cleaned = self._clean_content(content)
         try:
-            return json.loads(cleaned)
+            result = json.loads(cleaned)
+            if isinstance(result, dict):
+                return result
         except json.JSONDecodeError:
             pass
 
@@ -61,7 +66,10 @@ class SmartJSONParser:
     def _parse_json(self, content: str) -> Optional[Dict[str, Any]]:
         """解析标准 JSON"""
         try:
-            return json.loads(content)
+            result = json.loads(content)
+            if isinstance(result, dict):
+                return result
+            return None
         except json.JSONDecodeError:
             return None
 
@@ -101,7 +109,10 @@ class SmartJSONParser:
 
     def parse_array(self, content: str) -> Optional[list]:
         """解析 JSON 数组"""
-        parsed = self.parse(content)
+        try:
+            parsed = json.loads(content)
+        except json.JSONDecodeError:
+            return None
         if isinstance(parsed, list):
             return parsed
         return None

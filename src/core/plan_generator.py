@@ -229,7 +229,7 @@ class PlanGenerator:
         return info
 
     def _fast_ast_scan(self, content: str, language: str) -> Dict[str, Any]:
-        info = {
+        info: Dict[str, Any] = {
             "source_count": 0,
             "sink_count": 0,
             "api_entries": [],
@@ -245,8 +245,6 @@ class PlanGenerator:
         parser = Parser(self._languages[language])
         try:
             tree = parser.parse(content.encode())
-            if not tree:
-                return self._regex_scan(content)
 
             cursor = tree.walk()
 
@@ -299,7 +297,7 @@ class PlanGenerator:
     def _regex_scan(self, content: str) -> Dict[str, Any]:
         import re
 
-        info = {
+        info: Dict[str, Any] = {
             "source_count": 0,
             "sink_count": 0,
             "api_entries": [],
@@ -374,7 +372,7 @@ class PlanGenerator:
 
     def _get_node_text(self, node) -> str:
         if node.text:
-            return node.text.decode()
+            return str(node.text.decode())
         return ""
 
     def _traverse_tree(self, cursor, callback) -> None:

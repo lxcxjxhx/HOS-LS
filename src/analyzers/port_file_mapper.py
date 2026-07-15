@@ -391,9 +391,9 @@ class PortFileMapper:
                 if "server" in data and isinstance(data["server"], dict):
                     port = data["server"].get("port")
                     if port and isinstance(port, int):
-                        return port
+                        return int(port)
                 if "port" in data and isinstance(data["port"], int):
-                    return data["port"]
+                    return int(data["port"])
         except ImportError:
             for line in content.split("\n"):
                 for pattern, name, desc in self.server_port_patterns:
@@ -419,7 +419,7 @@ class PortFileMapper:
             if "ports" in data and isinstance(data["ports"], dict):
                 for key in ["http", "api", "app"]:
                     if key in data["ports"] and isinstance(data["ports"][key], int):
-                        return data["ports"][key]
+                        return int(data["ports"][key])
         return None
 
     def analyze_file(
@@ -529,18 +529,18 @@ class PortFileMapper:
         """
         if component_type == ComponentType.ROUTE_HANDLER:
             if match.groups() and len(match.groups()) >= 2:
-                return match.group(2)
-            return line.strip()[:50]
+                return str(match.group(2))
+            return str(line.strip()[:50])
 
         class_match = re.search(r"class\s+(\w+)", line)
         if class_match:
-            return class_match.group(1)
+            return str(class_match.group(1))
 
         decorator_match = re.search(r"@(\w+)", line)
         if decorator_match:
-            return decorator_match.group(1)
+            return str(decorator_match.group(1))
 
-        return component_type.value
+        return str(component_type.value)
 
     def scan_directory(self, directory: str, recursive: bool = True) -> PortMappingResult:
         """扫描目录中的端口关联文件

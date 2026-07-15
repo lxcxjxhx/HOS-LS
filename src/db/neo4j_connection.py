@@ -5,6 +5,7 @@
 
 from typing import Any, Dict, List, Optional
 
+from neo4j import Driver as Neo4jDriver
 from neo4j import GraphDatabase
 from neo4j_graphrag.embeddings import OpenAIEmbeddings
 from neo4j_graphrag.generation import GraphRAG
@@ -29,7 +30,7 @@ class Neo4jManager:
     def __init__(self) -> None:
         if not self._initialized:
             self._config: Optional[Config] = None
-            self._driver: Optional[GraphDatabase.driver] = None
+            self._driver: Optional[Neo4jDriver] = None
             self._graphrag: Optional[GraphRAG] = None
             self._initialized = True
 
@@ -43,28 +44,16 @@ class Neo4jManager:
 
         # 获取 Neo4j 配置
         # 检查是否有 neo4j 配置
-        neo4j_config = {}
+        neo4j_config: Dict[str, Any] = {}
         if hasattr(self._config, "neo4j"):
             neo4j_config = getattr(self._config, "neo4j", {})
         elif hasattr(self._config, "database") and hasattr(self._config.database, "neo4j"):
             neo4j_config = getattr(self._config.database, "neo4j", {})
 
         # 从配置中获取值，如果没有则使用默认值
-        if isinstance(neo4j_config, dict):
-            uri = neo4j_config.get("uri", "neo4j://localhost:7687")
-            username = neo4j_config.get("username", "neo4j")
-            password = neo4j_config.get("password", "password")
-        else:
-            # 如果是对象，直接访问属性
-            try:
-                uri = getattr(neo4j_config, "uri", "neo4j://localhost:7687")
-                username = getattr(neo4j_config, "username", "neo4j")
-                password = getattr(neo4j_config, "password", "password")
-            except BaseException:
-                # 如果访问失败，使用默认值
-                uri = "neo4j://localhost:7687"
-                username = "neo4j"
-                password = "password"
+        uri = neo4j_config.get("uri", "neo4j://localhost:7687")
+        username = neo4j_config.get("username", "neo4j")
+        password = neo4j_config.get("password", "password")
 
         # 打印连接信息（不打印密码）
         print(f"连接 Neo4j: {uri}, 用户名: {username}")
@@ -107,6 +96,7 @@ class Neo4jManager:
         try:
             # 配置 OpenAI 嵌入
             try:
+                assert self._config is not None
                 openai_api_key = getattr(self._config.ai, "api_key", None)
             except BaseException:
                 openai_api_key = None
@@ -217,7 +207,7 @@ class Neo4jManager:
         with self._driver.session() as session:
             session.run(query, {"batch": cves})
 
-    def find_attack_chains(self, sink_types: List[str] = None) -> List[Dict[str, Any]]:
+    def find_attack_chains(self, sink_types: Optional[List[str]] = None) -> List[Dict[str, Any]]:
         """查找攻击链
 
         Args:
@@ -272,7 +262,7 @@ class Neo4jManager:
         if self._graphrag:
             # 使用 GraphRAG 进行查询
             result = self._graphrag.query(query=query, limit=limit)
-            return result
+            return list(result) if result else []
         else:
             # 使用简单的关键词搜索
             cypher_query = """
@@ -308,7 +298,7 @@ class Neo4jManager:
             return {"cve_id": cve_id, "attack_chain": ""}
 
     @property
-    def driver(self) -> Optional[GraphDatabase.driver]:
+    def driver(self) -> Optional[Neo4jDriver]:
         """获取 Neo4j 驱动"""
         return self._driver
 

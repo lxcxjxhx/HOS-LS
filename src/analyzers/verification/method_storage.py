@@ -123,7 +123,7 @@ class MethodStorage:
         """
         return self.methods.get(method_id)
 
-    def list_methods(self, vuln_type: str = None) -> List[MethodDefinition]:
+    def list_methods(self, vuln_type: Optional[str] = None) -> List[MethodDefinition]:
         """
         列出验证方法
 
@@ -138,7 +138,7 @@ class MethodStorage:
 
         return [method for method in self.methods.values() if method.vuln_type == vuln_type]
 
-    def list_method_ids(self, vuln_type: str = None) -> List[str]:
+    def list_method_ids(self, vuln_type: Optional[str] = None) -> List[str]:
         """
         列出方法ID
 

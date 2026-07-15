@@ -119,7 +119,7 @@ class TranspilerQualityVerifier:
             {"key": "value"},
             java_object("SampleClass", {"field1": "value1", "field2": 42}),
             java_collection("ArrayList", [1, 2, 3]),
-            java_collection("HashMap", {"a": 1, "b": 2}),
+            java_collection("HashMap", [{"a": 1}, {"b": 2}]),
         ]
 
         for inp in inputs:
@@ -306,7 +306,7 @@ class TranspilerQualityVerifier:
     def _identify_inputs(self, source_code: str) -> List[Any]:
         try:
             tree = ast.parse(source_code)
-            inputs = []
+            inputs: List[Any] = []
 
             for node in ast.walk(tree):
                 if isinstance(node, ast.Assign):
@@ -803,12 +803,12 @@ print(repr(result))
             return output1 == output2
 
         if hasattr(output1, "_cpp_pointer_value__") and hasattr(output2, "_cpp_pointer_value__"):
-            return output1._cpp_pointer_value__ == output2._cpp_pointer_value__
+            return bool(output1._cpp_pointer_value__ == output2._cpp_pointer_value__)
 
         if hasattr(output1, "_cpp_reference_value__") and hasattr(
             output2, "_cpp_reference_value__"
         ):
-            return output1._cpp_reference_value__ == output2._cpp_reference_value__
+            return bool(output1._cpp_reference_value__ == output2._cpp_reference_value__)
 
         is_eq, _ = self.deep_compare(output1, output2)
         return is_eq

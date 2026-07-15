@@ -112,7 +112,7 @@ class AttackChainAnalyzer:
         vulnerabilities = self.analyze_code(code)
 
         # 2. 搜索相关的攻击链信息
-        attack_chain = {"entry_points": [], "exploit_paths": [], "impact": []}
+        attack_chain: Dict[str, Any] = {"entry_points": [], "exploit_paths": [], "impact": []}
 
         # 提取入口点
         for vuln in vulnerabilities:
@@ -228,7 +228,7 @@ class AttackChainAnalyzer:
         vulnerabilities = self.analyze_code(code)
 
         # 生成攻击面
-        attack_surface = {
+        attack_surface: Dict[str, Any] = {
             "total_vulnerabilities": len(vulnerabilities),
             "vulnerability_types": {},
             "attack_vectors": [],

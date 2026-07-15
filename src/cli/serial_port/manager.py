@@ -162,7 +162,8 @@ class SerialManager:
 
         try:
             self._log.append(("TX", data))
-            return self.serial_obj.write(data)
+            assert self.serial_obj is not None
+            return int(self.serial_obj.write(data))
         except Exception as e:
             print(f"发送数据失败: {e}")
             return 0
@@ -180,11 +181,12 @@ class SerialManager:
             return b""
 
         try:
+            assert self.serial_obj is not None
             self.serial_obj.timeout = timeout
             data = self.serial_obj.read(1024)
             if data:
                 self._log.append(("RX", data))
-            return data
+            return bytes(data)
         except Exception as e:
             print(f"接收数据失败: {e}")
             return b""
@@ -201,6 +203,7 @@ class SerialManager:
         """接收线程循环"""
         while self._running and self.is_connected():
             try:
+                assert self.serial_obj is not None
                 if self.serial_obj.in_waiting > 0:
                     data = self.serial_obj.read(self.serial_obj.in_waiting)
                     if data:

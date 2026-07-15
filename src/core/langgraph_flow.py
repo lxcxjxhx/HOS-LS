@@ -12,7 +12,7 @@ from src.analyzers.ast_analyzer import ASTAnalyzer
 from src.analyzers.cst_analyzer import CSTAnalyzer
 from src.cache.manager import CacheManager
 from src.core.chunk_processor import ChunkProcessor
-from src.core.engine import Finding, Location, ScanResult, Severity
+from src.core.engine import Finding, Location, ScanResult, ScanStatus, Severity
 from src.core.fusion_agent import FusionAgent
 from src.core.langgraph_state import AgentState, ScanState, evaluate_complexity, should_use_graph
 from src.core.rag_graph_integrator import get_rag_graph_integrator
@@ -183,8 +183,8 @@ async def query_graph(state: ScanState) -> ScanState:
 
         # 构建查询
         queries = []
-        if state.rag_results:
-            for rag_result in state.rag_results:
+        if state.rag:
+            for rag_result in state.rag:
                 if "CVE" in rag_result.get("title", ""):
                     # 提取CVE ID
                     cve_id = rag_result["title"].split(" ")[0]
@@ -214,7 +214,7 @@ async def fast_path(state: ScanState) -> ScanState:
     """
     try:
         # 创建扫描结果
-        scan_result = ScanResult(target=state.target, status="running")
+        scan_result = ScanResult(target=state.target, status=ScanStatus.RUNNING)
 
         # 简单规则检查
         target_path = Path(state.target)
@@ -256,7 +256,7 @@ async def fast_path(state: ScanState) -> ScanState:
         return state.update(scan_result=scan_result)
 
     except Exception as e:
-        scan_result = ScanResult(target=state.target, status="failed")
+        scan_result = ScanResult(target=state.target, status=ScanStatus.FAILED)
         scan_result.fail(str(e))
         return state.update(scan_result=scan_result)
 
@@ -276,9 +276,7 @@ async def cst_analysis_node(state: ScanState) -> ScanState:
                 code = f.read()
 
             # 创建分析上下文
-            context = AnalysisContext(
-                file_path=str(target_path), file_content=code, language="python"
-            )
+            context = AnalysisContext(file_path=target_path, file_content=code, language="python")
 
             # 执行 CST 分析
             cst_analyzer = CSTAnalyzer()
@@ -311,9 +309,7 @@ async def ast_analysis_node(state: ScanState) -> ScanState:
                 code = f.read()
 
             # 创建分析上下文
-            context = AnalysisContext(
-                file_path=str(target_path), file_content=code, language="python"
-            )
+            context = AnalysisContext(file_path=target_path, file_content=code, language="python")
 
             # 执行 AST 分析
             ast_analyzer = ASTAnalyzer()
@@ -346,9 +342,7 @@ async def taint_analysis_node(state: ScanState) -> ScanState:
                 code = f.read()
 
             # 创建分析上下文
-            context = AnalysisContext(
-                file_path=str(target_path), file_content=code, language="python"
-            )
+            context = AnalysisContext(file_path=target_path, file_content=code, language="python")
 
             # 执行污点分析
             taint_analyzer = TaintAnalyzer()
@@ -491,14 +485,14 @@ async def validation_node(state: ScanState) -> ScanState:
         )
 
         return state.update(
-            scan_result=ScanResult(target=state.target, status="completed"),
+            scan_result=ScanResult(target=state.target, status=ScanStatus.COMPLETED),
             confidence=confidence,
             flags={"needs_reflow": needs_reflow, "reflow_info": reflow_info},
         )
 
     except Exception as e:
         print(f"[DEBUG] 验证节点出错: {e}")
-        return state.update(scan_result=ScanResult(target=state.target, status="failed"))
+        return state.update(scan_result=ScanResult(target=state.target, status=ScanStatus.FAILED))
 
 
 @cache_result
@@ -513,7 +507,7 @@ async def generate_report(state: ScanState) -> ScanState:
             return state
 
         # 创建扫描结果
-        scan_result = ScanResult(target=state.target, status="running")
+        scan_result = ScanResult(target=state.target, status=ScanStatus.RUNNING)
 
         # 处理融合的证据
         if state.evidence:
@@ -594,7 +588,7 @@ async def generate_report(state: ScanState) -> ScanState:
         return state.update(scan_result=scan_result)
 
     except Exception as e:
-        scan_result = ScanResult(target=state.target, status="failed")
+        scan_result = ScanResult(target=state.target, status=ScanStatus.FAILED)
         scan_result.fail(str(e))
         return state.update(scan_result=scan_result)
 
@@ -725,7 +719,7 @@ async def run_scan(target: str, config: Any) -> ScanResult:
         print("✅ LangGraph 扫描流程执行完成")
 
         # 创建扫描结果
-        scan_result = ScanResult(target=target, status="completed")
+        scan_result = ScanResult(target=target, status=ScanStatus.COMPLETED)
 
         # 处理分析结果
         if "final_report" in result:
@@ -756,7 +750,7 @@ async def run_scan(target: str, config: Any) -> ScanResult:
 
     except Exception as e:
         # 创建失败结果
-        error_result = ScanResult(target=target, status="failed")
+        error_result = ScanResult(target=target, status=ScanStatus.FAILED)
         error_result.fail(str(e))
         print(f"❌ LangGraph 扫描流程失败: {e}")
         return error_result
@@ -847,10 +841,10 @@ async def graph_node(state: AgentState) -> AgentState:
         # 连接Neo4j
         from src.db import get_neo4j_manager
 
-        neo4j_manager = get_neo4j_manager({})
+        neo4j_manager = get_neo4j_manager(None)
 
         # 构建攻击链
-        attack_chain = {"chains": [], "statistics": {}}
+        attack_chain: dict[str, Any] = {"chains": [], "statistics": {}}
 
         if state.get("cve_candidates"):
             for candidate in state["cve_candidates"]:
@@ -862,7 +856,8 @@ async def graph_node(state: AgentState) -> AgentState:
                     try:
                         chain_info = neo4j_manager.generate_attack_chain(cve_id)
                         if chain_info and "attack_chain" in chain_info:
-                            attack_chain["chains"].append(
+                            chains_list: list[Any] = attack_chain["chains"]
+                            chains_list.append(
                                 {
                                     "cve_id": cve_id,
                                     "chain": chain_info["attack_chain"],

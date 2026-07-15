@@ -217,22 +217,23 @@ class NVDETL(BaseETL):
         """
 
         try:
-            with self.conn.get_connection() as conn:
-                cursor = conn.cursor()
-                for item in batch:
-                    try:
-                        cursor.execute(
-                            query,
-                            (
-                                item.get("cve_id"),
-                                item.get("score"),
-                                item.get("severity", ""),
-                                item.get("vector", ""),
-                                item.get("version", "3.1"),
-                            ),
-                        )
-                    except Exception:
-                        pass
+            conn = self.conn
+            cursor = conn.get_cursor()
+            for item in batch:
+                try:
+                    cursor.execute(
+                        query,
+                        (
+                            item.get("cve_id"),
+                            item.get("score"),
+                            item.get("severity", ""),
+                            item.get("vector", ""),
+                            item.get("version", "3.1"),
+                        ),
+                    )
+                except Exception:
+                    pass
+            cursor.close()
         except Exception as e:
             print(f"    ⚠ CVSS批量插入失败: {e}")
 
@@ -248,25 +249,26 @@ class NVDETL(BaseETL):
         """
 
         try:
-            with self.conn.get_connection() as conn:
-                cursor = conn.cursor()
-                for item in batch:
-                    try:
-                        cursor.execute(
-                            query,
-                            (
-                                item.get("cve_id"),
-                                item.get("vendor", ""),
-                                item.get("product", ""),
-                                item.get("version", ""),
-                                item.get("version_start", ""),
-                                item.get("version_end", ""),
-                                item.get("version_start_type"),
-                                item.get("version_end_type"),
-                            ),
-                        )
-                    except Exception:
-                        pass
+            conn = self.conn
+            cursor = conn.get_cursor()
+            for item in batch:
+                try:
+                    cursor.execute(
+                        query,
+                        (
+                            item.get("cve_id"),
+                            item.get("vendor", ""),
+                            item.get("product", ""),
+                            item.get("version", ""),
+                            item.get("version_start", ""),
+                            item.get("version_end", ""),
+                            item.get("version_start_type"),
+                            item.get("version_end_type"),
+                        ),
+                    )
+                except Exception:
+                    pass
+            cursor.close()
         except Exception as e:
             print(f"    ⚠ CPE批量插入失败: {e}")
 
@@ -274,21 +276,32 @@ class NVDETL(BaseETL):
         """插入CVSS数据"""
         query = """
             INSERT INTO cvss (cve_id, score, severity, vector, version)
-            VALUES (%(cve_id)s, %(score)s, %(severity)s, %(vector)s, %(version)s)
-            ON CONFLICT (cve_id) DO UPDATE SET
-                score = EXCLUDED.score,
-                severity = EXCLUDED.severity,
-                vector = EXCLUDED.vector,
-                version = EXCLUDED.version
+            VALUES (?, ?, ?, ?, ?)
         """
-        self.conn.execute(query, cvss_data)
+        params = (
+            cvss_data.get("cve_id"),
+            cvss_data.get("score"),
+            cvss_data.get("severity", ""),
+            cvss_data.get("vector", ""),
+            cvss_data.get("version", "3.1"),
+        )
+        self.conn.execute(query, params)
 
     def _insert_cpe(self, cpe_data: Dict) -> None:
         """插入CPE数据"""
         query = """
             INSERT INTO cpe (cve_id, vendor, product, version,
                           version_start, version_end, version_start_type, version_end_type)
-            VALUES (%(cve_id)s, %(vendor)s, %(product)s, %(version)s,
-                   %(version_start)s, %(version_end)s, %(version_start_type)s, %(version_end_type)s)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         """
-        self.conn.execute(query, cpe_data)
+        params = (
+            cpe_data.get("cve_id"),
+            cpe_data.get("vendor", ""),
+            cpe_data.get("product", ""),
+            cpe_data.get("version", ""),
+            cpe_data.get("version_start", ""),
+            cpe_data.get("version_end", ""),
+            cpe_data.get("version_start_type"),
+            cpe_data.get("version_end_type"),
+        )
+        self.conn.execute(query, params)

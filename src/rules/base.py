@@ -103,6 +103,8 @@ class RuleMetadata:
     author: str = ""
     references: List[str] = field(default_factory=list)
     tags: List[str] = field(default_factory=list)
+    cwe: str = ""
+    owasp_category: str = ""
     enabled: bool = True
     deprecated: bool = False
     replacement: Optional[str] = None
@@ -141,6 +143,36 @@ class BaseRule(ABC):
     def name(self) -> str:
         """规则名称"""
         return self.metadata.name
+
+    @property
+    def severity(self) -> RuleSeverity:
+        """规则严重级别"""
+        return self.metadata.severity
+
+    @property
+    def category(self) -> RuleCategory:
+        """规则类别"""
+        return self.metadata.category
+
+    @property
+    def language(self) -> str:
+        """规则适用的语言"""
+        return self.metadata.language
+
+    def is_enabled(self) -> bool:
+        """检查规则是否启用"""
+        return self.metadata.enabled and not self.metadata.deprecated
+
+    def matches_language(self, language: str) -> bool:
+        """检查规则是否匹配语言
+
+        Args:
+            language: 语言标识
+
+        Returns:
+            是否匹配
+        """
+        return self.metadata.language.lower() == language.lower() or self.metadata.language == "*"
 
 
 @dataclass
@@ -218,47 +250,6 @@ class RuleDefinition:
         }
         return severity_map.get(self.severity.lower(), 5.0)
 
-    @property
-    def severity(self) -> RuleSeverity:
-        """规则严重级别"""
-        return self.metadata.severity
-
-    @property
-    def category(self) -> RuleCategory:
-        """规则类别"""
-        return self.metadata.category
-
-    @property
-    def language(self) -> str:
-        """规则适用的语言"""
-        return self.metadata.language
-
-    @abstractmethod
-    def check(self, target: Union[str, Path, Dict[str, Any]]) -> List[RuleResult]:
-        """执行规则检查
-
-        Args:
-            target: 检查目标（文件路径、代码内容或 AST 节点）
-
-        Returns:
-            规则执行结果列表
-        """
-
-    def is_enabled(self) -> bool:
-        """检查规则是否启用"""
-        return self.metadata.enabled and not self.metadata.deprecated
-
-    def matches_language(self, language: str) -> bool:
-        """检查规则是否匹配语言
-
-        Args:
-            language: 语言标识
-
-        Returns:
-            是否匹配
-        """
-        return self.metadata.language.lower() == language.lower() or self.metadata.language == "*"
-
 
 class PatternRule(BaseRule):
     """基于模式的规则
@@ -287,17 +278,15 @@ class PatternRule(BaseRule):
         Returns:
             规则执行结果列表
         """
-        results = []
+        results: List[RuleResult] = []
 
         # 获取代码内容
         if isinstance(target, Path):
             content = target.read_text(encoding="utf-8")
         elif isinstance(target, str):
             content = target
-        elif isinstance(target, dict):
+        else:  # dict
             content = target.get("content", "")
-        else:
-            return results
 
         # 执行模式匹配
         for pattern in self._compiled_patterns:
@@ -345,7 +334,7 @@ class ASTRule(BaseRule):
         Returns:
             规则执行结果列表
         """
-        results = []
+        results: List[RuleResult] = []
 
         # 这里应该使用 AST 分析器进行实际的分析
         # 目前只是一个框架实现

@@ -6,7 +6,7 @@
 
 import re
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, cast
 
 from src.core.config import Config, get_config
 from src.utils.logger import get_logger
@@ -50,7 +50,7 @@ class LibraryMatcher:
             config: 配置对象
         """
         self.config = config or get_config()
-        self._nvd_adapter = None
+        self._nvd_adapter: Optional[Any] = None
         self._nvd_available = False
         self._library_cve_cache: Dict[str, List[LibraryVulnerability]] = {}
         self._language_patterns = {
@@ -154,7 +154,7 @@ class LibraryMatcher:
         Returns:
             匹配到的漏洞列表
         """
-        vulnerabilities = []
+        vulnerabilities: List[LibraryVulnerability] = []
 
         if self._nvd_available and self._nvd_adapter:
             vulnerabilities.extend(self._match_via_nvd(libraries))
@@ -165,7 +165,7 @@ class LibraryMatcher:
 
     def _match_via_nvd(self, libraries: List[LibraryInfo]) -> List[LibraryVulnerability]:
         """通过NVD数据库匹配漏洞（带缓存优化）"""
-        vulnerabilities = []
+        vulnerabilities: List[LibraryVulnerability] = []
         uncached_libraries = []
 
         for library in libraries:
@@ -183,6 +183,7 @@ class LibraryMatcher:
                 vendor = library.name.split(".")[0]
                 product = library.name
 
+                assert self._nvd_adapter is not None
                 hits = self._nvd_adapter.scan_library(
                     vendor=vendor, product=product, version=library.version, min_score=5.0, limit=50
                 )
@@ -343,7 +344,8 @@ class LibraryMatcher:
             return None
 
         try:
-            return self._nvd_adapter.get_cve_details(cve_id)
+            result = self._nvd_adapter.get_cve_details(cve_id)
+            return cast(Optional[Dict[str, Any]], result)
         except Exception as e:
             logger.debug(f"获取NVD详情失败: {e}")
             return None
@@ -361,7 +363,8 @@ class LibraryMatcher:
             return []
 
         try:
-            return self._nvd_adapter.get_exploits(cve_id)
+            result = self._nvd_adapter.get_exploits(cve_id)
+            return cast(List[Dict[str, Any]], result)
         except Exception as e:
             logger.debug(f"获取Exploit列表失败: {e}")
             return []
@@ -379,7 +382,8 @@ class LibraryMatcher:
             return []
 
         try:
-            return self._nvd_adapter.get_pocs(cve_id)
+            result = self._nvd_adapter.get_pocs(cve_id)
+            return cast(List[Dict[str, Any]], result)
         except Exception as e:
             logger.debug(f"获取PoC列表失败: {e}")
             return []
@@ -396,10 +400,11 @@ class LibraryMatcher:
         Returns:
             可利用的漏洞列表
         """
-        vulnerabilities = []
+        vulnerabilities: List[LibraryVulnerability] = []
 
         if self._nvd_available and self._nvd_adapter:
             try:
+                assert self._nvd_adapter is not None
                 hits = self._nvd_adapter.find_exploitable(min_score=min_score, limit=limit)
                 for hit in hits:
                     vuln = LibraryVulnerability(

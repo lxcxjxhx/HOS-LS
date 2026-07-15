@@ -3,18 +3,23 @@ from __future__ import annotations
 import ast
 import re
 from dataclasses import dataclass, field
-from typing import Any, Optional
+from typing import Any, Optional, Union, cast
+
+_UNIVERSAL_PARSER_AVAILABLE = False
+UniversalParser: Any = None
+SupportedLanguage: Any = None
+TreeSitterAdapter: Any = None
 
 try:
-    from .tree_sitter_adapter import TreeSitterAdapter
-    from .universal_parser import SupportedLanguage, UniversalParser
+    from .tree_sitter_adapter import TreeSitterAdapter  # type: ignore[no-redef,unused-ignore]
+    from .universal_parser import (  # type: ignore[no-redef,unused-ignore]
+        SupportedLanguage,
+        UniversalParser,
+    )
 
     _UNIVERSAL_PARSER_AVAILABLE = True
 except ImportError:
-    _UNIVERSAL_PARSER_AVAILABLE = False
-    UniversalParser = None
-    SupportedLanguage = None
-    TreeSitterAdapter = None
+    pass
 
 
 @dataclass
@@ -48,7 +53,9 @@ class Token:
 
 
 class ASTTranspilerEngine:
-    def __init__(self):
+    def __init__(self) -> None:
+        self._universal_parser: Any
+        self._tree_sitter: Any
         if _UNIVERSAL_PARSER_AVAILABLE:
             self._universal_parser = UniversalParser()
             try:
@@ -74,9 +81,10 @@ class ASTTranspilerEngine:
 
 
 class JavaASTParser(ASTTranspilerEngine):
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
-        self.javalang_available = False
+        self.javalang_available: bool = False
+        self.javalang: Any = None
         try:
             import javalang
 
@@ -91,7 +99,10 @@ class JavaASTParser(ASTTranspilerEngine):
         if self.javalang_available:
             return self._parse_with_javalang(source_code)
         elif self._universal_parser is not None:
-            return self._universal_parser.parse(source_code, SupportedLanguage.JAVA)
+            return cast(
+                IntermediateRepresentation,
+                self._universal_parser.parse(source_code, SupportedLanguage.JAVA),
+            )
         else:
             return self._fallback_parse(source_code)
 
@@ -115,23 +126,23 @@ class JavaASTParser(ASTTranspilerEngine):
 
         return ir
 
-    def _convert_class_to_ir(self, node) -> IRNode:
-        children = []
+    def _convert_class_to_ir(self, node: Any) -> IRNode:
+        children: list[IRNode] = []
         if hasattr(node, "body"):
             for member in node.body:
                 if isinstance(member, self.javalang.tree.MethodDeclaration):
                     children.append(self._convert_method_to_ir(member))
 
-        extends = []
+        extends: list[str] = []
         if node.extends:
             extends.append(node.extends.name)
 
-        implements = []
+        implements: list[str] = []
         if node.implements:
             for iface in node.implements:
                 implements.append(iface.name)
 
-        modifiers = []
+        modifiers: list[str] = []
         if hasattr(node, "modifiers"):
             modifiers = list(node.modifiers)
 
@@ -143,14 +154,14 @@ class JavaASTParser(ASTTranspilerEngine):
             source_location=("", node.line if hasattr(node, "line") else 0, 0),
         )
 
-    def _convert_method_to_ir(self, node) -> IRNode:
-        params = []
+    def _convert_method_to_ir(self, node: Any) -> IRNode:
+        params: list[dict[str, str]] = []
         if hasattr(node, "parameters"):
             for param in node.parameters:
                 param_type = param.type.name if hasattr(param.type, "name") else str(param.type)
                 params.append({"name": param.name, "type": param_type})
 
-        return_type = "void"
+        return_type: str = "void"
         if hasattr(node, "return_type") and node.return_type:
             return_type = (
                 node.return_type.name
@@ -158,7 +169,7 @@ class JavaASTParser(ASTTranspilerEngine):
                 else str(node.return_type)
             )
 
-        modifiers = []
+        modifiers: list[str] = []
         if hasattr(node, "modifiers"):
             modifiers = list(node.modifiers)
 
@@ -201,7 +212,7 @@ class JavaASTParser(ASTTranspilerEngine):
             raise ValueError(f"Unsupported target language: {target_lang}")
 
     def _ir_to_python_ast(self, ir: IntermediateRepresentation) -> ast.Module:
-        body = []
+        body: list[ast.stmt] = []
 
         for import_str in ir.imports:
             if import_str.endswith(".*"):
@@ -232,11 +243,11 @@ class JavaASTParser(ASTTranspilerEngine):
         return None
 
     def _convert_class_to_python(self, class_node: IRNode) -> ast.ClassDef:
-        bases = []
+        bases: list[ast.expr] = []
         for base in class_node.attributes.get("extends", []):
             bases.append(self._create_name(base))
 
-        body = []
+        body: list[ast.stmt] = []
         for child in class_node.children:
             if child.node_type in ["method_de", "field_def"]:
                 converted = self._convert_ir_node_to_python(child)
@@ -265,7 +276,7 @@ class JavaASTParser(ASTTranspilerEngine):
             defaults=[],
         )
 
-        body = [ast.Pass()]
+        body: list[ast.stmt] = [ast.Pass()]
 
         return ast.FunctionDef(
             name=method_node.name if method_node.name else "__init__",
@@ -285,7 +296,9 @@ class JavaASTParser(ASTTranspilerEngine):
             return ast.Assign(targets=[target], value=value)
         return None
 
-    def _convert_expression_to_python(self, expr_node: IRNode) -> ast.expr:
+    def _convert_expression_to_python(self, expr_node: Any) -> ast.expr:
+        if expr_node is None:
+            return ast.Constant(value=None)
         if expr_node.node_type == "literal":
             value = expr_node.attributes.get("value", "")
             if expr_node.name == "number":
@@ -311,7 +324,7 @@ class JavaASTParser(ASTTranspilerEngine):
             right = self._convert_expression_to_python(expr_node.attributes.get("right"))
             operator = expr_node.attributes.get("operator", "+")
 
-            op_map = {
+            op_map: dict[str, Any] = {
                 "+": ast.Add(),
                 "-": ast.Sub(),
                 "*": ast.Mult(),
@@ -331,15 +344,25 @@ class JavaASTParser(ASTTranspilerEngine):
             }
 
             if operator in ["+", "-", "*", "/", "%"]:
-                return ast.BinOp(left=left, op=op_map.get(operator, ast.Add()), right=right)
+                return ast.BinOp(
+                    left=left, op=cast(ast.operator, op_map.get(operator, ast.Add())), right=right
+                )
             elif operator in ["==", "!=", "<", ">", "<=", ">="]:
                 return ast.Compare(
-                    left=left, ops=[op_map.get(operator, ast.Eq())], comparators=[right]
+                    left=left,
+                    ops=[cast(ast.cmpop, op_map.get(operator, ast.Eq()))],
+                    comparators=[right],
                 )
             elif operator in ["&&", "||"]:
-                return ast.BoolOp(op=op_map.get(operator, ast.Or()), values=[left, right])
+                return ast.BoolOp(
+                    op=cast(ast.boolop, op_map.get(operator, ast.Or())), values=[left, right]
+                )
             elif operator in ["&", "|", "^"]:
-                return ast.BinOp(left=left, op=op_map.get(operator, ast.BitAnd()), right=right)
+                return ast.BinOp(
+                    left=left,
+                    op=cast(ast.operator, op_map.get(operator, ast.BitAnd())),
+                    right=right,
+                )
 
         elif expr_node.node_type == "method_invocation":
             func = self._convert_expression_to_python(expr_node.attributes.get("object"))
@@ -439,7 +462,10 @@ class PythonASTParser(ASTTranspilerEngine):
             name=node.name,
             attributes={
                 "bases": [
-                    base.attr if isinstance(base, ast.Attribute) else base.id for base in node.bases
+                    base.attr
+                    if isinstance(base, ast.Attribute)
+                    else (base.id if isinstance(base, ast.Name) else str(base))
+                    for base in node.bases
                 ]
             },
             children=children,
@@ -557,7 +583,12 @@ class PythonASTParser(ASTTranspilerEngine):
             elts = [self._convert_python_expr_to_ir(elt) for elt in node.elts]
             return IRNode(node_type="list_literal", name="list", attributes={"elements": elts})
         elif isinstance(node, ast.Dict):
-            keys = [self._convert_python_expr_to_ir(k) for k in node.keys]
+            keys = [
+                self._convert_python_expr_to_ir(k)
+                if k is not None
+                else IRNode(node_type="unknown", name="none", attributes={})
+                for k in node.keys
+            ]
             values = [self._convert_python_expr_to_ir(v) for v in node.values]
             return IRNode(
                 node_type="dict_literal", name="dict", attributes={"keys": keys, "values": values}
@@ -586,7 +617,7 @@ class PythonASTParser(ASTTranspilerEngine):
             return IRNode(node_type="boolean_operation", name=op, attributes={"values": values})
         return IRNode(node_type="unknown_expr", name="unknown", attributes={})
 
-    def _get_python_op_name(self, op: ast.operator) -> str:
+    def _get_python_op_name(self, op: Any) -> str:
         op_map = {
             ast.Add: "+",
             ast.Sub: "-",
@@ -636,10 +667,10 @@ class PythonASTParser(ASTTranspilerEngine):
 
     def _ir_to_python_node(self, ir_node: IRNode) -> Optional[ast.stmt]:
         if ir_node.node_type == "class_def":
-            bases = [
+            bases: list[ast.expr] = [
                 ast.Name(id=base, ctx=ast.Load()) for base in ir_node.attributes.get("bases", [])
             ]
-            body = []
+            body: list[ast.stmt] = []
             for child in ir_node.children:
                 converted = self._ir_to_python_node(child)
                 if converted:
@@ -694,19 +725,43 @@ class PythonASTParser(ASTTranspilerEngine):
             return ast.Return(value=value)
         elif ir_stmt.node_type == "if_statement":
             test = self._ir_expr_to_python(ir_stmt.attributes.get("condition"))
-            body = [self._ir_stmt_to_python(s) for s in ir_stmt.children if s.node_type != "else"]
-            orelse = [self._ir_stmt_to_python(s) for s in ir_stmt.children if s.node_type == "else"]
+            body = [
+                s
+                for s in (
+                    self._ir_stmt_to_python(stmt)
+                    for stmt in ir_stmt.children
+                    if stmt.node_type != "else"
+                )
+                if s is not None
+            ]
+            orelse = [
+                s
+                for s in (
+                    self._ir_stmt_to_python(stmt)
+                    for stmt in ir_stmt.children
+                    if stmt.node_type == "else"
+                )
+                if s is not None
+            ]
             return ast.If(
                 test=test, body=body if body else [ast.Pass()], orelse=orelse if orelse else []
             )
         elif ir_stmt.node_type == "while_statement":
             test = self._ir_expr_to_python(ir_stmt.attributes.get("condition"))
-            body = [self._ir_stmt_to_python(s) for s in ir_stmt.children]
+            body = [
+                s
+                for s in (self._ir_stmt_to_python(stmt) for stmt in ir_stmt.children)
+                if s is not None
+            ]
             return ast.While(test=test, body=body if body else [ast.Pass()], orelse=[])
         elif ir_stmt.node_type == "for_statement":
             target = self._ir_expr_to_python(ir_stmt.attributes.get("target"))
             iter_ = self._ir_expr_to_python(ir_stmt.attributes.get("iter"))
-            body = [self._ir_stmt_to_python(s) for s in ir_stmt.children]
+            body = [
+                s
+                for s in (self._ir_stmt_to_python(stmt) for stmt in ir_stmt.children)
+                if s is not None
+            ]
             return ast.For(
                 target=target, iter=iter_, body=body if body else [ast.Pass()], orelse=[]
             )
@@ -724,7 +779,9 @@ class PythonASTParser(ASTTranspilerEngine):
             return ast.Continue()
         return None
 
-    def _ir_expr_to_python(self, ir_expr: IRNode) -> ast.expr:
+    def _ir_expr_to_python(self, ir_expr: Any) -> ast.expr:
+        if ir_expr is None:
+            return ast.Constant(value=None)
         if ir_expr.node_type == "identifier":
             return ast.Name(id=ir_expr.name, ctx=ast.Load())
         elif ir_expr.node_type == "literal":
@@ -768,7 +825,7 @@ class PythonASTParser(ASTTranspilerEngine):
         elif ir_expr.node_type == "dict_literal":
             keys = [self._ir_expr_to_python(k) for k in ir_expr.attributes.get("keys", [])]
             values = [self._ir_expr_to_python(v) for v in ir_expr.attributes.get("values", [])]
-            return ast.Dict(keys=keys, values=values)
+            return ast.Dict(keys=keys, values=values)  # type: ignore[arg-type]
         elif ir_expr.node_type == "comparison":
             left = self._ir_expr_to_python(ir_expr.attributes.get("left"))
             ops = [self._python_op_from_string(op) for op in ir_expr.attributes.get("ops", [])]
@@ -782,8 +839,8 @@ class PythonASTParser(ASTTranspilerEngine):
             return ast.BoolOp(op=op, values=values)
         return ast.Constant(value=None)
 
-    def _python_op_from_string(self, op_str: str) -> ast.operator:
-        op_map = {
+    def _python_op_from_string(self, op_str: str) -> Any:
+        op_map: dict[str, Any] = {
             "+": ast.Add(),
             "-": ast.Sub(),
             "*": ast.Mult(),
@@ -796,6 +853,12 @@ class PythonASTParser(ASTTranspilerEngine):
             "^": ast.BitXor(),
             "<<": ast.LShift(),
             ">>": ast.RShift(),
+            "==": ast.Eq(),
+            "!=": ast.NotEq(),
+            "<": ast.Lt(),
+            ">": ast.Gt(),
+            "<=": ast.LtE(),
+            ">=": ast.GtE(),
         }
         return op_map.get(op_str, ast.Add())
 
@@ -813,14 +876,14 @@ class PythonASTParser(ASTTranspilerEngine):
 
 
 class CPPASTParser(ASTTranspilerEngine):
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
 
     def parse_to_ir(
         self, source_code: str, source_lang: Optional[str] = None
     ) -> IntermediateRepresentation:
         if self._tree_sitter is not None:
-            return self._tree_sitter.parse(source_code, "cpp")
+            return cast(IntermediateRepresentation, self._tree_sitter.parse(source_code, "cpp"))
         return self._fallback_parse(source_code)
 
     def _fallback_parse(self, source_code: str) -> IntermediateRepresentation:
@@ -854,7 +917,7 @@ class CPPASTParser(ASTTranspilerEngine):
             raise ValueError(f"Unsupported target language: {target_lang}")
 
     def _ir_to_python_ast(self, ir: IntermediateRepresentation) -> ast.Module:
-        body = []
+        body: list[ast.stmt] = []
         for node in ir.nodes:
             if node.node_type == "class_def":
                 class_def = ast.ClassDef(
@@ -892,14 +955,14 @@ class CPPASTParser(ASTTranspilerEngine):
 
 
 class RustASTParser(ASTTranspilerEngine):
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
 
     def parse_to_ir(
         self, source_code: str, source_lang: Optional[str] = None
     ) -> IntermediateRepresentation:
         if self._tree_sitter is not None:
-            return self._tree_sitter.parse(source_code, "rust")
+            return cast(IntermediateRepresentation, self._tree_sitter.parse(source_code, "rust"))
         return self._fallback_parse(source_code)
 
     def _fallback_parse(self, source_code: str) -> IntermediateRepresentation:
@@ -937,7 +1000,7 @@ class RustASTParser(ASTTranspilerEngine):
             raise ValueError(f"Unsupported target language: {target_lang}")
 
     def _ir_to_python_ast(self, ir: IntermediateRepresentation) -> ast.Module:
-        body = []
+        body: list[ast.stmt] = []
         for node in ir.nodes:
             if node.node_type in ["struct_de", "impl_block"]:
                 class_def = ast.ClassDef(
@@ -982,7 +1045,7 @@ class GoASTParser(ASTTranspilerEngine):
         self, source_code: str, source_lang: Optional[str] = None
     ) -> IntermediateRepresentation:
         if self._tree_sitter is not None:
-            return self._tree_sitter.parse(source_code, "go")
+            return cast(IntermediateRepresentation, self._tree_sitter.parse(source_code, "go"))
         return self._fallback_parse(source_code)
 
     def _fallback_parse(self, source_code: str) -> IntermediateRepresentation:
@@ -1040,7 +1103,7 @@ class GoASTParser(ASTTranspilerEngine):
             raise ValueError(f"Unsupported target language: {target_lang}")
 
     def _ir_to_python_ast(self, ir: IntermediateRepresentation) -> ast.Module:
-        body = []
+        body: list[ast.stmt] = []
         for node in ir.nodes:
             if node.node_type in ["function_de", "method_def"]:
                 func_def = ast.FunctionDef(

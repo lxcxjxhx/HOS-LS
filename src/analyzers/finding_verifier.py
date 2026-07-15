@@ -258,7 +258,7 @@ class FindingVerifier:
         },
     }
 
-    def __init__(self, project_root: str = "", nvd_db_path: str = None):
+    def __init__(self, project_root: str = "", nvd_db_path: Optional[str] = None):
         self.project_root = project_root
         self.nvd_adapter = None
 
@@ -594,7 +594,9 @@ class FindingVerifier:
         except Exception:
             return False
 
-    def verify_and_annotate(self, finding, project_root: Optional[str] = None) -> Dict[str, Any]:
+    def verify_and_annotate(
+        self, finding, project_root: Optional[str] = None
+    ) -> FindingVerification:
         """对发现进行全面验证并注解
 
         Args:
@@ -970,7 +972,10 @@ class FuzzyCweMatcher:
 
 
 def verify_ai_findings(
-    findings: List, project_root: str, nvd_vulnerabilities: List = None, nvd_db_path: str = None
+    findings: List,
+    project_root: str,
+    nvd_vulnerabilities: Optional[List] = None,
+    nvd_db_path: Optional[str] = None,
 ) -> List[Dict[str, Any]]:
     """批量验证 AI 发现
 
@@ -988,9 +993,12 @@ def verify_ai_findings(
 
     for finding in findings:
         verification = verifier.verify_and_annotate(finding, project_root)
-        verification_dict = (
-            verification.to_dict() if hasattr(verification, "to_dict") else verification
-        )
+        if hasattr(verification, "to_dict"):
+            verification_dict: Dict[str, Any] = verification.to_dict()
+        elif isinstance(verification, dict):
+            verification_dict = verification
+        else:
+            verification_dict = {}
         results.append(verification_dict)
 
         if isinstance(finding, dict):
@@ -1034,7 +1042,11 @@ class MultiLayerValidator:
     """
 
     def __init__(self):
-        self.layers = [KeywordMatchValidator(), AnnotationTypeValidator(), SemanticValidator()]
+        self.layers: List[Any] = [
+            KeywordMatchValidator(),
+            AnnotationTypeValidator(),
+            SemanticValidator(),
+        ]
 
     def validate(self, vulnerability: dict, file_content: str) -> tuple[bool, str, dict]:
         """执行多层验证
@@ -1046,7 +1058,7 @@ class MultiLayerValidator:
         Returns:
             (是否通过, 状态, 详细信息)
         """
-        results = []
+        results: List[Dict[str, Any]] = []
         for layer in self.layers:
             is_valid, status, details = layer.validate(vulnerability, file_content)
             results.append(
@@ -1264,7 +1276,10 @@ class SemanticValidator:
 
 
 def multi_layer_validate(
-    vulnerability: dict, file_content: str, line_number: int = None, line_content: str = None
+    vulnerability: dict,
+    file_content: str,
+    line_number: Optional[int] = None,
+    line_content: Optional[str] = None,
 ) -> tuple[bool, str, dict]:
     """多层验证的便捷函数
 

@@ -4,7 +4,7 @@
 """
 
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Callable, List, Optional
 
@@ -33,11 +33,11 @@ class PanelItem:
     value: Any
     default: Any = None
     description: str = ""
-    options: List[Any] = None
+    options: Optional[List[Any]] = field(default=None)
     type: str = "string"
-    on_change: Callable[[Any], None] = None
+    on_change: Optional[Callable[[Any], None]] = field(default=None)
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.options is None:
             self.options = []
 
@@ -158,6 +158,7 @@ class InteractivePanel:
                 return Key.RIGHT
             elif char == b"K":
                 return Key.LEFT
+            return Key.UNKNOWN
         elif char == b"\r":
             return Key.ENTER
         elif char == b" ":
@@ -179,13 +180,13 @@ class InteractivePanel:
     def _get_key_unix(self) -> Key:
         """Unix平台获取按键"""
         import sys as _sys
-        import termios
-        import tty
+        import termios as _termios  # type: ignore[import-not-found,unused-ignore]
+        import tty as _tty
 
         fd = _sys.stdin.fileno()
-        old_settings = termios.tcgetattr(fd)
+        old_settings = _termios.tcgetattr(fd)  # type: ignore[attr-defined]
         try:
-            tty.setraw(fd)
+            _tty.setraw(fd)  # type: ignore[attr-defined]
             char = _sys.stdin.read(1)
             if char == "\x1b":
                 next_char = _sys.stdin.read(1)
@@ -199,6 +200,8 @@ class InteractivePanel:
                         return Key.RIGHT
                     elif third_char == "D":
                         return Key.LEFT
+                    return Key.UNKNOWN
+                return Key.UNKNOWN
             elif char == "\r" or char == "\n":
                 return Key.ENTER
             elif char == " ":
@@ -212,12 +215,12 @@ class InteractivePanel:
             else:
                 return Key.UNKNOWN
         finally:
-            termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+            _termios.tcsetattr(fd, _termios.TCSADRAIN, old_settings)  # type: ignore[attr-defined]
 
     def run(self) -> Optional["InteractivePanel"]:
         """运行面板主循环"""
         self.is_running = True
-        result_panel = None
+        result_panel: Optional["InteractivePanel"] = None
 
         while self.is_running:
             self.render()
@@ -249,7 +252,8 @@ class InteractivePanel:
             elif key == Key.Q:
                 self.is_running = False
                 result_panel = None
-            elif key != Key.UNKNOWN:
+            else:
+                # Handle UNKNOWN and any other keys as character input
                 self.handle_character(
                     str(key.value) if hasattr(key.value, "value") else key.name.lower()
                 )

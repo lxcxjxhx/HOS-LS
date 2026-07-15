@@ -342,7 +342,7 @@ class APIKeyManager:
         Returns:
             统计信息
         """
-        stats = {
+        stats: Dict[str, Any] = {
             "total_keys": 0,
             "by_provider": {},
             "by_status": {},
@@ -396,7 +396,11 @@ class APIKeyManager:
         if self.config.encryption_key:
             self._encryption_key = self.config.encryption_key.encode()
         else:
-            key_file = self.config.key_file or Path.home() / ".api_key_encryption_key"
+            key_file = (
+                Path(self.config.key_file)
+                if self.config.key_file
+                else Path.home() / ".api_key_encryption_key"
+            )
             if key_file.exists():
                 try:
                     with open(key_file, "rb") as f:
@@ -470,7 +474,11 @@ class APIKeyManager:
             keys_data = self.config_manager.get("api_keys", {})
             self._load_from_dict(keys_data)
         else:
-            key_file = self.config.key_file or Path.home() / ".api_keys.json"
+            key_file = (
+                Path(self.config.key_file)
+                if self.config.key_file
+                else Path.home() / ".api_keys.json"
+            )
             if key_file.exists():
                 try:
                     with open(key_file, "r", encoding="utf-8") as f:
@@ -486,7 +494,11 @@ class APIKeyManager:
         if self.config_manager and hasattr(self.config_manager, "set"):
             self.config_manager.set("api_keys", keys_data)
         else:
-            key_file = self.config.key_file or Path.home() / ".api_keys.json"
+            key_file = (
+                Path(self.config.key_file)
+                if self.config.key_file
+                else Path.home() / ".api_keys.json"
+            )
             try:
                 key_file.parent.mkdir(parents=True, exist_ok=True)
                 with open(key_file, "w", encoding="utf-8") as f:

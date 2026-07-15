@@ -3,6 +3,8 @@
 提供中英文翻译支持，统一日志和消息的语言输出。
 """
 
+from typing import Optional
+
 from .locale import LocaleManager, get_current_language, reset_language, set_language
 from .translations import (
     SEVERITY_TRANSLATIONS,
@@ -29,7 +31,7 @@ __all__ = [
 ]
 
 
-def t(key: str, lang: str = None, **kwargs) -> str:
+def t(key: str, lang: Optional[str] = None, **kwargs) -> str:
     """翻译函数
 
     Args:
@@ -50,7 +52,7 @@ def t(key: str, lang: str = None, **kwargs) -> str:
     return template
 
 
-def t_state(state: str, lang: str = None) -> str:
+def t_state(state: str, lang: Optional[str] = None) -> str:
     """翻译状态值
 
     Args:
@@ -64,7 +66,7 @@ def t_state(state: str, lang: str = None) -> str:
     return get_state_translation(current_lang, state)
 
 
-def t_severity(severity: str, lang: str = None) -> str:
+def t_severity(severity: str, lang: Optional[str] = None) -> str:
     """翻译严重程度
 
     Args:
@@ -78,7 +80,7 @@ def t_severity(severity: str, lang: str = None) -> str:
     return get_severity_translation(current_lang, severity)
 
 
-def t_bool(value: bool, lang: str = None) -> str:
+def t_bool(value: bool, lang: Optional[str] = None) -> str:
     """翻译布尔值
 
     Args:

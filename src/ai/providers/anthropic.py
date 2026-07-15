@@ -4,9 +4,10 @@
 """
 
 import os
-from typing import Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from anthropic import AsyncAnthropic
+from anthropic.types import TextBlock
 
 from src.ai.client import AIClient
 from src.ai.models import AIProvider, AIRequest, AIResponse
@@ -64,11 +65,11 @@ class AnthropicClient(AIClient):
         model = request.model or self.config.ai.model or "claude-3-5-sonnet-20241022"
 
         # 构建消息
-        messages = []
+        messages: List[Dict[str, Any]] = []
 
         # 处理多模态内容
         if request.multimodal_content:
-            content = []
+            content: List[Dict[str, Any]] = []
             # 添加文本提示
             content.append({"type": "text", "text": request.prompt})
             # 添加图像内容
@@ -89,16 +90,22 @@ class AnthropicClient(AIClient):
             # 普通文本提示
             messages.append({"role": "user", "content": request.prompt})
 
-        response = await self._client.messages.create(
-            model=model,
-            max_tokens=request.max_tokens,
-            temperature=request.temperature,
-            system=request.system_prompt,
-            messages=messages,
-        )
+        create_kwargs: Dict[str, Any] = {
+            "model": model,
+            "max_tokens": request.max_tokens,
+            "temperature": request.temperature,
+            "messages": messages,
+        }
+        if request.system_prompt is not None:
+            create_kwargs["system"] = request.system_prompt
+
+        response = await self._client.messages.create(**create_kwargs)
+
+        first_block = response.content[0] if response.content else None
+        text = first_block.text if isinstance(first_block, TextBlock) else ""
 
         return AIResponse(
-            content=response.content[0].text if response.content else "",
+            content=text,
             model=model,
             provider=AIProvider.ANTHROPIC,
             usage={

@@ -53,9 +53,11 @@ class LibraryMatcher:
             config: 配置对象
         """
         self.config = config or get_config()
-        self._nvd_adapter = None
+        self._nvd_adapter: Optional[Any] = None
         self._nvd_available = False
-        self._vulnerability_db = self._load_vulnerability_db()
+        self._vulnerability_db: Dict[
+            str, List[LibraryVulnerability]
+        ] = self._load_vulnerability_db()
         self._library_cve_cache: Dict[str, List[LibraryVulnerability]] = {}
         self._language_patterns = {
             "python": {
@@ -85,6 +87,7 @@ class LibraryMatcher:
             from src.scanner.nvd_adapter import get_nvd_adapter
 
             self._nvd_adapter = get_nvd_adapter()
+            assert self._nvd_adapter is not None
             self._nvd_available = self._nvd_adapter.is_available()
             if self._nvd_available:
                 db_type = self._nvd_adapter.get_db_type()
@@ -101,7 +104,7 @@ class LibraryMatcher:
         Returns:
             漏洞数据库，按库名索引
         """
-        vulnerability_db = {}
+        vulnerability_db: Dict[str, List[LibraryVulnerability]] = {}
 
         # 加载内置漏洞数据库
         db_path = Path(__file__).parent / "vulnerability_db.json"
@@ -190,7 +193,7 @@ class LibraryMatcher:
         Returns:
             匹配到的漏洞列表
         """
-        vulnerabilities = []
+        vulnerabilities: List[LibraryVulnerability] = []
 
         if self._nvd_available and self._nvd_adapter:
             vulnerabilities.extend(self._match_via_nvd(libraries))
@@ -201,7 +204,7 @@ class LibraryMatcher:
 
     def _match_via_nvd(self, libraries: List[LibraryInfo]) -> List[LibraryVulnerability]:
         """通过NVD数据库匹配漏洞（带缓存优化）"""
-        vulnerabilities = []
+        vulnerabilities: List[LibraryVulnerability] = []
         uncached_libraries = []
 
         for library in libraries:
@@ -219,6 +222,7 @@ class LibraryMatcher:
                 vendor = library.name.split(".")[0]
                 product = library.name
 
+                assert self._nvd_adapter is not None
                 hits = self._nvd_adapter.scan_library(
                     vendor=vendor, product=product, version=library.version, min_score=5.0, limit=50
                 )
@@ -391,7 +395,8 @@ class LibraryMatcher:
             return None
 
         try:
-            return self._nvd_adapter.get_cve_details(cve_id)
+            result = self._nvd_adapter.get_cve_details(cve_id)
+            return result if result is None else dict(result)
         except Exception as e:
             logger.debug(f"获取NVD详情失败: {e}")
             return None

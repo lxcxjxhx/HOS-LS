@@ -59,7 +59,8 @@ class ThreatIntelligenceAnalyzer:
                     continue
 
                 name = title_elem.text.strip()
-                link = title_elem.find("a")["hre"] if title_elem.find("a") else ""
+                link_elem = title_elem.find("a")
+                link = link_elem["href"] if link_elem else ""
 
                 # 提取描述
                 desc_elem = item.find("p", class_="desc")
@@ -108,7 +109,8 @@ class ThreatIntelligenceAnalyzer:
                     continue
 
                 name = title_elem.text.strip()
-                link = title_elem.find("a")["hre"] if title_elem.find("a") else ""
+                link_elem2 = title_elem.find("a")
+                link = link_elem2["href"] if link_elem2 else ""
 
                 # 提取描述
                 desc_elem = item.find("p", class_="post-content")
@@ -167,7 +169,10 @@ class ThreatIntelligenceAnalyzer:
                     },
                 )
                 response.raise_for_status()
-                intelligence = source_config["parser"](response.content)
+                from typing import Callable, cast
+
+                parser_func = cast(Callable[[bytes], list], source_config["parser"])
+                intelligence = parser_func(response.content)
 
                 # 过滤时间范围内的情报
                 filtered_intelligence = []
@@ -200,7 +205,7 @@ class ThreatIntelligenceAnalyzer:
             return {}
 
         # 按日期分组
-        date_groups = {}
+        date_groups: dict[str, list[dict[str, Any]]] = {}
         for item in intelligence:
             date = item.get("published_date")
             if date:
@@ -220,13 +225,13 @@ class ThreatIntelligenceAnalyzer:
         prediction = self._predict_trend(daily_counts)
 
         # 分析热门漏洞类型
-        tag_counts = {}
+        tag_counts: dict[str, int] = {}
         for item in intelligence:
             for tag in item.get("tags", []):
                 tag_counts[tag] = tag_counts.get(tag, 0) + 1
 
         # 按来源分析
-        source_counts = {}
+        source_counts: dict[str, int] = {}
         for item in intelligence:
             source = item.get("source", "Unknown")
             source_counts[source] = source_counts.get(source, 0) + 1

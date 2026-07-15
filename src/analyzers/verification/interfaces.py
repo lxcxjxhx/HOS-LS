@@ -60,6 +60,34 @@ class Validator(ABC):
     def check_applicability(self, context: VulnContext) -> bool:
         """检查此验证器是否适用于给定上下文"""
 
+    def verify(self, context: Dict[str, Any]) -> Dict[str, Any]:
+        """执行验证并返回字典格式结果（可选实现）
+
+        默认实现调用 validate 方法并转换结果。子类可以覆盖此方法。
+        """
+        try:
+            vuln_context = VulnContext(
+                file_path=context.get("file_path", ""),
+                line_number=context.get("line_number", 0),
+                code_snippet=context.get("code_snippet", ""),
+                vuln_type=context.get("vuln_type", ""),
+                project_root=context.get("project_root", ""),
+                finding_id=context.get("finding_id"),
+                metadata=context.get("metadata"),
+            )
+            result = self.validate(vuln_context)
+            return {
+                "is_valid": result.is_valid,
+                "is_false_positive": result.is_false_positive,
+                "confidence": result.confidence,
+                "reason": result.reason,
+                "evidence": result.evidence,
+                "poc_script": result.poc_script,
+                "verification_steps": result.verification_steps,
+            }
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
+
 
 def create_false_positive_result(
     reason: str, confidence: float = 0.9, evidence: Dict[str, Any] = None

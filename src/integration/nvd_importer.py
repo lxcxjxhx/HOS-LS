@@ -76,7 +76,7 @@ class NVDImporter:
             self.numpy_available = False
         # 内存映射相关
         self.memmap_file = None
-        self.memmap_array = None
+        self.memmap_array: Any = None
         self.memmap_idx = 0
 
     def stream_read_json(self, file_obj) -> Optional[Dict[str, Any]]:
@@ -92,19 +92,19 @@ class NVDImporter:
             if IJSON_AVAILABLE:
                 # 使用ijson进行流式解析
                 parser = ijson.parse(file_obj)
-                data = {}
+                data: Dict[str, Any] = {}
                 # current_path = []
-                stack = [data]
+                stack: List[Any] = [data]
 
                 for prefix, event, value in parser:
                     if event == "start_map":
-                        new_obj = {}
+                        new_obj: Dict[str, Any] = {}
                         stack[-1][prefix.split(".")[-1]] = new_obj
                         stack.append(new_obj)
                     elif event == "end_map":
                         stack.pop()
                     elif event == "start_array":
-                        new_array = []
+                        new_array: List[Any] = []
                         stack[-1][prefix.split(".")[-1]] = new_array
                         stack.append(new_array)
                     elif event == "end_array":
@@ -128,7 +128,8 @@ class NVDImporter:
                 return data
             else:
                 # 回退到普通JSON解析
-                return json.load(file_obj)
+                result = json.load(file_obj)
+                return result if isinstance(result, dict) else None
         except Exception as e:
             logger.error(f"流式读取JSON失败: {e}")
             return None
@@ -150,11 +151,19 @@ class NVDImporter:
         max_batch_size = 256
 
         try:
-            batch_config = config.get("batch_processing", {})
-            adaptive_config = batch_config.get("adaptive_batch_size", {})
-            adaptive_enabled = adaptive_config.get("enabled", False)
-            min_batch_size = adaptive_config.get("min_batch_size", 16)
-            max_batch_size = adaptive_config.get("max_batch_size", 256)
+            batch_config = getattr(config, "batch_processing", {})
+            if isinstance(batch_config, dict):
+                adaptive_config = batch_config.get("adaptive_batch_size", {})
+            else:
+                adaptive_config = getattr(batch_config, "adaptive_batch_size", {})
+            if isinstance(adaptive_config, dict):
+                adaptive_enabled = adaptive_config.get("enabled", False)
+                min_batch_size = adaptive_config.get("min_batch_size", 16)
+                max_batch_size = adaptive_config.get("max_batch_size", 256)
+            else:
+                adaptive_enabled = getattr(adaptive_config, "enabled", False)
+                min_batch_size = getattr(adaptive_config, "min_batch_size", 16)
+                max_batch_size = getattr(adaptive_config, "max_batch_size", 256)
             logger.info(
                 f"批量大小自适应配置: enabled={adaptive_enabled}, min={min_batch_size}, max={max_batch_size}"
             )
@@ -266,8 +275,6 @@ class NVDImporter:
             return False
 
         try:
-            pass
-
             # 检查内存映射文件是否有足够空间
             if self.memmap_idx >= self.memmap_array.shape[0]:
                 logger.warning("内存映射文件空间不足")
@@ -649,7 +656,8 @@ class NVDImporter:
 
         try:
             with open(self.checkpoint_path, "r", encoding="utf-8") as f:
-                return json.load(f)
+                result = json.load(f)
+                return result if isinstance(result, dict) else {}
         except Exception as e:
             logger.error(f"加载检查点失败: {e}")
             return {
@@ -944,7 +952,8 @@ class NVDImporter:
         # 计算合适的worker数量
         import os
 
-        max_workers = min(os.cpu_count(), 4)  # 最多4个worker
+        cpu_count = os.cpu_count()
+        max_workers = min(cpu_count if cpu_count is not None else 1, 4)  # 最多4个worker
         logger.info(f"使用 {max_workers} 个进程处理CVE数据")
 
         # 分批处理
@@ -983,7 +992,8 @@ class NVDImporter:
         Returns:
             成功存储的数量
         """
-        return self.hybrid_store.store_cves_batch(cve_data_list)
+        result: int = self.hybrid_store.store_cves_batch(cve_data_list)
+        return result
 
     def resume_import(self):
         """从检查点恢复导入"""

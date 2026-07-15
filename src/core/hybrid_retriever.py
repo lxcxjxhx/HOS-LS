@@ -3,7 +3,7 @@
 实现结构化搜索和语义搜索的融合，提供更准确的CVE检索能力。
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, cast
 
 from src.utils.logger import get_logger
 
@@ -42,7 +42,7 @@ class HybridRetriever:
         try:
             # 执行混合搜索
             results = self.hybrid_store.hybrid_search(query, filters, top_k)
-            return results
+            return cast(List[Dict[str, Any]], results)
         except Exception as e:
             logger.error(f"混合搜索失败: {e}")
             return []
@@ -59,7 +59,7 @@ class HybridRetriever:
         """
         try:
             results = self.hybrid_store.search_cves(filters, limit)
-            return results
+            return cast(List[Any], results)
         except Exception as e:
             logger.error(f"结构化搜索失败: {e}")
             return []
@@ -79,7 +79,7 @@ class HybridRetriever:
         """
         try:
             results = self.hybrid_store.search_semantic(query, filters, top_k)
-            return results
+            return cast(List[Dict[str, Any]], results)
         except Exception as e:
             logger.error(f"语义搜索失败: {e}")
             return []

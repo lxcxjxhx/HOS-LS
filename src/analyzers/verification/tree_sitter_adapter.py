@@ -132,6 +132,7 @@ class TreeSitterAdapter:
         lang_enum = self._get_language_enum(language)
 
         try:
+            assert self._parser is not None
             tree = self._parser.parse(source_code, lang_enum)
             return tree
         except Exception as e:
@@ -149,9 +150,9 @@ class TreeSitterAdapter:
             # lang_name = LANGUAGE_MAP.get(language.lower())
 
             parser = Parser()
-            lang_instance = Language(tree_sitter.Language.library(), lang_enum.value)
+            lang_instance = Language(tree_sitter.Language.library(), lang_enum.value)  # type: ignore[attr-defined, call-overload]
 
-            parser.set_language(lang_instance)
+            parser.set_language(lang_instance)  # type: ignore[attr-defined]
             tree = parser.parse(source_code.encode())
 
             return tree

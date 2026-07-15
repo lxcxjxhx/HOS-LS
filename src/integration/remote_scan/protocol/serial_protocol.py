@@ -117,11 +117,12 @@ class SerialProtocol:
         """发送原始数据"""
         if not self.is_connected():
             raise SerialConnectionError("Not connected to serial port")
+        assert self._serial is not None
 
         try:
             bytes_written = self._serial.write(data)
             self._serial.flush()
-            return bytes_written
+            return int(bytes_written)
         except serial.SerialException as e:
             logger.error(f"Failed to send data: {e}")
             raise SerialWriteError(f"Failed to send data: {e}")
@@ -130,10 +131,11 @@ class SerialProtocol:
         """接收原始数据"""
         if not self.is_connected():
             raise SerialConnectionError("Not connected to serial port")
+        assert self._serial is not None
 
         try:
             data = self._serial.read(size)
-            return data
+            return bytes(data)
         except serial.SerialException as e:
             logger.error(f"Failed to receive data: {e}")
             raise SerialReadError(f"Failed to receive data: {e}")
@@ -142,6 +144,7 @@ class SerialProtocol:
         """读取一行数据"""
         if not self.is_connected():
             raise SerialConnectionError("Not connected to serial port")
+        assert self._serial is not None
 
         if timeout is not None:
             old_timeout = self._serial.timeout
@@ -156,9 +159,9 @@ class SerialProtocol:
                 raise SerialTimeoutError("Read line timeout")
 
             try:
-                return line_bytes.decode("utf-8").rstrip("\r\n")
+                return str(line_bytes.decode("utf-8").rstrip("\r\n"))
             except UnicodeDecodeError:
-                return line_bytes.decode("latin-1").rstrip("\r\n")
+                return str(line_bytes.decode("latin-1").rstrip("\r\n"))
         except serial.SerialException as e:
             if timeout is not None:
                 self._serial.timeout = old_timeout
@@ -169,6 +172,7 @@ class SerialProtocol:
         """写入一行数据"""
         if not self.is_connected():
             raise SerialConnectionError("Not connected to serial port")
+        assert self._serial is not None
 
         try:
             line_data = data.encode("utf-8") + b"\r\n"
@@ -188,6 +192,7 @@ class SerialProtocol:
         """发送命令并等待响应"""
         if not self.is_connected():
             raise SerialConnectionError("Not connected to serial port")
+        assert self._serial is not None
 
         if clear_buffer:
             self.flush_input()
@@ -244,6 +249,7 @@ class SerialProtocol:
         """等待指定模式出现"""
         if not self.is_connected():
             raise SerialConnectionError("Not connected to serial port")
+        assert self._serial is not None
 
         try:
             regex = re.compile(pattern)
@@ -278,7 +284,7 @@ class SerialProtocol:
                 match = regex.search(buffer)
                 if match:
                     matched_content = buffer[: match.end()]
-                    return matched_content
+                    return str(matched_content)
 
             except serial.SerialException as e:
                 if "timeout" not in str(e).lower():
@@ -289,6 +295,7 @@ class SerialProtocol:
         """清空输入缓冲区"""
         if not self.is_connected():
             raise SerialConnectionError("Not connected to serial port")
+        assert self._serial is not None
 
         try:
             self._serial.reset_input_buffer()
@@ -299,6 +306,7 @@ class SerialProtocol:
         """清空输出缓冲区"""
         if not self.is_connected():
             raise SerialConnectionError("Not connected to serial port")
+        assert self._serial is not None
 
         try:
             self._serial.reset_output_buffer()

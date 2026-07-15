@@ -1,6 +1,6 @@
 import asyncio
 import concurrent.futures
-from typing import Any, Callable, Dict, List
+from typing import Any, Callable, Dict, List, Optional
 
 from .environment import get_optimized_config
 
@@ -11,17 +11,17 @@ class ConcurrencyManager:
     管理AI分析的并发执行，提高性能
     """
 
-    def __init__(self, config: Dict[str, Any] = None):
+    def __init__(self, config: Optional[Dict[str, Any]] = None):
         """初始化并发管理器
 
         Args:
             config: 配置参数
         """
         # 使用环境检测模块优化配置
-        self.config = get_optimized_config(config)
-        self.max_workers = self.config.get("max_workers")
-        self.timeout = self.config.get("timeout")  # 5分钟超时
-        self.batch_size = self.config.get("batch_size")
+        self.config = get_optimized_config(config or {})
+        self.max_workers: int = self.config.get("max_workers", 4)
+        self.timeout: int = self.config.get("timeout", 300)  # 5分钟超时
+        self.batch_size: int = self.config.get("batch_size", 10)
 
     async def execute_concurrently(self, tasks: List[Callable], *args, **kwargs) -> List[Any]:
         """并发执行多个任务
@@ -29,12 +29,9 @@ class ConcurrencyManager:
         Args:
             tasks: 任务列表
             *args: 传递给任务的参数
-            **kwargs: 传递给任务的关键字参数
-
-        Returns:
-            任务执行结果列表
+            **kwargs: 传递给任务的参数
         """
-        results = []
+        results: List[Any] = []
 
         if not tasks:
             return results
@@ -77,7 +74,12 @@ class ConcurrencyManager:
         return results
 
     async def execute_in_batches(
-        self, items: List[Any], process_func: Callable, batch_size: int = None, *args, **kwargs
+        self,
+        items: List[Any],
+        process_func: Callable,
+        batch_size: Optional[int] = None,
+        *args,
+        **kwargs,
     ) -> List[Any]:
         """批量执行任务
 
@@ -91,7 +93,7 @@ class ConcurrencyManager:
         Returns:
             处理结果列表
         """
-        results = []
+        results: List[Any] = []
 
         if not items:
             return results

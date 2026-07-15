@@ -179,7 +179,7 @@ class ContextAnalyzer:
         file_path: str,
         line_number: int,
         code_snippet: str,
-        surrounding_lines: List[str] = None,
+        surrounding_lines: Optional[List[str]] = None,
     ) -> Dict[str, Any]:
         """分析 MyBatis ${} 拼接的上下文，判断是否为误报
 
@@ -246,7 +246,7 @@ class ContextAnalyzer:
         file_path: str,
         line_number: int,
         code_snippet: str,
-        surrounding_lines: List[str] = None,
+        surrounding_lines: Optional[List[str]] = None,
     ) -> Dict[str, Any]:
         """分析 SQL 注入发现的上下文
 
@@ -321,7 +321,7 @@ class ContextAnalyzer:
         file_path: str,
         line_number: int,
         code_snippet: str,
-        surrounding_lines: List[str] = None,
+        surrounding_lines: Optional[List[str]] = None,
     ) -> Dict[str, Any]:
         """分析权限控制的上下文
 
@@ -386,7 +386,7 @@ class ContextAnalyzer:
         file_path: str,
         line_number: int,
         code_snippet: str,
-        surrounding_lines: List[str] = None,
+        surrounding_lines: Optional[List[str]] = None,
     ) -> Dict[str, Any]:
         """分析反序列化漏洞的上下文
 
@@ -471,7 +471,7 @@ class ContextAnalyzer:
 
         return result
 
-    def is_framework_security_class(self, file_path: str, class_name: str = None) -> bool:
+    def is_framework_security_class(self, file_path: str, class_name: Optional[str] = None) -> bool:
         """判断是否为框架层安全类
 
         框架层安全类通常是Spring Security等框架自带的，
@@ -788,7 +788,7 @@ class CodeVulnScanner:
         self,
         enable_verification: bool = True,
         project_root: str = "",
-        nvd_db_path: str = None,
+        nvd_db_path: Optional[str] = None,
         hallucination_threshold: float = 0.2,
         scanner_threshold: float = 0.5,
     ):
@@ -808,7 +808,7 @@ class CodeVulnScanner:
         self.project_root = project_root
         self.hallucination_threshold = hallucination_threshold
         self.scanner_threshold = scanner_threshold
-        self._verification_adapter = None
+        self._verification_adapter: Optional[Any] = None
 
         self._context_analyzer = ContextAnalyzer()
         self._input_tracer = InputTracer()
@@ -888,7 +888,7 @@ class CodeVulnScanner:
         return True
 
     def _analyze_finding_context(
-        self, finding: CodeVulnFinding, all_lines: List[str] = None
+        self, finding: CodeVulnFinding, all_lines: Optional[List[str]] = None
     ) -> Dict[str, Any]:
         """分析发现的上下文，返回是否可能是误报
 
@@ -974,13 +974,13 @@ class CodeVulnScanner:
 
         return result
 
-    def _init_verification_adapter(self, nvd_db_path: str = None) -> None:
+    def _init_verification_adapter(self, nvd_db_path: Optional[str] = None) -> None:
         """初始化验证适配器"""
         try:
             from src.analyzers.verification_adapter import VerificationAdapter
 
             self._verification_adapter = VerificationAdapter(
-                project_root=self.project_root, nvd_db_path=nvd_db_path
+                project_root=self.project_root, nvd_db_path=nvd_db_path or ""
             )
         except Exception as e:
             logger.warning(f"验证适配器初始化失败: {e}")
@@ -1021,7 +1021,7 @@ class CodeVulnScanner:
         return False
 
     def scan_file(self, file_path: str, content: Optional[str] = None) -> List[CodeVulnFinding]:
-        findings = []
+        findings: List[CodeVulnFinding] = []
 
         if content is None:
             try:
@@ -1097,7 +1097,10 @@ class CodeVulnScanner:
         return all_findings
 
     def scan_with_verification(
-        self, file_paths: List[str], project_root: str = None, filter_hallucinations: bool = True
+        self,
+        file_paths: List[str],
+        project_root: Optional[str] = None,
+        filter_hallucinations: bool = True,
     ) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
         """扫描并验证结果
 

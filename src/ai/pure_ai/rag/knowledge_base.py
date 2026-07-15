@@ -155,20 +155,32 @@ class RAGKnowledgeBase:
         )
 
         # 重排序器配置
+        rerank_model: Optional[str]
         try:
             rerank_enabled = self.config.rag.rerank.enabled
             rerank_model = self.config.rag.rerank.model
         except (AttributeError, KeyError):
             # 兼容旧配置格式
-            rerank_config = self.config.get("rag", {}).get("rerank", {})
-            rerank_enabled = rerank_config.get("enabled", False)
-            rerank_model = rerank_config.get("model", None)
+            rerank_config = getattr(self.config, "rag", {})
+            if isinstance(rerank_config, dict):
+                rerank_config = rerank_config.get("rerank", {})
+            else:
+                rerank_config = getattr(rerank_config, "rerank", {})
+            rerank_enabled = (
+                rerank_config.get("enabled", False)
+                if isinstance(rerank_config, dict)
+                else getattr(rerank_config, "enabled", False)
+            )
+            rerank_model = (
+                rerank_config.get("model", None)
+                if isinstance(rerank_config, dict)
+                else getattr(rerank_config, "model", None)
+            )
 
         # 重排序器
+        self.reranker: Optional[Reranker] = None
         if rerank_enabled and rerank_model:
             self.reranker = Reranker(model_name=rerank_model)
-        else:
-            self.reranker = None
 
         # 查询重写器
         self.query_rewriter = QueryRewriter()
@@ -185,7 +197,7 @@ class RAGKnowledgeBase:
 
         # 版本信息
         self.version = 1
-        self.history = []
+        self.history: List[Dict[str, Any]] = []
         self.usage_count = 0  # 使用次数计数器
 
         # 内存管理
@@ -238,7 +250,7 @@ class RAGKnowledgeBase:
             import psutil
 
             process = psutil.Process()
-            return process.memory_info().rss
+            return int(process.memory_info().rss)
         except ImportError:
             return 0
 
@@ -288,7 +300,7 @@ class RAGKnowledgeBase:
         )
 
         self.save()
-        return knowledge.id
+        return str(knowledge.id)
 
     def add_knowledge_batch(
         self, knowledge_list: List[Knowledge], auto_save: bool = True, build_index: bool = True
@@ -455,7 +467,7 @@ class RAGKnowledgeBase:
         )
 
         self.save()
-        return pattern.id
+        return str(pattern.id)
 
     def get_knowledge(self, knowledge_id: str) -> Optional[Knowledge]:
         """获取知识
@@ -1130,7 +1142,7 @@ class RAGKnowledgeBase:
         logger.info(f"开始整理知识库，当前知识数量: {len(self._knowledge)}")
 
         # 按类型分组知识
-        knowledge_by_type = {}
+        knowledge_by_type: Dict[str, List[Knowledge]] = {}
         for knowledge in self._knowledge.values():
             type_str = knowledge.knowledge_type.value
             if type_str not in knowledge_by_type:

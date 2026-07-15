@@ -5,6 +5,7 @@
 """
 
 import os
+import sqlite3
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -20,15 +21,17 @@ class NVDQueryAdapter:
     优化版本：缓存 + 内存索引 + CVSS 统计
     """
 
-    def __init__(self, db_path: str = None, use_cache: bool = True):
-        if db_path is None:
-            db_path = self._find_default_db_path()
+    def __init__(self, db_path: Optional[str] = None, use_cache: bool = True):
+        resolved_path: Optional[str] = db_path
+        if resolved_path is None:
+            resolved_path = self._find_default_db_path()
 
-        self.db_path = db_path
-        self._conn = None
+        self.db_path: Optional[str] = resolved_path
+        self._conn: Optional[sqlite3.Connection] = None
         self._connected = False
         self._cwe_index: Optional[Dict[str, Dict[str, Any]]] = None
         self._index_built = False
+        self._cache: Any = None
 
         if use_cache:
             try:
@@ -37,13 +40,11 @@ class NVDQueryAdapter:
                 self._cache = get_global_cache()
             except Exception:
                 self._cache = None
-        else:
-            self._cache = None
 
-        if db_path and os.path.exists(db_path):
+        if self.db_path and os.path.exists(self.db_path):
             self._connect()
         else:
-            logger.warning(f"NVD数据库文件不存在: {db_path}")
+            logger.warning(f"NVD数据库文件不存在: {self.db_path}")
 
     def _find_default_db_path(self) -> Optional[str]:
         """查找默认的 NVD 数据库路径（使用增强的路径查找逻辑）"""
@@ -87,8 +88,8 @@ class NVDQueryAdapter:
     def _connect(self) -> bool:
         """连接数据库"""
         try:
-            import sqlite3
-
+            if self.db_path is None:
+                return False
             self._conn = sqlite3.connect(self.db_path, timeout=30.0)
             self._conn.row_factory = sqlite3.Row
             self._connected = True
@@ -101,7 +102,7 @@ class NVDQueryAdapter:
 
     def _disconnect(self) -> None:
         """断开数据库连接"""
-        if self._conn:
+        if self._conn is not None:
             self._conn.close()
             self._conn = None
             self._connected = False
@@ -116,6 +117,7 @@ class NVDQueryAdapter:
         """检查数据库是否可用"""
         if not self._ensure_connected():
             return False
+        assert self._conn is not None
 
         try:
             cursor = self._conn.cursor()
@@ -135,6 +137,7 @@ class NVDQueryAdapter:
 
         if not self._ensure_connected():
             return {}
+        assert self._conn is not None
 
         try:
             cursor = self._conn.cursor()
@@ -234,7 +237,7 @@ class NVDQueryAdapter:
         if self._cache:
             cached = self._cache.get(cache_key)
             if cached is not None:
-                return cached
+                return list(cached)
 
         if self._ensure_connected() and self._cwe_index is not None:
             results = self._search_in_memory(keywords, limit)
@@ -280,7 +283,11 @@ class NVDQueryAdapter:
         if self._cache:
             cached = self._cache.get(cache_key)
             if cached is not None:
-                return cached
+                return dict(cached)
+
+        if not self._ensure_connected():
+            return None
+        assert self._conn is not None
 
         try:
             cwe_index = self._ensure_cwe_index()
@@ -343,8 +350,9 @@ class NVDQueryAdapter:
         if self._cache:
             cached = self._cache.get(cache_key)
             if cached is not None:
-                return cached
+                return dict(cached)
 
+        assert self._conn is not None
         try:
             cursor = self._conn.cursor()
             cursor.execute(
@@ -384,7 +392,7 @@ class NVDQueryAdapter:
             return {}
 
     def search_vulnerabilities(
-        self, cwe_id: str = None, severity: str = None, limit: int = 100
+        self, cwe_id: Optional[str] = None, severity: Optional[str] = None, limit: int = 100
     ) -> List[Dict[str, Any]]:
         """搜索特定 CWE 的漏洞
 
@@ -398,6 +406,7 @@ class NVDQueryAdapter:
         """
         if not self._ensure_connected():
             return []
+        assert self._conn is not None
 
         try:
             cursor = self._conn.cursor()
@@ -482,7 +491,11 @@ class NVDQueryAdapter:
         if self._cache:
             cached = self._cache.get(cache_key)
             if cached is not None:
-                return cached
+                return list(cached)
+
+        if not self._ensure_connected():
+            return []
+        assert self._conn is not None
 
         try:
             cwe_index = self._ensure_cwe_index()
@@ -507,13 +520,13 @@ class NVDQueryAdapter:
             logger.error(f"获取CWE列表失败: {e}")
             return []
 
-    def get_db_stats(self) -> Dict[str, int]:
+    def get_db_stats(self) -> Dict[str, Any]:
         """获取数据库统计信息
 
         Returns:
             各表的记录数统计
         """
-        stats = {
+        stats: Dict[str, Any] = {
             "connected": self._connected,
             "db_path": self.db_path,
             "index_built": self._index_built,
@@ -522,6 +535,7 @@ class NVDQueryAdapter:
 
         if not self._ensure_connected():
             return stats
+        assert self._conn is not None
 
         try:
             cursor = self._conn.cursor()
@@ -551,7 +565,9 @@ class NVDQueryAdapter:
         self._disconnect()
 
 
-def get_nvd_adapter(db_path: str = None, use_cache: bool = True) -> Optional[NVDQueryAdapter]:
+def get_nvd_adapter(
+    db_path: Optional[str] = None, use_cache: bool = True
+) -> Optional[NVDQueryAdapter]:
     """获取 NVD 查询适配器实例
 
     Args:
