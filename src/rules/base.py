@@ -174,6 +174,27 @@ class BaseRule(ABC):
         """
         return self.metadata.language.lower() == language.lower() or self.metadata.language == "*"
 
+    def to_dict(self) -> Dict[str, Any]:
+        """转换为字典表示
+
+        Returns:
+            规则的字典表示
+        """
+        return {
+            "id": self.metadata.id,
+            "name": self.metadata.name,
+            "description": self.metadata.description,
+            "severity": self.metadata.severity.value,
+            "category": self.metadata.category.value,
+            "language": self.metadata.language,
+            "version": self.metadata.version,
+            "author": self.metadata.author,
+            "references": self.metadata.references,
+            "tags": self.metadata.tags,
+            "enabled": self.metadata.enabled,
+            "deprecated": self.metadata.deprecated,
+        }
+
 
 @dataclass
 class RuleDefinition:
