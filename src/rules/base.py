@@ -5,55 +5,10 @@
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
-
-class RuleSeverity(Enum):
-    """规则严重级别"""
-
-    CRITICAL = "critical"
-    HIGH = "high"
-    MEDIUM = "medium"
-    LOW = "low"
-    INFO = "info"
-
-    def __lt__(self, other: "RuleSeverity") -> bool:
-        order = [
-            RuleSeverity.INFO,
-            RuleSeverity.LOW,
-            RuleSeverity.MEDIUM,
-            RuleSeverity.HIGH,
-            RuleSeverity.CRITICAL,
-        ]
-        return order.index(self) < order.index(other)
-
-    def __le__(self, other: "RuleSeverity") -> bool:
-        return self == other or self < other
-
-    def __gt__(self, other: "RuleSeverity") -> bool:
-        return not self <= other
-
-    def __ge__(self, other: "RuleSeverity") -> bool:
-        return not self < other
-
-
-class RuleCategory(Enum):
-    """规则类别"""
-
-    INJECTION = "injection"
-    AUTHENTICATION = "authentication"
-    AUTHORIZATION = "authorization"
-    CRYPTOGRAPHY = "cryptography"
-    DATA_PROTECTION = "data_protection"
-    ERROR_HANDLING = "error_handling"
-    LOGGING = "logging"
-    CONFIGURATION = "configuration"
-    DEPENDENCY = "dependency"
-    PERFORMANCE = "performance"
-    CODE_QUALITY = "code_quality"
-    AI_SECURITY = "ai_security"
+from src.core.types import RuleCategory, RuleSeverity
 
 
 @dataclass

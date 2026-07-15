@@ -16,6 +16,7 @@ from rich.progress import Progress, SpinnerColumn, TextColumn
 
 from src.core.config import Config
 from src.core.plan_generator import ScanPlan, ScanStrategy, get_plan_generator
+from src.core.scan_scheduler import ScanScheduler, ScanTask
 from src.core.types import ScanStatus, Severity
 
 
@@ -400,7 +401,7 @@ class ScanEngine:
     管理扫描流程和插件。
     """
 
-    def __init__(self, config: Config) -> None:
+    def __init__(self, config: Config, scheduler: Optional[ScanScheduler] = None) -> None:
         self.config = config
         self.scanners: List[BaseScanner] = []
         self.console = Console()
@@ -408,6 +409,10 @@ class ScanEngine:
         self._mode_router = ModeRouter(config)
         self._plan_generator = get_plan_generator()
         self._current_plan: Optional[ScanPlan] = None
+        self._scheduler = scheduler or ScanScheduler(
+            max_concurrent=config.scan.max_workers,
+            max_retries=3,
+        )
 
     def get_mode_router(self) -> ModeRouter:
         """获取模式路由器
@@ -416,6 +421,14 @@ class ScanEngine:
             模式路由器实例
         """
         return self._mode_router
+
+    def get_scheduler(self) -> ScanScheduler:
+        """获取扫描调度器
+
+        Returns:
+            扫描调度器实例
+        """
+        return self._scheduler
 
     def register_scanner(self, scanner: BaseScanner) -> None:
         """注册扫描器
@@ -494,7 +507,7 @@ class ScanEngine:
     async def scan_batch(
         self, targets: List[Union[str, Path]], max_concurrent: Optional[int] = None
     ) -> List[ScanResult]:
-        """批量扫描
+        """批量扫描（使用 ScanScheduler 进行任务调度）
 
         Args:
             targets: 扫描目标列表
@@ -503,24 +516,34 @@ class ScanEngine:
         Returns:
             扫描结果列表
         """
-        # 使用配置中的最大工作线程数或默认值
-        concurrent_limit = max_concurrent or self.config.scan.max_workers
-        semaphore = asyncio.Semaphore(concurrent_limit)
+        # 动态调整调度器并发数（如果指定）
+        if max_concurrent is not None:
+            self._scheduler.max_concurrent = max_concurrent
 
-        async def scan_with_limit(target: Union[str, Path]) -> ScanResult:
-            async with semaphore:
-                try:
-                    return await self.scan(target)
-                except Exception as e:
-                    # 创建失败结果
-                    result = ScanResult(
-                        target=str(target), status=ScanStatus.FAILED, error_message=str(e)
-                    )
-                    result.end_time = datetime.now()
-                    return result
+        # 添加任务到调度器
+        for i, target in enumerate(targets):
+            await self._scheduler.add_task(
+                task_id=f"scan_{i}_{hash(str(target))}",
+                task_type="file",
+                target=str(target),
+                priority=0,
+            )
 
-        tasks = [scan_with_limit(target) for target in targets]
-        return await asyncio.gather(*tasks, return_exceptions=False)
+        # 定义扫描执行函数
+        async def execute_scan(task: ScanTask) -> ScanResult:
+            target_path = Path(task.target)
+            try:
+                return await self.scan(target_path)
+            except Exception as e:
+                result = ScanResult(
+                    target=str(target_path), status=ScanStatus.FAILED, error_message=str(e)
+                )
+                result.end_time = datetime.now()
+                return result
+
+        # 运行调度器
+        results = await self._scheduler.run(execute_scan)
+        return results
 
     def get_supported_scanners(self, target: Union[str, Path]) -> List[BaseScanner]:
         """获取支持目标的扫描器

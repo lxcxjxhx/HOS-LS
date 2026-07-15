@@ -1,0 +1,32 @@
+{
+  "version": "1.0",
+  "project_path": "C:\\Users\\46119\\AppData\\Local\\Temp\\tmpli41dke8",
+  "created_at": 1784130183.5675433,
+  "updated_at": 1784130183.5675433,
+  "entries": {
+    "C:\\Users\\46119\\AppData\\Local\\Temp\\tmpli41dke8\\test_file_0.py": {
+      "file_path": "C:\\Users\\46119\\AppData\\Local\\Temp\\tmpli41dke8\\test_file_0.py",
+      "file_hash": "bf7c3f1dd03f42f442daf46b5aa756f21316bbff8717b4c7f4303552d9eded6c",
+      "mtime": 1784130183.5658104,
+      "size": 29,
+      "indexed_at": 1784130183.567322,
+      "language": null
+    },
+    "C:\\Users\\46119\\AppData\\Local\\Temp\\tmpli41dke8\\test_file_1.py": {
+      "file_path": "C:\\Users\\46119\\AppData\\Local\\Temp\\tmpli41dke8\\test_file_1.py",
+      "file_hash": "64b63994dca6e4a7efd25a280303052f09c9a910e467cc69aa674337452e943a",
+      "mtime": 1784130183.5658104,
+      "size": 29,
+      "indexed_at": 1784130183.567322,
+      "language": null
+    },
+    "C:\\Users\\46119\\AppData\\Local\\Temp\\tmpli41dke8\\test_file_2.py": {
+      "file_path": "C:\\Users\\46119\\AppData\\Local\\Temp\\tmpli41dke8\\test_file_2.py",
+      "file_hash": "d4a1308361ad7573ac0d510d6069ecb806a708aacca13d705c38442b3037e693",
+      "mtime": 1784130183.5658104,
+      "size": 29,
+      "indexed_at": 1784130183.567322,
+      "language": null
+    }
+  }
+}

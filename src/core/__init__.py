@@ -6,7 +6,6 @@
 from src.core.config import Config, ConfigManager
 from src.core.engine import ScanEngine
 from src.core.registry import DependencyInjector, ModuleRegistry
-from src.core.scanner import SecurityScanner
 
 __all__ = [
     "Config",
@@ -21,7 +20,11 @@ __all__ = [
 
 
 def __getattr__(name):
-    """延迟导入 RAGGraphIntegrator"""
+    """延迟导入"""
+    if name == "SecurityScanner":
+        from src.core.scanner import SecurityScanner
+
+        return SecurityScanner
     if name in ("RAGGraphIntegrator", "get_rag_graph_integrator"):
         from src.ai.pure_ai.rag.graph_integrator import RAGGraphIntegrator, get_rag_graph_integrator
 

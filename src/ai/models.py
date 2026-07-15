@@ -4,26 +4,9 @@
 """
 
 from dataclasses import dataclass, field
-from enum import Enum
 from typing import Any, Dict, List, Optional
 
-
-class AIProvider(Enum):
-    """AI 提供商"""
-
-    ANTHROPIC = "anthropic"
-    OPENAI = "openai"
-    DEEPSEEK = "deepseek"
-    ALIYUN = "aliyun"
-    LOCAL = "local"
-
-
-class AnalysisLevel(Enum):
-    """分析级别"""
-
-    FUNCTION = "function"
-    FILE = "file"
-    PROJECT = "project"
+from src.core.types import AIProvider, AnalysisLevel
 
 
 @dataclass

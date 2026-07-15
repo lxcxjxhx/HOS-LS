@@ -5,7 +5,6 @@
 
 import os
 import time
-from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
@@ -13,13 +12,7 @@ import yaml
 from pydantic import BaseModel, Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-
-class AuditMode(Enum):
-    """审计模式枚举"""
-
-    STATIC = "static"  # 纯静态分析，不加载动态组件
-    DYNAMIC = "dynamic"  # 纯动态AI红队POC测试，不进行静态扫描
-    HYBRID = "hybrid"  # 静动态混合，原有行为
+from src.core.types import AuditMode
 
 
 class AIModuleConfig(BaseModel):

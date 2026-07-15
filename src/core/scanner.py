@@ -11,15 +11,11 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 
 from rich.console import Console
 
-from src.ai.models import (
-    AnalysisContext,
-    AnalysisLevel,
-    SecurityAnalysisResult,
-    VulnerabilityFinding,
-)
+from src.ai.models import AnalysisContext, SecurityAnalysisResult, VulnerabilityFinding
 from src.core.config import Config
 from src.core.engine import ScanEngine, ScanMode, ScanResult
 from src.core.scan_state import ScanState
+from src.core.types import AnalysisLevel
 from src.utils.file_discovery import FileDiscoveryEngine, FileInfo
 from src.utils.file_prioritizer import FilePrioritizer
 from src.utils.logger import get_logger

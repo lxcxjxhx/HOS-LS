@@ -32,9 +32,9 @@ class ScanStatus(Enum):
 class AuditMode(Enum):
     """审计模式枚举"""
 
-    FULL = "full"
-    INCREMENTAL = "incremental"
-    QUICK = "quick"
+    STATIC = "static"  # 纯静态分析，不加载动态组件
+    DYNAMIC = "dynamic"  # 纯动态AI红队POC测试，不进行静态扫描
+    HYBRID = "hybrid"  # 静动态混合，原有行为
 
 
 class RuleSeverity(Enum):
@@ -49,30 +49,56 @@ class RuleSeverity(Enum):
     def __str__(self) -> str:
         return self.value
 
+    def __lt__(self, other: "RuleSeverity") -> bool:
+        order = [
+            RuleSeverity.INFO,
+            RuleSeverity.LOW,
+            RuleSeverity.MEDIUM,
+            RuleSeverity.HIGH,
+            RuleSeverity.CRITICAL,
+        ]
+        return order.index(self) < order.index(other)
+
+    def __le__(self, other: "RuleSeverity") -> bool:
+        return self == other or self < other
+
+    def __gt__(self, other: "RuleSeverity") -> bool:
+        return not self <= other
+
+    def __ge__(self, other: "RuleSeverity") -> bool:
+        return not self < other
+
 
 class RuleCategory(Enum):
     """规则类别枚举"""
 
-    SECURITY = "security"
+    INJECTION = "injection"
+    AUTHENTICATION = "authentication"
+    AUTHORIZATION = "authorization"
+    CRYPTOGRAPHY = "cryptography"
+    DATA_PROTECTION = "data_protection"
+    ERROR_HANDLING = "error_handling"
+    LOGGING = "logging"
+    CONFIGURATION = "configuration"
+    DEPENDENCY = "dependency"
     PERFORMANCE = "performance"
-    RELIABILITY = "reliability"
-    MAINTAINABILITY = "maintainability"
-    BEST_PRACTICE = "best_practice"
+    CODE_QUALITY = "code_quality"
+    AI_SECURITY = "ai_security"
 
 
 class AIProvider(Enum):
     """AI提供商枚举"""
 
-    OPENAI = "openai"
     ANTHROPIC = "anthropic"
-    GOOGLE = "google"
+    OPENAI = "openai"
+    DEEPSEEK = "deepseek"
+    ALIYUN = "aliyun"
     LOCAL = "local"
 
 
 class AnalysisLevel(Enum):
     """分析级别枚举"""
 
-    BASIC = "basic"
-    STANDARD = "standard"
-    ADVANCED = "advanced"
-    EXPERT = "expert"
+    FUNCTION = "function"
+    FILE = "file"
+    PROJECT = "project"
