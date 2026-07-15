@@ -658,14 +658,14 @@ class LineNumberValidator:
                     result["is_valid"] = True
                     result["warning_message"] = None
                 else:
+                    # tolerance 仅用于决定是否显示警告，不用于排除
+                    # 保持 ADJUSTED 状态，只添加警告信息
+                    result["is_valid"] = True
                     if deviation > effective_tolerance:
-                        result["line_match_status"] = "UNVERIFIED"
-                        result["is_valid"] = True
                         result[
                             "warning_message"
                         ] = f"🚨 行号偏差过大（偏差{deviation}行，超过容忍范围{effective_tolerance}行），已自动标记为需人工复核"
                     else:
-                        result["is_valid"] = True
                         result["warning_message"] = f"行号已自动校正（偏差{deviation}行）"
             else:
                 result["verified_line"] = ai_line
