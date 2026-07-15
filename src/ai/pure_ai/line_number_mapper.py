@@ -664,7 +664,7 @@ class LineNumberValidator:
                     if deviation > effective_tolerance:
                         result[
                             "warning_message"
-                        ] = f"🚨 行号偏差过大（偏差{deviation}行，超过容忍范围{effective_tolerance}行），已自动标记为需人工复核"
+                        ] = f"🚨 偏差较大（偏差{deviation}行，超过容忍范围{effective_tolerance}行），已自动标记为需人工复核"
                     else:
                         result["warning_message"] = f"行号已自动校正（偏差{deviation}行）"
             else:
