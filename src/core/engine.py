@@ -16,42 +16,7 @@ from rich.progress import Progress, SpinnerColumn, TextColumn
 
 from src.core.config import Config
 from src.core.plan_generator import ScanPlan, ScanStrategy, get_plan_generator
-
-
-class ScanStatus(Enum):
-    """扫描状态"""
-
-    PENDING = "pending"
-    RUNNING = "running"
-    COMPLETED = "completed"
-    FAILED = "failed"
-    CANCELLED = "cancelled"
-
-
-class Severity(Enum):
-    """漏洞严重级别"""
-
-    CRITICAL = "critical"
-    HIGH = "high"
-    MEDIUM = "medium"
-    LOW = "low"
-    INFO = "info"
-
-    def __str__(self) -> str:
-        return self.value
-
-    def __lt__(self, other: "Severity") -> bool:
-        order = [Severity.INFO, Severity.LOW, Severity.MEDIUM, Severity.HIGH, Severity.CRITICAL]
-        return order.index(self) < order.index(other)
-
-    def __le__(self, other: "Severity") -> bool:
-        return self == other or self < other
-
-    def __gt__(self, other: "Severity") -> bool:
-        return not self <= other
-
-    def __ge__(self, other: "Severity") -> bool:
-        return not self < other
+from src.core.types import ScanStatus, Severity
 
 
 class ScanMode(Enum):
