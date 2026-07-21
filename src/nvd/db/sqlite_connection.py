@@ -50,14 +50,17 @@ class SQLiteConnection:
     @staticmethod
     def _find_database_path() -> Optional[str]:
         """查找默认的NVD数据库路径（静态方法，可被外部调用）"""
+        from src.core.config import get_config
+
+        config = get_config()
+        config_db_path = Path(config.nvd.database_path)
+
         possible_paths = [
+            config_db_path,
             Path(__file__).parent.parent.parent.parent
             / "All Vulnerabilities"
             / "sql_data"
             / "nvd_vulnerability.db",
-            Path(
-                "c:/1AAA_PROJECT/HOS/HOS-LS/HOS-LS/All Vulnerabilities/sql_data/nvd_vulnerability.db"
-            ),
             Path.cwd() / "All Vulnerabilities" / "sql_data" / "nvd_vulnerability.db",
         ]
 

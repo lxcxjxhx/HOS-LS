@@ -56,11 +56,14 @@ class DownloadRecord:
 class DownloadManager:
     """下载管理器"""
 
-    BASE_DIR = Path(r"c:\1AAA_PROJECT\HOS\HOS-LS\HOS-LS\All Vulnerabilities")
-    TEMP_ZIP_DIR = BASE_DIR / "temp_zip"
-    TEMP_DATA_DIR = BASE_DIR / "temp_data"
-
     def __init__(self, connection: Optional[NVDConnection] = None):
+        from src.core.config import get_config
+
+        config = get_config()
+        self.BASE_DIR = Path(config.data_preload.temp_data_dir).parent
+        self.TEMP_ZIP_DIR = Path(config.data_preload.temp_zip_dir)
+        self.TEMP_DATA_DIR = Path(config.data_preload.temp_data_dir)
+
         self.conn = connection or NVDConnection.get_instance()
         self.TEMP_ZIP_DIR.mkdir(parents=True, exist_ok=True)
         self.TEMP_DATA_DIR.mkdir(parents=True, exist_ok=True)

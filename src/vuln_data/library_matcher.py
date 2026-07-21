@@ -84,7 +84,7 @@ class LibraryMatcher:
     def _init_nvd_connection(self):
         """初始化NVD数据库连接"""
         try:
-            from src.scanner.nvd_adapter import get_nvd_adapter
+            from src.vuln_data.nvd_adapter import get_nvd_adapter
 
             self._nvd_adapter = get_nvd_adapter()
             assert self._nvd_adapter is not None

@@ -70,7 +70,10 @@ class NVDDataSync:
 
     def _run_all_etl(self) -> bool:
         """运行所有ETL"""
-        base_path = r"c:\1AAA_PROJECT\HOS\HOS-LS\HOS-LS\All Vulnerabilities\temp_data"
+        from src.core.config import get_config
+
+        config = get_config()
+        base_path = config.data_preload.temp_data_dir
 
         for source, etl_class in self.ETL_MAPPING.items():
             print(f"\n处理 {source}...")
@@ -101,11 +104,11 @@ class NVDDataSync:
 
         self.download_manager.download(source)
 
+        from src.core.config import get_config
+
+        config = get_config()
         etl_class = self.ETL_MAPPING[source]
-        data_path = (
-            Path(r"c:\1AAA_PROJECT\HOS\HOS-LS\HOS-LS\All Vulnerabilities\temp_data")
-            / self.DATA_DIRS[source]
-        )
+        data_path = Path(config.data_preload.temp_data_dir) / self.DATA_DIRS[source]
 
         if not data_path.exists():
             print(f"数据目录不存在: {data_path}")

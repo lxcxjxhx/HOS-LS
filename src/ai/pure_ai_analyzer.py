@@ -2658,7 +2658,7 @@ class PureAIAnalyzer:
 
         if dependency_files:
             try:
-                from src.scanner.library_matcher import get_library_matcher
+                from src.vuln_data.library_matcher import get_library_matcher
 
                 library_matcher = get_library_matcher()
 

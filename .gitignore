@@ -60,3 +60,6 @@ All Vulnerabilities/
 
 # Misc cache
 .cache/
+
+# HOS-LS indexes
+.hos-ls/indexes/

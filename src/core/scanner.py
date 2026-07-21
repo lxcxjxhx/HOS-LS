@@ -83,7 +83,7 @@ class SecurityScanner:
         from src.analyzers.ast_analyzer import ASTAnalyzer
         from src.analyzers.cst_analyzer import CSTAnalyzer
         from src.integration.web_search import get_web_searcher
-        from src.scanner.library_matcher import get_library_matcher
+        from src.vuln_data.library_matcher import get_library_matcher
 
         self.config = config
         self.remote_mode = False
@@ -264,7 +264,7 @@ class SecurityScanner:
             return
 
         try:
-            from src.scanner.nvd_adapter import get_nvd_adapter
+            from src.vuln_data.nvd_adapter import get_nvd_adapter
 
             self.nvd_adapter = get_nvd_adapter()
             if self.nvd_adapter.is_available():
@@ -295,7 +295,7 @@ class SecurityScanner:
             return
 
         try:
-            from src.scanner.vulnerability_data_manager import VulnerabilityDataManager
+            from src.vuln_data.vulnerability_data_manager import VulnerabilityDataManager
 
             self._data_manager = VulnerabilityDataManager(self.config)
             if self._data_manager:
@@ -554,7 +554,7 @@ class SecurityScanner:
                         content, file_info.language.value if file_info.language else "unknown"
                     )
 
-                    from src.scanner.vulnerability_data_manager import LibraryInfo
+                    from src.vuln_data.vulnerability_data_manager import LibraryInfo
 
                     library_infos = []
                     for lib in libraries:
@@ -3317,7 +3317,7 @@ class SecurityScanner:
             console.print(f"[dim][DEBUG] 发现 {len(dependency_files)} 个依赖声明文件[/dim]")
 
         try:
-            from src.scanner.library_matcher import get_library_matcher
+            from src.vuln_data.library_matcher import get_library_matcher
 
             library_matcher = get_library_matcher()
 

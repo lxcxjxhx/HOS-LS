@@ -316,8 +316,8 @@ def main():
     parser = argparse.ArgumentParser(description="漏洞数据批量入库系统 (SQLite)")
     parser.add_argument(
         "--base-path",
-        default=r"c:\1AAA_PROJECT\HOS\HOS-LS\HOS-LS\All Vulnerabilities\temp_zip",
-        help="数据根目录路径",
+        default=None,
+        help="数据根目录路径（默认从配置读取）",
     )
     parser.add_argument("--continue", dest="continue_mode", action="store_true", help="从断点继续")
     parser.add_argument("--reset", action="store_true", help="重置进度重新开始")
@@ -327,6 +327,13 @@ def main():
     parser.add_argument("--status", action="store_true", help="显示当前进度")
 
     args = parser.parse_args()
+
+    # 如果未指定 base-path，从配置读取
+    if args.base_path is None:
+        from src.core.config import get_config
+
+        config = get_config()
+        args.base_path = str(Path(config.data_preload.temp_zip_dir).parent)
 
     manager = BatchImportManager(args.base_path)
 

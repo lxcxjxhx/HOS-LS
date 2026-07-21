@@ -1503,10 +1503,10 @@ def nvd() -> None:
 @click.pass_context
 def update(ctx, zip, dir, limit, no_rag, batch_size, resume, model) -> None:
     """更新NVD漏洞库，解压并同步到本地RAG库"""
-    # config: Config = ctx.obj["config"]
+    config: Config = ctx.obj["config"]
 
     # 自动检测 temp_data 目录
-    temp_data_base = Path(r"c:\1AAA_PROJECT\HOS\HOS-LS\All Vulnerabilities\temp_data")
+    temp_data_base = Path(config.data_preload.temp_data_dir)
     nvd_data_dir = temp_data_base / "nvd-json-data-feeds"
 
     if dir is None and zip is None:
