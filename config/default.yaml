@@ -4,7 +4,7 @@
 ai:
   provider: deepseek
   model: deepseek-v4-flash
-  api_key: sk-b235bbdc776f47c3bee2e8e8d4ec1232
+  api_key: sk-b5495ce3e17243d3bc4125af7601b1db
   base_url: https://api.deepseek.com
   temperature: 0.0
   max_tokens: 4096
