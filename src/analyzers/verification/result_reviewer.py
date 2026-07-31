@@ -1,5 +1,6 @@
 import json
 import logging
+import os
 import threading
 from datetime import datetime
 from pathlib import Path
@@ -332,7 +333,7 @@ class ResultReviewer:
             AI 验证结果
         """
         try:
-            import openai
+            from openai import OpenAI
 
             # vuln_type = context.vuln_type
             # code_snippet = context.code_snippet
@@ -356,8 +357,24 @@ class ResultReviewer:
 - 原因: 详细解释
 """
 
-            response = openai.ChatCompletion.create(  # type: ignore[attr-defined]
-                model="gpt-3.5-turbo",
+            # 使用项目统一的 AI 客户端模式（新版 OpenAI SDK）
+            api_key = os.getenv("HOS_LS_AI_API_KEY") or os.getenv("DEEPSEEK_API_KEY")
+            if not api_key:
+                logger.warning("AI API key not configured, skipping AI verification")
+                return ValidationResult(
+                    is_valid=None,
+                    is_false_positive=None,
+                    confidence=0.5,
+                    reason=f"AI API 密钥未配置(fallback_reason: {fallback_reason})，需人工复核",
+                    evidence={"fallback_reason": fallback_reason},
+                )
+
+            base_url = os.getenv("HOS_LS_AI_BASE_URL", "https://api.deepseek.com")
+            model = os.getenv("HOS_LS_AI_MODEL", "deepseek-v4-flash")
+
+            client = OpenAI(api_key=api_key, base_url=base_url)
+            response = client.chat.completions.create(
+                model=model,
                 messages=[
                     {"role": "system", "content": "You are a professional security researcher."},
                     {"role": "user", "content": prompt},
