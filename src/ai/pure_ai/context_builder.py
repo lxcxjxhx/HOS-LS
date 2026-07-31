@@ -267,7 +267,7 @@ class ContextBuilder:
         Returns:
             包含上下文信息的字典
         """
-        print(f"[DEBUG] 开始构建上下文: {file_path}")
+        logger.debug(f" 开始构建上下文: {file_path}")
 
         ext = Path(file_path).suffix.lower()
 
@@ -295,7 +295,7 @@ class ContextBuilder:
             normalized_line = re.sub(r"/\*.*?\*/", "", normalized_line)
             normalized_line = normalized_line.strip()
             normalized_lines.append(normalized_line)
-        print("[DEBUG] 文件内容规范化已增强")
+        logger.debug(" 文件内容规范化已增强")
         return "\n".join(normalized_lines)
 
     def _read_file(self, file_path: str, max_size: int = 1048576) -> str:
@@ -309,29 +309,29 @@ class ContextBuilder:
             文件内容
         """
         if file_path in self._file_cache:
-            print(f"[DEBUG] 从缓存读取文件: {file_path}")
+            logger.debug(f" 从缓存读取文件: {file_path}")
             return self._file_cache[file_path]
 
         try:
             file_size = os.path.getsize(file_path)
-            print(f"[DEBUG] 读取文件: {file_path}, 大小: {file_size} 字节")
+            logger.debug(f" 读取文件: {file_path}, 大小: {file_size} 字节")
 
             if file_size > max_size:
-                print(f"[DEBUG] 文件过大，截断为 {max_size} 字节")
+                logger.debug(f" 文件过大，截断为 {max_size} 字节")
                 with open(file_path, "r", encoding="utf-8", errors="replace") as f:
                     content = f.read(max_size)
                 content = content + "\n... [文件过大，已截断]"
             else:
                 with open(file_path, "r", encoding="utf-8", errors="replace") as f:
                     content = f.read()
-                print(f"[DEBUG] 成功读取文件，内容长度: {len(content)} 字符")
+                logger.debug(f" 成功读取文件，内容长度: {len(content)} 字符")
 
             content = self._normalize_content_for_ai(content)
 
             self._file_cache[file_path] = content
             return content
         except Exception as e:
-            print(f"[DEBUG] 读取文件失败: {file_path}, 错误: {e}")
+            logger.warning(f" 读取文件失败: {file_path}, 错误: {e}")
             return ""
 
     def _extract_imports(self, file_path: str) -> List[str]:
@@ -696,7 +696,7 @@ class ContextBuilder:
         context["file_structure"] = self._extract_file_structure(file_path)
         context["data_flow"] = self._track_data_flow(file_path)
 
-        print(f"[DEBUG] 上下文构建完成，文件内容长度: {len(context['file_content'])} 字符")
+        logger.debug(f" 上下文构建完成，文件内容长度: {len(context['file_content'])} 字符")
         return context
 
     def _build_java_context(self, file_path: str) -> Dict[str, Any]:
@@ -747,8 +747,8 @@ class ContextBuilder:
             "data_flow": self._track_data_flow(file_path),
         }
 
-        print(
-            f"[DEBUG] Java上下文构建完成: 标准映射 {len(standard_mappings)} 个, Lambda映射 {len(lambda_mappings)} 个, Bean引用 {len(bean_references)} 个, 类继承 {len(class_hierarchy.get('extends', [])) + len(class_hierarchy.get('implements', []))} 个 (共 {total_mappings} 个)"
+        logger.info(
+            f"Java上下文构建完成: 标准映射 {len(standard_mappings)} 个, Lambda映射 {len(lambda_mappings)} 个, Bean引用 {len(bean_references)} 个, 类继承 {len(class_hierarchy.get('extends', [])) + len(class_hierarchy.get('implements', []))} 个 (共 {total_mappings} 个)"
         )
         return context
 
