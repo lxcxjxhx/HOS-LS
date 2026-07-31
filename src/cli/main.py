@@ -282,7 +282,7 @@ def cli(ctx: click.Context, config: Optional[str], verbose: bool, quiet: bool, d
 )
 @click.option("--output", "-o", help="输出文件路径")
 @click.option("--ruleset", "-r", help="规则集")
-@click.option("--dif", is_flag=True, help="扫描 Git 差异")
+@click.option("--diff", is_flag=True, help="扫描 Git 差异")
 @click.option("--workers", "-w", type=int, default=4, help="工作线程数")
 @click.option("--ai", is_flag=True, help="启用 AI 分析")
 @click.option("--pure-ai", is_flag=True, help="启用纯AI深度语义解析模式，只执行AI分析和报告导出")
