@@ -24,6 +24,9 @@ from src.reporting.category import (
     classify_rule,
     get_special_scan_area,
 )
+from src.utils.logger import get_logger
+
+logger = get_logger(__name__)
 
 try:
     from src.ai.pure_ai.schema import LineMatchStatus
@@ -548,8 +551,8 @@ class HTMLReportGenerator(BaseReportGenerator):
         if len(token_records) > MAX_TOKEN_RECORDS:
             token_records = token_records[-MAX_TOKEN_RECORDS:]
 
-        print(
-            f"[DEBUG] 调试日志数量限制: {len(debug_logs)}/{MAX_DEBUG_LOGS}, 令牌记录数量限制: {len(token_records)}/{MAX_TOKEN_RECORDS}"
+        logger.debug(
+            f"调试日志数量限制: {len(debug_logs)}/{MAX_DEBUG_LOGS}, 令牌记录数量限制: {len(token_records)}/{MAX_TOKEN_RECORDS}"
         )
 
         all_findings = [f for r in results for f in r.findings]
@@ -557,7 +560,7 @@ class HTMLReportGenerator(BaseReportGenerator):
 
         # 加载模板文件
         template_path = Path(__file__).parent / "templates" / "builtin" / "html" / "default.html"
-        print(f"[DEBUG] 报告模板路径: {template_path}, 存在: {'是' if template_path.exists() else '否'}")
+        logger.debug(f"报告模板路径: {template_path}, 存在: {'是' if template_path.exists() else '否'}")
         if not template_path.exists():
             # 如果模板文件不存在，使用默认模板
             return str(
@@ -623,8 +626,8 @@ class HTMLReportGenerator(BaseReportGenerator):
                         )
 
                         if not should_include:
-                            print(
-                                f"[DEBUG] 跳过已拒绝漏洞: {getattr(finding, 'rule_name', finding.rule_id)}"
+                            logger.debug(
+                                f"跳过已拒绝漏洞: {getattr(finding, 'rule_name', finding.rule_id)}"
                             )
                             finding_index -= 1
                             continue
@@ -688,8 +691,8 @@ class HTMLReportGenerator(BaseReportGenerator):
                         }
 
                         if needs_review:
-                            print(
-                                f"[DEBUG] 标记为需要审查的待定漏洞: {getattr(finding, 'rule_name', finding.rule_id)}, 置信度: {getattr(finding, 'confidence', 0)}, 证据数: {len(metadata.get('evidence', []))}"
+                            logger.debug(
+                                f"标记为需要审查的待定漏洞: {getattr(finding, 'rule_name', finding.rule_id)}, 置信度: {getattr(finding, 'confidence', 0)}, 证据数: {len(metadata.get('evidence', []))}"
                             )
 
                         if hasattr(finding, "files") and finding.files:

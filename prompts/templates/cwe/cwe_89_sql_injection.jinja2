@@ -1,0 +1,106 @@
+{# CWE-89: SQL注入（SQL Injection）检测指导模板
+   对标 ZeroFalse 论文的 CWE 专用 Prompt 实现
+   本模板作为 partial 被 vulnerability_verification / risk_enumeration 主模板 include
+#}
+
+[CWE-89 SQL注入检测指导]
+
+**漏洞定义**：
+SQL注入是指用户可控输入未经充分净化即被拼接到SQL查询语句中，
+导致攻击者可以改变SQL语句的语义，实现未授权的数据查询、修改或删除。
+
+**Sink函数（危险函数）**：
+{% if detected_language == "java" %}
+- Statement.executeQuery(sql) — 执行原始SQL查询
+- Statement.execute(sql) — 执行任意SQL
+- Statement.executeUpdate(sql) — 执行更新操作
+- Connection.prepareStatement(sql) — 当sql为拼接字符串时危险
+- JdbcTemplate.execute(sql) — Spring JDBC模板执行
+- JdbcTemplate.queryForList(sql) — 查询列表
+- JdbcTemplate.queryForObject(sql, ...) — 查询单对象
+- MyBatis ${} 占位符 — 直接拼接，非参数化
+- Hibernate Session.createSQLQuery(hql) — 原生SQL查询
+- Hibernate Session.createNativeQuery(hql) — JPA原生查询
+{% elif detected_language == "python" %}
+- cursor.execute(query) — 当query为拼接字符串时危险
+- cursor.executemany(query, ...) — 批量执行
+- db.execute(text(query)) — SQLAlchemy文本查询
+- session.execute(text(query)) — SQLAlchemy ORM文本查询
+- raw() / RawSQL() — Django ORM原始SQL
+- engine.execute(query) — 已废弃但仍存在
+{% elif detected_language == "javascript" %}
+- db.query(sql) — 原始SQL查询（mysql2/pg/node-mssql）
+- sequelize.query(sql) — Sequelize原始查询
+- knex.raw(sql) — Knex原始SQL
+- collection.find({$where: ...}) — MongoDB $where注入
+- mongoose.model.collection.findOne(query) — 当query可构造时
+{% endif %}
+
+**Source函数（用户输入入口）**：
+{% if detected_language == "java" %}
+- HttpServletRequest.getParameter() — HTTP请求参数
+- HttpServletRequest.getHeader() — HTTP请求头
+- @RequestParam / @PathVariable — Spring MVC参数绑定
+- @RequestBody — 请求体反序列化
+- MultipartFile.getInputStream() — 文件上传内容
+- Cookie.getValue() — Cookie值
+- InputStream / BufferedReader — 流输入
+{% elif detected_language == "python" %}
+- request.args.get() / request.form.get() — Flask请求参数
+- request.json / request.data — Flask请求体
+- request.GET / request.POST — Django请求参数
+- request.body / request.query_params — DRF请求参数
+- input() — 标准输入
+- sys.argv — 命令行参数
+{% elif detected_language == "javascript" %}
+- req.query / req.body / req.params — Express请求参数
+- req.headers — 请求头
+- req.cookies — Cookie值
+- process.argv — 命令行参数
+{% endif %}
+
+**Sanitization模式（充分防御判定）**：
+{% if detected_language == "java" %}
+- PreparedStatement + 参数化查询（?占位符 + setString/setInt）→ 充分防御
+- MyBatis #{} 绑定 → 充分防御（注意 ${} 不安全）
+- JPA Criteria API / JPQL命名参数 → 充分防御
+- ESAPI.getSafeSQLInput() → 充分防御
+- 白名单校验（仅允许预定义值）→ 充分防御
+- 存储过程（参数化调用）→ 充分防御
+{% elif detected_language == "python" %}
+- 参数化查询 cursor.execute("SELECT * FROM t WHERE id=?", (val,)) → 充分防御
+- SQLAlchemy ORM查询（非text()）→ 充分防御
+- Django ORM查询（非raw()/RawSQL()）→ 充分防御
+- 输入白名单校验 → 充分防御
+{% elif detected_language == "javascript" %}
+- 参数化查询 db.query("SELECT * FROM t WHERE id=?", [val]) → 充分防御
+- ORM查询（Sequelize model methods / Knex query builder）→ 充分防御
+- 输入白名单校验 → 充分防御
+{% endif %}
+
+**不充分防御（仍视为漏洞）**：
+- 仅使用 replace("'", "''") 等简单替换 → 不充分（编码绕过）
+- 仅使用正则过滤特殊字符 → 不充分（可能存在绕过）
+- 仅使用 addslashes / mysql_real_escape_string → 不充分（编码问题）
+- 黑名单过滤 → 不充分
+
+**证据要求**：
+1. 必须识别出从source到sink的完整数据流路径
+2. 必须确认中间无有效的参数化查询或白名单校验
+3. code_snippet必须包含实际的SQL拼接代码
+4. 必须标注具体的危险函数调用行
+
+**CVSS评分指导**：
+- 可联合查询获取数据库全部数据：AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:N → 9.1 (CRITICAL)
+- 仅布尔盲注/时间盲注：AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N → 7.5 (HIGH)
+- 需要认证后利用：AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:N → 8.1 (HIGH)
+- 仅影响部分数据：AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:L/A:N → 5.4 (MEDIUM)
+
+{% if file_content %}
+[CWE-89 针对性检测]
+在以下文件内容中重点检测SQL注入模式：
+- 字符串拼接（+ / .format / f-string / template literal）构造SQL
+- ORDER BY / LIMIT / 表名 / 列名等无法参数化的位置
+- MyBatis XML中的 ${} 使用
+- 动态表名或列名拼接
+{% endif %}

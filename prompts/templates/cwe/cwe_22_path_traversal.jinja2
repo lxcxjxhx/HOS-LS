@@ -1,0 +1,119 @@
+{# CWE-22: 路径遍历（Path Traversal）检测指导模板
+   对标 ZeroFalse 论文的 CWE 专用 Prompt 实现
+   本模板作为 partial 被主模板 include
+#}
+
+[CWE-22 路径遍历检测指导]
+
+**漏洞定义**：
+路径遍历是指用户可控输入未经充分验证即被用于构造文件路径，
+攻击者可以通过 ../ 等序列遍历到预期目录之外，读取、写入或删除
+服务器上的任意文件，可能泄露敏感配置、源代码或系统文件。
+
+**Sink函数（危险函数）**：
+{% if detected_language == "java" %}
+- new File(path) — 文件对象创建
+- new FileInputStream(path) — 文件读取流
+- new FileOutputStream(path) — 文件写入流
+- new FileReader(path) — 文件读取器
+- new FileWriter(path) — 文件写入器
+- Paths.get(path) / Path.of(path) — NIO路径
+- Files.readAllLines(path) — 读取全部行
+- Files.readString(path) — 读取字符串
+- Files.write(path, data) — 写入文件
+- Files.copy(src, dst) — 文件复制
+- Files.delete(path) — 删除文件
+- ClassLoader.getResource(path) — 资源加载
+- new RandomAccessFile(path, "r") — 随机访问文件
+{% elif detected_language == "python" %}
+- open(path) / open(path, "r") / open(path, "w") — 文件操作
+- os.path.join(base, user_input) — 路径拼接
+- pathlib.Path(path) — 路径对象
+- Path.read_text() / Path.write_text() — 路径读写
+- os.remove(path) / os.unlink(path) — 删除文件
+- os.rename(src, dst) — 重命名
+- shutil.copy(src, dst) — 复制文件
+- send_file(path) — Flask文件发送
+- FileResponse(path) — FastAPI文件响应
+- HttpResponse(open(path).read()) — Django文件响应
+{% elif detected_language == "javascript" %}
+- fs.readFile(path) / fs.readFileSync(path) — 文件读取
+- fs.writeFile(path, data) — 文件写入
+- fs.createReadStream(path) — 创建读取流
+- fs.unlink(path) — 删除文件
+- path.join(base, user_input) — 路径拼接
+- res.sendFile(path) — Express发送文件
+- express.static(path) — 静态文件服务
+{% endif %}
+
+**Source函数（用户输入入口）**：
+{% if detected_language == "java" %}
+- @RequestParam / @PathVariable — URL参数（如文件名、目录名）
+- HttpServletRequest.getParameter() — 请求参数
+- @RequestBody — 请求体中的文件名字段
+- Cookie值 — Cookie中的路径信息
+- HTTP请求头 — Content-Disposition中的文件名
+{% elif detected_language == "python" %}
+- request.args.get("file") / request.args.get("filename") — Flask文件名参数
+- request.GET.get("file") — Django文件参数
+- request.form.get("filename") — 表单文件名
+- request.headers.get("X-Filename") — 自定义头
+{% elif detected_language == "javascript" %}
+- req.query.file / req.query.filename — 文件参数
+- req.params.filename — URL路径参数
+- req.body.filename — 请求体文件名
+{% endif %}
+
+**Sanitization模式（充分防御判定）**：
+{% if detected_language == "java" %}
+- Path.normalize() + startsWith(allowedDir) 校验 → 充分防御
+- 白名单目录 + 规范化路径比较 → 充分防御
+- FilenameUtils.getName(path) 仅取文件名（Apache Commons）→ 充分防御
+- 文件ID映射（不直接使用用户输入作为路径）→ 充分防御
+{% elif detected_language == "python" %}
+- os.path.realpath(path) + startswith(allowed_dir) → 充分防御
+- pathlib.Path.resolve() + is_relative_to(allowed_dir) → 充分防御
+- os.path.basename(path) 仅取文件名 → 充分防御
+- 文件ID映射 → 充分防御
+{% elif detected_language == "javascript" %}
+- path.resolve() + startsWith(allowedDir) → 充分防御
+- path.basename(path) 仅取文件名 → 充分防御
+- 文件ID映射 → 充分防御
+{% endif %}
+
+**不充分防御（仍视为漏洞）**：
+- 仅过滤 ../ → 不充分（可通过 ..\、..%2f、%2e%2e%2f 等绕过）
+- 仅过滤 .. → 不充分（绝对路径绕过）
+- 先拼接后校验（TOCTOU竞态）→ 不充分
+- 仅校验文件扩展名 → 不充分（路径遍历仍可发生）
+- 使用 contains("..") 检查 → 不充分（编码绕过）
+
+**路径遍历载荷检测**：
+- 基础遍历：../../../etc/passwd
+- URL编码绕过：%2e%2e%2f%2e%2e%2f
+- 双重编码：%252e%252e%252f
+- 反斜杠（Windows）：..\..\windows\system32
+- 混合分隔符：..\/..\/
+- 空字节截断（旧版Java/PHP）：../../../etc/passwd%00.png
+- 绝对路径覆盖：/etc/shadow
+
+**证据要求**：
+1. 必须识别出用户输入到文件路径构造的数据流
+2. 必须确认路径未经规范化校验或白名单过滤
+3. 必须标注文件操作的具体类型（读/写/删除）
+4. code_snippet必须包含路径构造和文件操作代码
+
+**CVSS评分指导**：
+- 未认证读取敏感文件（/etc/passwd等）：AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N → 7.5 (HIGH)
+- 未认证写入任意文件（可覆盖配置/webshell）：AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:H/A:H → 9.1 (CRITICAL)
+- 需要认证：AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:N → 6.5 (MEDIUM)
+- 仅读取应用目录内文件（受限遍历）：AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N → 5.3 (MEDIUM)
+
+{% if file_content %}
+[CWE-22 针对性检测]
+在以下文件内容中重点检测路径遍历模式：
+- 用户输入直接拼接到文件路径
+- 文件上传时的文件名处理
+- 文件下载/查看功能中的路径参数
+- 静态资源服务中的路径构造
+{% endif %}

@@ -1,0 +1,127 @@
+{# CWE-862: 缺失授权（Missing Authorization）检测指导模板
+   对标 ZeroFalse 论文的 CWE 专用 Prompt 实现
+   本模板作为 partial 被主模板 include
+#}
+
+[CWE-862 缺失授权检测指导]
+
+**漏洞定义**：
+缺失授权是指应用程序在执行敏感操作时未正确验证用户是否具有相应的访问权限，
+导致攻击者可以越权执行操作（水平越权：访问其他用户数据；垂直越权：执行管理员操作），
+或者完全未授权访问受保护的资源和功能。
+
+**Sink函数（危险函数 - 缺少权限检查的敏感操作）**：
+{% if detected_language == "java" %}
+**数据操作**：
+- repository.findById(id) — 当id可被其他用户控制且无权限校验时
+- repository.findAll() — 无过滤查询所有数据
+- repository.delete(id) — 无权限校验的删除
+- service.updateUser(id, data) — 修改其他用户数据
+- service.deleteUser(id) — 删除其他用户
+
+**管理操作**：
+- 缺少 @PreAuthorize / @Secured / @RolesAllowed 注解的Controller方法
+- 缺少 Spring Security 配置的端点
+- 直接暴露的管理接口（无权限拦截器）
+
+**配置问题**：
+- .permitAll() 用于敏感端点
+- .antMatchers("/admin/**").permitAll() — 管理端点无认证
+- WebSecurityCustomizer 忽略安全路径包含敏感资源
+- @CrossOrigin(origins = "*") — 过于宽松的CORS
+{% elif detected_language == "python" %}
+**数据操作**：
+- Model.objects.get(id=id) — 当id可被其他用户控制且无权限校验时
+- Model.objects.all() — 无过滤查询所有数据
+- Model.objects.filter(user_id=id).delete() — 无权限校验的删除
+- 缺少 @permission_classes 的DRF视图
+- 缺少 @login_required 的Django视图
+
+**管理操作**：
+- 缺少权限装饰器的管理视图
+- 缺少认证中间件的URL路由
+- 直接暴露的管理API
+{% elif detected_language == "javascript" %}
+**数据操作**：
+- Model.findById(id) — 当id可被其他用户控制且无权限校验时
+- Model.find() — 无过滤查询
+- Model.deleteOne({id}) — 无权限校验的删除
+- 缺少认证中间件的路由
+
+**管理操作**：
+- 缺少 auth 中间件的管理路由
+- 缺少角色检查的敏感操作
+- 直接暴露的管理API端点
+{% endif %}
+
+**Source函数（请求入口 - 权限检查缺失点）**：
+{% if detected_language == "java" %}
+- @GetMapping / @PostMapping 等无安全注解的Controller方法
+- 缺少 SecurityFilterChain 配置的URL路径
+- Filter链中未被拦截的请求路径
+- API网关的公开路由配置
+{% elif detected_language == "python" %}
+- 缺少 @login_required / @permission_required 的视图函数
+- 缺少认证中间件的URL路由
+- DRF视图中 permission_classes = [] 或 AllowAny
+- Django settings中未包含在AUTHENTICATION_BACKENDS中的认证
+{% elif detected_language == "javascript" %}
+- 缺少认证中间件的路由定义
+- router.get/post 无 auth 中间件
+- API路由配置中的公开端点
+{% endif %}
+
+**授权检查模式（充分防御判定）**：
+{% if detected_language == "java" %}
+- Spring Security @PreAuthorize("hasRole('ADMIN')") → 充分防御
+- Spring Security @Secured("ROLE_ADMIN") → 充分防御
+- Spring Security SecurityFilterChain 正确配置URL权限 → 充分防御
+- 手动权限校验：if (!currentUser.getId().equals(targetUserId)) throw 403 → 充分防御（水平越权防护）
+- 数据归属校验：WHERE user_id = :currentUserId → 充分防御
+{% elif detected_language == "python" %}
+- Django @login_required + @permission_required → 充分防御
+- DRF IsAuthenticated + DjangoModelPermissions → 充分防御
+- 手动权限校验：if obj.owner != request.user → 充分防御
+- 数据过滤：queryset.filter(owner=request.user) → 充分防御
+{% elif detected_language == "javascript" %}
+- Express认证中间件 + 角色检查 → 充分防御
+- Passport.js isAuthenticated + 权限检查 → 充分防御
+- 数据归属校验：where: { userId: req.user.id } → 充分防御
+{% endif %}
+
+**不充分防御（仍视为漏洞）**：
+- 仅在前端隐藏管理按钮 → 不充分（API仍可访问）
+- 仅验证用户已登录但不检查权限 → 不充分（水平越权）
+- 仅使用角色名但不验证角色有效性 → 不充分
+- IDOR：仅使用自增ID但不验证归属 → 不充分（水平越权）
+- CORS限制但不验证Origin → 不充分
+
+**越权类型识别**：
+- 垂直越权（BOLA/IDOR）：普通用户访问管理员功能
+- 水平越权：用户A访问用户B的数据
+- 功能级越权：未授权用户调用受保护API
+- 数据级越权：通过修改ID参数访问其他用户数据
+
+**证据要求**：
+1. 必须识别出敏感操作缺少权限检查
+2. 必须标注操作类型（数据访问/修改/删除/管理功能）
+3. 必须确认是否存在用户身份验证和权限校验
+4. code_snippet必须包含缺少权限检查的代码
+5. 应标注越权类型（水平/垂直/功能级）
+
+**CVSS评分指导**：
+- 未授权访问管理功能：AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H → 9.8 (CRITICAL)
+- 水平越权访问其他用户敏感数据：AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:N → 6.5 (MEDIUM)
+- 垂直越权执行管理员操作：AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:N → 8.1 (HIGH)
+- 仅访问非敏感数据：AV:N/AC:L/PR:L/UI:N/S:U/C:L/I:N/A:N → 4.3 (MEDIUM)
+- 需要复杂条件才能利用：AV:N/AC:H/PR:L/UI:N/S:U/C:L/I:L/A:N → 3.5 (LOW)
+
+{% if file_content %}
+[CWE-862 针对性检测]
+在以下文件内容中重点检测授权缺失模式：
+- Controller/视图/路由中缺少权限注解或中间件
+- 数据查询中缺少用户归属校验
+- 管理功能缺少角色检查
+- Security配置中的permitAll路径
+- CORS配置过于宽松
+{% endif %}

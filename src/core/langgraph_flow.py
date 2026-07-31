@@ -1,4 +1,6 @@
 import functools
+import hashlib
+import json
 from pathlib import Path
 from typing import Any
 
@@ -19,6 +21,9 @@ from src.core.rag_graph_integrator import get_rag_graph_integrator
 from src.security.security_checker import get_security_checker
 from src.storage.rag_knowledge_base import RAGKnowledgeBase
 from src.taint.analyzer import TaintAnalyzer
+from src.utils.logger import get_logger
+
+logger = get_logger(__name__)
 
 # 缓存管理器
 cache_manager = CacheManager()
@@ -27,26 +32,33 @@ cache_manager = CacheManager()
 chunk_processor = ChunkProcessor()
 
 
+def _make_cache_key(func_name: str, state: ScanState) -> str:
+    """生成缓存键（基于目标路径和函数名）"""
+    raw = f"{func_name}:{state.target}:{getattr(state, 'config', {}).get('scan_id', 'default')}"
+    return hashlib.md5(raw.encode()).hexdigest()
+
+
 # 缓存装饰器
 def cache_result(func):
-    """缓存函数结果"""
+    """缓存函数结果（基于 ScanState 的关键字段）"""
 
     @functools.wraps(func)
     async def wrapper(state: ScanState):
-        # 生成缓存键
-        # cache_key = hashlib.md5(f"{func.__name__}:{state.target}".encode()).hexdigest()
+        try:
+            cache_key = _make_cache_key(func.__name__, state)
+            cached_result = cache_manager.get(cache_key)
+            if cached_result is not None:
+                logger.debug(f"Cache hit for {func.__name__}: {state.target}")
+                return cached_result
+        except Exception as e:
+            logger.warning(f"Cache lookup failed for {func.__name__}: {e}")
 
-        # 跳过缓存，因为ScanState对象可能无法序列化
-        # 后续可以实现更复杂的缓存策略
-        # cached_result = cache_manager.get(cache_key)
-        # if cached_result:
-        #     return cached_result
-
-        # 执行函数
         result = await func(state)
 
-        # 跳过缓存，因为ScanState对象可能无法序列化
-        # cache_manager.set(cache_key, result, expire=3600)  # 缓存1小时
+        try:
+            cache_manager.set(cache_key, result, expire=3600)
+        except Exception as e:
+            logger.warning(f"Cache store failed for {func.__name__}: {e}")
 
         return result
 
@@ -82,11 +94,21 @@ async def analyze_code(state: ScanState) -> ScanState:
                 with open(target_path, "r", encoding="utf-8") as f:
                     code = f.read()
         else:
-            # 如果是目录，简单判断
-            code = """
-            # 目录扫描
-            # 包含多个文件
-            """
+            # 目录扫描：聚合文件信息用于复杂度评估
+            code_parts = []
+            file_count = 0
+            total_lines = 0
+            for ext in ("*.py", "*.java", "*.js", "*.ts", "*.go", "*.c", "*.cpp"):
+                for fpath in target_path.rglob(ext):
+                    if fpath.is_file() and file_count < 50:  # 限制采样文件数
+                        try:
+                            content = fpath.read_text(encoding="utf-8", errors="ignore")
+                            code_parts.append(content[:500])  # 每文件取前500字符
+                            total_lines += len(content.split("\n"))
+                            file_count += 1
+                        except Exception:
+                            pass
+            code = "\n".join(code_parts) if code_parts else "# empty directory"
 
         # 评估代码复杂度
         complexity = evaluate_complexity(code)
@@ -183,8 +205,8 @@ async def query_graph(state: ScanState) -> ScanState:
 
         # 构建查询
         queries = []
-        if state.rag:
-            for rag_result in state.rag:
+        if state.rag_results:
+            for rag_result in state.rag_results:
                 if "CVE" in rag_result.get("title", ""):
                     # 提取CVE ID
                     cve_id = rag_result["title"].split(" ")[0]
@@ -290,7 +312,7 @@ async def cst_analysis_node(state: ScanState) -> ScanState:
         return state.update(cst=[])
 
     except Exception as e:
-        print(f"[DEBUG] CST 分析节点出错: {e}")
+        logger.debug(f"CST 分析节点出错: {e}")
         return state.update(cst=[])
 
 
@@ -323,7 +345,7 @@ async def ast_analysis_node(state: ScanState) -> ScanState:
         return state.update(ast=[])
 
     except Exception as e:
-        print(f"[DEBUG] AST 分析节点出错: {e}")
+        logger.debug(f"AST 分析节点出错: {e}")
         return state.update(ast=[])
 
 
@@ -356,7 +378,7 @@ async def taint_analysis_node(state: ScanState) -> ScanState:
         return state.update(taint=[])
 
     except Exception as e:
-        print(f"[DEBUG] 污点分析节点出错: {e}")
+        logger.debug(f"污点分析节点出错: {e}")
         return state.update(taint=[])
 
 
@@ -381,7 +403,7 @@ async def rag_analysis_node(state: ScanState) -> ScanState:
         return state.update(rag=[])
 
     except Exception as e:
-        print(f"[DEBUG] RAG 分析节点出错: {e}")
+        logger.debug(f"RAG 分析节点出错: {e}")
         return state.update(rag=[])
 
 
@@ -405,7 +427,7 @@ async def fusion_node(state: ScanState) -> ScanState:
         return state.update(evidence=fused_evidence)
 
     except Exception as e:
-        print(f"[DEBUG] Fusion 节点出错: {e}")
+        logger.debug(f"Fusion 节点出错: {e}")
         return state.update(evidence=[])
 
 
@@ -432,7 +454,7 @@ async def semantic_analysis_node(state: ScanState) -> ScanState:
         return state.update(semantic=[])
 
     except Exception as e:
-        print(f"[DEBUG] 语义分析节点出错: {e}")
+        logger.debug(f"语义分析节点出错: {e}")
         return state.update(semantic=[])
 
 
@@ -452,7 +474,7 @@ async def attack_analysis_node(state: ScanState) -> ScanState:
         return state.update(attack_paths=attack_chains)
 
     except Exception as e:
-        print(f"[DEBUG] 攻击链分析节点出错: {e}")
+        logger.debug(f"攻击链分析节点出错: {e}")
         return state.update(attack_paths=[])
 
 
@@ -491,7 +513,7 @@ async def validation_node(state: ScanState) -> ScanState:
         )
 
     except Exception as e:
-        print(f"[DEBUG] 验证节点出错: {e}")
+        logger.debug(f"验证节点出错: {e}")
         return state.update(scan_result=ScanResult(target=state.target, status=ScanStatus.FAILED))
 
 
@@ -896,10 +918,10 @@ async def reasoning_node(state: AgentState) -> AgentState:
     try:
         # 评估代码复杂度
         complexity = evaluate_complexity(state["input_code"])
-        print(f"[DEBUG] 代码复杂度评估: {complexity:.2f}")
+        logger.debug(f"代码复杂度评估: {complexity:.2f}")
 
         # 使用强化的 DSPy 分析逻辑
-        print("[DEBUG] 使用强化的 DSPy 分析")
+        logger.debug("使用强化的 DSPy 分析")
         # 构建分析输入
         cve_context = "\n".join(
             [candidate["content"] for candidate in state.get("cve_candidates", [])]
@@ -914,7 +936,7 @@ async def reasoning_node(state: AgentState) -> AgentState:
         attack_chain = "\n".join(attack_chain_info) or str(graph_subgraph)
 
         # 集成DSPy优化
-        print("[DEBUG] 集成 DSPy 优化...")
+        logger.debug("集成 DSPy 优化...")
         from src.ai.dspy_optimization import _optimized_programs, get_dspy_programs
 
         # 重置缓存，确保获取最新的程序
@@ -922,11 +944,11 @@ async def reasoning_node(state: AgentState) -> AgentState:
         programs = get_dspy_programs()
 
         # 使用DSPy进行漏洞分析
-        print("[DEBUG] 使用 DSPy 进行漏洞分析...")
+        logger.debug("使用 DSPy 进行漏洞分析...")
         result = programs["vulnerability_analysis"](
             code=state["input_code"], cve_context=cve_context, attack_chain=attack_chain
         )
-        print("[DEBUG] DSPy 漏洞分析完成")
+        logger.debug("DSPy 漏洞分析完成")
 
         # 构建分析结果
         analysis_result = "# 漏洞分析结果\n\n"
@@ -952,7 +974,7 @@ async def reasoning_node(state: AgentState) -> AgentState:
         return {**state, "analysis_result": analysis_result}
 
     except Exception as e:
-        print(f"[DEBUG] 推理节点出错: {e}")
+        logger.debug(f"推理节点出错: {e}")
         # 出错时使用默认逻辑
         analysis_result = "# 漏洞分析结果\n\n"
         analysis_result += "## 基础信息\n"
@@ -971,9 +993,9 @@ async def critic_node(state: AgentState) -> AgentState:
     质量检查，支持循环重试
     """
     try:
-        print("[DEBUG] 开始执行 Critic Agent 质量评估...")
+        logger.debug("开始执行 Critic Agent 质量评估...")
         # 集成DSPy优化
-        print("[DEBUG] 集成 DSPy 优化...")
+        logger.debug("集成 DSPy 优化...")
         from src.ai.dspy_optimization import _optimized_programs, get_dspy_programs
 
         # 重置缓存，确保获取最新的程序
@@ -981,9 +1003,9 @@ async def critic_node(state: AgentState) -> AgentState:
         programs = get_dspy_programs()
 
         # 使用DSPy进行质量评估
-        print("[DEBUG] 使用 DSPy 进行质量评估...")
+        logger.debug("使用 DSPy 进行质量评估...")
         result = programs["critic_evaluation"](analysis_result=state.get("analysis_result", ""))
-        print(f"[DEBUG] DSPy 质量评估结果: {result.quality}")
+        logger.debug(f"DSPy 质量评估结果: {result.quality}")
 
         # 质量评估
         iteration = state.get("iteration", 0)
@@ -1011,24 +1033,24 @@ async def critic_node(state: AgentState) -> AgentState:
             quality_score += 30
 
         # 4. 使用LangSmith + DeepEval进行评估
-        print("[DEBUG] 使用 LangSmith + DeepEval 进行评估...")
+        logger.debug("使用 LangSmith + DeepEval 进行评估...")
         evaluator = get_evaluator()
         evaluation_report = evaluator.evaluate_analysis(
             state.get("input_code", ""), analysis_result
         )
-        print(
-            f"[DEBUG] LangSmith + DeepEval 评估结果: {evaluation_report['evaluation']['overall']:.2f}"
+        logger.debug(
+            f"LangSmith + DeepEval 评估结果: {evaluation_report['evaluation']['overall']:.2f}"
         )
 
         # 生成反馈
         feedback = evaluator.generate_feedback(evaluation_report["evaluation"])
-        print("[DEBUG] 生成评估反馈")
+        logger.debug("生成评估反馈")
 
         # 判断是否需要重试
         if quality_score < 60 or evaluation_report["evaluation"]["overall"] < 0.6:
             # 质量不达标，需要重试
             if iteration < 3:
-                print(f"[DEBUG] 质量不达标，需要重试 (迭代 {iteration + 1}/3)")
+                logger.debug(f"质量不达标，需要重试 (迭代 {iteration + 1}/3)")
                 return {
                     **state,
                     "iteration": iteration + 1,
@@ -1043,7 +1065,7 @@ async def critic_node(state: AgentState) -> AgentState:
                 }
 
         # 质量达标，生成最终报告
-        print("[DEBUG] 质量达标，生成最终报告")
+        logger.debug("质量达标，生成最终报告")
         final_report = {
             "analysis": analysis_result,
             "cve_candidates": state.get("cve_candidates", []),
@@ -1059,7 +1081,7 @@ async def critic_node(state: AgentState) -> AgentState:
         return {**state, "final_report": final_report}
 
     except Exception as e:
-        print(f"[DEBUG] Critic 节点出错: {e}")
+        logger.debug(f"Critic 节点出错: {e}")
         # 出错时使用默认逻辑
         iteration = state.get("iteration", 0)
         analysis_result = state.get("analysis_result", "")
@@ -1075,21 +1097,21 @@ async def critic_node(state: AgentState) -> AgentState:
         evaluation = {"overall": 0.5}
         feedback = "分析结果需要改进"
         try:
-            print("[DEBUG] 尝试使用评估器...")
+            logger.debug("尝试使用评估器...")
             evaluator = get_evaluator()
             evaluation_report = evaluator.evaluate_analysis(
                 state.get("input_code", ""), analysis_result
             )
             evaluation = evaluation_report["evaluation"]
             feedback = evaluator.generate_feedback(evaluation)
-            print(f"[DEBUG] 评估器执行成功: {evaluation['overall']:.2f}")
+            logger.debug(f"评估器执行成功: {evaluation['overall']:.2f}")
         except Exception as eval_error:
-            print(f"[DEBUG] 评估器执行失败: {eval_error}")
+            logger.debug(f"评估器执行失败: {eval_error}")
 
         if quality_score < 60 or evaluation["overall"] < 0.6:
             # 质量不达标，需要重试
             if iteration < 3:
-                print(f"[DEBUG] 质量不达标，需要重试 (迭代 {iteration + 1}/3)")
+                logger.debug(f"质量不达标，需要重试 (迭代 {iteration + 1}/3)")
                 return {
                     **state,
                     "iteration": iteration + 1,
@@ -1100,7 +1122,7 @@ async def critic_node(state: AgentState) -> AgentState:
                 }
 
         # 质量达标，生成最终报告
-        print("[DEBUG] 质量达标，生成最终报告")
+        logger.debug("质量达标，生成最终报告")
         final_report = {
             "analysis": analysis_result,
             "cve_candidates": state.get("cve_candidates", []),
