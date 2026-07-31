@@ -4,7 +4,9 @@
 """
 
 import logging
+import os
 import sys
+from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from typing import Optional
 
@@ -21,11 +23,17 @@ def setup_logging(
 
     Args:
         level: 日志级别
-        log_file: 日志文件路径
+        log_file: 日志文件路径（显式指定时优先使用）
         use_rich: 是否使用 Rich 处理程序
 
     Returns:
         日志记录器
+
+    文件日志控制:
+        - 通过 log_file 参数显式指定日志文件路径
+        - 通过环境变量 HOS_LS_LOG_FILE 启用（值为日志文件名，默认 "hos-ls.log"）
+        - 通过环境变量 HOS_LS_LOG_DIR 指定日志目录（默认 "./logs"）
+        - 未设置任何参数时，文件日志默认关闭
     """
     # 创建日志记录器
     logger = logging.getLogger("hos-ls")
@@ -55,12 +63,26 @@ def setup_logging(
         stream_handler.setLevel(getattr(logging, level.upper()))
         logger.addHandler(stream_handler)
 
-    # 文件处理程序
-    if log_file:
-        log_path = Path(log_file)
+    # 文件处理程序（使用 RotatingFileHandler）
+    resolved_log_file = log_file
+    if not resolved_log_file:
+        # 通过环境变量启用文件日志
+        env_log_file = os.getenv("HOS_LS_LOG_FILE")
+        if env_log_file:
+            log_dir = os.getenv("HOS_LS_LOG_DIR", "./logs")
+            os.makedirs(log_dir, exist_ok=True)
+            resolved_log_file = os.path.join(log_dir, env_log_file)
+
+    if resolved_log_file:
+        log_path = Path(resolved_log_file)
         log_path.parent.mkdir(parents=True, exist_ok=True)
 
-        file_handler = logging.FileHandler(log_file, encoding="utf-8")
+        file_handler = RotatingFileHandler(
+            resolved_log_file,
+            maxBytes=10 * 1024 * 1024,  # 10MB
+            backupCount=3,
+            encoding="utf-8",
+        )
         file_handler.setFormatter(formatter)
         file_handler.setLevel(logging.DEBUG)
         logger.addHandler(file_handler)
