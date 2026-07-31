@@ -7,6 +7,9 @@ from src.ai.client import AIProvider, get_model_manager
 from src.ai.models import AIRequest
 from src.ai.pure_ai.cache import CacheManager
 from src.ai.pure_ai.prompt_templates import PromptTemplates
+from src.utils.logger import get_logger
+
+logger = get_logger(__name__)
 
 
 class FilePrioritizer:
@@ -630,11 +633,11 @@ class FilePrioritizer:
             self.enabled = self.ai_client is not None
             self.ai_initialized = True
             if self.enabled:
-                print("[DEBUG] AI文件优先级评估器初始化成功")
+                logger.debug(" AI文件优先级评估器初始化成功")
             else:
-                print("[DEBUG] AI文件优先级评估器初始化失败：无法获取AI客户端")
+                logger.warning(" AI文件优先级评估器初始化失败：无法获取AI客户端")
         except Exception as e:
-            print(f"[DEBUG] AI初始化失败: {e}")
+            logger.warning(f" AI初始化失败: {e}")
             self.enabled = False
             self.ai_initialized = True
 
@@ -658,7 +661,7 @@ class FilePrioritizer:
                 self.ai_client = self.model_manager.get_default_client()
 
         except Exception as e:
-            print(f"[DEBUG] AI客户端初始化失败: {e}")
+            logger.warning(f" AI客户端初始化失败: {e}")
 
     async def _generate_with_retry(
         self, prompt: str, max_retries: int = 2, timeout: float = 10.0
@@ -693,12 +696,12 @@ class FilePrioritizer:
 
             except asyncio.TimeoutError:
                 if i == max_retries - 1:
-                    print("[DEBUG] AI生成超时")
+                    logger.debug(" AI生成超时")
                     raise
                 continue
             except Exception as e:
                 if i == max_retries - 1:
-                    print(f"[DEBUG] AI生成最终失败: {e}")
+                    logger.warning(f" AI生成最终失败: {e}")
                     raise
                 continue
 
@@ -779,7 +782,7 @@ class FilePrioritizer:
             # 如果没有找到JSON，返回原始响应
             return {"raw_response": response}
         except Exception as e:
-            print(f"[DEBUG] JSON解析失败: {e}")
+            logger.warning(f" JSON解析失败: {e}")
             return {"raw_response": response, "error": str(e)}
 
     async def calculate_priority_ai(self, file_path: str, fast_mode: bool = True) -> Dict[str, Any]:
@@ -809,7 +812,7 @@ class FilePrioritizer:
             cache_key = f"priority_ai_{file_path}_{fast_mode}"
             cached_result = self.cache_manager.get(cache_key)
             if cached_result:
-                print(f"[DEBUG] 使用缓存的AI优先级评估结果: {file_path}")
+                logger.debug(f" 使用缓存的AI优先级评估结果: {file_path}")
                 return cached_result
 
             path = Path(file_path)
@@ -869,7 +872,7 @@ class FilePrioritizer:
             return final_result
 
         except Exception as e:
-            print(f"[DEBUG] AI优先级评估失败: {e}")
+            logger.warning(f" AI优先级评估失败: {e}")
             return {
                 "file_path": file_path,
                 "priority_score": 0.5,
@@ -915,7 +918,7 @@ class FilePrioritizer:
             ai_score = ai_result.get("priority_score", 0.5)
             ai_analysis = ai_result
         except Exception as e:
-            print(f"[DEBUG] AI评估失败，使用传统规则: {e}")
+            logger.warning(f" AI评估失败，使用传统规则: {e}")
 
         # 3. 混合计算（AI权重为0.5，传统规则权重为0.3，OWASP权重为0.2）
         final_score = traditional_score * 0.3 + ai_score * 0.5 + owasp_score * 0.2
