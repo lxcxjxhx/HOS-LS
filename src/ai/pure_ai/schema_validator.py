@@ -21,6 +21,9 @@ from src.ai.pure_ai.schema import (
     LineMatchStatus,
     SignalState,
 )
+from src.utils.logger import get_logger
+
+logger = get_logger(__name__)
 
 FORBIDDEN_PATTERNS = [
     r"^Unknown$",
@@ -423,8 +426,8 @@ class SchemaValidator:
                     current_data, schema_name
                 )
                 if not strict_valid:
-                    print(
-                        f"[WARN] Strict output contract violations for {schema_name}: {strict_errors}"
+                    logger.warning(
+                        f"Strict output contract violations for {schema_name}: {strict_errors}"
                     )
                     current_data = self.fix_unknown_outputs(current_data)
                 current_data = self.fix_invalid_locations(current_data, schema_name)
@@ -432,17 +435,17 @@ class SchemaValidator:
                 return current_data, True
 
             if attempt < max_retries:
-                print(f"[DEBUG] Schema validation failed for {schema_name}: {error}")
-                print(
-                    f"[DEBUG] Attempting to fix structure (attempt {attempt + 1}/{max_retries})..."
+                logger.warning(f" Schema validation failed for {schema_name}: {error}")
+                logger.debug(
+                    f"Attempting to fix structure (attempt {attempt + 1}/{max_retries})..."
                 )
                 current_data = self._fix_structure(current_data, schema_name)
                 current_data = self.fix_unknown_outputs(current_data)
                 current_data = self.fix_invalid_locations(current_data, schema_name)
                 current_data = self._ensure_required_fields(current_data, schema_name)
             else:
-                print(f"[WARN] Schema validation failed for {schema_name}: {error}")
-                print("[WARN] Final attempt exhausted, returning fixed data (may be incomplete)")
+                logger.warning(f" Schema validation failed for {schema_name}: {error}")
+                logger.debug(" Final attempt exhausted, returning fixed data (may be incomplete)")
                 current_data = self._fix_structure(current_data, schema_name)
                 current_data = self.fix_unknown_outputs(current_data)
                 current_data = self.fix_invalid_locations(current_data, schema_name)
@@ -462,7 +465,7 @@ class SchemaValidator:
         """
         if schema_name in ["vulnerability", "risk_enumeration", "attack_chain"]:
             if "signal_tracking" not in data or not isinstance(data.get("signal_tracking"), dict):
-                print(f"[DEBUG] [Schema Fix] 确保 signal_tracking 字段存在 for {schema_name}")
+                logger.debug(f" [Schema Fix] 确保 signal_tracking 字段存在 for {schema_name}")
                 data["signal_tracking"] = {
                     "signals_new": 0,
                     "signals_confirmed": 0,
@@ -472,7 +475,7 @@ class SchemaValidator:
 
         if schema_name == "vulnerability":
             if "vulnerabilities" not in data or not isinstance(data.get("vulnerabilities"), list):
-                print(f"[DEBUG] [Schema Fix] 确保 vulnerabilities 字段存在 for {schema_name}")
+                logger.debug(f" [Schema Fix] 确保 vulnerabilities 字段存在 for {schema_name}")
                 data["vulnerabilities"] = []
 
         return data
@@ -554,21 +557,20 @@ class SchemaValidator:
                     current_data, schema_name
                 )
                 if strict_valid:
-                    print(f"[DEBUG] Schema validation passed on attempt {attempt + 1}")
+                    logger.debug(f" Schema validation passed on attempt {attempt + 1}")
                     current_data = self.fix_invalid_locations(current_data, schema_name)
                     current_data = self._ensure_required_fields(current_data, schema_name)
                     return current_data
-                print(
-                    f"[WARN] Strict contract violations on attempt {attempt + 1}: {strict_errors}"
+                logger.warning(
+                    f"Strict contract violations on attempt {attempt + 1}: {strict_errors}"
                 )
-
             if attempt < max_retries - 1:
-                print(f"[DEBUG] Fixing structure (attempt {attempt + 1}/{max_retries})...")
+                logger.debug(f" Fixing structure (attempt {attempt + 1}/{max_retries})...")
                 current_data = self._fix_structure(current_data, schema_name)
                 current_data = self.fix_unknown_outputs(current_data)
                 current_data = self.fix_invalid_locations(current_data, schema_name)
             else:
-                print(f"[WARN] Max retries reached for {schema_name}, using last fixed data")
+                logger.debug(f" Max retries reached for {schema_name}, using last fixed data")
 
         current_data = self._ensure_required_fields(current_data, schema_name)
         return current_data
@@ -682,16 +684,16 @@ class SchemaValidator:
                     converted_risks = self._convert_potential_to_risks(
                         data.get("potential_vulnerabilities", [])
                     )
-                    print(
-                        f"[DEBUG] [Schema Fix] 将 {len(converted_risks)} 个 potential_vulnerabilities 转换为 risks"
+                    logger.debug(
+                        f"[Schema Fix] 将 {len(converted_risks)} 个 potential_vulnerabilities 转换为 risks"
                     )
                     fixed[field] = converted_risks
                 elif field == "vulnerabilities" and "potential_vulnerabilities" in data:
                     converted_vulns = self._convert_potential_to_risks(
                         data.get("potential_vulnerabilities", [])
                     )
-                    print(
-                        f"[DEBUG] [Schema Fix] 将 {len(converted_vulns)} 个 potential_vulnerabilities 转换为 vulnerabilities"
+                    logger.debug(
+                        f"[Schema Fix] 将 {len(converted_vulns)} 个 potential_vulnerabilities 转换为 vulnerabilities"
                     )
                     fixed[field] = converted_vulns
                 else:
@@ -986,10 +988,10 @@ class SchemaValidator:
         try:
             json_str = self._extract_json(response_text)
             if not json_str:
-                print(f"[WARN] No JSON found in response for {schema_name}")
+                logger.debug(f" No JSON found in response for {schema_name}")
                 emergency_result = self._emergency_fix(response_text, schema_name)
                 if emergency_result:
-                    print(f"[DEBUG] [Fallback] Using text extraction result for {schema_name}")
+                    logger.debug(f"  Using text extraction result for {schema_name}")
                     return emergency_result
                 return None
 
@@ -997,30 +999,30 @@ class SchemaValidator:
             validated_data, is_valid = self.validate_with_fallback(data, schema_name)
 
             if self._is_result_empty(validated_data, schema_name):
-                print(
-                    f"[WARN] [Fallback] Validated data is empty for {schema_name}, trying text extraction"
+                logger.warning(
+                    f" Validated data is empty for {schema_name}, trying text extraction"
                 )
                 emergency_result = self._emergency_fix(response_text, schema_name)
                 if emergency_result:
-                    print(f"[DEBUG] [Fallback] Using text extraction result for {schema_name}")
+                    logger.debug(f"  Using text extraction result for {schema_name}")
                     return emergency_result
 
             return validated_data
 
         except json.JSONDecodeError as e:
-            print(f"[ERROR] JSON parse error for {schema_name}: {e}")
+            logger.debug(f" JSON parse error for {schema_name}: {e}")
             emergency_result = self._emergency_fix(response_text, schema_name)
             if emergency_result:
-                print(
-                    f"[DEBUG] [Fallback] Using text extraction after JSON error for {schema_name}"
+                logger.debug(
+                    f" Using text extraction after JSON error for {schema_name}"
                 )
                 return emergency_result
             return None
         except Exception as e:
-            print(f"[ERROR] Unexpected error parsing {schema_name}: {e}")
+            logger.debug(f" Unexpected error parsing {schema_name}: {e}")
             emergency_result = self._emergency_fix(response_text, schema_name)
             if emergency_result:
-                print(f"[DEBUG] [Fallback] Using text extraction after exception for {schema_name}")
+                logger.warning(f"  Using text extraction after exception for {schema_name}")
                 return emergency_result
             return None
 
@@ -1094,7 +1096,7 @@ class SchemaValidator:
         Returns:
             修复后的数据
         """
-        print(f"[DEBUG] Attempting emergency fix for {schema_name}")
+        logger.debug(f" Attempting emergency fix for {schema_name}")
 
         if schema_name == "final_decision":
             vulnerabilities = self._extract_vulnerabilities_from_text(response_text)
@@ -1120,8 +1122,8 @@ class SchemaValidator:
 
         elif schema_name == "risk_enumeration":
             risks = self._extract_risks_from_text(response_text)
-            print(
-                f"[DEBUG] [Emergency Fix] Extracted {len(risks)} risks from raw text for {schema_name}"
+            logger.debug(
+                f"[Emergency Fix] Extracted {len(risks)} risks from raw text for {schema_name}"
             )
             if risks:
                 return {
@@ -1355,7 +1357,7 @@ class SchemaValidator:
                             break
                     break
 
-        print(f"[DEBUG] [Text Extraction] Found {len(risks)} potential risks in text")
+        logger.debug(f" [Text Extraction] Found {len(risks)} potential risks in text")
         return risks[:10]
 
     def _extract_chains_from_text(self, text: str) -> List[Dict]:
@@ -1424,13 +1426,13 @@ def retry_with_validation(max_retries: int = 3):
                     is_valid, error = validator.validate(result, "final_decision")
                     if is_valid:
                         return result
-                    print(f"[WARN] Attempt {attempt + 1} validation failed: {error}")
+                    logger.warning(f" Attempt {attempt + 1} validation failed: {error}")
                     last_error = Exception(error) if error else None
                 except Exception as e:
                     last_error = e
-                    print(f"[WARN] Attempt {attempt + 1} failed: {e}")
+                    logger.warning(f" Attempt {attempt + 1} failed: {e}")
 
-            print(f"[ERROR] All {max_retries} attempts failed. Last error: {last_error}")
+            logger.warning(f" All {max_retries} attempts failed. Last error: {last_error}")
             raise SchemaValidationError(f"Failed after {max_retries} attempts: {last_error}")
 
         return wrapper
@@ -1559,18 +1561,17 @@ class LineNumberValidator:
             匹配状态: "EXACT", "ADJUSTED", "FUZZY", "NOT_FOUND"
         """
         rule_name = vulnerability.get("rule_name", "unknown")
-        print("\n[DEBUG] ====== find_actual_line START ======")
-        print(f"[DEBUG] Rule: {rule_name}")
+        logger.debug("\n ====== find_actual_line START ======")
+        logger.debug(f" Rule: {rule_name}")
 
         if file_content:
             original_line_count = len(file_content.split("\n"))
             file_content = self._normalize_line_endings(file_content)
             normalized_line_count = len(file_content.split("\n"))
             if original_line_count != normalized_line_count:
-                print(
-                    f"[DEBUG] Line ending normalization: {original_line_count} -> {normalized_line_count} lines"
+                logger.debug(
+                    f"Line ending normalization: {original_line_count} -> {normalized_line_count} lines"
                 )
-
         evidence = vulnerability.get("evidence", [])
         code_snippet = ""
         ai_reported_line = None
@@ -1589,16 +1590,16 @@ class LineNumberValidator:
                 try:
                     if "-" in raw_line_str:
                         ai_reported_line = int(raw_line_str.split("-")[0])
-                        print(
-                            f"[DEBUG] Range line number detected: {raw_line_str} -> using start: {ai_reported_line}"
+                        logger.debug(
+                            f"Range line number detected: {raw_line_str} -> using start: {ai_reported_line}"
                         )
                     else:
                         ai_reported_line = int(raw_line_str)
                 except ValueError:
                     pass
 
-        print(f"[DEBUG] AI reported line: {ai_reported_line}")
-        print(f"[DEBUG] code_snippet length: {len(code_snippet) if code_snippet else 0}")
+        logger.debug(f" AI reported line: {ai_reported_line}")
+        logger.debug(f" code_snippet length: {len(code_snippet) if code_snippet else 0}")
 
         if ai_reported_line and file_content:
             lines = file_content.split("\n")
@@ -1615,143 +1616,142 @@ class LineNumberValidator:
                         reported_content, ai_reported_line, file_content
                     )
                     if ai_line_has_snippet and is_valid_ai_line:
-                        print(
-                            f"[DEBUG] AI reported line {ai_reported_line} contains code snippet and is valid, using it directly"
+                        logger.debug(
+                            f"AI reported line {ai_reported_line} contains code snippet and is valid, using it directly"
                         )
                         return ai_reported_line, "REPORTED", []
                     elif is_valid_ai_line:
-                        print(
-                            f"[DEBUG] AI reported line {ai_reported_line} is valid code (line content verified)"
+                        logger.debug(
+                            f"AI reported line {ai_reported_line} is valid code (line content verified)"
                         )
                         if extracted_identifiers:
-                            print(
-                                f"[DEBUG] Extracted identifiers from description: {extracted_identifiers}"
+                            logger.debug(
+                                f"Extracted identifiers from description: {extracted_identifiers}"
                             )
                             line_lower = reported_content.lower()
                             matched = any(ident in line_lower for ident in extracted_identifiers)
                             if matched:
-                                print(
-                                    "[DEBUG] Semantic validation passed: line contains identifier from description"
+                                logger.debug(
+                                    "Semantic validation passed: line contains identifier from description"
                                 )
                                 return ai_reported_line, "REPORTED", []
-                        print(f"[DEBUG] Using AI reported line directly: {ai_reported_line}")
+                        logger.debug(f" Using AI reported line directly: {ai_reported_line}")
                         return ai_reported_line, "REPORTED", []
                     else:
-                        print(f"[DEBUG] AI reported line rejected: {reason}, trying fuzzy match...")
+                        logger.debug(f" AI reported line rejected: {reason}, trying fuzzy match...")
 
                 is_valid, reason = self._is_valid_ai_reported_line(
                     reported_content, ai_reported_line, file_content
                 )
                 if is_valid:
-                    print(
-                        f"[DEBUG] Using AI reported line directly (has valid code): {ai_reported_line}"
+                    logger.debug(
+                        f"Using AI reported line directly (has valid code): {ai_reported_line}"
                     )
-                    print(f"[DEBUG] Content: {reported_content[:60]}...")
+                    logger.debug(f" Content: {reported_content[:60]}...")
 
                     if extracted_identifiers:
-                        print(
-                            f"[DEBUG] Extracted identifiers from description: {extracted_identifiers}"
+                        logger.debug(
+                            f"Extracted identifiers from description: {extracted_identifiers}"
                         )
                         line_lower = reported_content.lower()
                         matched = any(ident in line_lower for ident in extracted_identifiers)
                         if matched:
-                            print(
-                                "[DEBUG] Semantic validation passed: line contains identifier from description"
+                            logger.debug(
+                                "Semantic validation passed: line contains identifier from description"
                             )
                             return ai_reported_line, "REPORTED", []
                         else:
-                            print(
-                                "[DEBUG] Semantic validation FAILED: line does not contain identifier from description"
+                            logger.error(
+                                "Semantic validation FAILED: line does not contain identifier from description"
                             )
-                            print(
-                                "[DEBUG] Triggering keyword-based fuzzy match to find actual line..."
+                            logger.debug(
+                                "Triggering keyword-based fuzzy match to find actual line..."
                             )
                             candidates = self._find_lines_by_keywords(
                                 [], file_content, ai_reported_line, extracted_identifiers
                             )
                             if candidates:
-                                print(f"[DEBUG] Keyword match found: line {candidates[0]}")
+                                logger.debug(f" Keyword match found: line {candidates}")
                                 return candidates[0], "FUZZY", candidates
-                            print("[DEBUG] Keyword match failed, falling back to AI reported line")
+                            logger.warning(" Keyword match failed, falling back to AI reported line")
                             return ai_reported_line, "FUZZY", []
                     else:
                         return ai_reported_line, "REPORTED", []
                 else:
-                    print(
-                        f"[DEBUG] AI reported line rejected: {reason}, line {ai_reported_line}: {reported_content[:40]}..."
+                    logger.debug(
+                        f"AI reported line rejected: {reason}, line {ai_reported_line}: {reported_content[:40]}..."
                     )
                     fallback_matched = False
                     if extracted_identifiers and file_content:
-                        print("[DEBUG] Trying identifier-based matching after rejection...")
+                        logger.debug(" Trying identifier-based matching after rejection...")
                         candidates = self._find_lines_by_keywords(
                             [], file_content, ai_reported_line, extracted_identifiers
                         )
                         if candidates:
-                            print(
-                                f"[DEBUG] Fallback identifier matched: line {candidates[0]}, candidates {candidates}"
+                            logger.debug(
+                                f"Fallback identifier matched: line {candidates}, candidates {candidates}"
                             )
                             return candidates[0], "FUZZY", candidates
                         else:
                             fallback_matched = True
-                            print("[DEBUG] Fallback identifier matching returned no candidates")
+                            logger.debug(" Fallback identifier matching returned no candidates")
 
                     if fallback_matched or not extracted_identifiers:
-                        print(
-                            "[DEBUG] No valid match found after AI line rejected, continuing to keyword search..."
+                        logger.debug(
+                            "No valid match found after AI line rejected, continuing to keyword search..."
                         )
-
         if self._is_configuration_vulnerability(vulnerability):
-            print(
-                "[DEBUG] Configuration vulnerability detected, trying joint keyword verification..."
+            logger.debug(
+                "Configuration vulnerability detected, trying joint keyword verification..."
             )
             joint_candidates = self._find_lines_by_joint_keywords(
                 vulnerability, file_content, ai_reported_line
             )
             if joint_candidates:
-                print(
-                    f"[DEBUG] Joint verification matched: line {joint_candidates[0]}, candidates {joint_candidates}"
+                logger.debug(
+                    f"Joint verification matched: line {joint_candidates}, candidates {joint_candidates}"
                 )
-                print("[DEBUG] ====== find_actual_line END ======\n")
+                logger.debug(" ====== find_actual_line END ======\n")
                 return joint_candidates[0], "FUZZY", joint_candidates
 
         description = vulnerability.get("description", "")
         extracted_identifiers = self._extract_identifiers_from_description(description)
         if extracted_identifiers:
-            print(f"[DEBUG] Extracted identifiers from description: {extracted_identifiers}")
+            logger.debug(f" Extracted identifiers from description: {extracted_identifiers}")
 
         keywords = self._extract_keywords(vulnerability)
-        print(f"[DEBUG] Keywords extracted: {len(keywords)}")
+        logger.debug(f" Keywords extracted: {len(keywords)}")
 
         security_keywords = self._extract_security_api_keywords(vulnerability, description)
         if security_keywords:
-            print(f"[DEBUG] Security API keywords added: {security_keywords}")
+            logger.debug(f" Security API keywords added: {security_keywords}")
             keywords = list(set(keywords + security_keywords))
 
         if keywords and file_content:
-            print("[DEBUG] Trying keyword fuzzy match...")
+            logger.debug(" Trying keyword fuzzy match...")
             candidates = self._find_lines_by_keywords(
                 keywords, file_content, ai_reported_line, extracted_identifiers
             )
             if candidates:
-                print(f"[DEBUG] Keyword matched: line {candidates[0]}, candidates {candidates}")
-                print("[DEBUG] ====== find_actual_line END ======\n")
+                logger.debug(f" Keyword matched: line {candidates}, candidates {candidates}")
+                logger.debug(" ====== find_actual_line END ======\n")
                 return candidates[0], "FUZZY", candidates
 
         if not keywords and extracted_identifiers and file_content:
-            print("[DEBUG] No keywords but identifiers found, trying identifier-only match...")
+            logger.debug(" No keywords but identifiers found, trying identifier-only match...")
             candidates = self._find_lines_by_keywords(
                 [], file_content, ai_reported_line, extracted_identifiers
             )
             if candidates:
-                print(
-                    f"[DEBUG] Identifier-only matched: line {candidates[0]}, candidates {candidates}"
+                logger.debug(
+                    f"Identifier-only matched: line {candidates}, candidates {candidates}"
                 )
-                print("[DEBUG] ====== find_actual_line END ======\n")
+                logger.debug(" ====== find_actual_line END ======\n")
                 return candidates[0], "FUZZY", candidates
 
-        print("[DEBUG] No match found, returning NOT_FOUND")
-        print("[DEBUG] Keywords or file_content empty, cannot use AI reported line directly")
-        print("[DEBUG] ====== find_actual_line END ======\n")
+        logger.debug(" No match found, returning NOT_FOUND")
+        logger.debug(" Keywords or file_content empty, cannot use AI reported line directly")
+        logger.debug(" ====== find_actual_line END ======\n")
         return -1, "NOT_FOUND", []
 
     def _extract_keywords(self, vulnerability: dict) -> list:
@@ -1889,8 +1889,8 @@ class LineNumberValidator:
         keywords = [k for k in keywords if k and len(k) > 1 and not self._contains_chinese(k)]
 
         if not keywords:
-            print(
-                "[DEBUG] Keywords still empty after extraction, using identifiers as fallback keywords"
+            logger.debug(
+                "Keywords still empty after extraction, using identifiers as fallback keywords"
             )
             identifiers = self._extract_identifiers_from_description(
                 vulnerability.get("description", "")
@@ -2320,7 +2320,7 @@ class LineNumberValidator:
             return []
 
         if not keywords and identifiers:
-            print("[DEBUG] Keyword-only mode: using identifiers only (no keywords provided)")
+            logger.debug(" Keyword-only mode: using identifiers only (no keywords provided)")
 
         lines = file_content.split("\n")
         scored_lines = []
@@ -2358,20 +2358,19 @@ class LineNumberValidator:
             key=lambda x: (x[4] if preferred_line else 0, -(x[1] + x[3] * 0.5)), reverse=False
         )
 
-        print(
-            f"[DEBUG] Keyword match: {len(keywords)} keywords, {len(identifiers)} identifiers, {len(scored_lines)} candidates"
+        logger.debug(
+            f"Keyword match: {len(keywords)} keywords, {len(identifiers)} identifiers, {len(scored_lines)} candidates"
         )
-        print(f"[DEBUG] Keywords: {keywords[:10]}...")
-        print(f"[DEBUG] Identifiers: {identifiers[:10]}...")
+        logger.debug(f" Keywords: {keywords[:10]}...")
+        logger.debug(f" Identifiers: {identifiers[:10]}...")
         if scored_lines:
-            print(
-                f"[DEBUG] Best candidate: line {scored_lines[0][0]}, score {scored_lines[0][1]}, identifier_bonus {scored_lines[0][3]}, matched {scored_lines[0][2][:5]}"
+            logger.debug(
+                f"Best candidate: line {scored_lines}, score {scored_lines}, identifier_bonus {scored_lines}, matched {scored_lines[:5]}"
             )
             if preferred_line:
-                print(
-                    f"[DEBUG] AI reported: {preferred_line}, offset: {abs(scored_lines[0][0] - preferred_line)} lines"
+                logger.debug(
+                    f"AI reported: {preferred_line}, offset: {abs(scored_lines - preferred_line)} lines"
                 )
-
         if scored_lines:
             best_match = scored_lines[0][0]
             best_score = scored_lines[0][1]
@@ -2382,11 +2381,11 @@ class LineNumberValidator:
             if preferred_line:
                 offset = abs(best_match - preferred_line)
                 if offset <= tolerance:
-                    print(f"[DEBUG] Tolerance check passed: offset {offset} <= {tolerance}")
+                    logger.debug(f" Tolerance check passed: offset {offset} <= {tolerance}")
                     return [best_match]
                 else:
-                    print(
-                        f"[DEBUG] Best match exceeds tolerance: offset {offset} > {tolerance}, looking for closer candidates..."
+                    logger.debug(
+                        f"Best match exceeds tolerance: offset {offset} > {tolerance}, looking for closer candidates..."
                     )
                     closer_candidates = [
                         (ln, score, kws, ib, prox)
@@ -2396,26 +2395,26 @@ class LineNumberValidator:
                     if closer_candidates:
                         closer_candidates.sort(key=lambda x: (x[4], -(x[1] + x[3] * 0.5)))
                         best_match = closer_candidates[0][0]
-                        print(f"[DEBUG] Found closer match within tolerance: line {best_match}")
+                        logger.debug(f" Found closer match within tolerance: line {best_match}")
                         return [best_match]
                     else:
                         high_score_threshold = 3
                         if best_identifier_bonus >= high_score_threshold:
-                            print(
-                                f"[DEBUG] Best match has high identifier score ({best_identifier_bonus} >= {high_score_threshold}), accepting despite offset {offset}"
+                            logger.debug(
+                                f"Best match has high identifier score ({best_identifier_bonus} >= {high_score_threshold}), accepting despite offset {offset}"
                             )
                             return [best_match]
                         elif best_score >= high_score_threshold * 2:
-                            print(
-                                f"[DEBUG] Best match has very high keyword score ({best_score} >= {high_score_threshold * 2}), accepting despite offset {offset}"
+                            logger.debug(
+                                f"Best match has very high keyword score ({best_score} >= {high_score_threshold * 2}), accepting despite offset {offset}"
                             )
                             return [best_match]
-                        print("[DEBUG] No candidates within tolerance, returning best available")
+                        logger.debug(" No candidates within tolerance, returning best available")
                         top_candidates = [ln for ln, _, _, _, _ in scored_lines[:5]]
-                        print(f"[DEBUG] Returning top 5 candidates: {top_candidates}")
+                        logger.debug(f" Returning top 5 candidates: {top_candidates}")
                         return top_candidates
             elif best_identifier_bonus > 0:
-                print("[DEBUG] Identifier match found (no preferred_line), accepting match")
+                logger.debug(" Identifier match found (no preferred_line), accepting match")
                 return [best_match]
 
             if identifiers:
@@ -2427,15 +2426,15 @@ class LineNumberValidator:
                 if target_candidates:
                     target_candidates.sort(key=lambda x: (x[4], -(x[1] + x[3] * 0.5)))
                     best_target = target_candidates[0]
-                    print(
-                        f"[DEBUG] Found target identifier match: line {best_target[0]}, score {best_target[1]}"
+                    logger.debug(
+                        f"Found target identifier match: line {best_target}, score {best_target}"
                     )
                     return [best_target[0]]
                 else:
-                    print("[DEBUG] No target identifier found in candidates")
+                    logger.debug(" No target identifier found in candidates")
 
             top_candidates = [ln for ln, _, _, _, _ in scored_lines[:5]]
-            print(f"[DEBUG] Returning top 5 candidates: {top_candidates}")
+            logger.debug(f" Returning top 5 candidates: {top_candidates}")
             return top_candidates
 
         return []
@@ -2574,11 +2573,11 @@ class LineNumberValidator:
                 self._extract_keywords(vulnerability), file_content, preferred_line, None
             )
 
-        print(
-            f"[DEBUG] Joint verification: {len(required_kws)} required keywords, {len(optional_kws)} optional keywords"
+        logger.debug(
+            f"Joint verification: {len(required_kws)} required keywords, {len(optional_kws)} optional keywords"
         )
-        print(f"[DEBUG] Required keywords: {required_kws}")
-        print(f"[DEBUG] Optional keywords: {optional_kws}")
+        logger.debug(f" Required keywords: {required_kws}")
+        logger.debug(f" Optional keywords: {optional_kws}")
 
         lines = file_content.split("\n")
         joint_candidates = []
@@ -2613,13 +2612,13 @@ class LineNumberValidator:
         )
 
         if joint_candidates:
-            print(f"[DEBUG] Joint verification found {len(joint_candidates)} candidates")
-            print(
-                f"[DEBUG] Best joint match: line {joint_candidates[0][0]}, required matched: {joint_candidates[0][3]}"
+            logger.debug(f" Joint verification found {len(joint_candidates)} candidates")
+            logger.debug(
+                f"Best joint match: line {joint_candidates}, required matched: {joint_candidates}"
             )
             return [ln for ln, _, _, _ in joint_candidates]
 
-        print("[DEBUG] Joint verification failed, falling back to standard keyword search")
+        logger.warning(" Joint verification failed, falling back to standard keyword search")
         return self._find_lines_by_keywords(
             required_kws + optional_kws, file_content, preferred_line, None
         )
