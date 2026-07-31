@@ -1,0 +1,105 @@
+{# CWE-78: OS命令注入（OS Command Injection）检测指导模板
+   对标 ZeroFalse 论文的 CWE 专用 Prompt 实现
+   本模板作为 partial 被主模板 include
+#}
+
+[CWE-78 OS命令注入检测指导]
+
+**漏洞定义**：
+OS命令注入是指用户可控输入未经充分验证即被传递给操作系统命令执行函数，
+导致攻击者可以在服务器上执行任意系统命令，通常可直接获取服务器控制权。
+
+**Sink函数（危险函数）**：
+{% if detected_language == "java" %}
+- Runtime.getRuntime().exec(command) — 执行系统命令
+- ProcessBuilder(command).start() — 创建进程
+- new ProcessBuilder(Arrays.asList(cmd)).start() — 列表形式命令
+- GroovyShell.evaluate() — 当包含Runtime调用时
+- ScriptEngine.eval() — 脚本引擎执行
+{% elif detected_language == "python" %}
+- os.system(command) — 执行系统命令（通过shell）
+- os.popen(command) — 打开进程管道
+- subprocess.call(command, shell=True) — shell模式调用
+- subprocess.run(command, shell=True) — shell模式运行
+- subprocess.Popen(command, shell=True) — shell模式进程
+- subprocess.getoutput(command) — 获取命令输出
+- subprocess.getstatusoutput(command) — 获取输出和状态
+- commands.getoutput(command) — Python2遗留接口
+- eval() / exec() — 当执行系统调用字符串时
+{% elif detected_language == "javascript" %}
+- child_process.exec(command) — 通过shell执行
+- child_process.execSync(command) — 同步shell执行
+- child_process.execFile(file, args) — 当args可构造时
+- child_process.spawn(command, args, {shell: true}) — shell模式
+- child_process.spawnSync(command, args, {shell: true}) — 同步shell模式
+{% endif %}
+
+**Source函数（用户输入入口）**：
+{% if detected_language == "java" %}
+- HttpServletRequest.getParameter() — HTTP请求参数
+- @RequestParam / @PathVariable — Spring参数绑定
+- @RequestBody — 请求体
+- 配置文件读取（当配置可被外部修改时）
+- 环境变量（当可被用户影响时）
+{% elif detected_language == "python" %}
+- request.args / request.form — Flask请求参数
+- request.GET / request.POST — Django请求参数
+- input() — 标准输入
+- sys.argv — 命令行参数
+- os.environ — 环境变量（当可被影响时）
+{% elif detected_language == "javascript" %}
+- req.query / req.body / req.params — Express请求参数
+- process.argv — 命令行参数
+- process.env — 环境变量
+{% endif %}
+
+**Sanitization模式（充分防御判定）**：
+{% if detected_language == "java" %}
+- 命令白名单（仅允许预定义的命令和参数）→ 充分防御
+- 避免使用Runtime.exec，改用Java原生API → 充分防御
+- 对参数进行严格正则校验（仅允许字母数字）→ 充分防御
+{% elif detected_language == "python" %}
+- 使用 subprocess.run([cmd, arg1, arg2], shell=False) → 列表形式且shell=False → 充分防御
+- 命令白名单 → 充分防御
+- 参数严格正则校验（仅允许安全字符）→ 充分防御
+- 使用Python原生API替代系统调用 → 充分防御
+{% elif detected_language == "javascript" %}
+- 使用 spawn(cmd, args, {shell: false}) → 非shell模式 → 充分防御
+- 命令白名单 → 充分防御
+- 参数严格正则校验 → 充分防御
+{% endif %}
+
+**不充分防御（仍视为漏洞）**：
+- 仅过滤 ";" 或 "&&" → 不充分（可通过换行符、管道符等绕过）
+- 仅过滤部分特殊字符 → 不充分（命令注入载体多样）
+- 使用 shell=True 但"过滤了危险字符" → 不充分
+- 使用 execFile 但参数中包含用户输入的完整命令字符串 → 不充分
+
+**命令注入载体检测**：
+- 分号分隔：; malicious_command
+- 管道符：| malicious_command
+- 逻辑运算符：&& malicious_command, || malicious_command
+- 命令替换：$(malicious_command), `malicious_command`
+- 换行符：\n malicious_command
+- 重定向：> /etc/passwd
+
+**证据要求**：
+1. 必须识别出用户输入到命令执行函数的完整数据流
+2. 必须确认 shell=True 或等效的shell解释模式
+3. 必须确认中间无有效的白名单校验
+4. code_snippet必须包含命令构造和执行代码
+
+**CVSS评分指导**：
+- 未认证远程命令执行：AV:N/AC:L/PR:N/UI:N/S:C/C:H/I:H/A:H → 10.0 (CRITICAL)
+- 需要低权限认证：AV:N/AC:L/PR:L/UI:N/S:C/C:H/I:H/A:H → 9.9 (CRITICAL)
+- 需要高权限认证：AV:N/AC:L/PR:H/UI:N/S:C/C:H/I:H/A:H → 9.1 (CRITICAL)
+- 仅本地利用：AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H → 7.8 (HIGH)
+
+{% if file_content %}
+[CWE-78 针对性检测]
+在以下文件内容中重点检测命令注入模式：
+- shell=True 的 subprocess 调用
+- Runtime.exec() 的字符串拼接参数
+- 命令字符串中的用户输入拼接
+- 管道符、分号等命令分隔符的注入点
+{% endif %}

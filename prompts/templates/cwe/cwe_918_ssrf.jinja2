@@ -1,0 +1,113 @@
+{# CWE-918: 服务端请求伪造（Server-Side Request Forgery, SSRF）检测指导模板
+   对标 ZeroFalse 论文的 CWE 专用 Prompt 实现
+   本模板作为 partial 被主模板 include
+#}
+
+[CWE-918 SSRF检测指导]
+
+**漏洞定义**：
+服务端请求伪造是指攻击者能够控制服务端发起HTTP请求的目标URL，
+使服务器代替攻击者向内网资源发起请求，从而访问内部服务、
+元数据接口（如AWS 169.254.169.254）或绕过网络访问控制。
+
+**Sink函数（危险函数）**：
+{% if detected_language == "java" %}
+- HttpClient.newHttpClient().send(request, ...) — Java 11+ HTTP客户端
+- HttpClient.execute(method) — Apache HttpClient
+- OkHttpClient.newCall(request).execute() — OkHttp客户端
+- URL(url).openConnection() / HttpURLConnection — JDK原生连接
+- RestTemplate.getForObject(url, ...) — Spring REST模板
+- RestTemplate.exchange(url, ...) — Spring REST模板
+- WebClient.create(url).get()... — Spring WebFlux客户端
+- Feign客户端（当URL可构造时）
+- URLClassLoader(url) — 远程类加载
+{% elif detected_language == "python" %}
+- requests.get(url) / requests.post(url, ...) — requests库
+- urllib.request.urlopen(url) — urllib库
+- httpx.get(url) / httpx.AsyncClient().get(url) — httpx库
+- aiohttp.ClientSession().get(url) — aiohttp异步客户端
+- urllib3.PoolManager().request(url) — urllib3库
+- pycurl.Curl().setopt(URL, url) — pycurl库
+{% elif detected_language == "javascript" %}
+- axios.get(url) / axios.post(url, ...) — axios库
+- fetch(url) — 原生Fetch API
+- http.get(url) / https.get(url) — Node.js内置模块
+- request(url) — request库（已废弃但仍存在）
+- got(url) — got库
+- superagent.get(url) — superagent库
+- node-fetch(url) — node-fetch库
+{% endif %}
+
+**Source函数（用户输入入口）**：
+{% if detected_language == "java" %}
+- @RequestParam / @PathVariable — URL参数
+- @RequestBody — 请求体中的URL字段
+- HttpServletRequest.getParameter() — 请求参数
+- 配置文件中的URL（当配置可被外部修改时）
+- Webhook URL注册
+- API网关的转发目标
+{% elif detected_language == "python" %}
+- request.args.get("url") / request.form.get("url") — Flask请求参数
+- request.GET.get("url") / request.POST.get("url") — Django请求参数
+- request.json.get("url") — JSON请求体中的URL
+- 配置文件中的URL
+- Webhook注册URL
+{% elif detected_language == "javascript" %}
+- req.query.url / req.body.url — Express请求参数
+- req.query.redirect / req.body.callback — 回调URL
+- 配置文件中的URL
+- Webhook注册URL
+{% endif %}
+
+**Sanitization模式（充分防御判定）**：
+{% if detected_language == "java" %}
+- URL白名单（仅允许预定义的域名/IP）→ 充分防御
+- 禁止内网IP访问（校验127.0.0.0/8, 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, 169.254.0.0/16）→ 充分防御
+- DNS解析后校验IP（防止DNS重绑定）→ 充分防御
+- 禁止协议降级（仅允许http/https）→ 辅助防御
+{% elif detected_language == "python" %}
+- URL白名单 → 充分防御
+- 禁止内网IP（使用ipaddress模块校验）→ 充分防御
+- DNS解析后校验IP → 充分防御
+- 使用urllib3的AllowedHostsPoolManager → 充分防御
+{% elif detected_language == "javascript" %}
+- URL白名单 → 充分防御
+- 禁止内网IP校验 → 充分防御
+- DNS解析后校验 → 充分防御
+{% endif %}
+
+**不充分防御（仍视为漏洞）**：
+- 仅使用正则过滤URL → 不充分（编码绕过、DNS重绑定）
+- 仅禁止特定IP但不禁止IP段 → 不充分
+- 仅校验URL前缀（如必须以http://开头）→ 不充分（可指向内网）
+- 先校验后使用URL但未防止TOCTOU竞态 → 不充分
+
+**SSRF攻击目标检测**：
+- 云元数据：http://169.254.169.254/latest/meta-data/ (AWS)
+- 云元数据：http://metadata.google.internal/ (GCP)
+- 云元数据：http://169.254.169.254/metadata/instance (Azure)
+- 内网服务：http://localhost:xxxx/
+- 内网服务：http://10.x.x.x/, http://172.16.x.x/, http://192.168.x.x/
+- 文件协议：file:///etc/passwd
+- Gopher协议：gopher://...
+
+**证据要求**：
+1. 必须识别出用户输入到HTTP请求URL的数据流
+2. 必须确认URL未经白名单或内网IP过滤
+3. 必须标注HTTP请求的目标URL构造方式
+4. code_snippet必须包含URL构造和请求发送代码
+
+**CVSS评分指导**：
+- 可访问云元数据获取凭证：AV:N/AC:L/PR:N/UI:N/S:C/C:H/I:L/A:N → 9.3 (CRITICAL)
+- 可扫描内网端口：AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N → 7.5 (HIGH)
+- 可访问内网服务：AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:L/A:N → 8.2 (HIGH)
+- 仅能触发请求但无法获取响应：AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N → 5.3 (MEDIUM)
+
+{% if file_content %}
+[CWE-918 针对性检测]
+在以下文件内容中重点检测SSRF模式：
+- 用户可控的URL参数传递到HTTP请求函数
+- URL构造逻辑中是否包含内网IP过滤
+- Webhook/回调URL的验证逻辑
+- 文件下载/图片加载等功能中的URL参数
+{% endif %}

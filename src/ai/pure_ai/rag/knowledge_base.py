@@ -40,11 +40,11 @@ def validate_json_file(file_path: Path) -> tuple[bool, str | None, Exception | N
         return False, "文件不存在", None
 
     try:
-        with open(file_path, "r", encoding="utf-8"):
-            # content = f.read()
-            pass
-        # 尝试加载
-        # data = json.loads(content)
+        with open(file_path, "r", encoding="utf-8") as f:
+            content = f.read()
+        data = json.loads(content)
+        if not isinstance(data, (dict, list)):
+            return False, "JSON 顶层结构必须是对象或数组", None
         return True, None, None
     except json.JSONDecodeError as e:
         return False, f"JSON语法错误: {e}", e

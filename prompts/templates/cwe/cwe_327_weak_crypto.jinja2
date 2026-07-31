@@ -1,0 +1,127 @@
+{# CWE-327: 使用弱加密算法（Use of a Broken or Risky Cryptographic Algorithm）检测指导模板
+   对标 ZeroFalse 论文的 CWE 专用 Prompt 实现
+   本模板作为 partial 被主模板 include
+#}
+
+[CWE-327 弱加密算法检测指导]
+
+**漏洞定义**：
+使用已被破解或已知存在安全弱点的加密算法、哈希函数或加密模式，
+攻击者可以利用算法缺陷破解加密数据、伪造签名或碰撞哈希值，
+导致数据机密性和完整性受到威胁。
+
+**Sink函数（危险函数 - 弱算法使用）**：
+{% if detected_language == "java" %}
+**弱哈希算法**：
+- MessageDigest.getInstance("MD5") — MD5（已碰撞）
+- MessageDigest.getInstance("SHA-1") — SHA-1（已碰撞）
+- DigestUtils.md5() — Apache Commons MD5
+- DigestUtils.sha1() — Apache Commons SHA-1
+
+**弱对称加密**：
+- Cipher.getInstance("DES") — DES（56位密钥，可暴力破解）
+- Cipher.getInstance("DES/ECB/...") — DES + ECB模式
+- Cipher.getInstance("AES/ECB/...") — AES但使用ECB模式
+- Cipher.getInstance("RC4") — RC4（已破解）
+- Cipher.getInstance("RC2") — RC2（弱密钥长度）
+- Cipher.getInstance("Blowfish") — Blowfish（64位块，存在弱点）
+
+**弱加密配置**：
+- Cipher.getInstance("AES") — 未指定模式（默认ECB）
+- Cipher.getInstance("AES/ECB/PKCS5Padding") — ECB模式
+- 密钥长度 < 128位（AES最低要求）
+- RSA密钥 < 2048位
+- DSA密钥 < 2048位
+
+**弱随机数**：
+- new Random() / Math.random() — 非加密安全随机数（用于安全场景时危险）
+- ThreadLocalRandom — 非加密安全
+{% elif detected_language == "python" %}
+**弱哈希算法**：
+- hashlib.md5() — MD5（已碰撞）
+- hashlib.sha1() — SHA-1（已碰撞）
+
+**弱对称加密**：
+- DES.new(key, DES.MODE_ECB) — PyCryptodome DES
+- AES.new(key, AES.MODE_ECB) — AES ECB模式
+- Crypto.Cipher.DES — DES算法
+- Crypto.Cipher.ARC4 — RC4算法
+
+**弱加密配置**：
+- RSA生成密钥 < 2048位：RSA.generate(1024)
+- 使用ECB模式
+- 硬编码IV或固定IV
+- 密码学操作使用random模块而非secrets/os.urandom
+
+**弱随机数**：
+- random.random() / random.randint() — 非加密安全
+- numpy.random — 非加密安全
+{% elif detected_language == "javascript" %}
+**弱哈希算法**：
+- crypto.createHash("md5") — MD5
+- crypto.createHash("sha1") — SHA-1
+- md5() — 各种MD5库
+
+**弱对称加密**：
+- crypto.createCipher("aes-128-ecb", key) — ECB模式
+- crypto.createCipheriv("des-ecb", ...) — DES
+- 使用crypto.createCipher（已废弃，内部使用不安全KDF）
+
+**弱随机数**：
+- Math.random() — 非加密安全
+- 当用于Token/密钥/盐生成时使用非加密随机数
+{% endif %}
+
+**安全算法推荐**：
+{% if detected_language == "java" %}
+- 哈希：SHA-256, SHA-384, SHA-512, bcrypt, scrypt, Argon2
+- 对称加密：AES/GCM/NoPadding（256位密钥）
+- 非对称加密：RSA（>=2048位）, ECDSA（P-256或更高）
+- 随机数：SecureRandom
+{% elif detected_language == "python" %}
+- 哈希：hashlib.sha256(), hashlib.sha512(), bcrypt, argon2
+- 对称加密：cryptography库的Fernet或AESGCM
+- 非对称加密：cryptography库的RSA（>=2048位）
+- 随机数：secrets模块, os.urandom()
+{% elif detected_language == "javascript" %}
+- 哈希：crypto.createHash("sha256"), crypto.createHash("sha512")
+- 对称加密：crypto.createCipheriv("aes-256-gcm", ...)
+- 非对称加密：crypto.generateKeyPairSync("rsa", {modulusLength: 2048})
+- 随机数：crypto.randomBytes(), crypto.randomUUID()
+{% endif %}
+
+**不充分防御（仍视为漏洞）**：
+- MD5/SHA1加盐用于密码哈希 → 不充分（应使用bcrypt/scrypt/Argon2）
+- 使用AES-ECB但"数据量小" → 不充分（ECB模式始终不安全）
+- 使用DES但"密钥空间足够" → 不充分（DES已被完全破解）
+- 使用random模块但"加了密码学库" → 不充分（random始终不安全）
+- 对密码哈希使用SHA256（无盐/无迭代）→ 不充分
+
+**例外场景（不视为漏洞）**：
+- MD5用于非安全目的（文件校验和、数据去重）→ 信息性
+- SHA-1用于HMAC且安全要求低 → 信息性
+- 旧协议兼容性要求且有文档说明 → 信息性
+- 测试代码中的弱算法使用 → 信息性
+
+**证据要求**：
+1. 必须识别出弱加密算法的使用
+2. 必须确认使用场景是否为安全敏感（密码存储、数据加密、签名验证等）
+3. 必须标注具体的算法名称和参数
+4. code_snippet必须包含加密算法调用代码
+5. 应标注推荐的安全替代方案
+
+**CVSS评分指导**：
+- 密码使用MD5/SHA1存储（可被彩虹表破解）：AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N → 7.5 (HIGH)
+- 数据加密使用DES/ECB（可被破解）：AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:N → 6.5 (MEDIUM)
+- 签名使用SHA-1（可被伪造）：AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:H/A:N → 7.5 (HIGH)
+- 非安全用途使用MD5：AV:N/AC:H/PR:N/UI:N/S:U/C:N/I:N/A:N → 0.0 (INFO)
+- 随机数不安全（用于Token生成）：AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N → 7.5 (HIGH)
+
+{% if file_content %}
+[CWE-327 针对性检测]
+在以下文件内容中重点检测弱加密模式：
+- MD5/SHA1/DES/RC4/ECB等弱算法的使用
+- 密码哈希是否使用bcrypt/scrypt/Argon2
+- 加密密钥长度是否满足最低要求
+- 安全敏感场景是否使用加密安全随机数
+{% endif %}

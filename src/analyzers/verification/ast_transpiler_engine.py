@@ -249,7 +249,7 @@ class JavaASTParser(ASTTranspilerEngine):
 
         body: list[ast.stmt] = []
         for child in class_node.children:
-            if child.node_type in ["method_de", "field_def"]:
+            if child.node_type in ["method_def", "field_def"]:
                 converted = self._convert_ir_node_to_python(child)
                 if converted:
                     body.append(converted)
