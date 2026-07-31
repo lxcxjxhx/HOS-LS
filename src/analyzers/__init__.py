@@ -5,6 +5,13 @@
 
 from src.analyzers.ast_analyzer import ASTAnalyzer
 from src.analyzers.base import AnalysisResult, BaseAnalyzer
+from src.analyzers.dependency_chain_analyzer import (
+    DependencyChainAnalyzer,
+    DependencyInfo,
+    DependencyReport,
+    SupplyChainWarning,
+    VulnerabilityInfo,
+)
 from src.analyzers.input_tracer import ControllabilityResult, InputTracer, TraceNode
 
 # 临时注释掉 CSTAnalyzer 的导入，以避免 libcst 的依赖问题
@@ -17,5 +24,10 @@ __all__ = [
     "InputTracer",
     "ControllabilityResult",
     "TraceNode",
+    "DependencyChainAnalyzer",
+    "DependencyInfo",
+    "DependencyReport",
+    "SupplyChainWarning",
+    "VulnerabilityInfo",
     # "CSTAnalyzer",
 ]

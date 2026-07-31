@@ -1,0 +1,121 @@
+{# CWE-502: 不可信数据反序列化（Deserialization of Untrusted Data）检测指导模板
+   对标 ZeroFalse 论文的 CWE 专用 Prompt 实现
+   本模板作为 partial 被主模板 include
+#}
+
+[CWE-502 不可信数据反序列化检测指导]
+
+**漏洞定义**：
+不可信数据反序列化是指应用程序对来自不可信来源的序列化数据进行反序列化操作，
+攻击者可以构造恶意序列化数据，在反序列化过程中触发任意代码执行（RCE）、
+拒绝服务（DoS）或其他注入攻击。
+
+**Sink函数（危险函数）**：
+{% if detected_language == "java" %}
+- ObjectInputStream.readObject() — Java原生反序列化（最危险）
+- ObjectInputStream.readUnshared() — 非共享反序列化
+- XMLDecoder.readObject() — XML反序列化
+- XStream.fromXML(xml) — XStream反序列化
+- ObjectMapper.readValue(json, ...) — Jackson（当enableDefaultTyping开启时危险）
+- JSON.parseObject(json, Feature.SupportNonPublicField) — Fastjson
+- JSON.parse(json) — Fastjson autoType（历史漏洞）
+- Kryo.readObject(input, type) — Kryo反序列化
+- Hessian2Input.readObject() — Hessian反序列化
+- YAML.load(yaml) — SnakeYAML（不安全构造器）
+- Gson.fromJson(json, ...) — 当配置不当时
+- @JsonTypeInfo — Jackson多态反序列化注解
+{% elif detected_language == "python" %}
+- pickle.loads(data) — Python pickle反序列化（极度危险）
+- pickle.load(file) — 从文件加载pickle
+- yaml.load(data) — PyYAML不安全加载（应使用safe_load）
+- yaml.unsafe_load(data) — 显式不安全加载
+- marshal.loads(data) — marshal反序列化
+- shelve.open() — 基于pickle的持久化
+- jsonpickle.decode(data) — jsonpickle反序列化
+{% elif detected_language == "javascript" %}
+- node-serialize.unserialize(data) — 已知存在RCE
+- serialize-javascript（当使用unsafe反序列化时）
+- JSON.parse() — 本身安全，但后续类型处理可能不安全
+- electron.deserialize(data) — Electron反序列化
+{% endif %}
+
+**Source函数（用户输入入口）**：
+{% if detected_language == "java" %}
+- HTTP请求体（@RequestBody, InputStream）
+- Cookie值（特别是Java序列化Cookie如JSESSIONID）
+- Redis/MQ消息（Redis缓存、RabbitMQ/Kafka消息）
+- 文件上传内容
+- RMI/JRPC远程调用参数
+- URL参数（Base64编码的序列化数据）
+- 数据库存储的序列化数据（二次注入）
+{% elif detected_language == "python" %}
+- HTTP请求体（request.data, request.body）
+- Cookie值
+- Redis/MQ消息
+- 文件上传内容
+- 数据库存储的pickle数据
+- API参数（Base64编码数据）
+{% elif detected_language == "javascript" %}
+- HTTP请求体
+- Cookie值
+- WebSocket消息
+- 文件上传内容
+{% endif %}
+
+**Sanitization模式（充分防御判定）**：
+{% if detected_language == "java" %}
+- ObjectInputFilter（JEP 290）配置类白名单 → 充分防御
+- 自定义ObjectInputStream.resolveClass()白名单 → 充分防御
+- 使用JSON/XML等文本格式替代原生序列化 → 充分防御（需正确配置）
+- Jackson禁用enableDefaultTyping + 启用PolymorphicTypeValidator → 充分防御
+- Fastjson启用safeMode → 充分防御
+- SnakeYAML使用new SafeConstructor() → 充分防御
+{% elif detected_language == "python" %}
+- 使用json替代pickle → 充分防御
+- 使用pickle时配合restrictedpython或自定义Unpickler.find_class()白名单 → 充分防御
+- yaml.safe_load() 替代 yaml.load() → 充分防御
+{% elif detected_language == "javascript" %}
+- 使用JSON.parse()替代node-serialize → 充分防御
+- 避免反序列化不可信数据 → 充分防御
+{% endif %}
+
+**不充分防御（仍视为漏洞）**：
+- 仅使用Base64编码/解码 → 不充分（不是安全措施）
+- 仅使用加密但不验证完整性 → 不充分
+- 仅过滤已知危险类 → 不充分（gadget chain不断被发现）
+- 使用@JsonIgnore但不禁用全局多态 → 不充分
+
+**Gadget Chain检测**：
+{% if detected_language == "java" %}
+常见危险Gadget链：
+- CommonsCollections (1-7) — Apache Commons Collections
+- CommonsBeanutils — Apache Commons BeanUtils
+- Spring1/Spring2 — Spring Framework
+- C3P0 — C3P0连接池
+- Jdk7u21 — JDK内置
+- Clojure — Clojure运行时
+- Groovy1 — Groovy运行时
+- Hibernate1 — Hibernate ORM
+{% endif %}
+
+**证据要求**：
+1. 必须识别出反序列化函数的调用
+2. 必须确认输入数据来源于不可信源
+3. 必须确认缺少有效的类型白名单过滤
+4. code_snippet必须包含反序列化调用代码
+5. 如可能，标注已知的gadget chain利用路径
+
+**CVSS评分指导**：
+- 远程未认证RCE（通过HTTP请求体）：AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H → 9.8 (CRITICAL)
+- 需要认证：AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H → 8.8 (HIGH)
+- 仅拒绝服务：AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H → 7.5 (HIGH)
+- 通过MQ/Redis间接利用：AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H → 8.1 (HIGH)
+
+{% if file_content %}
+[CWE-502 针对性检测]
+在以下文件内容中重点检测反序列化模式：
+- ObjectInputStream / pickle.loads / yaml.load 等反序列化调用
+- 不可信数据源到反序列化函数的数据流
+- Jackson/Fastjson/XStream等库的危险配置
+- 序列化数据的传输通道（Cookie/Header/Body）
+{% endif %}

@@ -1,0 +1,115 @@
+{# CWE-79: 跨站脚本攻击（Cross-site Scripting, XSS）检测指导模板
+   对标 ZeroFalse 论文的 CWE 专用 Prompt 实现
+   本模板作为 partial 被主模板 include
+#}
+
+[CWE-79 跨站脚本攻击检测指导]
+
+**漏洞定义**：
+跨站脚本攻击是指用户可控输入未经充分编码/转义即被嵌入到HTML页面中，
+导致攻击者可以在受害者浏览器中执行任意JavaScript代码，窃取会话、劫持账户。
+
+**XSS类型分类**：
+- 反射型XSS：用户输入通过URL参数传入，在响应中直接回显
+- 存储型XSS：用户输入被持久化存储（数据库/文件），其他用户访问时触发
+- DOM型XSS：前端JavaScript直接将用户输入写入DOM
+
+**Sink函数（危险函数 - 输出到HTML的上下文）**：
+{% if detected_language == "java" %}
+- response.getWriter().write(userInput) — 直接写入响应
+- response.getOutputStream().print(userInput) — 输出流写入
+- JSP <%= userInput %> — JSP表达式输出
+- JSP <c:out value="${userInput}" /> — 当未转义时
+- Model.addAttribute() + Thymeleaf th:utext — 非转义输出
+- PrintWriter.print/println(userInput) — 打印输出
+{% elif detected_language == "python" %}
+- return Response(html_content) — Flask直接返回HTML
+- render_template_string(user_input) — Jinja2模板注入
+- mark_safe(user_input) — Django标记安全HTML
+- {{ user_input|safe }} — Django模板非转义输出
+- HttpResponse(html_content) — Django HTTP响应
+{% elif detected_language == "javascript" %}
+- res.send(userInput) — Express直接发送HTML
+- res.write(userInput) — 写入响应
+- element.innerHTML = userInput — DOM写入
+- document.write(userInput) — 文档写入
+- element.outerHTML = userInput — DOM写入
+- jQuery $(userInput).appendTo(...) — jQuery DOM注入
+- dangerouslySetInnerHTML — React非转义渲染
+- v-html — Vue非转义渲染
+{% endif %}
+
+**Source函数（用户输入入口）**：
+{% if detected_language == "java" %}
+- HttpServletRequest.getParameter() — URL参数
+- HttpServletRequest.getHeader() — 请求头
+- @RequestParam / @PathVariable — Spring参数
+- @RequestBody — 请求体
+- Cookie.getValue() — Cookie
+- URL.getQueryString() — 完整查询字符串
+{% elif detected_language == "python" %}
+- request.args / request.form — Flask请求参数
+- request.GET / request.POST — Django请求参数
+- request.headers — 请求头
+- request.cookies — Cookie
+- request.referrer — Referer头
+{% elif detected_language == "javascript" %}
+- req.query / req.body / req.params — Express请求参数
+- location.search / location.hash — URL参数
+- document.URL / document.referrer — 文档URL
+- window.name — 窗口名称
+- postMessage data — 跨域消息
+{% endif %}
+
+**Sanitization模式（充分防御判定）**：
+{% if detected_language == "java" %}
+- 输出编码：ESAPI.encoder().encodeForHTML(userInput) → 充分防御
+- 模板引擎自动转义：Thymeleaf th:text（非th:utext）→ 充分防御
+- Content-Security-Policy响应头 → 辅助防御（不单独视为充分）
+- HttpOnly Cookie标志 → 辅助防御（减少会话窃取影响）
+{% elif detected_language == "python" %}
+- Jinja2自动转义（默认开启）→ 充分防御
+- Django模板自动转义（默认开启）→ 充分防御
+- markupsafe.escape() → 充分防御
+- 设置Content-Security-Policy → 辅助防御
+{% elif detected_language == "javascript" %}
+- textContent / innerText 替代 innerHTML → 充分防御
+- DOMPurify.sanitize(userInput) → 充分防御
+- React JSX自动转义（非dangerouslySetInnerHTML）→ 充分防御
+- Vue {{ }} 自动转义（非v-html）→ 充分防御
+{% endif %}
+
+**不充分防御（仍视为漏洞）**：
+- 仅使用 replace("<script>", "") → 不充分（大小写绕过、其他标签）
+- 仅过滤 < 和 > → 不充分（属性注入、事件处理器）
+- 仅使用 encodeURIComponent → 不充分（HTML上下文需要HTML编码）
+- 黑名单过滤标签 → 不充分（新标签、事件处理器绕过）
+
+**上下文敏感检测**：
+- HTML正文上下文：需要HTML实体编码（&lt; &gt; &amp; &quot;）
+- HTML属性上下文：需要属性编码（防止属性注入）
+- JavaScript上下文：需要JavaScript编码
+- URL上下文：需要URL编码
+- CSS上下文：需要CSS编码
+
+**证据要求**：
+1. 必须识别出从source到sink的数据流
+2. 必须确认输出上下文（HTML/JS/URL/CSS）
+3. 必须确认中间无对应上下文的有效编码
+4. 存储型XSS必须标注数据持久化点
+5. code_snippet必须包含输入输出代码
+
+**CVSS评分指导**：
+- 存储型XSS（影响所有访问用户）：AV:N/AC:L/PR:N/UI:R/S:C/C:L/I:L/A:N → 6.1 (MEDIUM)
+- 反射型XSS（需用户点击链接）：AV:N/AC:L/PR:N/UI:R/S:C/C:L/I:L/A:N → 6.1 (MEDIUM)
+- 可窃取管理员会话：AV:N/AC:L/PR:N/UI:R/S:C/C:H/I:H/A:N → 8.2 (HIGH)
+- DOM型XSS：AV:N/AC:L/PR:N/UI:R/S:C/C:L/I:L/A:N → 6.1 (MEDIUM)
+
+{% if file_content %}
+[CWE-79 针对性检测]
+在以下文件内容中重点检测XSS模式：
+- 用户输入直接输出到HTML响应
+- 模板引擎中的非转义输出（|safe, th:utext, v-html, dangerouslySetInnerHTML）
+- 前端DOM操作中的innerHTML/document.write
+- 反射型参数回显
+{% endif %}

@@ -205,19 +205,23 @@ class HybridRetriever:
             else:
                 doc_map[doc_id]["rule_score"] = result.get("rule_score", 0.0)
 
+        # 计算各维度最大值用于归一化
+        max_bm25 = max((d["bm25_score"] for d in doc_map.values()), default=0.0)
+        max_rule = max((d["rule_score"] for d in doc_map.values()), default=0.0)
+
         # 计算综合得分
         fused_results = []
         for doc_id, doc_info in doc_map.items():
             # 归一化得分
             embedding_score = doc_info["embedding_score"]
-            bm25_score = doc_info["bm25_score"]
-            rule_score = doc_info["rule_score"]
+            bm25_score = doc_info["bm25_score"] / max(max_bm25, 1e-10)
+            rule_score = doc_info["rule_score"] / max(max_rule, 1e-10)
 
             # 计算综合得分
             total_score = (
                 self.weights["embedding"] * embedding_score
-                + self.weights["bm25"] * (bm25_score / max(bm25_score, 1e-10))
-                + self.weights["rule"] * (rule_score / max(rule_score, 1e-10))
+                + self.weights["bm25"] * bm25_score
+                + self.weights["rule"] * rule_score
             )
 
             doc_info["score"] = total_score

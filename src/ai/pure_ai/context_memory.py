@@ -4,6 +4,10 @@ from collections import OrderedDict
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
 
+from src.utils.logger import get_logger
+
+logger = get_logger(__name__)
+
 
 @dataclass
 class Entity:
@@ -82,7 +86,7 @@ class ContextMemoryManager:
         }
 
     def extract_entities(self, text: str) -> List[Entity]:
-        print(f"[DEBUG] 开始提取实体: {text[:50]}...")
+        logger.debug(f"开始提取实体: {text[:50]}...")
         entities: List[Entity] = []
         current_time = time.time()
 
@@ -219,7 +223,7 @@ class ContextMemoryManager:
                     if entity not in entities:
                         entities.append(entity)
 
-        print(f"[DEBUG] 提取到 {len(entities)} 个实体")
+        logger.debug(f"提取到 {len(entities)} 个实体")
         return entities
 
     def _is_likely_file_path(self, text: str) -> bool:
@@ -323,10 +327,10 @@ class ContextMemoryManager:
         while len(self._entities) > self.max_entities:
             oldest_key = next(iter(self._entities))
             del self._entities[oldest_key]
-            print(f"[DEBUG] 实体数量超限，删除最旧的实体: {oldest_key}")
+            logger.debug(f"实体数量超限，删除最旧的实体: {oldest_key}")
 
     def resolve_pronouns(self, text: str) -> str:
-        print(f"[DEBUG] 开始解析代词: {text[:50]}...")
+        logger.debug(f"开始解析代词: {text[:50]}...")
         resolved_text = text
         pronoun_replacements: Dict[str, str] = {}
 
@@ -360,11 +364,11 @@ class ContextMemoryManager:
             pattern = r"\b" + re.escape(pronoun) + r"\b"
             resolved_text = re.sub(pattern, replacement, resolved_text, flags=re.IGNORECASE)
 
-        print(f"[DEBUG] 代词解析完成: {resolved_text[:80]}...")
+        logger.debug(f"代词解析完成: {resolved_text[:80]}...")
         return resolved_text
 
     def track_intent(self, user_input: str, entities: List[Entity]) -> Optional[str]:
-        print(f"[DEBUG] 开始跟踪意图: {user_input[:50]}...")
+        logger.debug(f"开始跟踪意图: {user_input[:50]}...")
         lower_input = user_input.lower()
 
         best_intent: Optional[str] = None
@@ -388,13 +392,13 @@ class ContextMemoryManager:
                 best_intent = intent
 
         self._current_intent = best_intent
-        print(f"[DEBUG] 识别到意图: {best_intent}, 分数: {best_score}")
+        logger.debug(f"识别到意图: {best_intent}, 分数: {best_score}")
         return best_intent
 
     def add_to_history(
         self, user_input: str, entities: List[Entity], intent: Optional[str], response_summary: str
     ) -> None:
-        print("[DEBUG] 添加到历史记录...")
+        logger.debug("添加到历史记录...")
         turn = ConversationTurn(
             timestamp=time.time(),
             user_input=user_input,
@@ -407,9 +411,9 @@ class ContextMemoryManager:
 
         while len(self._conversation_history) > self.max_history:
             self._conversation_history.pop(0)
-            print("[DEBUG] 历史记录超限，删除最旧的记录")
+            logger.debug("历史记录超限，删除最旧的记录")
 
-        print(f"[DEBUG] 当前历史记录数量: {len(self._conversation_history)}")
+        logger.debug(f"当前历史记录数量: {len(self._conversation_history)}")
 
     def get_recent_entities(self, limit: int = 10) -> List[Entity]:
         entities_list = list(self._entities.values())
@@ -417,7 +421,7 @@ class ContextMemoryManager:
         return entities_list[:limit]
 
     def get_entity(self, name: str) -> Optional[Entity]:
-        print(f"[DEBUG] 查找实体: {name}")
+        logger.debug(f"查找实体: {name}")
 
         direct_key = f"file:{name}"
         if direct_key in self._entities:
@@ -447,7 +451,7 @@ class ContextMemoryManager:
         return None
 
     def resolve_reference(self, reference: str) -> Optional[str]:
-        print(f"[DEBUG] 解析引用: {reference}")
+        logger.debug(f"解析引用: {reference}")
         reference_lower = reference.lower().strip()
 
         if reference_lower in self._pronoun_map:
@@ -456,17 +460,17 @@ class ContextMemoryManager:
 
             for entity in recent_entities:
                 if entity_type == "entity" or entity.type == entity_type:
-                    print(f"[DEBUG] 引用解析结果: {entity.name}")
+                    logger.debug(f"引用解析结果: {entity.name}")
                     return entity.name
 
         resolved_entity: Optional[Entity] = self.get_entity(reference)
         if resolved_entity:
-            print(f"[DEBUG] 引用解析结果: {resolved_entity.name}")
+            logger.debug(f"引用解析结果: {resolved_entity.name}")
             return resolved_entity.name
 
         for entity_key, entity_obj in self._entities.items():
             if reference_lower in entity_obj.name.lower():
-                print(f"[DEBUG] 引用解析结果(模糊匹配): {entity_obj.name}")
+                logger.debug(f"引用解析结果(模糊匹配): {entity_obj.name}")
                 return entity_obj.name
 
         return None
@@ -477,14 +481,14 @@ class ContextMemoryManager:
         return self._conversation_history[-limit:]
 
     def get_entities_by_type(self, entity_type: str) -> List[Entity]:
-        print(f"[DEBUG] 获取类型为 {entity_type} 的实体")
+        logger.debug(f"获取类型为 {entity_type} 的实体")
         return [e for e in self._entities.values() if e.type == entity_type]
 
     def get_current_intent(self) -> Optional[str]:
         return self._current_intent
 
     def clear_old_entities(self, max_age_seconds: float = 3600) -> int:
-        print(f"[DEBUG] 清理超过 {max_age_seconds} 秒的实体")
+        logger.debug(f"清理超过 {max_age_seconds} 秒的实体")
         current_time = time.time()
         keys_to_delete = []
 
@@ -495,7 +499,7 @@ class ContextMemoryManager:
         for key in keys_to_delete:
             del self._entities[key]
 
-        print(f"[DEBUG] 删除了 {len(keys_to_delete)} 个过期实体")
+        logger.debug(f"删除了 {len(keys_to_delete)} 个过期实体")
         return len(keys_to_delete)
 
     def get_entity_stats(self) -> Dict[str, Any]:

@@ -389,6 +389,145 @@ class JavaScriptSlicer(BaseCodeSlicer):
         )
 
 
+class JavaSlicer(BaseCodeSlicer):
+    """Java 代码切片器"""
+
+    def slice(self) -> List[CodeSlice]:
+        """切片 Java 代码"""
+        if not self.load_file():
+            return []
+
+        self.slices = []
+        context_lines: List[str] = []
+        method_stack: List[Dict[str, Any]] = []
+        class_stack: List[Dict[str, Any]] = []
+        brace_count = 0
+
+        for i, line in enumerate(self.lines):
+            stripped = line.strip()
+
+            # 收集上下文（import、package）
+            if not method_stack and not class_stack:
+                if stripped.startswith(("import ", "package ")):
+                    context_lines.append(line)
+
+            # 统计大括号
+            brace_count += line.count("{") - line.count("}")
+
+            # 检测方法定义
+            method_match = self._match_method(stripped)
+            if method_match:
+                method_stack.append(
+                    {
+                        "name": method_match,
+                        "start": i,
+                        "start_brace": brace_count - line.count("{"),
+                    }
+                )
+
+            # 检测类定义
+            class_match = re.search(r"(?:public\s+|private\s+|protected\s+)?(?:abstract\s+)?class\s+(\w+)", stripped)
+            if class_match:
+                class_stack.append(
+                    {
+                        "name": class_match.group(1),
+                        "start": i,
+                        "start_brace": brace_count - line.count("{"),
+                    }
+                )
+
+            # 检测方法结束
+            while method_stack and brace_count <= method_stack[-1]["start_brace"]:
+                method = method_stack.pop()
+                self._add_method_slice(method["name"], method["start"], i + 1, context_lines)
+
+            # 检测类结束
+            while class_stack and brace_count <= class_stack[-1]["start_brace"]:
+                cls = class_stack.pop()
+                self._add_class_slice(cls["name"], cls["start"], i + 1, context_lines)
+
+        # 处理未闭合的方法/类
+        for method in method_stack:
+            self._add_method_slice(method["name"], method["start"], len(self.lines), context_lines)
+        for cls in class_stack:
+            self._add_class_slice(cls["name"], cls["start"], len(self.lines), context_lines)
+
+        if not self.slices and self.lines:
+            self._add_whole_file_slice(context_lines)
+
+        return self.slices
+
+    def _match_method(self, line: str) -> Optional[str]:
+        """匹配 Java 方法定义"""
+        pattern = r"(?:public|private|protected)?\s*(?:static\s+)?(?:final\s+)?(?:synchronized\s+)?(?:\w+(?:<[^>]+>)?(?:\[\])*)\s+(\w+)\s*\("
+        match = re.search(pattern, line)
+        if match:
+            name = match.group(1)
+            # 排除关键字误匹配
+            if name not in ("if", "for", "while", "switch", "catch", "return", "new", "class", "interface", "enum"):
+                return name
+        return None
+
+    def _add_method_slice(self, name: str, start: int, end: int, context: List[str]):
+        """添加方法切片"""
+        code = self._get_line_content(start, end)
+        context_str = "".join(context[-10:])
+        slice_id = self._generate_slice_id("method", name, start)
+        self.slices.append(
+            CodeSlice(
+                slice_id=slice_id,
+                file_path=self.file_path,
+                language=Language.JAVA,
+                slice_type="method",
+                name=name,
+                start_line=start + 1,
+                end_line=end,
+                code=code,
+                context=context_str,
+                metadata={},
+            )
+        )
+
+    def _add_class_slice(self, name: str, start: int, end: int, context: List[str]):
+        """添加类切片"""
+        code = self._get_line_content(start, end)
+        context_str = "".join(context[-10:])
+        slice_id = self._generate_slice_id("class", name, start)
+        self.slices.append(
+            CodeSlice(
+                slice_id=slice_id,
+                file_path=self.file_path,
+                language=Language.JAVA,
+                slice_type="class",
+                name=name,
+                start_line=start + 1,
+                end_line=end,
+                code=code,
+                context=context_str,
+                metadata={},
+            )
+        )
+
+    def _add_whole_file_slice(self, context: List[str]):
+        """添加整个文件切片"""
+        code = "".join(self.lines)
+        slice_id = self._generate_slice_id("module", "whole_file", 0)
+        self.slices.append(
+            CodeSlice(
+                slice_id=slice_id,
+                file_path=self.file_path,
+                language=Language.JAVA,
+                slice_type="module",
+                name="whole_file",
+                start_line=1,
+                end_line=len(self.lines),
+                code=code,
+                context="",
+                metadata={},
+            )
+        )
+
+
 def get_slicer(file_path: str, language: Optional[str] = None) -> BaseCodeSlicer:
     """获取对应的代码切片器"""
     if not language:
@@ -400,6 +539,8 @@ def get_slicer(file_path: str, language: Optional[str] = None) -> BaseCodeSlicer
         return PythonSlicer(file_path, lang_enum)
     elif lang_enum in [Language.JAVASCRIPT, Language.TYPESCRIPT]:
         return JavaScriptSlicer(file_path, lang_enum)
+    elif lang_enum == Language.JAVA:
+        return JavaSlicer(file_path, lang_enum)
     else:
         return BaseCodeSlicer(file_path, lang_enum)
 
