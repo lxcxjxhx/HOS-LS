@@ -52,8 +52,8 @@ class PureAIAnalyzer:
         """异步初始化"""
         try:
             if self.config.debug:
-                console.print(f"[dim][DEBUG] 开始初始化纯AI分析器，使用提供商: {self.ai_provider}[/dim]")
-                console.print(f"[dim][DEBUG] 使用模型: {self.ai_model}[/dim]")
+                logger.debug(f" 开始初始化纯AI分析器，使用提供商: {self.ai_provider}")
+                logger.debug(f" 使用模型: {self.ai_model}")
 
             # 检查API密钥
             api_key = getattr(self.config, "pure_ai_api_key", None)
@@ -65,11 +65,11 @@ class PureAIAnalyzer:
                 api_key = os.getenv("DEEPSEEK_API_KEY")
 
             if not api_key:
-                console.print("[yellow]WARNING: API 密钥未设置，纯AI分析器可能无法正常工作[/yellow]")
-                console.print("[dim]请设置环境变量 HOS_LS_AI_API_KEY 或 DEEPSEEK_API_KEY[/dim]")
+                logger.warning("WARNING: API 密钥未设置，纯AI分析器可能无法正常工作")
+                logger.debug("请设置环境变量 HOS_LS_AI_API_KEY 或 DEEPSEEK_API_KEY")
             else:
                 if self.config.debug:
-                    console.print(f"[dim][DEBUG] API 密钥已设置 (长度: {len(api_key)})[/dim]")
+                    logger.debug(f" API 密钥已设置 (长度: {len(api_key)})")
 
             # 为纯AI模式创建临时配置
             from src.ai.client import AIModelManager
@@ -85,7 +85,7 @@ class PureAIAnalyzer:
             self.model_manager = AIModelManager()
             await self.model_manager.initialize(temp_config)
             if self.config.debug:
-                console.print("[dim][DEBUG] 模型管理器初始化成功[/dim]")
+                logger.debug(" 模型管理器初始化成功")
 
             # 映射提供商名称到AIProvider枚举
             from src.ai.client import AIProvider
@@ -98,51 +98,48 @@ class PureAIAnalyzer:
             }
             provider = provider_map.get(self.ai_provider, AIProvider.DEEPSEEK)
             if self.config.debug:
-                console.print(f"[dim][DEBUG] 使用提供商: {provider}[/dim]")
+                logger.debug(f" 使用提供商: {provider}")
 
             # 获取客户端
             assert self.model_manager is not None
             self.client = self.model_manager.get_client(provider)
             if self.config.debug:
-                console.print(f"[dim][DEBUG] 获取客户端: {self.client}[/dim]")
+                logger.debug(f" 获取客户端: {self.client}")
 
             if not self.client:
                 # 尝试获取默认客户端
                 if self.config.debug:
-                    console.print("[dim][DEBUG] 尝试获取默认客户端[/dim]")
+                    logger.debug(" 尝试获取默认客户端")
                 self.client = self.model_manager.get_default_client()
                 if self.config.debug:
-                    console.print(f"[dim][DEBUG] 默认客户端: {self.client}[/dim]")
+                    logger.debug(f" 默认客户端: {self.client}")
 
             if self.client:
                 # 验证API访问
                 if self.config.debug:
-                    console.print("[dim][DEBUG] 验证API访问...[/dim]")
+                    logger.debug(" 验证API访问...")
                 try:
                     is_available, error_msg = await self.client.validate_api_access()
                     if is_available:
-                        console.print("[green][OK] API访问验证成功[/green]")
+                        logger.info("API访问验证成功")
                     else:
-                        console.print(f"[red][X] API访问验证失败: {error_msg}[/red]")
-                        console.print("[yellow][!] 纯AI分析器将以降级模式运行[/yellow]")
+                        logger.error(f" API访问验证失败: {error_msg}")
+                        logger.warning("[!] 纯AI分析器将以降级模式运行")
                 except Exception as e:
-                    console.print(f"[yellow][!] API访问验证异常: {e}[/yellow]")
+                    logger.warning(f"[!] API访问验证异常: {e}")
 
                 # 创建pipeline配置，包含模型信息
                 pipeline_config = {"max_retries": 3, "model": self.ai_model}
                 self.pipeline = MultiAgentPipeline(self.client, pipeline_config)
                 self.initialized = True  # 标记初始化成功
-                console.print(
-                    f"[green][OK] 纯AI分析器初始化成功[/green] (提供商: {self.ai_provider}, 模型: {self.ai_model})"
+                logger.debug(
+                    f"纯AI分析器初始化成功 (提供商: {self.ai_provider}, 模型: {self.ai_model})"
                 )
             else:
-                console.print("[red][X] 纯AI分析器初始化失败：无法获取AI客户端[/red]")
-                console.print("[dim]请检查API密钥配置和网络连接[/dim]")
+                logger.error(" 纯AI分析器初始化失败：无法获取AI客户端")
+                logger.debug("请检查API密钥配置和网络连接")
         except Exception as e:
-            console.print(f"[red][X] 纯AI分析器初始化失败: {e}[/red]")
-            import traceback
-
-            traceback.print_exc()
+            logger.exception(f"纯AI分析器初始化失败: {type(e).__name__}: {e}")
             self.initialized = False
 
     async def analyze(self, file_path: str, file_content: str) -> List[VulnerabilityFinding]:
@@ -159,7 +156,7 @@ class PureAIAnalyzer:
         # 检查缓存
         cached_result = self.cache_manager.get(file_path)
         if cached_result:
-            print(f"[PURE-AI] 使用缓存结果: {file_path}")
+            logger.debug(f"[PURE-AI] 使用缓存结果: {file_path}")
             findings = self._convert_to_findings(cached_result)
             logger.debug(f"从缓存获取 {len(findings)} 个问题")
             return findings
@@ -1104,8 +1101,8 @@ class PureAIAnalyzer:
                     # cwe_info = cwe_results[0]
                     # nvd_context = cwe_info.get("cwe_description", "")
                     pass
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug(f"静默异常: {type(e).__name__}: {e}")
 
         prompt = """你是一个安全漏洞专家。请将以下漏洞名称翻译为中文。
 
@@ -1167,8 +1164,8 @@ class PureAIAnalyzer:
                     )
                 except RuntimeError:
                     pass
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"静默异常: {type(e).__name__}: {e}")
 
         return self._normalize_vulnerability_name(vulnerability)
 
@@ -1382,7 +1379,7 @@ class PureAIAnalyzer:
 
             if verification_decision == "REJECTED" and signal_state == "REJECTED":
                 if self._is_high_risk_type(title):
-                    print(f"[WARN] [完整性检查] 高危风险类型被拒绝，进入人工复核: {title}")
+                    logger.debug(f"  高危风险类型被拒绝，进入人工复核: {title}")
                     risk["requires_human_review"] = True
                     risk["high_risk_override"] = True
                     risk["status"] = "REFINED"
@@ -1390,7 +1387,7 @@ class PureAIAnalyzer:
                     modified_count += 1
 
         if modified_count > 0:
-            print(f"[WARN] [完整性检查] 识别出 {modified_count} 个高危类型被错误拒绝，已标记为待人工复核")
+            logger.warning(f"  识别出 {modified_count} 个高危类型被错误拒绝，已标记为待人工复核")
 
         return risk_findings
 
@@ -1410,8 +1407,8 @@ class PureAIAnalyzer:
         reason = risk.get("reason", "")
 
         if verification_decision == "CONFIRMED" and signal_state != "CONFIRMED":
-            print(
-                f"[DEBUG] 验证覆盖: verification_decision={verification_decision}, signal_state={signal_state}, 采用验证决策"
+            logger.debug(
+                f"验证覆盖: verification_decision={verification_decision}, signal_state={signal_state}, 采用验证决策"
             )
             self.debug_logs.append(
                 f"[DEBUG] 验证覆盖: verification_decision={verification_decision}, signal_state={signal_state}"
@@ -1423,8 +1420,8 @@ class PureAIAnalyzer:
             self.debug_logs.append(f"[DEBUG] 覆盖原因: {reason}")
 
         elif verification_decision == "REFINED" and signal_state not in ["CONFIRMED", "REFINED"]:
-            print(
-                f"[DEBUG] 验证覆盖: verification_decision={verification_decision}, signal_state={signal_state}, 采用验证决策"
+            logger.debug(
+                f"验证覆盖: verification_decision={verification_decision}, signal_state={signal_state}, 采用验证决策"
             )
             self.debug_logs.append(
                 f"[DEBUG] 验证覆盖: verification_decision={verification_decision}, signal_state={signal_state}"
@@ -1435,8 +1432,8 @@ class PureAIAnalyzer:
             risk["override_reason"] = f"验证决策: {verification_decision}, 原因: {reason}"
 
         elif verification_decision == "REJECTED" and signal_state != "REJECTED":
-            print(
-                f"[DEBUG] 验证覆盖: verification_decision={verification_decision}, signal_state={signal_state}, 采用验证决策"
+            logger.debug(
+                f"验证覆盖: verification_decision={verification_decision}, signal_state={signal_state}, 采用验证决策"
             )
             self.debug_logs.append(
                 f"[DEBUG] 验证覆盖: verification_decision={verification_decision}, signal_state={signal_state}"
@@ -1495,10 +1492,9 @@ class PureAIAnalyzer:
                             refined_with_high_confidence.append((v, avg_conf))
 
                 logger.debug(f"Fallback: 从 vulnerability_verification 提取已确认漏洞: {len(confirmed)}")
-                print(
-                    f"[DEBUG] Fallback: 从 vulnerability_verification 提取高置信度已细化漏洞: {len(refined_with_high_confidence)}"
+                logger.debug(
+                    f"Fallback: 从 vulnerability_verification 提取高置信度已细化漏洞: {len(refined_with_high_confidence)}"
                 )
-
                 adversarial_val = result.get("adversarial_validation", {})
                 adversarial_analysis = adversarial_val.get("adversarial_analysis", [])
                 adversarial_findings = []
@@ -1518,8 +1514,8 @@ class PureAIAnalyzer:
                                 item_confidence = 0.5
 
                         if verdict == "ESCALATE" and item_confidence < MIN_CONFIDENCE:
-                            print(
-                                f"[DEBUG] 跳过低置信度待定: {item.get('attack_chain_name', '未知')} (置信度={item_confidence:.2f})"
+                            logger.warning(
+                                f"跳过低置信度待定: {item.get('attack_chain_name', '未知')} (置信度={item_confidence:.2f})"
                             )
                             continue
 
@@ -1612,8 +1608,8 @@ class PureAIAnalyzer:
                         if sig_data.get("state") in ["CONFIRMED", "REFINED"]
                     }
                     if confirmed_signals:
-                        print(
-                            f"[DEBUG] risk_enumeration.risks 为空，从 signal_tracker 提取 {len(confirmed_signals)} 个已确认信号"
+                        logger.debug(
+                            f"risk_enumeration.risks 为空，从 signal_tracker 提取 {len(confirmed_signals)} 个已确认信号"
                         )
                         for sig_id, sig_data in confirmed_signals.items():
                             verification = signal_id_to_verification.get(sig_id, {})
@@ -1717,8 +1713,8 @@ class PureAIAnalyzer:
                             "REJECTED",
                             "NEW",
                         ]:
-                            print(
-                                f"[DEBUG] Agent-3 验证覆盖 tracker 状态: {tracker_state} -> {verification_decision}"
+                            logger.debug(
+                                f"Agent-3 验证覆盖 tracker 状态: {tracker_state} -> {verification_decision}"
                             )
                             risk["signal_state"] = verification_decision
                             risk_state = verification_decision
@@ -1740,13 +1736,13 @@ class PureAIAnalyzer:
                         )
                         if is_unverified_risk_title:
                             if risk_confidence < 0.6 and risk_state not in ["CONFIRMED", "REFINED"]:
-                                print(
-                                    f"[DEBUG] [UNVERIFIED_RISK过滤] 拒绝未验证占位符风险: {risk_title}, confidence={risk_confidence:.2f}, state={risk_state}"
+                                logger.debug(
+                                    f" 拒绝未验证占位符风险: {risk_title}, confidence={risk_confidence:.2f}, state={risk_state}"
                                 )
                                 continue
                             elif risk_state not in ["CONFIRMED", "REFINED"]:
-                                print(
-                                    f"[DEBUG] [UNVERIFIED_RISK过滤] 标记未验证占位符风险待人工复核: {risk_title}, confidence={risk_confidence:.2f}, state={risk_state}"
+                                logger.debug(
+                                    f" 标记未验证占位符风险待人工复核: {risk_title}, confidence={risk_confidence:.2f}, state={risk_state}"
                                 )
                                 risk["requires_human_review"] = True
 
@@ -1756,21 +1752,21 @@ class PureAIAnalyzer:
                     ]:
                         rejection_confidence = risk.get("rejection_confidence", 0.5)
                         if is_high_risk and rejection_confidence < 0.7:
-                            print(
-                                f"[WARN] [审核检查] 高危风险被拒绝(低置信度): {risk_title}, 置信度: {rejection_confidence:.2f}, 标记为待人工复核"
+                            logger.warning(
+                                f" 高危风险被拒绝(低置信度): {risk_title}, 置信度: {rejection_confidence:.2f}, 标记为待人工复核"
                             )
                             risk["requires_human_review"] = True
                             risk["high_risk_override"] = True
                             risk_state = "REFINED"
                             risk["signal_state"] = "REFINED"
                         elif is_high_risk and rejection_confidence >= 0.7:
-                            print(
-                                f"[DEBUG] 高危风险被明确拒绝(高置信度: {rejection_confidence:.2f}): {risk_title}, 跳过"
+                            logger.warning(
+                                f"高危风险被明确拒绝(高置信度: {rejection_confidence:.2f}): {risk_title}, 跳过"
                             )
                             continue
                         else:
-                            print(
-                                f"[DEBUG] 跳过已拒绝信号: {risk.get('title', risk.get('risk_type', '未知风险'))}, 验证决策: {verification_decision or 'N/A'}"
+                            logger.warning(
+                                f"跳过已拒绝信号: {risk.get('title', risk.get('risk_type', '未知风险'))}, 验证决策: {verification_decision or 'N/A'}"
                             )
                             continue
 
@@ -1778,8 +1774,8 @@ class PureAIAnalyzer:
                         risk_confidence and risk_confidence >= MIN_CONFIDENCE
                     ):
                         if risk_confidence and risk_confidence < MIN_CONFIDENCE:
-                            print(
-                                f"[DEBUG] 跳过极低置信度风险: {risk.get('title', risk.get('risk_type', '未知风险'))}, 置信度: {risk_confidence:.4f}"
+                            logger.warning(
+                                f"跳过极低置信度风险: {risk.get('title', risk.get('risk_type', '未知风险'))}, 置信度: {risk_confidence:.4f}"
                             )
                             continue
                         risk_title_raw = risk.get("title", risk.get("risk_type", "UNKNOWN_RISK"))
@@ -1821,7 +1817,7 @@ class PureAIAnalyzer:
 
                 all_rejected = len(risk_findings) > 0 and len(risk_based_findings) == 0
                 if all_rejected:
-                    print(f"[WARN] [完整性检查] 所有 {len(risk_findings)} 个风险都被拒绝，执行高危类型检查...")
+                    logger.debug(f"  所有 {len(risk_findings)} 个风险都被拒绝，执行高危类型检查...")
                     risk_findings = self._check_rejection_completeness(
                         risk_findings, all_rejected=True
                     )
@@ -1862,25 +1858,24 @@ class PureAIAnalyzer:
                             )
 
                 logger.debug("Fallback 检查:")
-                print(
+                logger.debug(
                     f"  - vulnerability_verification.vulnerabilities (CONFIRMED): {len(confirmed)}"
                 )
-                print(
+                logger.debug(
                     f"  - vulnerability_verification (REFINED 高置信度): {len(refined_with_high_confidence)}"
                 )
-                print(f"  - adversarial_validation.ACCEPT/ESCALATE: {len(adversarial_findings)}")
-                print(
+                logger.debug(f"  - adversarial_validation.ACCEPT/ESCALATE: {len(adversarial_findings)}")
+                logger.debug(
                     f"  - risk_enumeration.risks: {len(risk_findings)} (可用: {len(risk_based_findings)})"
                 )
-
                 if adversarial_findings:
-                    print(
-                        f"[DEBUG] 使用 fallback: 从 adversarial_validation 获取 {len(adversarial_findings)} 个漏洞"
+                    logger.debug(
+                        f"使用 fallback: 从 adversarial_validation 获取 {len(adversarial_findings)} 个漏洞"
                     )
                     final_findings = adversarial_findings
                 elif confirmed:
-                    print(
-                        f"[DEBUG] 使用 fallback: 从 vulnerability_verification.confirmed_vulnerabilities 获取 {len(confirmed)} 个漏洞"
+                    logger.debug(
+                        f"使用 fallback: 从 vulnerability_verification.confirmed_vulnerabilities 获取 {len(confirmed)} 个漏洞"
                     )
                     final_findings = []
                     for v in confirmed:
@@ -1895,8 +1890,8 @@ class PureAIAnalyzer:
                         v_copy["vulnerability"] = v_type
                         final_findings.append(v_copy)
                 elif refined_with_high_confidence:
-                    print(
-                        f"[DEBUG] 使用 fallback: 从高置信度已细化获取 {len(refined_with_high_confidence)} 个漏洞"
+                    logger.debug(
+                        f"使用 fallback: 从高置信度已细化获取 {len(refined_with_high_confidence)} 个漏洞"
                     )
                     final_findings = []
                     for v, conf in refined_with_high_confidence:
@@ -1907,8 +1902,8 @@ class PureAIAnalyzer:
                         v_copy["confidence"] = conf
                         final_findings.append(v_copy)
                 elif risk_based_findings:
-                    print(
-                        f"[DEBUG] 使用 fallback: 从 risk_enumeration 获取 {len(risk_based_findings)} 个漏洞"
+                    logger.debug(
+                        f"使用 fallback: 从 risk_enumeration 获取 {len(risk_based_findings)} 个漏洞"
                     )
                     verified_findings = []
                     unverified_findings = []
@@ -1938,8 +1933,8 @@ class PureAIAnalyzer:
                         ]:
                             v["metadata"]["line_match_status"] = "REJECTED"
                             rejected_findings.append(v)
-                            print(
-                                f"[DEBUG] 丢弃已拒绝信号: {v.get('vulnerability', '未知')}, verification_decision={verification_decision}"
+                            logger.debug(
+                                f"丢弃已拒绝信号: {v.get('vulnerability', '未知')}, verification_decision={verification_decision}"
                             )
                             continue
 
@@ -1949,8 +1944,8 @@ class PureAIAnalyzer:
                         ]:
                             v["metadata"]["line_match_status"] = "VERIFIED"
                             verified_findings.append(v)
-                            print(
-                                f"[DEBUG] [动态验证优先] signal_state=NEW但verification_decision={verification_decision}，接受为已验证漏洞: {v.get('vulnerability', '未知')}"
+                            logger.debug(
+                                f" signal_state=NEW但verification_decision={verification_decision}，接受为已验证漏洞: {v.get('vulnerability', '未知')}"
                             )
                             continue
 
@@ -1961,8 +1956,8 @@ class PureAIAnalyzer:
                         ):
                             v["metadata"]["line_match_status"] = "REJECTED_NO_VERIFICATION"
                             unverified_findings.append(v)
-                            print(
-                                f"[DEBUG] [放宽条件] 未验证信号（无代码片段）添加人工复核: {v.get('vulnerability', '未知')}, verification_decision={verification_decision}"
+                            logger.debug(
+                                f" 未验证信号（无代码片段）添加人工复核: {v.get('vulnerability', '未知')}, verification_decision={verification_decision}"
                             )
                             continue
 
@@ -1973,8 +1968,8 @@ class PureAIAnalyzer:
                         ):
                             v["metadata"]["line_match_status"] = "REJECTED_LOW_CONFIDENCE"
                             unverified_findings.append(v)
-                            print(
-                                f"[DEBUG] [放宽条件] 低置信度未验证信号添加人工复核: {v.get('vulnerability', '未知')}, confidence={confidence:.4f}"
+                            logger.debug(
+                                f" 低置信度未验证信号添加人工复核: {v.get('vulnerability', '未知')}, confidence={confidence:.4f}"
                             )
                             continue
 
@@ -1993,8 +1988,8 @@ class PureAIAnalyzer:
                             v for v in rejected_findings if v.get("confidence", 0) >= MIN_CONFIDENCE
                         ]
                         if high_conf_rejected:
-                            print(
-                                f"[DEBUG] 从 {len(rejected_findings)} 个已拒绝漏洞中筛选出 {len(high_conf_rejected)} 个高置信度漏洞进行人工复核"
+                            logger.debug(
+                                f"从 {len(rejected_findings)} 个已拒绝漏洞中筛选出 {len(high_conf_rejected)} 个高置信度漏洞进行人工复核"
                             )
                             for v in high_conf_rejected:
                                 v["status"] = "UNCERTAIN"
@@ -2006,12 +2001,12 @@ class PureAIAnalyzer:
                             logger.debug(f"额外添加 {len(unverified_findings)} 个高置信度未验证/已拒绝漏洞进行人工复核")
                         final_findings = verified_findings + unverified_findings
                     elif unverified_findings:
-                        print(
-                            f"[DEBUG] 警告: risk_enumeration 中无 Agent-3 验证的漏洞，使用 {len(unverified_findings)} 个高置信度漏洞"
+                        logger.debug(
+                            f"警告: risk_enumeration 中无 Agent-3 验证的漏洞，使用 {len(unverified_findings)} 个高置信度漏洞"
                         )
                         strict_unverified = []
                         for v in unverified_findings:
-                            v_title = v.get("vulnerability", "") or v.get("title", "") or ""
+                            v_title = v.get("vulnerability", "") or v.get("title", "")
                             v_confidence = v.get("confidence", 0)
                             v_signal_state = v.get("signal_state", "NEW")
                             is_unverified_risk = (
@@ -2023,22 +2018,22 @@ class PureAIAnalyzer:
                                         "CONFIRMED",
                                         "REFINED",
                                     ]:
-                                        print(
-                                            f"[DEBUG] [UNVERIFIED_RISK过滤] 拒绝未验证占位符: {v_title}, confidence={v_confidence:.2f}, state={v_signal_state}"
+                                        logger.debug(
+                                            f" 拒绝未验证占位符: {v_title}, confidence={v_confidence:.2f}, state={v_signal_state}"
                                         )
                                         continue
                                     elif v_confidence >= 0.6 and v_signal_state in [
                                         "CONFIRMED",
                                         "REFINED",
                                     ]:
-                                        print(
-                                            f"[DEBUG] [UNVERIFIED_RISK过滤] 置信度 {v_confidence:.2f} >= 0.6 且状态 {v_signal_state}，通过: {v_title}"
+                                        logger.debug(
+                                            f" 置信度 {v_confidence:.2f} >= 0.6 且状态 {v_signal_state}，通过: {v_title}"
                                         )
                                         v["requires_human_review"] = True
                                         strict_unverified.append(v)
                                     else:
-                                        print(
-                                            f"[DEBUG] [UNVERIFIED_RISK过滤] 标记待人工复核: {v_title}, confidence={v_confidence:.2f}, state={v_signal_state}"
+                                        logger.debug(
+                                            f" 标记待人工复核: {v_title}, confidence={v_confidence:.2f}, state={v_signal_state}"
                                         )
                                         v["requires_human_review"] = True
                                         strict_unverified.append(v)
@@ -2047,13 +2042,13 @@ class PureAIAnalyzer:
                                         "CONFIRMED",
                                         "REFINED",
                                     ]:
-                                        print(
-                                            f"[DEBUG] [UNVERIFIED_RISK过滤] 置信度 {v_confidence:.2f} >= 0.6，通过: {v_title}"
+                                        logger.debug(
+                                            f" 置信度 {v_confidence:.2f} >= 0.6，通过: {v_title}"
                                         )
                                         strict_unverified.append(v)
                                     else:
-                                        print(
-                                            f"[DEBUG] [UNVERIFIED_RISK过滤] 丢弃低置信度UNVERIFIED_RISK: {v_title}, confidence={v_confidence:.2f}, state={v_signal_state}"
+                                        logger.debug(
+                                            f" 丢弃低置信度UNVERIFIED_RISK: {v_title}, confidence={v_confidence:.2f}, state={v_signal_state}"
                                         )
                                         continue
                             else:
@@ -2082,8 +2077,8 @@ class PureAIAnalyzer:
                                     sig_location = sig.get("location", "")
                                     sig_evidence = sig.get("evidence", [])
                                     if sig_title not in ("", "UNKNOWN", "unknown") or sig_desc:
-                                        print(
-                                            f"[DEBUG] [紧急Fallback] 从tracker恢复信号: {sig_id} - {sig_title}"
+                                        logger.debug(
+                                            f" 从tracker恢复信号: {sig_id} - {sig_title}"
                                         )
                                         tracker_findings.append(
                                             {
@@ -2108,8 +2103,8 @@ class PureAIAnalyzer:
                                             }
                                         )
                             if tracker_findings:
-                                print(
-                                    f"[DEBUG] [紧急Fallback] 从tracker恢复 {len(tracker_findings)} 个未验证漏洞进行人工复核"
+                                logger.debug(
+                                    f" 从tracker恢复 {len(tracker_findings)} 个未验证漏洞进行人工复核"
                                 )
                                 final_findings = tracker_findings
                             else:
@@ -2127,7 +2122,7 @@ class PureAIAnalyzer:
             for finding in final_findings:
                 try:
                     status = finding.get("status", "UNKNOWN")
-                    vuln_name = finding.get("vulnerability", "") or ""
+                    vuln_name = finding.get("vulnerability", "")
 
                     if status == "REJECTED":
                         logger.debug(f"跳过 final_decision 中的已拒绝发现: {vuln_name}")
@@ -2247,13 +2242,17 @@ class PureAIAnalyzer:
                     # 验证漏洞位置和代码是否真实存在（防止AI编造）
                     validation_result = self._validate_finding_location(finding, file_path_context)
                     if not validation_result["is_valid"]:
-                        print(
-                            f"[WARN] 漏洞验证失败，跳过: {vulnerability_desc} - {validation_result['reason']}"
+                        logger.warning(
+                            f"Finding 位置验证失败，降低置信度保留: {vulnerability_desc} - {validation_result['reason']}"
                         )
                         self.debug_logs.append(
-                            f"[WARN] 漏洞验证失败，跳过: {vulnerability_desc} - {validation_result['reason']}"
+                            f"[WARN] Finding 位置验证失败，降低置信度保留: {vulnerability_desc} - {validation_result['reason']}"
                         )
-                        continue
+                        # 降低置信度但不丢弃
+                        finding["verification_status"] = "location_unverified"
+                        finding["requires_human_review"] = True
+                        if "confidence" in finding:
+                            finding["confidence"] = finding["confidence"] * 0.5
 
                     # 提取行号
                     line_num = 0
@@ -2277,14 +2276,14 @@ class PureAIAnalyzer:
                             finding["line_match_status"] = match_status
 
                             if match_status == "NOT_FOUND":
-                                print(f"[WARN] 行号验证失败，跳过: {rule_name} - AI报告行{line_num}无法验证")
+                                logger.warning(f"行号验证失败，降低置信度保留: {rule_name} - AI报告行{line_num}无法验证")
                                 self.debug_logs.append(
-                                    f"[WARN] 行号验证失败，跳过: {rule_name} - AI报告行{line_num}无法验证"
+                                    f"[WARN] 行号验证失败，降低置信度保留: {rule_name} - AI报告行{line_num}无法验证"
                                 )
                                 line_validation_passed = False
                             elif actual_line > 0 and actual_line != line_num:
-                                print(
-                                    f"[DEBUG] Line number adjusted: {line_num} -> {actual_line} (status: {match_status})"
+                                logger.debug(
+                                    f"Line number adjusted: {line_num} -> {actual_line} (status: {match_status})"
                                 )
                                 self.debug_logs.append(
                                     f"[DEBUG] Line number adjusted: {line_num} -> {actual_line}"
@@ -2295,7 +2294,11 @@ class PureAIAnalyzer:
                         self.debug_logs.append(f"[DEBUG] Line number validation skipped: {e}")
 
                     if not line_validation_passed:
-                        continue
+                        # 行号验证失败，降低置信度但不丢弃
+                        finding["verification_status"] = "line_unverified"
+                        finding["requires_human_review"] = True
+                        if "confidence" in finding:
+                            finding["confidence"] = finding["confidence"] * 0.5
 
                     code_snippet = self._extract_code_at_line(
                         file_path_context, line_num if line_num > 0 else 1, context_lines=3
@@ -2329,8 +2332,8 @@ class PureAIAnalyzer:
                         hallucination_reasons.append("placeholder_vulnerability_name")
 
                     if ai_hallucination_warning:
-                        print(
-                            f"[WARN] 拒绝 hallucination 漏洞发现: {vulnerability_name} - 原因: {hallucination_reasons}"
+                        logger.warning(
+                            f"拒绝 hallucination 漏洞发现: {vulnerability_name} - 原因: {hallucination_reasons}"
                         )
                         self.debug_logs.append(
                             f"[WARN] 拒绝 hallucination 漏洞发现: {vulnerability_name} - 原因: {hallucination_reasons}"
@@ -2354,8 +2357,8 @@ class PureAIAnalyzer:
                     # 检测可疑的均匀置信度（AI未动态计算时可能出现）
                     # 如果AI返回的是固定值，则使用动态计算的置信度
                     if confidence in [0.85, 0.9, 0.8, 0.95, 1.0] and dynamic_confidence > 0:
-                        print(
-                            f"[WARN] 可疑均匀置信度检测: {rule_name} - AI报告{confidence}但证据计算{dynamic_confidence}，使用动态置信度"
+                        logger.warning(
+                            f"可疑均匀置信度检测: {rule_name} - AI报告{confidence}但证据计算{dynamic_confidence}，使用动态置信度"
                         )
                         self.debug_logs.append(
                             f"[WARN] 可疑均匀置信度: AI={confidence}, 证据计算={dynamic_confidence}，使用动态置信度"
@@ -2400,15 +2403,12 @@ class PureAIAnalyzer:
                     logger.debug(f"添加漏洞发现: {rule_name}")
                     self.debug_logs.append(f"[DEBUG] 添加漏洞发现: {rule_name}")
                 except Exception as e:
-                    logger.debug(f"处理单个发现失败: {e}")
-                    self.debug_logs.append(f"[DEBUG] 处理单个发现失败: {e}")
+                    logger.warning(f"处理单个发现失败: {e}, 类型: {type(e).__name__}", exc_info=True)
+                    self.debug_logs.append(f"[WARN] 处理单个发现失败: {e}, 类型: {type(e).__name__}")
                     continue
         except Exception as e:
-            print(f"[PURE-AI] 转换结果失败: {e}")
-            self.debug_logs.append(f"[DEBUG] 转换结果失败: {e}")
-            import traceback
-
-            traceback.print_exc()
+            logger.exception(f"[PURE-AI] 转换结果失败: {type(e).__name__}: {e}")
+            self.debug_logs.append(f"[WARN] 转换结果失败: {type(e).__name__}: {e}")
 
         logger.debug(f"转换完成，生成 {len(findings)} 个漏洞发现")
         self.debug_logs.append(f"[DEBUG] 转换完成，生成 {len(findings)} 个漏洞发现")
@@ -2500,7 +2500,7 @@ class PureAIAnalyzer:
                     else False
                 )
                 confidence = r.get("confidence", 0)
-                risk_title = r.get("title", "") or r.get("vulnerability", "") or ""
+                risk_title = r.get("title", "") or r.get("vulnerability", "")
                 is_unverified_placeholder = (
                     not risk_title
                     or "UNVERIFIED" in risk_title.upper()
@@ -2517,16 +2517,16 @@ class PureAIAnalyzer:
             )
 
             if has_potential_findings:
-                print("[WARN] Agent 6 判定无漏洞，但其他 Agent 发现了潜在漏洞")
-                print(
-                    f"[WARN]   - risk_enumeration potential_vulnerabilities: {len(potential_vulns)}"
+                logger.debug(" Agent 6 判定无漏洞，但其他 Agent 发现了潜在漏洞")
+                logger.warning(
+                    f"- risk_enumeration potential_vulnerabilities: {len(potential_vulns)}"
                 )
-                print(
-                    f"[WARN]   - vulnerability_verification confirmed_vulnerabilities: {len(confirmed_vulns)}"
+                logger.warning(
+                    f"- vulnerability_verification confirmed_vulnerabilities: {len(confirmed_vulns)}"
                 )
-                print(f"[WARN]   - adversarial_validation findings: {len(adversarial_findings)}")
-                print(
-                    f"[WARN]   - high_quality_risks (confidence>=0.3, has_code): {len(high_quality_risks)}"
+                logger.debug(f"   - adversarial_validation findings: {len(adversarial_findings)}")
+                logger.warning(
+                    f"- high_quality_risks (confidence>=0.3, has_code): {len(high_quality_risks)}"
                 )
                 if strict:
                     raise ValueError("Agent 6 漏报：发现了潜在漏洞但 final_findings 为空")
@@ -2554,16 +2554,30 @@ class PureAIAnalyzer:
             # 确保已初始化
             if not self.initialized:
                 if self.config.debug:
-                    console.print("[dim][DEBUG] 纯AI分析器未初始化，正在初始化...[/dim]")
+                    logger.debug(" 纯AI分析器未初始化，正在初始化...")
                 await self._initialize()
                 if not self.initialized:
-                    console.print(f"[red][X] 纯AI分析器初始化失败，跳过分析: {file_info.path}[/red]")
-                    return []
+                    logger.error(f"纯AI分析器初始化失败，跳过分析: {file_info.path}")
+                    return [VulnerabilityFinding(
+                        rule_id="ANALYSIS_FAILURE",
+                        rule_name="分析失败",
+                        description=f"纯AI分析器初始化失败，无法分析文件: {file_info.path}",
+                        severity="info",
+                        confidence=0.0,
+                        location={"file": file_info.path, "line": 0},
+                    )]
 
             # 检查pipeline
             if not self.pipeline:
-                console.print(f"[red][X] Pipeline未创建，跳过分析: {file_info.path}[/red]")
-                return []
+                logger.error(f"Pipeline未创建，跳过分析: {file_info.path}")
+                return [VulnerabilityFinding(
+                    rule_id="ANALYSIS_FAILURE",
+                    rule_name="分析失败",
+                    description=f"Pipeline未创建，无法分析文件: {file_info.path}",
+                    severity="info",
+                    confidence=0.0,
+                    location={"file": file_info.path, "line": 0},
+                )]
 
             # 分析文件
             findings = await self.analyze(file_info.path, "")
@@ -2571,15 +2585,19 @@ class PureAIAnalyzer:
                 logger.debug(f"分析完成，发现 {len(findings)} 个问题")
             return findings
         except DeepSeekAPIError as e:
-            console.print(f"[red][X] API错误，分析中断: {e.message}[/red]")
+            logger.error(f" API错误，分析中断: {e.message}")
             raise
         except Exception as e:
-            console.print(f"[red][X] 纯AI分析文件失败: {e}[/red]")
-            if self.config.debug:
-                import traceback
-
-                traceback.print_exc()
-            return []
+            logger.exception(f"纯AI分析文件失败: {file_info.path}, 错误类型: {type(e).__name__}")
+            # 返回一个标记性的失败 finding，让调用方区分"无漏洞"和"分析失败"
+            return [VulnerabilityFinding(
+                rule_id="ANALYSIS_FAILURE",
+                rule_name="分析失败",
+                description=f"分析过程发生错误: {str(e)}",
+                severity="info",
+                confidence=0.0,
+                location={"file": file_info.path, "line": 0},
+            )]
 
     async def analyze_batch(
         self, file_infos: List[Any], max_concurrent: int = 5
@@ -2677,23 +2695,21 @@ class PureAIAnalyzer:
                         project_libraries.extend(libs)
 
                     if project_libraries:
-                        print(
-                            f"[DEBUG] Build project dependency table: found {len(project_libraries)} libraries"
+                        logger.debug(
+                            f"Build project dependency table: found {len(project_libraries)} libraries"
                         )
-
                     if library_matcher._nvd_available:
                         nvd_vulnerabilities = library_matcher.match_vulnerabilities(
                             project_libraries
                         )
                         if nvd_vulnerabilities:
-                            print(
-                                f"[DEBUG] Found {len(nvd_vulnerabilities)} known CVE vulnerabilities in project dependencies"
+                            logger.debug(
+                                f"Found {len(nvd_vulnerabilities)} known CVE vulnerabilities in project dependencies"
                             )
-
                             for vuln in nvd_vulnerabilities[:5]:
                                 cvss = vuln.metadata.get("cvss_score", 0)
-                                print(
-                                    f"[DEBUG]   - {vuln.library_name}: {vuln.cve_id} (CVSS: {cvss})"
+                                logger.debug(
+                                    f"- {vuln.library_name}: {vuln.cve_id} (CVSS: {cvss})"
                                 )
                             if len(nvd_vulnerabilities) > 5:
                                 logger.debug(f"  ... and {len(nvd_vulnerabilities) - 5} more CVEs")
@@ -2782,8 +2798,8 @@ class PureAIAnalyzer:
             async def analyze_with_limit(idx, file_info):
                 async with semaphore:
                     if self.config.debug:
-                        print(
-                            f"[DEBUG] AI 分析文件 {idx + 1}/{len(suspicious_files)}: {file_info.path}"
+                        logger.debug(
+                            f"AI 分析文件 {idx + 1}/{len(suspicious_files)}: {file_info.path}"
                         )
                     result = await self.analyze_file(file_info)
                     if task_id is not None:
@@ -2999,8 +3015,8 @@ class PureAIAnalyzer:
 
             logger.debug(f"[Triple Verification] CVE confirmed: {cve_confirmed_count}")
             if hallucination_warnings:
-                print(
-                    f"[DEBUG] [Triple Verification] Hallucination warnings: {len(hallucination_warnings)}"
+                logger.debug(
+                    f"[Triple Verification] Hallucination warnings: {len(hallucination_warnings)}"
                 )
                 for hw in hallucination_warnings[:3]:
                     logger.debug(f"  - {hw['rule_name']} ({hw['library_name']})")
@@ -3051,8 +3067,8 @@ class PureAIAnalyzer:
                 logger.debug(f"  - Triple verified: {triple_verified}")
                 logger.debug(f"  - Double verified: {double_verified}")
                 logger.debug(f"  - Single verified: {single_verified}")
-                print(
-                    f"[DEBUG]   - Needs review: {len(all_findings) - verified_count - hallucination_count}"
+                logger.debug(
+                    f"- Needs review: {len(all_findings) - verified_count - hallucination_count}"
                 )
                 logger.debug(f"  - Potential hallucinations: {hallucination_count}")
 
@@ -3063,10 +3079,9 @@ class PureAIAnalyzer:
                         if v["is_hallucination"]:
                             finding = all_findings[i]
                             hallucinated_indices.add(i)
-                            print(
-                                f"[DEBUG]   - [{finding.rule_name}] confidence: {v['confidence']:.2f}, reason: file path or code not verified"
+                            logger.debug(
+                                f"- [{finding.rule_name}] confidence: {v['confidence']:.2f}, reason: file path or code not verified"
                             )
-
                     filtered_results = []
                     flat_index = 0
                     for file_findings in results:
@@ -3077,10 +3092,9 @@ class PureAIAnalyzer:
                             flat_index += 1
                         filtered_results.append(filtered_file_findings)
                     results = filtered_results
-                    print(
-                        f"[DEBUG] [Triple Verification] Filtered out {hallucination_count} hallucinated findings, remaining: {sum(len(f) for f in results)}"
+                    logger.debug(
+                        f"[Triple Verification] Filtered out {hallucination_count} hallucinated findings, remaining: {sum(len(f) for f in results)}"
                     )
-
         except Exception as e:
             logger.debug(f"[Triple Verification] File path verification failed: {e}")
 
@@ -3102,28 +3116,28 @@ class PureAIAnalyzer:
         """
         try:
             if self.config.debug:
-                console.print("[dim][DEBUG] 开始从断点恢复扫描[/dim]")
+                logger.debug(" 开始从断点恢复扫描")
 
             processed_files = checkpoint_data.get("processed_files", [])
             pending_files = checkpoint_data.get("pending_files", [])
             results = checkpoint_data.get("results", [])
 
             if self.config.debug:
-                console.print(f"[dim][DEBUG] 已处理文件数: {len(processed_files)}[/dim]")
-                console.print(f"[dim][DEBUG] 待处理文件数: {len(pending_files)}[/dim]")
+                logger.debug(f" 已处理文件数: {len(processed_files)}")
+                logger.debug(f" 待处理文件数: {len(pending_files)}")
 
             # 确保已初始化
             if not self.initialized:
                 await self._initialize()
                 if not self.initialized:
-                    console.print("[red][X] 纯AI分析器初始化失败，无法恢复扫描[/red]")
+                    logger.error(" 纯AI分析器初始化失败，无法恢复扫描")
                     return []
 
             # 继续处理未完成的部分
             for file_info in pending_files:
                 try:
                     if self.config.debug:
-                        console.print(f"[dim][DEBUG] 恢复处理文件: {file_info.path}[/dim]")
+                        logger.debug(f" 恢复处理文件: {file_info.path}")
 
                     findings = await self.analyze_file(file_info)
                     results.append(findings)
@@ -3144,17 +3158,17 @@ class PureAIAnalyzer:
                         await self.context_memory.update(file_info.path, findings)
 
                 except Exception as e:
-                    console.print(f"[red][X] 恢复处理文件失败 {file_info.path}: {e}[/red]")
+                    logger.error(f" 恢复处理文件失败 {file_info.path}: {e}")
                     results.append([])
                     continue
 
             if self.config.debug:
-                console.print(f"[dim][DEBUG] 断点恢复完成，共处理 {len(processed_files)} 个文件[/dim]")
+                logger.debug(f" 断点恢复完成，共处理 {len(processed_files)} 个文件")
 
             return results  # type: ignore[no-any-return]
 
         except Exception as e:
-            console.print(f"[red][X] 断点恢复失败: {e}[/red]")
+            logger.error(f" 断点恢复失败: {e}")
             import traceback
 
             traceback.print_exc()
@@ -3174,7 +3188,7 @@ class PureAIAnalyzer:
         """
         try:
             if self.config.debug:
-                console.print(f"[dim][DEBUG] 开始增量扫描，共 {len(file_infos)} 个文件[/dim]")
+                logger.debug(f" 开始增量扫描，共 {len(file_infos)} 个文件")
 
             # 确保已初始化
             if not self.initialized:
@@ -3192,8 +3206,8 @@ class PureAIAnalyzer:
                 if is_changed:
                     changed_files.append((file_info, change_type))
                     if self.config.debug:
-                        console.print(
-                            f"[dim][DEBUG] 检测到变更文件: {file_info.path} (类型: {change_type})[/dim]"
+                        logger.debug(
+                            f" 检测到变更文件: {file_info.path} (类型: {change_type})"
                         )
                 else:
                     unchanged_files.append(file_info)
@@ -3205,10 +3219,9 @@ class PureAIAnalyzer:
                         cached_results.append([])
 
             if self.config.debug:
-                console.print(
-                    f"[dim][DEBUG] 变更文件: {len(changed_files)}, 未变更文件: {len(unchanged_files)}[/dim]"
+                logger.debug(
+                    f" 变更文件: {len(changed_files)}, 未变更文件: {len(unchanged_files)}"
                 )
-
             # 构建结果列表，保持原始顺序
             results = []
             changed_idx = 0
@@ -3239,12 +3252,12 @@ class PureAIAnalyzer:
                     cached_idx += 1
 
             if self.config.debug:
-                console.print("[dim][DEBUG] 增量扫描完成[/dim]")
+                logger.debug(" 增量扫描完成")
 
             return results
 
         except Exception as e:
-            console.print(f"[red][X] 增量扫描失败: {e}[/red]")
+            logger.error(f" 增量扫描失败: {e}")
             import traceback
 
             traceback.print_exc()
@@ -3258,7 +3271,7 @@ class PureAIAnalyzer:
         """
         self.context_memory = context_memory
         if self.config.debug:
-            console.print("[dim][DEBUG] 上下文记忆管理器已设置[/dim]")
+            logger.debug(" 上下文记忆管理器已设置")
 
     def set_checkpoint_callback(self, callback) -> None:
         """设置检查点回调函数
@@ -3268,4 +3281,4 @@ class PureAIAnalyzer:
         """
         self.checkpoint_callback = callback
         if self.config.debug:
-            console.print("[dim][DEBUG] 检查点回调函数已设置[/dim]")
+            logger.debug(" 检查点回调函数已设置")
