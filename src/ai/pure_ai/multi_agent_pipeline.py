@@ -22,6 +22,9 @@ except ImportError:
 
 
 from src.ai.pure_ai.schema import SignalState
+from src.utils.logger import get_logger
+
+logger = get_logger(__name__)
 
 console = Console()
 
@@ -327,8 +330,8 @@ class EvidenceChain:
         """
         in_cooldown, remaining = self._check_cooldown(signal_id)
         if in_cooldown:
-            print(
-                f"[DEBUG] Signal {signal_id} in cooldown ({remaining:.1f}s remaining), ignoring add request from {agent}"
+            logger.warning(
+                f"Signal {signal_id} in cooldown ({remaining:.1f}s remaining), ignoring add request from {agent}"
             )
             return
 
@@ -336,14 +339,14 @@ class EvidenceChain:
             current = self.signals.get(signal_id, {})
             current_state = current.get("current_state", "")
             if current_state in self.TERMINAL_STATES:
-                print(
-                    f"[DEBUG] Signal {signal_id} already created with terminal state {current_state}, ignoring duplicate creation request from {agent}"
+                logger.debug(
+                    f"Signal {signal_id} already created with terminal state {current_state}, ignoring duplicate creation request from {agent}"
                 )
                 return
             existing_history_len = len(current.get("state_history", []))
             if existing_history_len >= self.MAX_STATE_CHANGES and current_state != "REFINED":
-                print(
-                    f"[DEBUG] Signal {signal_id} reached max state changes ({self.MAX_STATE_CHANGES}), ignoring creation request from {agent}"
+                logger.debug(
+                    f"Signal {signal_id} reached max state changes ({self.MAX_STATE_CHANGES}), ignoring creation request from {agent}"
                 )
                 return
 
@@ -359,8 +362,8 @@ class EvidenceChain:
             dup_signal = self.signals.get(dup_id, {})
             dup_state = dup_signal.get("current_state", "")
             if dup_state in ["REFINED", "CONFIRMED"]:
-                print(
-                    f"[DEBUG] Duplicate signal detected: {signal_id} matches {dup_id} (state: {dup_state}), ignoring new signal creation"
+                logger.debug(
+                    f"Duplicate signal detected: {signal_id} matches {dup_id} (state: {dup_state}), ignoring new signal creation"
                 )
                 return
 
@@ -381,7 +384,7 @@ class EvidenceChain:
             if location_for_dedup:
                 self._signal_locations[signal_id] = (location_for_dedup, description)
             self.evidence_chain[signal_id] = list(evidence) if evidence else []
-            print(f"[DEBUG] Created new signal {signal_id} with state {state} by {agent}")
+            logger.debug(f" Created new signal {signal_id} with state {state} by {agent}")
 
             unverified_placeholder_titles = [
                 "UNVERIFIED_RISK",
@@ -401,8 +404,8 @@ class EvidenceChain:
                             has_concrete_evidence = True
                             break
                 if not has_concrete_evidence:
-                    print(
-                        f"[DEBUG] [UNVERIFIED_RISK检测] 信号 {signal_id} 标题为占位符且无具体证据，标记为待拒绝: title={title}"
+                    logger.debug(
+                        f" 信号 {signal_id} 标题为占位符且无具体证据，标记为待拒绝: title={title}"
                     )
                     self.signals[signal_id]["current_state"] = SignalState.REJECTED.value
                     self.signals[signal_id]["state_history"].append(
@@ -415,8 +418,8 @@ class EvidenceChain:
             if existing_title in generic_titles or not existing_title:
                 if title and title not in generic_titles:
                     self.signals[signal_id]["title"] = title
-                    print(
-                        f"[DEBUG] Updated signal {signal_id} title from '{existing_title}' to '{title}'"
+                    logger.debug(
+                        f"Updated signal {signal_id} title from '{existing_title}' to '{title}'"
                     )
             if not self.signals[signal_id].get("description"):
                 self.signals[signal_id]["description"] = description
@@ -427,16 +430,16 @@ class EvidenceChain:
                 history = self.signals[signal_id].get("state_history", [])
 
                 if len(history) >= self.MAX_STATE_CHANGES and state != "REFINED":
-                    print(
-                        f"[WARN] Signal {signal_id} state change limit ({self.MAX_STATE_CHANGES}) reached, ignoring transition from {current_state} to {state}"
+                    logger.warning(
+                        f"Signal {signal_id} state change limit ({self.MAX_STATE_CHANGES}) reached, ignoring transition from {current_state} to {state}"
                     )
                     self.signals[signal_id]["state_history"].append(
                         (agent, state + " (BLOCKED: limit reached)")
                     )
                 elif state in self.TERMINAL_STATES and current_state not in self.TERMINAL_STATES:
                     if not self.validate_state_transition(signal_id, current_state or "", state):
-                        print(
-                            f"[WARN] Signal {signal_id} invalid transition: {current_state} -> {state} blocked by state machine validation"
+                        logger.warning(
+                            f"Signal {signal_id} invalid transition: {current_state} -> {state} blocked by state machine validation"
                         )
                         self.signals[signal_id]["state_history"].append(
                             (agent, state + " (BLOCKED: invalid transition)")
@@ -445,18 +448,18 @@ class EvidenceChain:
                         self.signals[signal_id]["current_state"] = state
                         self.signals[signal_id]["state_history"].append((agent, state))
                         self._update_cooldown(signal_id)
-                        print(
-                            f"[DEBUG] Signal {signal_id} state changed: {current_state} -> {state} (change #{len(history) + 1}, terminal state)"
+                        logger.debug(
+                            f"Signal {signal_id} state changed: {current_state} -> {state} (change #{len(history) + 1}, terminal state)"
                         )
                 else:
                     in_cooldown_transition, remaining_transition = self._check_cooldown(signal_id)
                     if in_cooldown_transition:
-                        print(
-                            f"[DEBUG] Signal {signal_id} in cooldown ({remaining_transition:.1f}s), ignoring transition from {current_state} to {state}"
+                        logger.warning(
+                            f"Signal {signal_id} in cooldown ({remaining_transition:.1f}s), ignoring transition from {current_state} to {state}"
                         )
                     elif not self.validate_state_transition(signal_id, current_state or "", state):
-                        print(
-                            f"[WARN] Signal {signal_id} invalid transition: {current_state} -> {state} blocked by state machine validation"
+                        logger.warning(
+                            f"Signal {signal_id} invalid transition: {current_state} -> {state} blocked by state machine validation"
                         )
                         self.signals[signal_id]["state_history"].append(
                             (agent, state + " (BLOCKED: invalid transition)")
@@ -465,10 +468,9 @@ class EvidenceChain:
                         self.signals[signal_id]["current_state"] = state
                         self.signals[signal_id]["state_history"].append((agent, state))
                         self._update_cooldown(signal_id)
-                        print(
-                            f"[DEBUG] Signal {signal_id} state changed: {current_state} -> {state} (change #{len(history) + 1})"
+                        logger.debug(
+                            f"Signal {signal_id} state changed: {current_state} -> {state} (change #{len(history) + 1})"
                         )
-
         if evidence:
             self.evidence_chain[signal_id].extend(evidence)
 
@@ -493,8 +495,8 @@ class EvidenceChain:
         """
         in_cooldown, remaining = self._check_cooldown(signal_id)
         if in_cooldown:
-            print(
-                f"[DEBUG] Signal {signal_id} update blocked - in cooldown ({remaining:.1f}s remaining), requested by {agent}"
+            logger.warning(
+                f"Signal {signal_id} update blocked - in cooldown ({remaining:.1f}s remaining), requested by {agent}"
             )
             return
 
@@ -504,8 +506,8 @@ class EvidenceChain:
 
             state_change_count = len(self.signals[signal_id]["state_history"])
             if state_change_count >= self.MAX_STATE_CHANGES and new_state != "REFINED":
-                print(
-                    f"[WARN] Signal {signal_id} state change limit ({self.MAX_STATE_CHANGES}) reached, ignoring transition from {old_state} to {new_state}"
+                logger.warning(
+                    f"Signal {signal_id} state change limit ({self.MAX_STATE_CHANGES}) reached, ignoring transition from {old_state} to {new_state}"
                 )
                 self.signals[signal_id]["state_history"].append(
                     (agent, new_state + " (BLOCKED: limit reached)")
@@ -517,8 +519,8 @@ class EvidenceChain:
                 and new_state in self.TERMINAL_STATES
                 and old_state != new_state
             ):
-                print(
-                    f"[WARN] Attempt to change terminal state {old_state} -> {new_state} for {signal_id} blocked"
+                logger.warning(
+                    f"Attempt to change terminal state {old_state} -> {new_state} for {signal_id} blocked"
                 )
                 self.signals[signal_id]["state_history"].append(
                     (agent, new_state + " (BLOCKED: terminal state protected)")
@@ -526,8 +528,8 @@ class EvidenceChain:
                 return
 
             if not self.validate_state_transition(signal_id, old_state, new_state):
-                print(
-                    f"[WARN] Signal {signal_id} invalid transition: {old_state} -> {new_state} blocked by state machine validation"
+                logger.warning(
+                    f"Signal {signal_id} invalid transition: {old_state} -> {new_state} blocked by state machine validation"
                 )
                 self.signals[signal_id]["state_history"].append(
                     (agent, new_state + " (BLOCKED: invalid transition)")
@@ -544,7 +546,7 @@ class EvidenceChain:
                 log_parts.append(f"(confidence: {confidence_change:+.2f})")
             if reason:
                 log_parts.append(f"reason: {reason}")
-            print(" ".join(log_parts))
+            logger.debug(" ".join(log_parts))
 
     def get_signal(self, signal_id: str) -> Optional[Dict[str, Any]]:
         """获取信号"""
@@ -775,10 +777,9 @@ class MultiAgentPipeline:
             )
             self.reject_on_signal_creation = getattr(config, "reject_on_signal_creation", True)
 
-        console.print(
-            f"[dim][DEBUG] Pipeline 使用模型: {self.model}, Temperature: {self.temperature}, reject_on_signal_creation: {self.reject_on_signal_creation}[/dim]"
+        logger.debug(
+            f" Pipeline 使用模型: {self.model}, Temperature: {self.temperature}, reject_on_signal_creation: {self.reject_on_signal_creation}"
         )
-
     def _detect_language(self, file_path: str, file_content: str) -> str:
         """检测代码语言/框架
 
@@ -885,7 +886,7 @@ class MultiAgentPipeline:
         self._file_registry.register(context["current_file"], context["file_content"])
         for rf in context.get("related_files", []):
             self._file_registry.register(rf["path"], rf["content"])
-        print(f"[DEBUG] Registered {len(self._file_registry.get_known_file_paths())} known files")
+        logger.debug(f" Registered {len(self._file_registry.get_known_file_paths())} known files")
 
     def set_checkpoint_callback(self, callback) -> None:
         """设置检查点回调函数
@@ -939,7 +940,7 @@ class MultiAgentPipeline:
                     }
                 )
             except Exception as e:
-                console.print(f"[yellow]检查点回调失败: {e}[/yellow]")
+                logger.warning(f"检查点回调失败: {e}")
 
     async def run_pipeline(self, file_path: str) -> Dict[str, Any]:
         """运行完整的多Agent流水线
@@ -953,7 +954,7 @@ class MultiAgentPipeline:
         from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn, TimeElapsedColumn
 
         try:
-            print(f"[DEBUG] 开始运行多Agent流水线: {file_path}")
+            logger.debug(f" 开始运行多Agent流水线: {file_path}")
             total_start_time = time.time()
             self._agent_timings = {}
             self._current_step = "started"
@@ -986,7 +987,7 @@ class MultiAgentPipeline:
                 progress.advance(main_task)
 
                 detected_language = self._detect_language(file_path, context["file_content"])
-                print(f"[DEBUG] 检测到语言: {detected_language}")
+                logger.debug(f" 检测到语言: {detected_language}")
 
                 cached = self._get_cached_result(file_path, context["file_content"])
                 use_cache = cached is not None
@@ -995,7 +996,7 @@ class MultiAgentPipeline:
 
                 start_time = time.time()
                 if use_cache and cached is not None:
-                    console.print(f"[dim][CACHE] 使用缓存结果跳过 Agent-0/1: {Path(file_path).name}[/dim]")
+                    logger.debug(f" 使用缓存结果跳过 Agent-0/1: {Path(file_path).name}")
                     context_analysis = cached.get("context_analysis", {})
                     code_understanding = cached.get("code_understanding", {})
                     token_usage = {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
@@ -1073,6 +1074,9 @@ class MultiAgentPipeline:
 
                 start_time = time.time()
                 if skip_agent_4_5:
+                    logger.warning(
+                        f"[TOKEN-SKIP] 跳过 Agent-4 (Token: {total_token_usage['total_tokens']:,}/{TOKEN_BUDGET_PER_FILE:,})"
+                    )
                     console.print(
                         f"[yellow][TOKEN-SKIP] 跳过 Agent-4 (Token: {total_token_usage['total_tokens']:,}/{TOKEN_BUDGET_PER_FILE:,})[/yellow]"
                     )
@@ -1096,6 +1100,9 @@ class MultiAgentPipeline:
 
                 start_time = time.time()
                 if skip_agent_4_5:
+                    logger.warning(
+                        f"[TOKEN-SKIP] 跳过 Agent-5 (Token: {total_token_usage['total_tokens']:,}/{TOKEN_BUDGET_PER_FILE:,})"
+                    )
                     console.print(
                         f"[yellow][TOKEN-SKIP] 跳过 Agent-5 (Token: {total_token_usage['total_tokens']:,}/{TOKEN_BUDGET_PER_FILE:,})[/yellow]"
                     )
@@ -1155,16 +1162,14 @@ class MultiAgentPipeline:
             )
             if file_path not in self._processed_files:
                 self._processed_files.append(file_path)
-            console.print(
-                f"[bold cyan][PURE-AI][/bold cyan] [bold green]OK {Path(file_path).name} 分析完成[/bold green] [dim]({total_elapsed:.2f}s)[/dim]"
+            logger.info(
+                f"[bold cyan][PURE-AI][/bold cyan] [bold green]OK {Path(file_path).name} 分析完成[/bold green] ({total_elapsed:.2f}s)"
             )
-
             if total_token_usage["total_tokens"] > 0:
                 # avg_tokens_per_agent = total_token_usage["total_tokens"] / 6 if 6 > 0 else 0
-                console.print(
-                    f"[dim]  [TOKEN] Token: {total_token_usage['total_tokens']:,} (提示词: {total_token_usage['prompt_tokens']:,}, 补全: {total_token_usage['completion_tokens']:,})[/dim]"
+                logger.debug(
+                    f"   Token: {total_token_usage['total_tokens']:,} (提示词: {total_token_usage['prompt_tokens']:,}, 补全: {total_token_usage['completion_tokens']:,})"
                 )
-
             self._cache_analysis_result(
                 file_path,
                 context.get("file_content", ""),
@@ -1187,9 +1192,8 @@ class MultiAgentPipeline:
         except Exception as e:
             self._current_step = "error"
             self._trigger_checkpoint_callback("pipeline_error", {"error": str(e)})
-            console.print(
-                f"[bold cyan][PURE-AI][/bold cyan] [bold red][X] {Path(file_path).name} 分析失败: {e}[/bold red]"
-            )
+            logger.error(f"{Path(file_path).name} 分析失败: {e}")
+            console.print(f"[red]分析失败: {Path(file_path).name}[/red]")
             import traceback
 
             traceback.print_exc()
@@ -1198,14 +1202,19 @@ class MultiAgentPipeline:
     def _track_risk_signals(self, risk_enumeration: Any) -> None:
         """追踪风险信号"""
         if not isinstance(risk_enumeration, dict):
-            print(
-                f"[DEBUG] Agent-2 数据结构错误 - risk_enumeration 不是字典类型: {type(risk_enumeration).__name__}, 值: {str(risk_enumeration)[:100]}"
+            logger.error(
+                f"Agent-2 数据结构错误 - risk_enumeration 不是字典类型: {type(risk_enumeration).__name__}, 值: {str(risk_enumeration)[:100]}"
             )
             return
+
+        # [FIX-B2] 检查 JSON 解析是否失败
+        if risk_enumeration.get("_parse_failed"):
+            logger.warning("Agent-2 JSON 解析失败，使用兜底数据，信号追踪可能不完整")
+
         risks = risk_enumeration.get("risks", [])
         if not isinstance(risks, list):
-            print(
-                f"[DEBUG] Agent-2 数据结构错误 - risks 不是列表类型: {type(risks).__name__}, 值: {str(risks)[:100]}"
+            logger.error(
+                f"Agent-2 数据结构错误 - risks 不是列表类型: {type(risks).__name__}, 值: {str(risks)[:100]}"
             )
             risks = []
         current_file_path = getattr(self, "_current_file_path", "unknown")
@@ -1214,14 +1223,16 @@ class MultiAgentPipeline:
 
         for risk in risks:
             if not isinstance(risk, dict):
-                print(
-                    f"[DEBUG] Agent-3 数据结构错误修复已应用 - risk 不是字典类型: {type(risk).__name__}, 值: {str(risk)[:100]}"
+                logger.error(
+                    f"Agent-3 数据结构错误修复已应用 - risk 不是字典类型: {type(risk).__name__}, 值: {str(risk)[:100]}"
                 )
                 continue
             original_signal_id = risk.get("signal_id", "")
             if original_signal_id:
+                signal_id = original_signal_id  # [FIX-B5] 保持原始 ID 一致性
+            else:
                 signal_counter += 1
-                signal_id = f"{file_hash}-{signal_counter:03d}"
+                signal_id = f"{file_hash}-{signal_counter:03d}"  # 仅在无原始 ID 时生成
                 evidence = risk.get("evidence", [])
                 risk_title = (
                     risk.get("title", "")
@@ -1231,8 +1242,8 @@ class MultiAgentPipeline:
                 risk_description = risk.get("description", "") or risk.get("reason", "")
 
                 if self.reject_on_signal_creation and self._should_reject_signal(risk_title):
-                    print(
-                        f"[DEBUG] 拒绝占位符信号: {risk_title} (signal_id: {signal_id}, original: {original_signal_id})"
+                    logger.debug(
+                        f"拒绝占位符信号: {risk_title} (signal_id: {signal_id}, original: {original_signal_id})"
                     )
                     continue
 
@@ -1295,7 +1306,7 @@ class MultiAgentPipeline:
                         for keyword in vuln_keywords:
                             if keyword.lower() in desc.lower():
                                 risk_title = keyword
-                                print(f"[DEBUG] Extracted vuln type from description: '{keyword}'")
+                                logger.debug(f" Extracted vuln type from description: '{keyword}'")
                                 break
                     if not risk_title or risk_title in generic_titles:
                         risk_title = (
@@ -1312,21 +1323,20 @@ class MultiAgentPipeline:
                     evidence=evidence,
                 )
                 self._current_file_signals.add(signal_id)
-                print(
-                    f"[DEBUG] Added risk signal: {signal_id} (original: {original_signal_id}) with title: {risk_title or 'UNKNOWN'}"
+                logger.debug(
+                    f"Added risk signal: {signal_id} (original: {original_signal_id}) with title: {risk_title or 'UNKNOWN'}"
                 )
-
     def _track_verification_signals(self, vulnerability_verification: Any) -> None:
         """追踪验证信号"""
         if not isinstance(vulnerability_verification, dict):
-            print(
-                f"[DEBUG] Agent-3 数据结构错误 - vulnerability_verification 不是字典类型: {type(vulnerability_verification).__name__}, 值: {str(vulnerability_verification)[:100]}"
+            logger.error(
+                f"Agent-3 数据结构错误 - vulnerability_verification 不是字典类型: {type(vulnerability_verification).__name__}, 值: {str(vulnerability_verification)[:100]}"
             )
             return
         vulnerabilities = vulnerability_verification.get("vulnerabilities", [])
         if not isinstance(vulnerabilities, list):
-            print(
-                f"[DEBUG] Agent-3 数据结构错误 - vulnerabilities 不是列表类型: {type(vulnerabilities).__name__}, 值: {str(vulnerabilities)[:100]}"
+            logger.error(
+                f"Agent-3 数据结构错误 - vulnerabilities 不是列表类型: {type(vulnerabilities).__name__}, 值: {str(vulnerabilities)[:100]}"
             )
             vulnerabilities = []
         current_file_signals: set = getattr(self, "_current_file_signals", set())
@@ -1335,8 +1345,8 @@ class MultiAgentPipeline:
 
         for vuln in vulnerabilities:
             if not isinstance(vuln, dict):
-                print(
-                    f"[DEBUG] Agent-3 数据结构错误修复已应用 - vuln 不是字典类型: {type(vuln).__name__}, 值: {str(vuln)[:100]}"
+                logger.error(
+                    f"Agent-3 数据结构错误修复已应用 - vuln 不是字典类型: {type(vuln).__name__}, 值: {str(vuln)[:100]}"
                 )
                 continue
             signal_id = vuln.get("signal_id", "") or vuln.get("id", "")
@@ -1372,12 +1382,12 @@ class MultiAgentPipeline:
                         confidence_change=confidence_change,
                         reason=f"verification_decision={verification_decision}, reason={verification_reason}",
                     )
-                    print(f"[DEBUG] Updated verification signal: {signal_id} -> {new_state}")
+                    logger.debug(f" Updated verification signal: {signal_id} -> {new_state}")
                 else:
-                    print(
-                        f"[WARN] Verification signal {signal_id} not found in tracker (Agent-2 original signals), may be a new signal from Agent-3"
+                    logger.warning(
+                        f"Verification signal {signal_id} not found in tracker (Agent-2 original signals), may be a new signal from Agent-3"
                     )
-                    print(f"[DEBUG] Adding new signal from Agent-3: {signal_id}")
+                    logger.debug(f" Adding new signal from Agent-3: {signal_id}")
                     vuln_title = (
                         vuln.get("vulnerability", "")
                         or vuln.get("title", "")
@@ -1390,7 +1400,7 @@ class MultiAgentPipeline:
                     if self.reject_on_signal_creation and self._should_reject_signal(
                         vuln_title or ""
                     ):
-                        print(f"[DEBUG] 拒绝占位符验证信号: {vuln_title} (signal_id: {signal_id})")
+                        logger.debug(f" 拒绝占位符验证信号: {vuln_title} (signal_id: {signal_id})")
                         continue
 
                     self.evidence_chain_tracker.add_signal(
@@ -1409,14 +1419,13 @@ class MultiAgentPipeline:
             coverage_ratio = (
                 len(processed_signal_ids) / len(all_signal_ids) if all_signal_ids else 0
             )
-            print(f"[WARN] Signals from Agent-2 not verified by Agent-3: {unverified_signals}")
-            print(
-                f"[WARN] Agent-3 verification coverage: {len(processed_signal_ids)}/{len(all_signal_ids)} ({coverage_ratio * 100:.1f}%)"
+            logger.debug(f" Signals from Agent-2 not verified by Agent-3: {unverified_signals}")
+            logger.warning(
+                f"Agent-3 verification coverage: {len(processed_signal_ids)}/{len(all_signal_ids)} ({coverage_ratio * 100:.1f}%)"
             )
-
             if coverage_ratio < 0.5:
-                print(
-                    f"[WARN] [完整性警告] Agent-3 验证覆盖率低于50%阈值 ({coverage_ratio * 100:.1f}%)，尝试从风险列表匹配..."
+                logger.warning(
+                    f" Agent-3 验证覆盖率低于50%阈值 ({coverage_ratio * 100:.1f}%)，尝试从风险列表匹配..."
                 )
                 matched_count = self._match_unverified_signals(
                     unverified_signals, vulnerability_verification
@@ -1426,15 +1435,15 @@ class MultiAgentPipeline:
                     if all_signal_ids
                     else 0
                 )
-                print(
-                    f"[DEBUG] 匹配后调整覆盖率: {len(processed_signal_ids) + matched_count}/{len(all_signal_ids)} ({adjusted_coverage * 100:.1f}%)"
+                logger.debug(
+                    f"匹配后调整覆盖率: {len(processed_signal_ids) + matched_count}/{len(all_signal_ids)} ({adjusted_coverage * 100:.1f}%)"
                 )
                 if adjusted_coverage >= 0.5:
-                    print(f"[INFO] 匹配成功，覆盖率已提升至 {adjusted_coverage * 100:.1f}%")
+                    logger.debug(f" 匹配成功，覆盖率已提升至 {adjusted_coverage * 100:.1f}%")
                     coverage_ratio = adjusted_coverage
 
             if coverage_ratio < 0.5:
-                print("[WARN] [覆盖率修复] 将相关风险标记为需要人工复核")
+                logger.debug("  将相关风险标记为需要人工复核")
                 for signal_id in unverified_signals:
                     signal = self.evidence_chain_tracker.get_signal(signal_id)
                     if signal:
@@ -1505,8 +1514,8 @@ class MultiAgentPipeline:
     def _track_attack_chain_signals(self, attack_chain_analysis: Any) -> None:
         """追踪攻击链信号"""
         if not isinstance(attack_chain_analysis, dict):
-            print(
-                f"[WARN] _track_attack_chain_signals received non-dict type: {type(attack_chain_analysis).__name__}, expected dict"
+            logger.warning(
+                f"_track_attack_chain_signals received non-dict type: {type(attack_chain_analysis).__name__}, expected dict"
             )
             chains: list = []
         else:
@@ -1522,13 +1531,13 @@ class MultiAgentPipeline:
                     state=chain.get("signal_state", SignalState.NEW.value),
                     evidence=evidence,
                 )
-                print(f"[DEBUG] Added attack chain signal: {signal_id}")
+                logger.debug(f" Added attack chain signal: {signal_id}")
 
     def _track_adversarial_signals(self, adversarial_validation: Any) -> None:
         """追踪对抗验证信号"""
         if not isinstance(adversarial_validation, dict):
-            print(
-                f"[WARN] _track_adversarial_signals received non-dict type: {type(adversarial_validation).__name__}, expected dict"
+            logger.warning(
+                f"_track_adversarial_signals received non-dict type: {type(adversarial_validation).__name__}, expected dict"
             )
             analysis = []
         else:
@@ -1565,7 +1574,7 @@ class MultiAgentPipeline:
                     confidence_change=confidence_change,
                     reason=f"verdict={verdict}, detail={reason}",
                 )
-                print(f"[DEBUG] Updated adversarial signal: {challenged_id} -> {new_state}")
+                logger.debug(f" Updated adversarial signal: {challenged_id} -> {new_state}")
 
     def _check_semantic_consistency(
         self, check_name: str, upstream: Dict[str, Any], downstream: Dict[str, Any]
@@ -1577,7 +1586,7 @@ class MultiAgentPipeline:
             upstream: 上游输出
             downstream: 下游输出
         """
-        print(f"[DEBUG] Running semantic consistency check: {check_name}")
+        logger.debug(f" Running semantic consistency check: {check_name}")
 
         if check_name == "agent_2_to_3":
             upstream_signals = set(r.get("signal_id", "") for r in upstream.get("risks", []))
@@ -1587,11 +1596,11 @@ class MultiAgentPipeline:
 
             missing_signals = upstream_signals - downstream_signals
             if missing_signals:
-                print(
-                    f"[WARN] Semantic gap detected: signals in Agent-2 but not in Agent-3: {missing_signals}"
+                logger.warning(
+                    f"Semantic gap detected: signals in Agent-2 but not in Agent-3: {missing_signals}"
                 )
-                print(
-                    f"[DEBUG] Agent-2 produced {len(upstream_signals)} signals, Agent-3 consumed {len(downstream_signals)} signals"
+                logger.debug(
+                    f"Agent-2 produced {len(upstream_signals)} signals, Agent-3 consumed {len(downstream_signals)} signals"
                 )
                 self._fill_missing_signals_via_refinement(missing_signals, downstream, "risk")
                 downstream_signals = set(
@@ -1599,7 +1608,7 @@ class MultiAgentPipeline:
                 )
                 remaining_gaps = upstream_signals - downstream_signals
                 if remaining_gaps:
-                    print(f"[WARN] After refinement, still missing signals: {remaining_gaps}")
+                    logger.debug(f" After refinement, still missing signals: {remaining_gaps}")
 
         elif check_name == "agent_4_to_5":
             upstream_signals = set(
@@ -1612,11 +1621,11 @@ class MultiAgentPipeline:
 
             missing_signals = upstream_signals - downstream_signals
             if missing_signals:
-                print(
-                    f"[WARN] Semantic gap detected: signals in Agent-4 but not in Agent-5: {missing_signals}"
+                logger.warning(
+                    f"Semantic gap detected: signals in Agent-4 but not in Agent-5: {missing_signals}"
                 )
-                print(
-                    f"[DEBUG] Agent-4 produced {len(upstream_signals)} signals, Agent-5 consumed {len(downstream_signals)} signals"
+                logger.debug(
+                    f"Agent-4 produced {len(upstream_signals)} signals, Agent-5 consumed {len(downstream_signals)} signals"
                 )
                 self._fill_missing_signals_via_refinement(
                     missing_signals, downstream, "attack_chain"
@@ -1634,10 +1643,9 @@ class MultiAgentPipeline:
             downstream: 下游输出（将被修改）
             signal_type: 信号类型 ('risk' 或 'attack_chain')
         """
-        print(
-            f"[WARN] Semantic gap: signals {missing_signals} were not consumed by downstream agent"
+        logger.warning(
+            f"Semantic gap: signals {missing_signals} were not consumed by downstream agent"
         )
-
         if signal_type == "risk" and missing_signals:
             vulnerabilities = downstream.get("vulnerabilities", [])
             if not isinstance(vulnerabilities, list):
@@ -1658,7 +1666,7 @@ class MultiAgentPipeline:
                     "verification_reason": f"Signal {sig_id} was not consumed by vulnerability verification agent - requires manual review",
                 }
                 vulnerabilities.append(refined_signal)
-                print(f"[DEBUG] 添加已细化信号用于未消耗的 {sig_id}")
+                logger.debug(f" 添加已细化信号用于未消耗的 {sig_id}")
 
             signal_tracking = downstream.get("signal_tracking", {})
             if isinstance(signal_tracking, dict):
@@ -1685,7 +1693,7 @@ class MultiAgentPipeline:
                     "challenged_signal_id": sig_id,
                 }
                 adversarial_analysis.append(refined_signal)
-                print(f"[DEBUG] 添加待定判定用于未消耗的 {sig_id}")
+                logger.debug(f" 添加待定判定用于未消耗的 {sig_id}")
 
     def _get_signal_summary(self) -> Dict[str, Any]:
         """获取信号摘要"""
@@ -1709,7 +1717,7 @@ class MultiAgentPipeline:
                 "history": signal_data.get("state_history", []),
             }
 
-        print(f"[DEBUG] Signal summary: {summary}")
+        logger.debug(f" Signal summary: {summary}")
         return summary
 
     def _verify_location_exists(self, location: str, context: Dict[str, Any]) -> tuple[bool, str]:
@@ -1804,12 +1812,11 @@ class MultiAgentPipeline:
         for sig in conflict_signals:
             if sig in agent6_rejected_signals:
                 inconsistencies.append(sig)
-                print(
-                    f"[WARN] Agent-6 与 Agent-3 不一致: 信号 {sig} 被 Agent-6 REJECTED 但被 Agent-3 CONFIRMED"
+                logger.warning(
+                    f"Agent-6 与 Agent-3 不一致: 信号 {sig} 被 Agent-6 REJECTED 但被 Agent-3 CONFIRMED"
                 )
-
         if inconsistencies:
-            print(f"[WARN] 发现 {len(inconsistencies)} 个 Agent-6 与 Agent-3 不一致的信号，标记为需要人工复核")
+            logger.debug(f" 发现 {len(inconsistencies)} 个 Agent-6 与 Agent-3 不一致的信号，标记为需要人工复核")
             for finding in final_findings:
                 linked_signals = finding.get("linked_signals", [])
                 for sig in inconsistencies:
@@ -1818,7 +1825,7 @@ class MultiAgentPipeline:
                         finding[
                             "consistency_warning"
                         ] = f"Agent-6 与 Agent-3 不一致: 信号 {sig} 被 Agent-6 拒绝但被 Agent-3 确认"
-                        print(f"[DEBUG] 标记发现 {finding.get('vulnerability', 'unknown')} 需要人工复核")
+                        logger.debug(f" 标记发现 {finding.get('vulnerability', 'unknown')} 需要人工复核")
 
         agent6_final_findings = final_findings
         for sig in inconsistencies:
@@ -1841,10 +1848,9 @@ class MultiAgentPipeline:
                     "consistency_warning": f"Agent-6 与 Agent-3 不一致: 信号 {sig} 被 Agent-6 拒绝但被 Agent-3 确认",
                 }
                 agent6_final_findings.append(human_review_finding)
-                print(
-                    f"[DEBUG] 添加人工复核发现: signal={sig}, vulnerability={agent3_data.get('vulnerability', '')}"
+                logger.debug(
+                    f"添加人工复核发现: signal={sig}, vulnerability={agent3_data.get('vulnerability', '')}"
                 )
-
         return agent6_final_findings
 
     def _validate_final_findings(
@@ -1912,23 +1918,22 @@ class MultiAgentPipeline:
 
                 if validation_result["deviation"] > 0:
                     line_validation_summary["corrected"] += 1
-                    print(
-                        f"[DEBUG] Line corrected: {location} -> {validation_result['verified_line']} (deviation: {validation_result['deviation']})"
+                    logger.debug(
+                        f"Line corrected: {location} -> {validation_result['verified_line']} (deviation: {validation_result['deviation']})"
                     )
-
                 if validation_result.get("is_valid", True):
                     valid_findings.append(finding)
                 else:
-                    print(
-                        f"[WARN] Filtered finding without valid code snippet: {finding.get('rule_name', 'unknown')} at {location}"
+                    logger.warning(
+                        f"Filtered finding without valid code snippet: {finding.get('rule_name', 'unknown')} at {location}"
                     )
-                    print(
-                        f"[WARN] Reason: {validation_result.get('warning_message', 'code_snippet is empty or invalid')}"
+                    logger.warning(
+                        f"Reason: {validation_result.get('warning_message', 'code_snippet is empty or invalid')}"
                     )
                     rejected_count += 1
             else:
-                print(
-                    f"[WARN] Filtered invalid finding: {finding.get('rule_name', 'unknown')} at {location} - {error}"
+                logger.warning(
+                    f"Filtered invalid finding: {finding.get('rule_name', 'unknown')} at {location} - {error}"
                 )
                 rejected_count += 1
 
@@ -1978,10 +1983,9 @@ class MultiAgentPipeline:
 
         if vuln_count == 0 and tracker_count > 0:
             vuln_count = tracker_verified
-            print(
-                f"[DEBUG] Using tracker signal count for verification: {vuln_count} (total: {tracker_count}, verified: {tracker_verified}, new: {tracker_new})"
+            logger.debug(
+                f"Using tracker signal count for verification: {vuln_count} (total: {tracker_count}, verified: {tracker_verified}, new: {tracker_new})"
             )
-
         consistency_score = 1.0
         if risk_count > 0:
             consistency_score = min(vuln_count / risk_count, 1.0) if vuln_count > 0 else 0.0
@@ -1990,11 +1994,11 @@ class MultiAgentPipeline:
         if risk_count != vuln_count and risk_count > 0:
             if vuln_count < risk_count:
                 stability_warning = f"[稳定性警告] 风险枚举({risk_count})与验证({vuln_count})信号数不一致，{risk_count - vuln_count}个信号未被验证"
-                print(f"[WARN] {stability_warning}")
+                logger.debug(f" {stability_warning}")
                 self.debug_logs.append(stability_warning)
             else:
                 stability_warning = f"[稳定性警告] 验证阶段发现了额外的{vuln_count - risk_count}个信号"
-                print(f"[WARN] {stability_warning}")
+                logger.debug(f" {stability_warning}")
                 self.debug_logs.append(stability_warning)
 
         result["consistency_score"] = consistency_score
@@ -2048,6 +2052,9 @@ class MultiAgentPipeline:
         critical_threshold = budget * TOKEN_CRITICAL_THRESHOLD
 
         if total >= critical_threshold and not self._token_budget_warned:
+            logger.warning(
+                f"[TOKEN-WARNING] Token消耗达到 {total:,}/{budget:,} ({(total / budget) * 100:.1f}%)，即将跳过 Agent-4/5"
+            )
             console.print(
                 f"[bold yellow][TOKEN-WARNING] Token消耗达到 {total:,}/{budget:,} ({(total / budget) * 100:.1f}%)，即将跳过 Agent-4/5[/bold yellow]"
             )
@@ -2055,12 +2062,18 @@ class MultiAgentPipeline:
             return False
 
         if total >= warning_threshold and not self._token_budget_warned:
+            logger.warning(
+                f"[TOKEN-WARNING] Token消耗较高: {total:,}/{budget:,} ({(total / budget) * 100:.1f}%) - Agent: {agent_name}"
+            )
             console.print(
                 f"[yellow][TOKEN-WARNING] Token消耗较高: {total:,}/{budget:,} ({(total / budget) * 100:.1f}%) - Agent: {agent_name}[/yellow]"
             )
             self._token_budget_warned = True
 
         if total >= critical_threshold:
+            logger.warning(
+                f"[TOKEN-SKIP] 跳过 Agent-4/5，Token预算已超出 {total:,}/{budget:,}"
+            )
             console.print(
                 f"[yellow][TOKEN-SKIP] 跳过 Agent-4/5，Token预算已超出 {total:,}/{budget:,}[/yellow]"
             )
@@ -2081,7 +2094,7 @@ class MultiAgentPipeline:
         if agent_name in ["agent_4", "agent_5"]:
             total = total_token_usage.get("total_tokens", 0)
             if total >= TOKEN_BUDGET_PER_FILE * TOKEN_CRITICAL_THRESHOLD:
-                print(f"[DEBUG] 跳过 {agent_name} (Token: {total:,}/{TOKEN_BUDGET_PER_FILE:,})")
+                logger.warning(f" 跳过 {agent_name} (Token: {total:,}/{TOKEN_BUDGET_PER_FILE:,})")
                 return True
         return False
 
@@ -2128,7 +2141,7 @@ class MultiAgentPipeline:
             "content_hash": content_hash,
             "cached_at": time.time(),
         }
-        console.print(f"[dim][CACHE] 缓存已更新: {Path(file_path).name} (hash: {content_hash})[/dim]")
+        logger.debug(f" 缓存已更新: {Path(file_path).name} (hash: {content_hash})")
 
     def _get_cached_result(
         self, file_path: str, file_content: Optional[str] = None
@@ -2146,7 +2159,7 @@ class MultiAgentPipeline:
         cache_key = f"{file_path}:{content_hash}"
         cached = self._file_analysis_cache.get(cache_key)
         if cached:
-            console.print(f"[dim][CACHE] 命中缓存: {Path(file_path).name} (hash: {content_hash})[/dim]")
+            logger.debug(f" 命中缓存: {Path(file_path).name} (hash: {content_hash})")
         return cached
 
     async def _run_agent_0(
@@ -2162,7 +2175,7 @@ class MultiAgentPipeline:
         Returns:
             (上下文分析结果, token使用信息)
         """
-        print(f"[DEBUG] 运行Agent 0 (上下文构建) on: {file_path}")
+        logger.debug(f" 运行Agent 0 (上下文构建) on: {file_path}")
         self.debug_logs.append(f"[DEBUG] 运行Agent 0 (上下文构建) on: {file_path}")
         prompt = self.prompt_engine.render_agent_prompt(
             "context_builder",
@@ -2178,7 +2191,7 @@ class MultiAgentPipeline:
             prompt, "Agent 0", temperature=self.temperature
         )
         result = self._parse_json_response(response, schema_name="context_analysis")
-        print(f"[DEBUG] Agent 0 完成，令牌使用: {token_usage['total_tokens']}")
+        logger.debug(f" Agent 0 完成，令牌使用: {token_usage['total_tokens']}")
         self.debug_logs.append(f"[DEBUG] Agent 0 完成，令牌使用: {token_usage['total_tokens']}")
         return result, token_usage
 
@@ -2200,7 +2213,7 @@ class MultiAgentPipeline:
         Returns:
             (代码理解结果, token使用信息)
         """
-        print(f"[DEBUG] 运行Agent 1 (代码理解) on: {file_path}")
+        logger.debug(f" 运行Agent 1 (代码理解) on: {file_path}")
         self.debug_logs.append(f"[DEBUG] 运行Agent 1 (代码理解) on: {file_path}")
         context_info = json.dumps(context_analysis, ensure_ascii=False)
         prompt = self.prompt_engine.render_agent_prompt(
@@ -2215,7 +2228,7 @@ class MultiAgentPipeline:
             prompt, "Agent 1", temperature=self.temperature
         )
         result = self._parse_json_response(response, schema_name="code_understanding")
-        print(f"[DEBUG] Agent 1 完成，令牌使用: {token_usage['total_tokens']}")
+        logger.debug(f" Agent 1 完成，令牌使用: {token_usage['total_tokens']}")
         self.debug_logs.append(f"[DEBUG] Agent 1 完成，令牌使用: {token_usage['total_tokens']}")
         return result, token_usage
 
@@ -2232,7 +2245,7 @@ class MultiAgentPipeline:
         Returns:
             (风险枚举结果, token使用信息)
         """
-        print(f"[DEBUG] 运行Agent 2 (风险枚举) on: {file_path}")
+        logger.debug(f" 运行Agent 2 (风险枚举) on: {file_path}")
         self.debug_logs.append(f"[DEBUG] 运行Agent 2 (风险枚举) on: {file_path}")
         structured_data = json.dumps(code_understanding, ensure_ascii=False)
         known_file_paths = self._file_registry.get_known_file_paths()
@@ -2248,7 +2261,7 @@ class MultiAgentPipeline:
             prompt, "Agent 2", temperature=self.temperature
         )
         result = self._parse_json_response(response, schema_name="risk_enumeration")
-        print(f"[DEBUG] Agent 2 完成，令牌使用: {token_usage['total_tokens']}")
+        logger.debug(f" Agent 2 完成，令牌使用: {token_usage['total_tokens']}")
         self.debug_logs.append(f"[DEBUG] Agent 2 完成，令牌使用: {token_usage['total_tokens']}")
         return result, token_usage
 
@@ -2326,12 +2339,12 @@ class MultiAgentPipeline:
         Returns:
             (漏洞验证结果, token使用信息)
         """
-        print(f"[DEBUG] 运行Agent 3 (漏洞验证) on: {file_path}")
+        logger.debug(f" 运行Agent 3 (漏洞验证) on: {file_path}")
         self.debug_logs.append(f"[DEBUG] 运行Agent 3 (漏洞验证) on: {file_path}")
 
         if not isinstance(risk_enumeration, dict):
-            print(
-                f"[WARN] [Agent-3] risk_enumeration 不是字典类型: {type(risk_enumeration).__name__}, 使用空风险列表"
+            logger.warning(
+                f"[Agent-3] risk_enumeration 不是字典类型: {type(risk_enumeration).__name__}, 使用空风险列表"
             )
             self.debug_logs.append(
                 f"[WARN] [Agent-3] risk_enumeration 不是字典类型: {type(risk_enumeration).__name__}"
@@ -2348,25 +2361,24 @@ class MultiAgentPipeline:
 
         risks = risk_enumeration.get("risks", [])
 
-        print(f"[DEBUG] [Agent-3] 从 risk_enumeration 获取到 {len(risks)} 个风险")
+        logger.debug(f" [Agent-3] 从 risk_enumeration 获取到 {len(risks)} 个风险")
         if len(risks) == 0:
-            print("[WARN] [Agent-3] risk_enumeration 返回空风险列表，检查原始数据...")
+            logger.debug(" [Agent-3] risk_enumeration 返回空风险列表，检查原始数据...")
 
         self._init_signal_queue()
         for risk in risks:
             if not isinstance(risk, dict):
-                print(
-                    f"[WARN] [Agent-3] risk 不是字典类型: {type(risk).__name__}, 跳过, 值: {str(risk)[:100]}"
+                logger.warning(
+                    f"[Agent-3] risk 不是字典类型: {type(risk).__name__}, 跳过, 值: {str(risk)[:100]}"
                 )
                 self.debug_logs.append(f"[WARN] [Agent-3] risk 不是字典类型: {type(risk).__name__}, 跳过")
                 continue
             signal_id = risk.get("signal_id", "")
             if signal_id:
                 self._add_to_signal_queue(signal_id, risk)
-                print(
-                    f"[DEBUG] [Agent-3] 添加信号到队列: {signal_id} - {risk.get('title', risk.get('risk_type', 'UNKNOWN'))}"
+                logger.debug(
+                    f"[Agent-3] 添加信号到队列: {signal_id} - {risk.get('title', risk.get('risk_type', 'UNKNOWN'))}"
                 )
-
         if len(self._signal_queue) == 0 and hasattr(self, "evidence_chain_tracker"):
             tracked_signals = self.evidence_chain_tracker.get_all_signals()
             file_path_str = str(file_path)
@@ -2381,13 +2393,13 @@ class MultiAgentPipeline:
                 )
             ]
             if current_file_signals:
-                print(f"[DEBUG] [Fallback] 信号队列为空，从tracker中恢复 {len(current_file_signals)} 个信号")
+                logger.debug(f"  信号队列为空，从tracker中恢复 {len(current_file_signals)} 个信号")
                 for sig in current_file_signals:
                     sig_id = sig.get("signal_id", "")
                     if sig_id:
                         self._add_to_signal_queue(sig_id, sig)
 
-        print(f"[DEBUG] 信号队列初始化完成，共 {len(self._signal_queue)} 个信号待处理")
+        logger.debug(f" 信号队列初始化完成，共 {len(self._signal_queue)} 个信号待处理")
 
         risk_list = self._format_risk_list_concise(risks)
         known_file_paths = self._file_registry.get_known_file_paths()
@@ -2405,7 +2417,7 @@ class MultiAgentPipeline:
             context_mappings_summary = self._format_context_mappings_for_agent(context)
 
         queue_info = f"共 {len(self._signal_queue)} 个信号进入验证队列"
-        print(f"[DEBUG] {queue_info}")
+        logger.debug(f" {queue_info}")
 
         prompt = self.prompt_engine.render_agent_prompt(
             "vulnerability_verification",
@@ -2428,7 +2440,7 @@ class MultiAgentPipeline:
 
         timedout_signals = self._check_signal_queue_timeout()
         if timedout_signals:
-            print(f"[WARN] 信号验证超时 ({SIGNAL_QUEUE_TIMEOUT}秒)，超时信号: {timedout_signals}")
+            logger.debug(f" 信号验证超时 ({SIGNAL_QUEUE_TIMEOUT}秒)，超时信号: {timedout_signals}")
 
         result = self._parse_json_response(response, schema_name="vulnerability")
 
@@ -2446,8 +2458,8 @@ class MultiAgentPipeline:
 
         unverified_from_queue = self._get_pending_signals()
         if unverified_from_queue:
-            print(
-                f"[WARN] [覆盖率警告] 风险枚举({len(self._signal_queue)})与验证({len(verified_signals)})信号数不一致，{len(unverified_from_queue)}个信号未被验证: {unverified_from_queue}"
+            logger.warning(
+                f" 风险枚举({len(self._signal_queue)})与验证({len(verified_signals)})信号数不一致，{len(unverified_from_queue)}个信号未被验证: {unverified_from_queue}"
             )
             for sig_id in unverified_from_queue:
                 queue_item = next(
@@ -2470,9 +2482,9 @@ class MultiAgentPipeline:
                     if "vulnerabilities" not in result:
                         result["vulnerabilities"] = []
                     result["vulnerabilities"].append(refined_signal)
-                    print(f"[DEBUG] 添加未验证信号 {sig_id} 到待复核列表")
+                    logger.debug(f" 添加未验证信号 {sig_id} 到待复核列表")
 
-        print(f"[DEBUG] Agent 3 完成，令牌使用: {token_usage['total_tokens']}, 耗时: {agent_elapsed:.2f}s")
+        logger.debug(f" Agent 3 完成，令牌使用: {token_usage['total_tokens']}, 耗时: {agent_elapsed:.2f}s")
         self.debug_logs.append(
             f"[DEBUG] Agent 3 完成，令牌使用: {token_usage['total_tokens']}, 耗时: {agent_elapsed:.2f}s"
         )
@@ -2509,7 +2521,7 @@ class MultiAgentPipeline:
         - 高危类型最低置信度阈值0.3，其他类型0.5
         """
         if not isinstance(result, dict):
-            print(f"[WARN] [Agent-3] _safety_net_agent_3 收到非字典输入: {type(result).__name__}, 返回安全默认值")
+            logger.debug(f" [Agent-3] _safety_net_agent_3 收到非字典输入: {type(result).__name__}, 返回安全默认值")
             self.debug_logs.append(
                 f"[WARN] [Agent-3] _safety_net_agent_3 收到非字典输入: {type(result).__name__}"
             )
@@ -2551,8 +2563,8 @@ class MultiAgentPipeline:
 
         for vuln in vulnerabilities:
             if not isinstance(vuln, dict):
-                print(
-                    f"[WARN] [Agent-3] vuln 不是字典类型: {type(vuln).__name__}, 跳过, 值: {str(vuln)[:100]}"
+                logger.warning(
+                    f"[Agent-3] vuln 不是字典类型: {type(vuln).__name__}, 跳过, 值: {str(vuln)[:100]}"
                 )
                 self.debug_logs.append(f"[WARN] [Agent-3] vuln 不是字典类型: {type(vuln).__name__}, 跳过")
                 continue
@@ -2571,10 +2583,9 @@ class MultiAgentPipeline:
             )
 
             if is_high_severity:
-                print(
-                    f"[DEBUG] 高危风险检测: {vuln_signal_id} - {vuln_title} (置信度: {confidence}, 阈值: {confidence_threshold})"
+                logger.debug(
+                    f"高危风险检测: {vuln_signal_id} - {vuln_title} (置信度: {confidence}, 阈值: {confidence_threshold})"
                 )
-
             if original_verification_decision == "REJECTED":
                 reason = vuln.get("verification_reason", "")
 
@@ -2603,8 +2614,8 @@ class MultiAgentPipeline:
                     vuln["verification_decision"] = "REFINED"
                     vuln["verification_reason"] = reason + f" [{upgrade_reason}]"
                     modified = True
-                    print(
-                        f"[DEBUG] [HALLU-2修复] 检测到伪拒绝理由: {vuln_signal_id} - 模式:{fake_pattern_matched}, 原理由:{reason}"
+                    logger.debug(
+                        f"[HALLU-2修复] 检测到伪拒绝理由: {vuln_signal_id} - 模式:{fake_pattern_matched}, 原理由:{reason}"
                     )
                     self.debug_logs.append(
                         f"[DEBUG] [HALLU-2修复] 伪拒绝降级: {vuln_signal_id}，原拒绝理由: {reason}"
@@ -2620,9 +2631,9 @@ class MultiAgentPipeline:
                         "verification_reason"
                     ] = f"[ISSUE-008修复] 高危风险保留确认：{vuln_title} (置信度:{confidence} >= 阈值:{confidence_threshold})，原拒绝理由: {reason}"
                     modified = True
-                    print(f"[WARN] [ISSUE-008修复] 高危风险被错误拒绝已恢复: {vuln_signal_id} - {vuln_title}")
-                    print(
-                        f"[WARN] [审核检查] 高危风险保留确认: {vuln_title} (置信度:{confidence} >= 阈值:{confidence_threshold})"
+                    logger.warning(f" [ISSUE-008修复] 高危风险被错误拒绝已恢复: {vuln_signal_id} - {vuln_title}")
+                    logger.warning(
+                        f" 高危风险保留确认: {vuln_title} (置信度:{confidence} >= 阈值:{confidence_threshold})"
                     )
                     self.debug_logs.append(
                         f"[WARN] [ISSUE-008修复] 高危风险保留确认: {vuln_signal_id} - {vuln_title}，原拒绝理由: {reason}"
@@ -2636,8 +2647,8 @@ class MultiAgentPipeline:
                         "verification_reason"
                     ] = f"[ISSUE-008修复] 高危风险降级待复核：{vuln_title} (置信度:{confidence} < 阈值:{confidence_threshold})，原拒绝理由: {reason}"
                     modified = True
-                    print(
-                        f"[WARN] [ISSUE-008修复] 高危风险降级待复核: {vuln_signal_id} - {vuln_title} (置信度:{confidence} < 阈值:{confidence_threshold})"
+                    logger.warning(
+                        f"[ISSUE-008修复] 高危风险降级待复核: {vuln_signal_id} - {vuln_title} (置信度:{confidence} < 阈值:{confidence_threshold})"
                     )
                     self.debug_logs.append(
                         f"[WARN] [ISSUE-008修复] 高危风险降级待复核: {vuln_signal_id} - {vuln_title}，原拒绝理由: {reason}"
@@ -2654,8 +2665,8 @@ class MultiAgentPipeline:
                         if old_decision == "REJECTED"
                         else ("已确认" if old_decision == "CONFIRMED" else old_decision)
                     )
-                    print(
-                        f"[DEBUG] 安全网修正: {vuln.get('signal_id', 'unknown')} 从 {old_decision_display} -> 已细化"
+                    logger.debug(
+                        f"安全网修正: {vuln.get('signal_id', 'unknown')} 从 {old_decision_display} -> 已细化"
                     )
                     self.debug_logs.append(
                         f"[DEBUG] 安全网修正: {vuln.get('signal_id', 'unknown')} 从 {old_decision_display} -> 已细化，原始原因: {reason}"
@@ -2688,7 +2699,7 @@ class MultiAgentPipeline:
         Returns:
             (攻击链分析结果, token使用信息)
         """
-        print(f"[DEBUG] 运行Agent 4 (攻击链分析) on: {file_path}")
+        logger.debug(f" 运行Agent 4 (攻击链分析) on: {file_path}")
         self.debug_logs.append(f"[DEBUG] 运行Agent 4 (攻击链分析) on: {file_path}")
         verification_results = json.dumps(vulnerability_verification, ensure_ascii=False)
 
@@ -2708,7 +2719,7 @@ class MultiAgentPipeline:
             prompt, "Agent 4", temperature=self.temperature
         )
         result = self._parse_json_response(response, schema_name="attack_chain")
-        print(f"[DEBUG] Agent 4 完成，令牌使用: {token_usage['total_tokens']}")
+        logger.debug(f" Agent 4 完成，令牌使用: {token_usage['total_tokens']}")
         self.debug_logs.append(f"[DEBUG] Agent 4 完成，令牌使用: {token_usage['total_tokens']}")
         return result, token_usage
 
@@ -2730,7 +2741,7 @@ class MultiAgentPipeline:
         Returns:
             (对抗验证结果, token使用信息)
         """
-        print(f"[DEBUG] 运行Agent 5 (对抗验证) on: {file_path}")
+        logger.debug(f" 运行Agent 5 (对抗验证) on: {file_path}")
         self.debug_logs.append(f"[DEBUG] 运行Agent 5 (对抗验证) on: {file_path}")
         attack_chain_json = json.dumps(attack_chain_analysis, ensure_ascii=False)
         prompt = self.prompt_engine.render_agent_prompt(
@@ -2745,7 +2756,7 @@ class MultiAgentPipeline:
             prompt, "Agent 5", temperature=self.temperature
         )
         result = self._parse_json_response(response, schema_name="adversarial")
-        print(f"[DEBUG] Agent 5 完成，令牌使用: {token_usage['total_tokens']}")
+        logger.debug(f" Agent 5 完成，令牌使用: {token_usage['total_tokens']}")
         self.debug_logs.append(f"[DEBUG] Agent 5 完成，令牌使用: {token_usage['total_tokens']}")
         return result, token_usage
 
@@ -2769,7 +2780,7 @@ class MultiAgentPipeline:
         Returns:
             (最终裁决结果, token使用信息)
         """
-        print(f"[DEBUG] 运行Agent 6 (最终裁决) on: {file_path}")
+        logger.debug(f" 运行Agent 6 (最终裁决) on: {file_path}")
         self.debug_logs.append(f"[DEBUG] 运行Agent 6 (最终裁决) on: {file_path}")
         adversarial_results = json.dumps(adversarial_validation, ensure_ascii=False)
         verification_results = json.dumps(vulnerability_verification, ensure_ascii=False)
@@ -2792,7 +2803,7 @@ class MultiAgentPipeline:
             prompt, "Agent 6", temperature=self.temperature
         )
         result = self._parse_json_response(response, schema_name="final_decision")
-        print(f"[DEBUG] Agent 6 完成，令牌使用: {token_usage['total_tokens']}")
+        logger.debug(f" Agent 6 完成，令牌使用: {token_usage['total_tokens']}")
         self.debug_logs.append(f"[DEBUG] Agent 6 完成，令牌使用: {token_usage['total_tokens']}")
         return result, token_usage
 
@@ -2872,21 +2883,20 @@ class MultiAgentPipeline:
                 return response_content, token_usage
 
             except DeepSeekAPIError as e:
-                console.print(
-                    f"[bold cyan][PURE-AI][/bold cyan] [red][ERROR] API错误 (Agent: {agent_name}): {e.message}[/red]"
-                )
+                logger.error(f"API错误 (Agent: {agent_name}): {e.message}")
+                console.print(f"[red]API错误 (Agent: {agent_name})[/red]")
                 if e.should_truncate:
-                    console.print("[bold yellow][!] 检测到需立即截断的错误，不进行重试[/bold yellow]")
+                    logger.error("检测到需立即截断的错误，不进行重试")
                     raise
-                console.print(
-                    f"[bold cyan][PURE-AI][/bold cyan] [yellow]生成失败 (Agent: {agent_name}, 尝试 {i + 1}/{self.max_retries}): {e.message}[/yellow]"
+                logger.warning(
+                    f"生成失败 (Agent: {agent_name}, 尝试 {i + 1}/{self.max_retries}): {e.message}"
                 )
                 if i == self.max_retries - 1:
                     raise
                 await asyncio.sleep(2)
             except Exception as e:
-                console.print(
-                    f"[bold cyan][PURE-AI][/bold cyan] [yellow]生成失败 (Agent: {agent_name}, 尝试 {i + 1}/{self.max_retries}): {e}[/yellow]"
+                logger.warning(
+                    f"生成失败 (Agent: {agent_name}, 尝试 {i + 1}/{self.max_retries}): {e}"
                 )
                 if i == self.max_retries - 1:
                     raise
@@ -2899,6 +2909,10 @@ class MultiAgentPipeline:
         self, response: str, schema_name: Optional[str] = None
     ) -> Dict[str, Any]:
         """解析JSON响应
+
+        注意: 基础 JSON 提取逻辑已抽取到 json_utils.extract_json_from_text()，
+        本方法保留了 schema 合规性修复（_ensure_schema_compliance）等特殊处理，
+        后续可考虑将无 schema 场景替换为 json_utils.safe_json_parse()。
 
         Args:
             response: 响应字符串
@@ -2922,12 +2936,12 @@ class MultiAgentPipeline:
                 if "vulnerabilities" not in result or not isinstance(
                     result.get("vulnerabilities"), list
                 ):
-                    print("[DEBUG] [Schema Fix] _parse_json_response 确保 vulnerabilities 字段存在")
+                    logger.debug(" [Schema Fix] _parse_json_response 确保 vulnerabilities 字段存在")
                     result["vulnerabilities"] = []
                 if "signal_tracking" not in result or not isinstance(
                     result.get("signal_tracking"), dict
                 ):
-                    print("[DEBUG] [Schema Fix] _parse_json_response 确保 signal_tracking 字段存在")
+                    logger.debug(" [Schema Fix] _parse_json_response 确保 signal_tracking 字段存在")
                     result["signal_tracking"] = {
                         "signals_new": 0,
                         "signals_confirmed": 0,
@@ -2936,12 +2950,12 @@ class MultiAgentPipeline:
                     }
             elif schema_name == "risk_enumeration":
                 if "risks" not in result or not isinstance(result.get("risks"), list):
-                    print("[DEBUG] [Schema Fix] _parse_json_response 确保 risks 字段存在")
+                    logger.debug(" [Schema Fix] _parse_json_response 确保 risks 字段存在")
                     result["risks"] = []
                 if "signal_tracking" not in result or not isinstance(
                     result.get("signal_tracking"), dict
                 ):
-                    print("[DEBUG] [Schema Fix] _parse_json_response 确保 signal_tracking 字段存在")
+                    logger.debug(" [Schema Fix] _parse_json_response 确保 signal_tracking 字段存在")
                     result["signal_tracking"] = {
                         "signals_new": 0,
                         "signals_confirmed": 0,
@@ -2952,23 +2966,23 @@ class MultiAgentPipeline:
                 if "adversarial_analysis" not in result or not isinstance(
                     result.get("adversarial_analysis"), list
                 ):
-                    print("[DEBUG] [Schema Fix] _parse_json_response 确保 adversarial_analysis 字段存在")
+                    logger.debug(" [Schema Fix] _parse_json_response 确保 adversarial_analysis 字段存在")
                     result["adversarial_analysis"] = []
                 if "cross_agent_agreement" not in result or not isinstance(
                     result.get("cross_agent_agreement"), list
                 ):
-                    print("[DEBUG] [Schema Fix] _parse_json_response 确保 cross_agent_agreement 字段存在")
+                    logger.debug(" [Schema Fix] _parse_json_response 确保 cross_agent_agreement 字段存在")
                     result["cross_agent_agreement"] = []
             elif schema_name == "attack_chain":
                 if "attack_chains" not in result or not isinstance(
                     result.get("attack_chains"), list
                 ):
-                    print("[DEBUG] [Schema Fix] _parse_json_response 确保 attack_chains 字段存在")
+                    logger.debug(" [Schema Fix] _parse_json_response 确保 attack_chains 字段存在")
                     result["attack_chains"] = []
                 if "signal_tracking" not in result or not isinstance(
                     result.get("signal_tracking"), dict
                 ):
-                    print("[DEBUG] [Schema Fix] _parse_json_response 确保 signal_tracking 字段存在")
+                    logger.debug(" [Schema Fix] _parse_json_response 确保 signal_tracking 字段存在")
                     result["signal_tracking"] = {
                         "signals_new": 0,
                         "signals_confirmed": 0,
@@ -2986,14 +3000,14 @@ class MultiAgentPipeline:
                     validated_data, is_valid = validator.validate_with_fallback(data, schema_name)
                     result = _ensure_schema_compliance(validated_data, schema_name)
                     if not is_valid:
-                        print(
-                            "[WARN] [PURE-AI] validate_with_fallback 返回 is_valid=False，schema 修复后返回"
+                        logger.warning(
+                            "[PURE-AI] validate_with_fallback 返回 is_valid=False，schema 修复后返回"
                         )
                     return result
                 if isinstance(data, dict):
                     return data
-                print(f"[WARN] [PURE-AI] json.loads 返回非字典类型: {type(data).__name__}")
-                return {"raw_response": response}
+                logger.debug(f" [PURE-AI] json.loads 返回非字典类型: {type(data).__name__}")
+                return {"raw_response": response, "_parse_failed": True}  # [FIX-B3]
             except json.JSONDecodeError:
                 pass
 
@@ -3009,16 +3023,16 @@ class MultiAgentPipeline:
                         )
                         result = _ensure_schema_compliance(validated_data, schema_name)
                         if not is_valid:
-                            print(
-                                "[WARN] [PURE-AI] validate_with_fallback(json_code_block) 返回 is_valid=False，schema 修复后返回"
+                            logger.warning(
+                                "[PURE-AI] validate_with_fallback(json_code_block) 返回 is_valid=False，schema 修复后返回"
                             )
                         return result
                     if isinstance(data, dict):
                         return data
-                    print(
-                        f"[WARN] [PURE-AI] json.loads(json_code_block) 返回非字典类型: {type(data).__name__}"
+                    logger.warning(
+                        f"[PURE-AI] json.loads(json_code_block) 返回非字典类型: {type(data).__name__}"
                     )
-                    return {"raw_response": response}
+                    return {"raw_response": response, "_parse_failed": True}  # [FIX-B3]
                 except json.JSONDecodeError:
                     pass
 
@@ -3034,14 +3048,14 @@ class MultiAgentPipeline:
                         )
                         result = _ensure_schema_compliance(validated_data, schema_name)
                         if not is_valid:
-                            print(
-                                "[WARN] [PURE-AI] validate_with_fallback(code_block) 返回 is_valid=False，schema 修复后返回"
+                            logger.warning(
+                                "[PURE-AI] validate_with_fallback(code_block) 返回 is_valid=False，schema 修复后返回"
                             )
                         return result
                     if isinstance(data, dict):
                         return data
-                    print(f"[WARN] [PURE-AI] json.loads(code_block) 返回非字典类型: {type(data).__name__}")
-                    return {"raw_response": response}
+                    logger.debug(f" [PURE-AI] json.loads(code_block) 返回非字典类型: {type(data).__name__}")
+                    return {"raw_response": response, "_parse_failed": True}  # [FIX-B3]
                 except json.JSONDecodeError:
                     pass
 
@@ -3057,16 +3071,16 @@ class MultiAgentPipeline:
                         )
                         result = _ensure_schema_compliance(validated_data, schema_name)
                         if not is_valid:
-                            print(
-                                "[WARN] [PURE-AI] validate_with_fallback(curly_brace) 返回 is_valid=False，schema 修复后返回"
+                            logger.warning(
+                                "[PURE-AI] validate_with_fallback(curly_brace) 返回 is_valid=False，schema 修复后返回"
                             )
                         return result
                     if isinstance(data, dict):
                         return data
-                    print(
-                        f"[WARN] [PURE-AI] json.loads(curly_brace) 返回非字典类型: {type(data).__name__}"
+                    logger.warning(
+                        f"[PURE-AI] json.loads(curly_brace) 返回非字典类型: {type(data).__name__}"
                     )
-                    return {"raw_response": response}
+                    return {"raw_response": response, "_parse_failed": True}  # [FIX-B3]
                 except json.JSONDecodeError:
                     pass
 
@@ -3085,14 +3099,14 @@ class MultiAgentPipeline:
                         )
                         result = _ensure_schema_compliance(validated_data, schema_name)
                         if not is_valid:
-                            print(
-                                "[WARN] [PURE-AI] validate_with_fallback(last_brace) 返回 is_valid=False，schema 修复后返回"
+                            logger.warning(
+                                "[PURE-AI] validate_with_fallback(last_brace) 返回 is_valid=False，schema 修复后返回"
                             )
                         return result
                     if isinstance(data, dict):
                         return data
-                    print(f"[WARN] [PURE-AI] json.loads(last_brace) 返回非字典类型: {type(data).__name__}")
-                    return {"raw_response": response}
+                    logger.debug(f" [PURE-AI] json.loads(last_brace) 返回非字典类型: {type(data).__name__}")
+                    return {"raw_response": response, "_parse_failed": True}  # [FIX-B3]
                 except json.JSONDecodeError:
                     pass
 
@@ -3102,14 +3116,15 @@ class MultiAgentPipeline:
                     {"raw": response}, schema_name
                 )
                 result = _ensure_schema_compliance(validated_data, schema_name)
-                print("[WARN] [PURE-AI] JSON 解析失败，使用 fallback 并修复 schema")
+                result["_parse_failed"] = True  # [FIX-B3] 标记解析失败
+                logger.warning(" [PURE-AI] JSON 解析失败，使用 fallback 并修复 schema")
                 return result
 
-            return {"raw_response": response}
+            return {"raw_response": response, "_parse_failed": True}  # [FIX-B3]
         except Exception as e:
-            console.print(f"[bold cyan][PURE-AI][/bold cyan] [yellow]JSON解析失败: {e}[/yellow]")
-            console.print(f"[bold cyan][PURE-AI][/bold cyan] [dim]原始响应: {response[:500]}...[/dim]")
-            return {"raw_response": response, "error": str(e)}
+            logger.warning(f"JSON解析失败: {e}")
+            logger.debug(f"原始响应: {response[:500]}...")
+            return {"raw_response": response, "error": str(e), "_parse_failed": True}  # [FIX-B3]
 
     async def run_parallel_agents(
         self, file_path: str, agents: List[str], context: Dict[str, Any], detected_language: str
@@ -3127,7 +3142,7 @@ class MultiAgentPipeline:
         Returns:
             各 Agent 结果的字典
         """
-        print(f"[DEBUG] 并行运行 Agents: {agents}")
+        logger.debug(f" 并行运行 Agents: {agents}")
         # start_time = time.time()
 
         tasks = []
@@ -3176,14 +3191,14 @@ class MultiAgentPipeline:
         for i, result in enumerate(results):
             agent_name = agent_names[i]
             if isinstance(result, Exception):
-                console.print(f"[yellow]Agent {agent_name} failed: {result}[/yellow]")
+                logger.warning(f"Agent {agent_name} failed: {result}")
                 result_dict[agent_name] = {}
             else:
                 token_usage = result[1] if isinstance(result, tuple) else {}
                 agent_result = result[0] if isinstance(result, tuple) else result
                 if not isinstance(agent_result, dict):
-                    print(
-                        f"[WARN] Agent {agent_name} returned non-dict result type: {type(agent_result).__name__}, treating as empty result"
+                    logger.warning(
+                        f"Agent {agent_name} returned non-dict result type: {type(agent_result).__name__}, treating as empty result"
                     )
                     agent_result = {}
                 result_dict[agent_name] = {"result": agent_result, "token_usage": token_usage}
@@ -3209,7 +3224,7 @@ class MultiAgentPipeline:
         from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn, TimeElapsedColumn
 
         try:
-            print(f"[DEBUG] 开始运行优化版多Agent流水线: {file_path}")
+            logger.debug(f" 开始运行优化版多Agent流水线: {file_path}")
             total_start_time = time.time()
             self._agent_timings = {}
             self._current_step = "started"
@@ -3244,7 +3259,7 @@ class MultiAgentPipeline:
                 progress.advance(main_task)
 
                 detected_language = self._detect_language(file_path, context["file_content"])
-                print(f"[DEBUG] 检测到语言: {detected_language}")
+                logger.debug(f" 检测到语言: {detected_language}")
 
                 cached = self._get_cached_result(file_path, context["file_content"])
                 use_cache = cached is not None
@@ -3253,7 +3268,7 @@ class MultiAgentPipeline:
 
                 start_time = time.time()
                 if use_cache and cached is not None:
-                    console.print(f"[dim][CACHE] 使用缓存结果跳过 Agent-0/1: {Path(file_path).name}[/dim]")
+                    logger.debug(f" 使用缓存结果跳过 Agent-0/1: {Path(file_path).name}")
                     context_analysis = cached.get("context_analysis", {})
                     code_understanding = cached.get("code_understanding", {})
                     token_usage = {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
@@ -3300,103 +3315,95 @@ class MultiAgentPipeline:
                         >= TOKEN_BUDGET_PER_FILE * TOKEN_CRITICAL_THRESHOLD
                     )
 
-                    parallel_context = {
-                        "file_content": context["file_content"],
-                        "risk_enumeration": risk_enumeration,
-                        "vulnerability_verification": {},
-                        "attack_chain_analysis": {},
-                    }
+                    # [FIX-B4] 顺序执行 Agent-3 → Agent-4 → Agent-5
+                    # Agent-4 依赖 Agent-3 结果，Agent-5 依赖 Agent-4 结果，
+                    # 不能并行执行。保留并行模式框架以备未来无依赖任务使用。
 
-                    agents_to_run = (
-                        ["agent_3", "agent_4", "agent_5"] if not skip_agent_4_5 else ["agent_3"]
-                    )
                     if skip_agent_4_5:
+                        logger.warning(
+                            f"[TOKEN-SKIP] 跳过 Agent-4/5 (并行模式，Token: {total_token_usage['total_tokens']:,}/{TOKEN_BUDGET_PER_FILE:,})"
+                        )
                         console.print(
                             f"[yellow][TOKEN-SKIP] 跳过 Agent-4/5 (并行模式，Token: {total_token_usage['total_tokens']:,}/{TOKEN_BUDGET_PER_FILE:,})[/yellow]"
                         )
 
-                    parallel_results = await self.run_parallel_agents(
-                        file_path=file_path,
-                        agents=agents_to_run,
-                        context=parallel_context,
-                        detected_language=detected_language,
-                    )
-
-                    if "agent_3" in parallel_results and "result" in parallel_results["agent_3"]:
-                        agent_3_result = parallel_results["agent_3"]["result"]
-                        if isinstance(agent_3_result, dict):
-                            vulnerability_verification = agent_3_result
+                    # Agent-3: 漏洞验证 (先执行，因为 Agent-4 依赖其结果)
+                    start_t = time.time()
+                    try:
+                        vuln_verify_result, token_usage = await self._run_agent_3(
+                            file_path, risk_enumeration or {}, context["file_content"],
+                            detected_language, context
+                        )
+                        total_token_usage["prompt_tokens"] += token_usage.get("prompt_tokens", 0)
+                        total_token_usage["completion_tokens"] += token_usage.get("completion_tokens", 0)
+                        total_token_usage["total_tokens"] += token_usage.get("total_tokens", 0)
+                        if isinstance(vuln_verify_result, dict):
+                            vulnerability_verification = vuln_verify_result
                             self._track_verification_signals(vulnerability_verification)
-                            total_token_usage["prompt_tokens"] += parallel_results["agent_3"][
-                                "token_usage"
-                            ].get("prompt_tokens", 0)
-                            total_token_usage["completion_tokens"] += parallel_results["agent_3"][
-                                "token_usage"
-                            ].get("completion_tokens", 0)
-                            total_token_usage["total_tokens"] += parallel_results["agent_3"][
-                                "token_usage"
-                            ].get("total_tokens", 0)
                         else:
-                            print(
-                                f"[WARN] Agent-3 returned non-dict result type: {type(agent_3_result).__name__}, treating as empty"
+                            logger.warning(
+                                f"Agent-3 returned non-dict result type: {type(vuln_verify_result).__name__}, treating as empty"
                             )
                             vulnerability_verification = {"vulnerabilities": []}
-                    elif "agent_3" in parallel_results:
-                        error_info = parallel_results["agent_3"].get("error", "Unknown error")
-                        print(f"[WARN] Agent-3 执行失败: {error_info}")
+                    except Exception as e:
+                        logger.error(f"Agent-3 执行失败: {e}")
                         vulnerability_verification = {"vulnerabilities": []}
+                    self._agent_timings["agent_3"] = time.time() - start_t
 
-                    if "agent_4" in parallel_results and "result" in parallel_results["agent_4"]:
-                        agent_4_result = parallel_results["agent_4"]["result"]
-                        if isinstance(agent_4_result, dict):
-                            attack_chain_analysis = agent_4_result
-                            self._track_attack_chain_signals(attack_chain_analysis)
-                            total_token_usage["prompt_tokens"] += parallel_results["agent_4"][
-                                "token_usage"
-                            ].get("prompt_tokens", 0)
-                            total_token_usage["completion_tokens"] += parallel_results["agent_4"][
-                                "token_usage"
-                            ].get("completion_tokens", 0)
-                            total_token_usage["total_tokens"] += parallel_results["agent_4"][
-                                "token_usage"
-                            ].get("total_tokens", 0)
-                        else:
-                            print(
-                                f"[WARN] Agent-4 returned non-dict result type: {type(agent_4_result).__name__}, treating as empty"
+                    # Agent-4: 攻击链分析 (依赖 Agent-3 结果)
+                    if not skip_agent_4_5:
+                        start_t = time.time()
+                        try:
+                            attack_result, token_usage = await self._run_agent_4(
+                                file_path,
+                                vulnerability_verification or {},
+                                detected_language,
+                                context,
                             )
+                            total_token_usage["prompt_tokens"] += token_usage.get("prompt_tokens", 0)
+                            total_token_usage["completion_tokens"] += token_usage.get("completion_tokens", 0)
+                            total_token_usage["total_tokens"] += token_usage.get("total_tokens", 0)
+                            if isinstance(attack_result, dict):
+                                attack_chain_analysis = attack_result
+                                self._track_attack_chain_signals(attack_chain_analysis)
+                            else:
+                                logger.warning(
+                                    f"Agent-4 returned non-dict result type: {type(attack_result).__name__}, treating as empty"
+                                )
+                                attack_chain_analysis = {"attack_chains": []}
+                        except Exception as e:
+                            logger.error(f"Agent-4 执行失败: {e}")
                             attack_chain_analysis = {"attack_chains": []}
-                    elif "agent_4" in parallel_results:
-                        error_info = parallel_results["agent_4"].get("error", "Unknown error")
-                        print(f"[WARN] Agent-4 执行失败: {error_info}")
-                        attack_chain_analysis = {"attack_chains": []}
+                        self._agent_timings["agent_4"] = time.time() - start_t
 
-                    if "agent_5" in parallel_results and "result" in parallel_results["agent_5"]:
-                        agent_5_result = parallel_results["agent_5"]["result"]
-                        if isinstance(agent_5_result, dict):
-                            adversarial_validation = agent_5_result
-                            self._track_adversarial_signals(adversarial_validation)
-                            total_token_usage["prompt_tokens"] += parallel_results["agent_5"][
-                                "token_usage"
-                            ].get("prompt_tokens", 0)
-                            total_token_usage["completion_tokens"] += parallel_results["agent_5"][
-                                "token_usage"
-                            ].get("completion_tokens", 0)
-                            total_token_usage["total_tokens"] += parallel_results["agent_5"][
-                                "token_usage"
-                            ].get("total_tokens", 0)
-                        else:
-                            print(
-                                f"[WARN] Agent-5 returned non-dict result type: {type(agent_5_result).__name__}, treating as empty"
+                        # Agent-5: 对抗验证 (依赖 Agent-4 结果)
+                        start_t = time.time()
+                        try:
+                            adversarial_result, token_usage = await self._run_agent_5(
+                                file_path,
+                                attack_chain_analysis or {},
+                                context["file_content"],
+                                detected_language,
                             )
+                            total_token_usage["prompt_tokens"] += token_usage.get("prompt_tokens", 0)
+                            total_token_usage["completion_tokens"] += token_usage.get("completion_tokens", 0)
+                            total_token_usage["total_tokens"] += token_usage.get("total_tokens", 0)
+                            if isinstance(adversarial_result, dict):
+                                adversarial_validation = adversarial_result
+                                self._track_adversarial_signals(adversarial_validation)
+                            else:
+                                logger.warning(
+                                    f"Agent-5 returned non-dict result type: {type(adversarial_result).__name__}, treating as empty"
+                                )
+                                adversarial_validation = {"adversarial_analysis": []}
+                        except Exception as e:
+                            logger.error(f"Agent-5 执行失败: {e}")
                             adversarial_validation = {"adversarial_analysis": []}
-                    elif "agent_5" in parallel_results:
-                        error_info = parallel_results["agent_5"].get("error", "Unknown error")
-                        print(f"[WARN] Agent-5 执行失败: {error_info}")
-                        adversarial_validation = {"adversarial_analysis": []}
+                        self._agent_timings["agent_5"] = time.time() - start_t
 
                     elapsed = time.time() - start_time
                     self._agent_timings["parallel_stage"] = elapsed
-                    print(f"[DEBUG] 并行 Stage 3-5 耗时: {elapsed:.2f}s")
+                    logger.debug(f" 顺序 Stage 3-5 耗时: {elapsed:.2f}s (已修复数据依赖)")
                 else:
                     start_time = time.time()
                     risk_enumeration, token_usage = await self._run_agent_2(
@@ -3436,6 +3443,9 @@ class MultiAgentPipeline:
                     progress.advance(main_task)
 
                     if skip_agent_4_5:
+                        logger.warning(
+                            f"[TOKEN-SKIP] 跳过 Agent-5 (非并行模式，Token: {total_token_usage['total_tokens']:,}/{TOKEN_BUDGET_PER_FILE:,})"
+                        )
                         console.print(
                             f"[yellow][TOKEN-SKIP] 跳过 Agent-5 (非并行模式，Token: {total_token_usage['total_tokens']:,}/{TOKEN_BUDGET_PER_FILE:,})[/yellow]"
                         )
@@ -3484,15 +3494,13 @@ class MultiAgentPipeline:
             if file_path not in self._processed_files:
                 self._processed_files.append(file_path)
 
-            console.print(
-                f"[bold cyan][PURE-AI][/bold cyan] [bold green]OK {Path(file_path).name} 优化流水线分析完成[/bold green] [dim]({total_elapsed:.2f}s)[/dim]"
+            logger.info(
+                f"[bold cyan][PURE-AI][/bold cyan] [bold green]OK {Path(file_path).name} 优化流水线分析完成[/bold green] ({total_elapsed:.2f}s)"
             )
-
             if total_token_usage["total_tokens"] > 0:
-                console.print(
-                    f"[dim]  [TOKEN] Token: {total_token_usage['total_tokens']:,} (提示词: {total_token_usage['prompt_tokens']:,}, 补全: {total_token_usage['completion_tokens']:,})[/dim]"
+                logger.debug(
+                    f"   Token: {total_token_usage['total_tokens']:,} (提示词: {total_token_usage['prompt_tokens']:,}, 补全: {total_token_usage['completion_tokens']:,})"
                 )
-
             if not use_cache:
                 self._cache_analysis_result(
                     file_path,
@@ -3535,9 +3543,8 @@ class MultiAgentPipeline:
 
         except Exception as e:
             self._current_step = "error"
-            console.print(
-                f"[bold cyan][PURE-AI][/bold cyan] [bold red][X] 优化流水线分析失败: {e}[/bold red]"
-            )
+            logger.error(f"优化流水线分析失败: {e}")
+            console.print(f"[red]优化流水线分析失败[/red]")
             import traceback
 
             traceback.print_exc()
