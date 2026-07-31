@@ -1,3 +1,9 @@
+import logging
+import re
+
+logger = logging.getLogger(__name__)
+
+
 class PromptEvolver:
     """Prompt 自进化系统
 
@@ -123,29 +129,75 @@ class PromptEvolver:
         """
         import json
 
-        try:
-            # 解析输出为 JSON
-            output_json = json.loads(output)
-
-            # 检查输出结构
+        def _check_structure(output_json, expected_output):
+            """检查 JSON 结构是否符合期望"""
             success = True
             errors = []
-
-            # 检查期望的关键字段
             for key in expected_output:
                 if key not in output_json:
                     success = False
                     errors.append(f"缺少字段: {key}")
                 elif isinstance(expected_output[key], dict):
-                    # 递归检查嵌套结构
                     nested_result = self.evaluate_output(output_json[key], expected_output[key])
                     if not nested_result["success"]:
                         success = False
                         errors.extend(nested_result["errors"])
+            return success, errors
 
+        # 第1层: 直接解析
+        try:
+            output_json = json.loads(output)
+            success, errors = _check_structure(output_json, expected_output)
             return {"success": success, "errors": errors, "output": output_json}
-        except json.JSONDecodeError:
-            return {"success": False, "errors": ["输出不是有效的 JSON"], "output": output}
+        except (json.JSONDecodeError, TypeError):
+            pass
+
+        # 第2层: 尝试从文本中提取 JSON
+        logger.warning("JSON 解析失败，尝试提取...")
+
+        # 尝试提取 ```json ``` 代码块
+        json_block = re.search(r'```json\s*\n?(.*?)\n?\s*```', output, re.DOTALL)
+        if json_block:
+            try:
+                output_json = json.loads(json_block.group(1))
+                success, errors = _check_structure(output_json, expected_output)
+                return {"success": success, "errors": errors, "output": output_json}
+            except (json.JSONDecodeError, TypeError):
+                pass
+
+        # 尝试提取 ``` ``` 代码块
+        code_block = re.search(r'```\s*\n?(.*?)\n?\s*```', output, re.DOTALL)
+        if code_block:
+            try:
+                output_json = json.loads(code_block.group(1))
+                success, errors = _check_structure(output_json, expected_output)
+                return {"success": success, "errors": errors, "output": output_json}
+            except (json.JSONDecodeError, TypeError):
+                pass
+
+        # 尝试正则匹配 {…}
+        json_match = re.search(r'\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}', output, re.DOTALL)
+        if json_match:
+            try:
+                output_json = json.loads(json_match.group())
+                success, errors = _check_structure(output_json, expected_output)
+                return {"success": success, "errors": errors, "output": output_json}
+            except (json.JSONDecodeError, TypeError):
+                pass
+
+        # 尝试首尾花括号截取
+        first_brace = output.find('{')
+        last_brace = output.rfind('}')
+        if first_brace != -1 and last_brace > first_brace:
+            try:
+                output_json = json.loads(output[first_brace:last_brace + 1])
+                success, errors = _check_structure(output_json, expected_output)
+                return {"success": success, "errors": errors, "output": output_json}
+            except (json.JSONDecodeError, TypeError):
+                pass
+
+        logger.error("JSON 提取也失败，无法解析输出")
+        return {"success": False, "errors": ["输出不是有效的 JSON"], "output": output}
 
     def is_better(self, test_result):
         """判断是否更好
