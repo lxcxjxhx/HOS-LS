@@ -1,0 +1,39 @@
+name: DCO Check
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  dco:
+    name: Verify Signed-off-by
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check all commits have Signed-off-by
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -e
+          if git rev-parse -q --verify "$BASE_SHA" >/dev/null 2>&1; then
+            commits="$(git log --format='%H%x09%s' "$BASE_SHA..$HEAD_SHA")"
+          else
+            commits="$(git log --format='%H%x09%s' "$HEAD_SHA")"
+          fi
+          missing=0
+          while IFS=$'\t' read -r sha msg; do
+            [ -z "$sha" ] && continue
+            if ! git log --format='%B' -1 "$sha" | grep -q '^Signed-off-by: '; then
+              echo "::error::Commit $sha is missing Signed-off-by: $msg"
+              missing=1
+            fi
+          done <<< "$commits"
+          if [ "$missing" -ne 0 ]; then
+            echo "请为每个提交添加 Signed-off-by 行（使用 git commit -s 提交）。"
+            exit 1
+          fi
+          echo "✅ 所有提交均已签名 (DCO OK)"
