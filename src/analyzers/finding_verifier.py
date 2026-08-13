@@ -41,6 +41,13 @@ class FindingVerification:
     matched_cwes: List[Dict] = field(default_factory=list)
     best_match: Optional[Dict] = None
 
+    # --- dict 兼容层（修复：调用方按 dict 访问导致 "'FindingVerification' object is not subscriptable"）---
+    def __getitem__(self, key: str) -> Any:
+        return getattr(self, key)
+
+    def get(self, key: str, default: Any = None) -> Any:
+        return getattr(self, key, default)
+
     def to_dict(self) -> Dict[str, Any]:
         """转换为字典格式"""
         return {

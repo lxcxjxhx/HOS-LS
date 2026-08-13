@@ -2832,7 +2832,10 @@ class MultiAgentPipeline:
 
                 # 创建AIRequest对象
                 request = AIRequest(
-                    prompt=json_guard_prompt, model=self.model, temperature=temperature
+                    prompt=json_guard_prompt,
+                    model=self.model,
+                    temperature=temperature,
+                    max_tokens=8192,
                 )
 
                 # 调用客户端生成
@@ -3010,6 +3013,28 @@ class MultiAgentPipeline:
                 return {"raw_response": response, "_parse_failed": True}  # [FIX-B3]
             except json.JSONDecodeError:
                 pass
+
+            # 容错修复：response 可能在 JSON 之后附加了文本，或 JSON 被截断
+            # 尝试从最后一个 } 或 ] 截断后重新解析
+            for end_char in ("}", "]"):
+                idx = cleaned_response.rfind(end_char)
+                if idx > 0:
+                    try:
+                        candidate = cleaned_response[: idx + 1]
+                        data = json.loads(candidate)
+                        if isinstance(data, dict):
+                            logger.warning(
+                                f"[PURE-AI] JSON 尾部截断修复成功 (schema={schema_name}, len={len(candidate)})"
+                            )
+                            if schema_name:
+                                validator = SchemaValidator()
+                                validated_data, is_valid = validator.validate_with_fallback(
+                                    data, schema_name
+                                )
+                                return _ensure_schema_compliance(validated_data, schema_name)
+                            return data
+                    except json.JSONDecodeError:
+                        continue
 
             json_match = re.search(r"```json\s*([\s\S]*?)```", cleaned_response)
             if json_match:
