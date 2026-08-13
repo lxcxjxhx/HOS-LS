@@ -308,7 +308,7 @@ class NVDQueryAdapter:
             cursor = self._conn.cursor()
             cursor.execute(
                 """
-                SELECT cwe_id, cwe_name, cwe_description
+                SELECT cwe_id, name AS cwe_name, description AS cwe_description
                 FROM cwe
                 WHERE cwe_id = ?
             """,
@@ -361,10 +361,10 @@ class NVDQueryAdapter:
             cursor.execute(
                 """
                 SELECT
-                    AVG(cvss.cvss_score) as avg_score,
-                    MAX(cvss.cvss_score) as max_score,
-                    MIN(cvss.cvss_score) as min_score,
-                    COUNT(DISTINCT cvss.cvss_severity) as severity_count,
+                    AVG(cvss.score) as avg_score,
+                    MAX(cvss.score) as max_score,
+                    MIN(cvss.score) as min_score,
+                    COUNT(DISTINCT cvss.severity) as severity_count,
                     COUNT(DISTINCT cvss.cve_id) as cve_count
                 FROM cve_cwe
                 JOIN cvss ON cve_cwe.cve_id = cvss.cve_id
@@ -418,8 +418,8 @@ class NVDQueryAdapter:
                 SELECT DISTINCT
                     cve.cve_id,
                     cve.description,
-                    cvss.cvss_score,
-                    cvss.cvss_severity
+                    cvss.score AS cvss_score,
+                    cvss.severity AS cvss_severity
                 FROM cve
                 LEFT JOIN cvss ON cve.cve_id = cvss.cve_id
                 LEFT JOIN cve_cwe ON cve.cve_id = cve_cwe.cve_id
@@ -432,10 +432,10 @@ class NVDQueryAdapter:
                 params.append(cwe_id)
 
             if severity:
-                query += " AND cvss.cvss_severity = ?"
+                query += " AND cvss.severity = ?"
                 params.append(severity.upper())
 
-            query += f" ORDER BY cvss.cvss_score DESC LIMIT {limit}"
+            query += f" ORDER BY cvss.score DESC LIMIT {limit}"
 
             cursor.execute(query, params)
             rows = cursor.fetchall()

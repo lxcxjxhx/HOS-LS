@@ -12,7 +12,7 @@ class CWEETL(BaseETL):
 
     ETL_NAME = "cwe"
 
-    CWE_NAMESPACES = {"ns": "http://cwe.mitre.org/cwe-6"}
+    CWE_NAMESPACES = {"ns": "http://cwe.mitre.org/cwe-7"}
 
     def __init__(self, connection=None):
         super().__init__(connection)
@@ -105,14 +105,10 @@ class CWEETL(BaseETL):
             if not cwe_id:
                 return None
 
-            name_elem = weakness.find("ns:Name", self.CWE_NAMESPACES)
-            name = name_elem.text if name_elem is not None else ""
-
-            abstraction_elem = weakness.find("ns:Abstraction", self.CWE_NAMESPACES)
-            abstraction = abstraction_elem.text if abstraction_elem is not None else ""
-
-            status_elem = weakness.find("ns:Status", self.CWE_NAMESPACES)
-            status = status_elem.text if status_elem is not None else ""
+            # CWE XML v7：ID/Name/Abstraction/Status 为 Weakness 元素属性，Description 为子元素
+            name = weakness.get("Name", "")
+            abstraction = weakness.get("Abstraction", "")
+            status = weakness.get("Status", "")
 
             desc_elem = weakness.find("ns:Description", self.CWE_NAMESPACES)
             description = desc_elem.text if desc_elem is not None else ""
@@ -150,12 +146,12 @@ class CWEETL(BaseETL):
         """插入CWE"""
         query = """
             INSERT INTO cwe (cwe_id, name, weakness_abstraction, status, description)
-            VALUES (%(cwe_id)s, %(name)s, %(weakness_abstraction)s, %(status)s, %(description)s)
+            VALUES (:cwe_id, :name, :weakness_abstraction, :status, :description)
             ON CONFLICT (cwe_id) DO UPDATE SET
-                name = EXCLUDED.name,
-                weakness_abstraction = EXCLUDED.weakness_abstraction,
-                status = EXCLUDED.status,
-                description = EXCLUDED.description
+                name = excluded.name,
+                weakness_abstraction = excluded.weakness_abstraction,
+                status = excluded.status,
+                description = excluded.description
         """
         try:
             self.conn.execute(query, cwe_data)
@@ -168,9 +164,9 @@ class CWEETL(BaseETL):
         """插入CVE-CWE关联"""
         query = """
             INSERT INTO cve_cwe (cve_id, cwe_id, is_primary)
-            VALUES (%(cve_id)s, %(cwe_id)s, %(is_primary)s)
+            VALUES (:cve_id, :cwe_id, :is_primary)
             ON CONFLICT (cve_id, cwe_id) DO UPDATE SET
-                is_primary = EXCLUDED.is_primary
+                is_primary = excluded.is_primary
         """
         try:
             self.conn.execute(query, rel_data)
