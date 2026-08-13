@@ -89,6 +89,7 @@ class VulnerabilityFinding:
     confidence_score: float = 1.0
     owasp_category: str = ""
     evidence_chain: List[Dict[str, Any]] = field(default_factory=list)
+    status: str = ""  # 验证状态：CONFIRMED / REFINED / REJECTED / WEAK / UNKNOWN（来自 AI pipeline 信号状态机）
 
     def to_dict(self) -> Dict[str, Any]:
         """转换为字典"""
@@ -110,6 +111,7 @@ class VulnerabilityFinding:
             "confidence_score": self.confidence_score,
             "owasp_category": self.owasp_category,
             "evidence_chain": self.evidence_chain,
+            "status": self.status,
         }
 
 

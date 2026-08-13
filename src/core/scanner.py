@@ -996,6 +996,11 @@ class SecurityScanner:
                     fix_suggestion=getattr(finding, "fix_suggestion", ""),
                     metadata=getattr(finding, "metadata", {}),
                     code_context=code_context,
+                    status=(
+                        getattr(finding, "status", "")
+                        or (getattr(finding, "metadata", {}) or {}).get("status", "")
+                        or (getattr(finding, "metadata", {}) or {}).get("signal_state", "")
+                    ),
                 )
                 result.add_finding(finding_obj)
 
