@@ -120,6 +120,7 @@ class Finding:
     metadata: Dict[str, Any] = field(default_factory=dict)
     timestamp: datetime = field(default_factory=datetime.now)
     code_context: Optional[CodeContext] = None
+    status: str = ""  # 验证状态：CONFIRMED / REFINED / REJECTED / WEAK / UNKNOWN（来自 AI pipeline 信号状态机）
 
     def to_dict(self) -> Dict[str, Any]:
         """转换为字典"""
@@ -142,6 +143,7 @@ class Finding:
             "references": self.references,
             "metadata": self.metadata,
             "timestamp": self.timestamp.isoformat(),
+            "status": self.status,
         }
         if self.code_context:
             result["code_context"] = self.code_context.to_dict()

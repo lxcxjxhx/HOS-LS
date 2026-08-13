@@ -2399,6 +2399,13 @@ class PureAIAnalyzer:
                         code_snippet=code_snippet,
                         metadata=metadata,
                     )
+                    # 同步验证状态到顶层字段（报告/统计直接可读，无需挖 metadata）
+                    vulnerability.status = (
+                        finding.get("status")
+                        or finding.get("signal_state")
+                        or metadata.get("status")
+                        or "UNKNOWN"
+                    )
                     findings.append(vulnerability)
                     logger.debug(f"添加漏洞发现: {rule_name}")
                     self.debug_logs.append(f"[DEBUG] 添加漏洞发现: {rule_name}")
