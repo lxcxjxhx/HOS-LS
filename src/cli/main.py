@@ -2331,26 +2331,17 @@ def _check_data_preload_status(config: Config) -> None:
     db_path = Path(config.nvd.database_path)
 
     if not db_path.exists():
-        console.print("[bold yellow]警告: NVD 数据库不存在[/bold yellow]")
+        # 降级：不交互、不自动下载（避免 click.confirm 默认 True 触发全量下载挂起）
+        console.print("[bold yellow]警告: NVD 数据库不存在，使用内置 DB 降级[/bold yellow]")
         console.print(f"[yellow]数据库路径: {db_path}[/yellow]")
-        if click.confirm("是否执行数据预加载 (hos-ls data-preload run)?", default=True):
-            console.print("[bold cyan]开始执行数据预加载...[/bold cyan]")
-            try:
-                preloader = DataPreloader(
-                    sources_file=Path(config.data_preload.sources_file),
-                    temp_zip_dir=Path(config.data_preload.temp_zip_dir),
-                    temp_data_dir=Path(config.data_preload.temp_data_dir),
-                    skip_on_checksum_match=config.data_preload.skip_on_checksum_match,
-                    merge_strategy=config.data_preload.merge_strategy,
-                )
-                preloader.download_all(parallel=True)
-                console.print("[bold green]数据预加载完成[/bold green]")
-            except Exception as e:
-                console.print(f"[bold red]数据预加载失败: {e}[/bold red]")
-                if click.confirm("是否继续扫描（可能影响扫描结果）?", default=False):
-                    console.print("[yellow]继续执行扫描...[/yellow]")
-                else:
-                    sys.exit(1)
+        console.print(
+            "[dim]如需完整 CVE 匹配，请手动运行: hos-ls data-preload run[/dim]"
+        )
+        return
+
+    if not db_path.is_file() or db_path.stat().st_size < 1024 * 1024:
+        console.print("[bold yellow]警告: NVD 数据库文件异常（缺失或过小），使用内置 DB 降级[/bold yellow]")
+        console.print(f"[yellow]数据库路径: {db_path}[/yellow]")
         return
 
     try:
