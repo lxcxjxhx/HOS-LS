@@ -1,14 +1,18 @@
 # HOS-LS v3 默认配置文件
 
 # AI 配置
+# 注意：禁止在提交的配置文件中硬编码 API Key（仓库为公开仓库，密钥会泄露）。
+# 留空时客户端按顺序回退到环境变量 HOS_LS_AI_API_KEY / DEEPSEEK_API_KEY。
 ai:
   provider: deepseek
   model: deepseek-v4-flash
-  api_key: sk-b5495ce3e17243d3bc4125af7601b1db
+  api_key: ""  # 从环境变量 HOS_LS_AI_API_KEY 或 DEEPSEEK_API_KEY 读取
   base_url: https://api.deepseek.com
   temperature: 0.0
   max_tokens: 4096
   timeout: 60
+  request_timeout: 180  # 单次 API 请求超时（秒），防止网络挂起拖垮扫描
+  json_mode: auto  # JSON 结构化输出: auto/on/off
   allow_fallback: false  # true: 允许自动切换到其他provider; false: 禁用回退机制
 
 # 扫描配置

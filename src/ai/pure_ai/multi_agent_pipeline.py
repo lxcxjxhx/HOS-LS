@@ -654,6 +654,54 @@ class MultiAgentPipeline:
             or len(title) < 5
         )
 
+    def _should_early_exit(
+        self,
+        risk_enumeration: Any,
+        code_understanding: Dict[str, Any],
+        file_path: str,
+        file_content: str,
+    ) -> bool:
+        """判断是否早停（跳过 Agent-3~6，节省 token/时间）。
+
+        条件（全部满足才早停，避免漏报）：
+        1. Agent-2 返回零风险信号
+        2. Agent-1 未发现 security_hotspots
+        3. 静态规则门（CodeVulnScanner）零命中
+        4. 信号跟踪器中无未决信号
+        """
+        try:
+            if isinstance(risk_enumeration, dict) and risk_enumeration.get("risks"):
+                return False
+            hotspots = code_understanding.get("security_hotspots") or []
+            if hotspots:
+                return False
+
+            # 静态规则门
+            try:
+                from src.analyzers.code_vuln_scanner import CodeVulnScanner
+
+                scanner = CodeVulnScanner()
+                findings = scanner.scan_file(str(file_path))
+                if findings:
+                    return False
+            except Exception:
+                # 静态扫描异常时不早停（保守）
+                return False
+
+            # 未决信号检查
+            if hasattr(self, "evidence_chain_tracker") and self.evidence_chain_tracker:
+                pending = [
+                    s
+                    for s in self.evidence_chain_tracker.get_all_signals().values()
+                    if isinstance(s, dict)
+                    and s.get("current_state") not in ("CONFIRMED", "REJECTED")
+                ]
+                if pending:
+                    return False
+            return True
+        except Exception:
+            return False
+
     def _init_signal_queue(self) -> None:
         """初始化信号队列"""
         self._signal_queue: List[Dict[str, Any]] = []
@@ -765,6 +813,8 @@ class MultiAgentPipeline:
             self.model = config.get("model", "deepseek-v4-flash")
             self.temperature = config.get("temperature", 0.1)
             self.reject_on_signal_creation = config.get("reject_on_signal_creation", True)
+            self.json_mode = config.get("json_mode", "auto")
+            self.request_timeout = config.get("request_timeout", 180)
         else:
             self.max_retries = getattr(config, "max_retries", 3)
             self.model = (
@@ -776,10 +826,19 @@ class MultiAgentPipeline:
                 getattr(config, "ai", {}).get("temperature", 0.1) if hasattr(config, "ai") else 0.1
             )
             self.reject_on_signal_creation = getattr(config, "reject_on_signal_creation", True)
+            self.json_mode = (
+                getattr(config, "ai", {}).get("json_mode", "auto") if hasattr(config, "ai") else "auto"
+            )
+            self.request_timeout = (
+                getattr(config, "ai", {}).get("request_timeout", 180)
+                if hasattr(config, "ai")
+                else 180
+            )
 
         logger.debug(
             f" Pipeline 使用模型: {self.model}, Temperature: {self.temperature}, reject_on_signal_creation: {self.reject_on_signal_creation}"
         )
+
     def _detect_language(self, file_path: str, file_content: str) -> str:
         """检测代码语言/框架
 
@@ -1326,6 +1385,7 @@ class MultiAgentPipeline:
                 logger.debug(
                     f"Added risk signal: {signal_id} (original: {original_signal_id}) with title: {risk_title or 'UNKNOWN'}"
                 )
+
     def _track_verification_signals(self, vulnerability_verification: Any) -> None:
         """追踪验证信号"""
         if not isinstance(vulnerability_verification, dict):
@@ -2232,6 +2292,44 @@ class MultiAgentPipeline:
         self.debug_logs.append(f"[DEBUG] Agent 1 完成，令牌使用: {token_usage['total_tokens']}")
         return result, token_usage
 
+    def _slim_structured_data(self, code_understanding: Dict[str, Any]) -> str:
+        """将 Agent-1 的结构化输出精简为关键字段（减少 Agent-2 的输入 token）。
+
+        保留：file_function、key_functions、input_sources、
+        security_hotspots、file_relationships；丢弃冗余字段，evidence 截断。
+        """
+        if not isinstance(code_understanding, dict):
+            return json.dumps(code_understanding, ensure_ascii=False)
+
+        def _keep_fields(items: Any, fields: List[str], max_items: int = 8) -> Any:
+            if not isinstance(items, list):
+                return items
+            out = []
+            for item in items[:max_items]:
+                if isinstance(item, dict):
+                    out.append({k: v for k, v in item.items() if k in fields})
+                else:
+                    out.append(item)
+            return out
+
+        slim: Dict[str, Any] = {
+            "file_function": code_understanding.get("file_function", ""),
+            "key_functions": _keep_fields(
+                code_understanding.get("key_functions", []),
+                ["name", "purpose", "security_impact"],
+            ),
+            "input_sources": (code_understanding.get("input_sources") or [])[:6],
+            "security_hotspots": _keep_fields(
+                code_understanding.get("security_hotspots", []),
+                ["location", "type", "confidence"],
+            ),
+            "file_relationships": _keep_fields(
+                code_understanding.get("file_relationships", []),
+                ["file", "relationship"],
+            ),
+        }
+        return json.dumps(slim, ensure_ascii=False)
+
     async def _run_agent_2(
         self, file_path: str, code_understanding: Dict[str, Any], detected_language: str = "Unknown"
     ) -> Tuple[Dict[str, Any], Dict[str, int]]:
@@ -2247,7 +2345,7 @@ class MultiAgentPipeline:
         """
         logger.debug(f" 运行Agent 2 (风险枚举) on: {file_path}")
         self.debug_logs.append(f"[DEBUG] 运行Agent 2 (风险枚举) on: {file_path}")
-        structured_data = json.dumps(code_understanding, ensure_ascii=False)
+        structured_data = self._slim_structured_data(code_understanding)
         known_file_paths = self._file_registry.get_known_file_paths()
         prompt = self.prompt_engine.render_agent_prompt(
             "risk_enumeration",
@@ -2830,12 +2928,20 @@ class MultiAgentPipeline:
                 # JSON Guard: 在prompt顶部添加JSON输出强制约束
                 json_guard_prompt = "只输出JSON，否则视为失败\n\n" + prompt
 
+                # 结构化输出（不裁剪 max_tokens；输出 token 一律不限制）
+                response_format = None
+                json_mode = getattr(self, "json_mode", "auto")
+                if json_mode in ("auto", "on"):
+                    response_format = {"type": "json_object"}
+
                 # 创建AIRequest对象
                 request = AIRequest(
                     prompt=json_guard_prompt,
                     model=self.model,
                     temperature=temperature,
                     max_tokens=8192,
+                    response_format=response_format,
+                    timeout=getattr(self, "request_timeout", 180),
                 )
 
                 # 调用客户端生成
@@ -3334,6 +3440,83 @@ class MultiAgentPipeline:
                     risk_enumeration = risk_enum_result
                     self._track_risk_signals(risk_enumeration)
 
+                    # 早停：Agent-2 零风险 + Agent-1 无安全热点 + 静态规则门零命中
+                    # → 跳过 Agent-3~6（省 token/时间），直接返回空结果
+                    if self._should_early_exit(
+                        risk_enumeration,
+                        code_understanding or {},
+                        file_path,
+                        context.get("file_content", ""),
+                    ):
+                        logger.info(
+                            f"[EARLY-EXIT] {Path(file_path).name} 无风险信号且静态门零命中，跳过 Agent-3~6"
+                        )
+                        self.debug_logs.append(
+                            f"[EARLY-EXIT] {Path(file_path).name} 无风险信号，跳过 Agent-3~6"
+                        )
+                        vulnerability_verification = {"vulnerabilities": [], "signal_tracking": {}}
+                        attack_chain_analysis = {"attack_chains": []}
+                        adversarial_validation = {"adversarial_analysis": []}
+                        self._agent_timings["agent_3"] = 0.0
+                        self._agent_timings["agent_4"] = 0.0
+                        self._agent_timings["agent_5"] = 0.0
+                        self._agent_timings["early_exit"] = True
+
+                        start_time = time.time()
+                        final_decision, token_usage = await self._run_agent_6(
+                            file_path,
+                            context,
+                            adversarial_validation,
+                            vulnerability_verification,
+                            detected_language,
+                        )
+                        validated_final_decision = self._validate_final_findings(
+                            final_decision, context, vulnerability_verification
+                        )
+                        elapsed = time.time() - start_time
+                        self._agent_timings["agent_6"] = elapsed
+                        total_token_usage["prompt_tokens"] += token_usage["prompt_tokens"]
+                        total_token_usage["completion_tokens"] += token_usage["completion_tokens"]
+                        total_token_usage["total_tokens"] += token_usage["total_tokens"]
+                        progress.advance(main_task)
+                        progress.advance(main_task)
+                        progress.advance(main_task)
+                        progress.advance(main_task)
+
+                        total_elapsed = time.time() - total_start_time
+                        self._current_step = "completed"
+                        if file_path not in self._processed_files:
+                            self._processed_files.append(file_path)
+                        if not use_cache:
+                            self._cache_analysis_result(
+                                file_path,
+                                context.get("file_content", ""),
+                                context_analysis or {},
+                                code_understanding or {},
+                            )
+                        logger.info(
+                            f"[bold cyan][PURE-AI][/bold cyan] [bold green]OK {Path(file_path).name} 分析完成（早停）[/bold green] ({total_elapsed:.2f}s)"
+                        )
+                        return {
+                            "file_path": file_path,
+                            "context_analysis": context_analysis,
+                            "code_understanding": code_understanding,
+                            "risk_enumeration": risk_enumeration or {},
+                            "vulnerability_verification": vulnerability_verification,
+                            "attack_chain_analysis": attack_chain_analysis,
+                            "adversarial_validation": adversarial_validation,
+                            "final_decision": validated_final_decision,
+                            "evidence_chain": self._get_signal_summary(),
+                            "debug_logs": self.debug_logs,
+                            "parallel_mode": enable_parallel,
+                            "early_exit": True,
+                            "file_snapshot": {
+                                "path": file_path,
+                                "recorded": True,
+                                "has_content": file_path in self.line_number_mapper._snapshots,
+                            },
+                        }
+
                     self._check_token_budget_and_warn(total_token_usage, "Agent-2")
                     skip_agent_4_5 = (
                         total_token_usage["total_tokens"]
@@ -3569,7 +3752,7 @@ class MultiAgentPipeline:
         except Exception as e:
             self._current_step = "error"
             logger.error(f"优化流水线分析失败: {e}")
-            console.print(f"[red]优化流水线分析失败[/red]")
+            console.print("[red]优化流水线分析失败[/red]")
             import traceback
 
             traceback.print_exc()

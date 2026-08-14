@@ -130,15 +130,27 @@ class DeepSeekClient(AIClient):
         # 日志显示实际使用的模型
         logger.info(f"DeepSeek API 调用，使用模型: {model}")
 
+        # 单次请求超时：优先请求级，其次配置级，防止网络挂起拖垮扫描
+        request_timeout = (
+            request.timeout
+            or getattr(self.config.ai, "request_timeout", 180)
+            or 180
+        )
+
         try:
-            # 使用 OpenAI SDK 调用 API
-            response = await self._client.chat.completions.create(
-                model=model,
-                messages=cast(Any, messages),
-                max_tokens=request.max_tokens,
-                temperature=request.temperature,
-                stream=False,
-            )
+            # 使用 OpenAI SDK 调用 API（response_format 结构化输出 + 显式超时）
+            kwargs: Dict[str, Any] = {
+                "model": model,
+                "messages": cast(Any, messages),
+                "max_tokens": request.max_tokens,
+                "temperature": request.temperature,
+                "stream": False,
+                "timeout": request_timeout,
+            }
+            if request.response_format:
+                kwargs["response_format"] = request.response_format
+
+            response = await self._client.chat.completions.create(**kwargs)
 
             # 类型断言：确保 response 不是流式响应
             assert hasattr(response, "choices")
@@ -161,6 +173,34 @@ class DeepSeekClient(AIClient):
                 raw_response=response,
             )
         except OpenAIAPIStatusError as e:
+            # 兼容性回退：若供应商不支持 response_format，去掉该参数重试一次
+            if request.response_format and e.status_code in (400, 422):
+                try:
+                    logger.warning(
+                        f"response_format 不被支持，回退为普通模式重试: {str(e)[:120]}"
+                    )
+                    response = await self._client.chat.completions.create(
+                        model=model,
+                        messages=cast(Any, messages),
+                        max_tokens=request.max_tokens,
+                        temperature=request.temperature,
+                        stream=False,
+                        timeout=request_timeout,
+                    )
+                    choice = response.choices[0]
+                    return AIResponse(
+                        content=choice.message.content or "",
+                        model=model,
+                        provider=AIProvider.DEEPSEEK,
+                        usage={
+                            "prompt_tokens": response.usage.prompt_tokens,
+                            "completion_tokens": response.usage.completion_tokens,
+                            "total_tokens": response.usage.total_tokens,
+                        },
+                        raw_response=response,
+                    )
+                except Exception:
+                    pass
             api_error = APIError.from_exception(e)
             logger.error(f"DeepSeek API 错误: {api_error.message}")
             raise api_error
@@ -188,7 +228,7 @@ class DeepSeekClient(AIClient):
                 return False, "Client not initialized"
 
             # 简单的测试调用以验证 API 访问
-            response = await self._client.chat.completions.create(
+            await self._client.chat.completions.create(
                 model="deepseek-v4-flash",
                 messages=[{"role": "user", "content": "Hello"}],
                 max_tokens=10,

@@ -61,5 +61,10 @@ All Vulnerabilities/
 # Misc cache
 .cache/
 
+# Local benchmark run artifacts (see bench/benchmark.py outputs)
+hosls-eval/
+bench/artifacts/
+bench-tmp/
+
 # HOS-LS indexes
 .hos-ls/indexes/

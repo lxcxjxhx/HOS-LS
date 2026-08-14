@@ -74,8 +74,21 @@ class AIConfig(BaseModel):
     temperature: float = Field(default=0.0, description="默认温度参数")
     max_tokens: int = Field(default=4096, description="最大令牌数")
     timeout: int = Field(default=60, description="超时时间（秒）")
+    request_timeout: int = Field(default=180, description="单次 API 请求超时（秒），防止网络挂起拖垮扫描")
+    json_mode: str = Field(
+        default="auto",
+        description="JSON 结构化输出模式: auto/on/off（auto=供应商支持时启用 response_format=json_object）",
+    )
     enable_learning: bool = Field(default=True, description="是否启用 AI 学习")
     allow_fallback: bool = Field(default=True, description="当主provider失败时是否允许自动切换到其他provider")
+
+    @field_validator("json_mode")
+    @classmethod
+    def validate_json_mode(cls, v: str) -> str:
+        allowed = ["auto", "on", "off"]
+        if v not in allowed:
+            raise ValueError(f"json_mode must be one of {allowed}")
+        return v
 
     modules: Dict[str, AIModuleConfig] = Field(default_factory=dict, description="各模块的AI配置")
     aliyun: AliyunConfig = Field(default_factory=AliyunConfig, description="阿里云配置")

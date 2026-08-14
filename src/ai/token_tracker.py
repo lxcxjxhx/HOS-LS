@@ -3,9 +3,25 @@ Token使用追踪模块
 用于追踪所有AI API调用的token使用情况
 """
 
+import hashlib
+import json
+import os
 import threading
 from datetime import datetime
 from typing import Any, Dict, List, Optional
+
+# 内容寻址响应缓存：diskcache 已列入 requirements.txt
+try:
+    from diskcache import Cache as _DiskCache
+
+    _CACHE_DIR = os.path.join(
+        os.environ.get("HOS_LS_CACHE_DIR", ".cache"), "hos-ls", "llm-cache"
+    )
+    _RESPONSE_CACHE: Optional[_DiskCache] = _DiskCache(_CACHE_DIR)
+except Exception:  # pragma: no cover - 缓存不可用时降级为无缓存
+    _RESPONSE_CACHE = None
+
+_DEFAULT_CACHE_TTL = int(os.environ.get("HOS_LS_LLM_CACHE_TTL", "86400"))  # 24小时
 
 
 class TokenUsageRecord:
@@ -169,15 +185,102 @@ class TokenTracker:
         self._success_count = 0
         self._failure_count = 0
 
-    def check_cache(self, prompt: str, system_prompt: Optional[str] = None) -> Optional[Any]:
-        """检查缓存（当前未实现）"""
-        return None
+    @staticmethod
+    def _cache_key(
+        prompt: str,
+        system_prompt: Optional[str] = None,
+        model: Optional[str] = None,
+        temperature: Optional[float] = None,
+    ) -> str:
+        """生成内容寻址缓存键（模型 + 提示词 + 采样参数）。"""
+        payload = json.dumps(
+            {
+                "model": model or "",
+                "system_prompt": system_prompt or "",
+                "prompt": prompt,
+                "temperature": temperature if temperature is not None else 0.0,
+            },
+            ensure_ascii=False,
+            sort_keys=True,
+        )
+        return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+    def check_cache(
+        self,
+        prompt: str,
+        system_prompt: Optional[str] = None,
+        model: Optional[str] = None,
+        temperature: Optional[float] = None,
+    ) -> Optional[Any]:
+        """检查响应缓存（内容寻址，同一 prompt 不重复付费）。
+
+        命中时返回 AIResponse 对象，否则返回 None。
+        """
+        if _RESPONSE_CACHE is None or not prompt:
+            return None
+        try:
+            key = self._cache_key(prompt, system_prompt, model, temperature)
+            data = _RESPONSE_CACHE.get(key)
+            if not data:
+                return None
+            from src.ai.models import AIProvider, AIResponse
+
+            provider = data.get("provider", "")
+            provider_enum = next(
+                (p for p in AIProvider if p.value == provider),
+                AIProvider.DEEPSEEK,
+            )
+            return AIResponse(
+                content=data.get("content", ""),
+                model=data.get("model", ""),
+                provider=provider_enum,
+                usage=data.get("usage", {}),
+                metadata={"cached": True},
+            )
+        except Exception:
+            return None
 
     def add_to_cache(
-        self, prompt: str, system_prompt: Optional[str] = None, result: Any = None
+        self,
+        prompt: str,
+        system_prompt: Optional[str] = None,
+        result: Any = None,
+        model: Optional[str] = None,
+        temperature: Optional[float] = None,
     ) -> None:
-        """添加到缓存（当前未实现）"""
-        pass
+        """添加到响应缓存。"""
+        if _RESPONSE_CACHE is None or result is None or not prompt:
+            return
+        try:
+            if hasattr(result, "to_dict"):
+                data = result.to_dict()
+            elif isinstance(result, dict):
+                data = result
+            else:
+                return
+            key = self._cache_key(prompt, system_prompt, model, temperature)
+            _RESPONSE_CACHE.set(key, data, expire=_DEFAULT_CACHE_TTL)
+        except Exception:
+            pass
+
+    def get_cache_stats(self) -> Dict[str, Any]:
+        """获取响应缓存统计信息。"""
+        if _RESPONSE_CACHE is None:
+            return {"enabled": False}
+        try:
+            stats = _RESPONSE_CACHE.stats(enable=True, reset=False)
+            if isinstance(stats, tuple) and len(stats) == 2:
+                hits, misses = stats
+                stats = {"hits": hits, "misses": misses}
+            return {
+                "enabled": True,
+                "cache_dir": _CACHE_DIR,
+                "hits": int(stats.get("hits", 0)),
+                "misses": int(stats.get("misses", 0)),
+                "ttl_s": _DEFAULT_CACHE_TTL,
+            }
+        except Exception as e:
+            return {"enabled": True, "error": str(e)}
 
 
 _global_tracker: Optional[TokenTracker] = None

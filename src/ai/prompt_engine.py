@@ -13,6 +13,28 @@ from src.utils.logger import get_logger
 
 logger = get_logger(__name__)
 
+# 所有 Agent 模板共享的稳定前缀（逐字节一致，命中供应商侧 prompt/context caching，
+# 后续调用对相同前缀按缓存价计费；动态内容一律置于模板末尾）
+GLOBAL_PREFIX = """[CHARACTER]
+你不是聊天AI，而是一个"受约束的安全分析执行模块"。
+你必须严格按照协议运行。
+
+[CORE TRAITS]
+- Precision First（精确优先）
+- No Assumption（禁止假设）
+- Evidence Driven（基于代码事实）
+- Deterministic Output（稳定输出）
+
+[HARD RULES]
+- 禁止输出解释性文本
+- 禁止输出推理过程
+- 禁止偏离任务
+- 禁止补充未提供的信息
+- 禁止使用"可能/大概/推测"等词
+- 禁止空洞的"Unknown"输出
+
+"""
+
 
 class PromptEngine:
     """Prompt 模板引擎"""
@@ -64,6 +86,9 @@ class PromptEngine:
     def render_agent_prompt(self, agent_name: str, **kwargs: Any) -> str:
         """渲染 Agent Prompt
 
+        在模板内容前统一注入 GLOBAL_PREFIX（稳定前缀，跨 Agent/跨文件相同），
+        使供应商侧上下文缓存可命中，降低后续调用的输入成本。
+
         Args:
             agent_name: Agent 名称（如 context_builder, vulnerability_verification）
             **kwargs: 模板变量
@@ -73,7 +98,7 @@ class PromptEngine:
         """
         agent_config = self._config_center.get_agent_config(agent_name)
         template_name = agent_config.get("template", f"{agent_name}.jinja2")
-        return self.render(template_name, **kwargs)
+        return GLOBAL_PREFIX + self.render(template_name, **kwargs)
 
     def get_available_templates(self) -> list:
         """获取所有可用的模板列表"""
