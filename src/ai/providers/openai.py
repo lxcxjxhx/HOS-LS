@@ -86,12 +86,19 @@ class OpenAIClient(AIClient):
             # 普通文本提示
             messages.append({"role": "user", "content": request.prompt})
 
-        response = await self._client.chat.completions.create(
-            model=model,
-            messages=messages,
-            max_tokens=request.max_tokens,
-            temperature=request.temperature,
-        )
+        request_timeout = request.timeout or getattr(self.config.ai, "request_timeout", 180) or 180
+
+        kwargs: dict = {
+            "model": model,
+            "messages": messages,
+            "max_tokens": request.max_tokens,
+            "temperature": request.temperature,
+            "timeout": request_timeout,
+        }
+        if request.response_format:
+            kwargs["response_format"] = request.response_format
+
+        response = await self._client.chat.completions.create(**kwargs)
 
         return AIResponse(
             content=response.choices[0].message.content or "",

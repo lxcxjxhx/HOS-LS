@@ -765,6 +765,8 @@ class MultiAgentPipeline:
             self.model = config.get("model", "deepseek-v4-flash")
             self.temperature = config.get("temperature", 0.1)
             self.reject_on_signal_creation = config.get("reject_on_signal_creation", True)
+            self.json_mode = config.get("json_mode", "auto")
+            self.request_timeout = config.get("request_timeout", 180)
         else:
             self.max_retries = getattr(config, "max_retries", 3)
             self.model = (
@@ -776,6 +778,14 @@ class MultiAgentPipeline:
                 getattr(config, "ai", {}).get("temperature", 0.1) if hasattr(config, "ai") else 0.1
             )
             self.reject_on_signal_creation = getattr(config, "reject_on_signal_creation", True)
+            self.json_mode = (
+                getattr(config, "ai", {}).get("json_mode", "auto") if hasattr(config, "ai") else "auto"
+            )
+            self.request_timeout = (
+                getattr(config, "ai", {}).get("request_timeout", 180)
+                if hasattr(config, "ai")
+                else 180
+            )
 
         logger.debug(
             f" Pipeline 使用模型: {self.model}, Temperature: {self.temperature}, reject_on_signal_creation: {self.reject_on_signal_creation}"
@@ -2830,12 +2840,20 @@ class MultiAgentPipeline:
                 # JSON Guard: 在prompt顶部添加JSON输出强制约束
                 json_guard_prompt = "只输出JSON，否则视为失败\n\n" + prompt
 
+                # 结构化输出（不裁剪 max_tokens；输出 token 一律不限制）
+                response_format = None
+                json_mode = getattr(self, "json_mode", "auto")
+                if json_mode in ("auto", "on"):
+                    response_format = {"type": "json_object"}
+
                 # 创建AIRequest对象
                 request = AIRequest(
                     prompt=json_guard_prompt,
                     model=self.model,
                     temperature=temperature,
                     max_tokens=8192,
+                    response_format=response_format,
+                    timeout=getattr(self, "request_timeout", 180),
                 )
 
                 # 调用客户端生成

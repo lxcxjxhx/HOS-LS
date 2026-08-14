@@ -28,6 +28,10 @@ class AIRequest:
     model: Optional[str] = None
     context: Optional[Dict[str, Any]] = None
     multimodal_content: Optional[List[AIContent]] = None
+    # 结构化输出：{"type": "json_object"} 等（供应商支持时启用）
+    response_format: Optional[Dict[str, Any]] = None
+    # 单次请求超时（秒），None 时使用配置默认
+    timeout: Optional[int] = None
 
     def to_dict(self) -> Dict[str, Any]:
         """转换为字典"""
@@ -38,6 +42,8 @@ class AIRequest:
             "max_tokens": self.max_tokens,
             "model": self.model,
             "context": self.context,
+            "response_format": self.response_format,
+            "timeout": self.timeout,
         }
         if self.multimodal_content:
             result["multimodal_content"] = [

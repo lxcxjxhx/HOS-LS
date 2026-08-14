@@ -129,7 +129,12 @@ class PureAIAnalyzer:
                     logger.warning(f"[!] API访问验证异常: {e}")
 
                 # 创建pipeline配置，包含模型信息
-                pipeline_config = {"max_retries": 3, "model": self.ai_model}
+                pipeline_config = {
+                    "max_retries": 3,
+                    "model": self.ai_model,
+                    "json_mode": getattr(self.config.ai, "json_mode", "auto"),
+                    "request_timeout": getattr(self.config.ai, "request_timeout", 180),
+                }
                 self.pipeline = MultiAgentPipeline(self.client, pipeline_config)
                 self.initialized = True  # 标记初始化成功
                 logger.debug(

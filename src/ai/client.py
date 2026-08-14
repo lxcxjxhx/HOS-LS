@@ -15,6 +15,14 @@ from src.utils.logger import get_logger
 logger = get_logger(__name__)
 
 
+def cfg_model_name() -> str:
+    """获取当前生效的模型名（用于缓存键）。"""
+    try:
+        return get_config().ai.get_model("pure_ai") or "unknown"
+    except Exception:
+        return "unknown"
+
+
 class AIClient(ABC):
     """AI 客户端基类"""
 
@@ -276,9 +284,12 @@ class AIModelManager:
         if not token_tracker:
             raise RuntimeError("Token tracker not available")
 
-        # 检查缓存
+        # 检查缓存（内容寻址：模型+提示词+采样参数）
         cached_response = token_tracker.check_cache(
-            prompt=request.prompt, system_prompt=request.system_prompt
+            prompt=request.prompt,
+            system_prompt=request.system_prompt,
+            model=request.model or cfg_model_name(),
+            temperature=request.temperature,
         )
         if cached_response:
             logger.info("Using cached AI response")
@@ -304,6 +315,8 @@ class AIModelManager:
                             prompt=request.prompt,
                             system_prompt=request.system_prompt,
                             result=response,
+                            model=request.model or cfg_model_name(),
+                            temperature=request.temperature,
                         )
 
                         if fallback_provider != self._fallback_chain[0]:
@@ -330,7 +343,11 @@ class AIModelManager:
 
                     # 添加到缓存
                     token_tracker.add_to_cache(
-                        prompt=request.prompt, system_prompt=request.system_prompt, result=response
+                        prompt=request.prompt,
+                        system_prompt=request.system_prompt,
+                        result=response,
+                        model=request.model or cfg_model_name(),
+                        temperature=request.temperature,
                     )
 
                     return response

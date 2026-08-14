@@ -50,6 +50,40 @@ except ImportError:
 console = Console()
 
 
+def _token_record_to_dict(rec: Any) -> Dict[str, Any]:
+    """将 TokenUsageRecord 对象转换为纯 dict（保证 JSON 报告可解析）。"""
+    if rec is None:
+        return {}
+    if isinstance(rec, dict):
+        return {
+            k: (str(v) if not isinstance(v, (str, int, float, bool)) and v is not None else v)
+            for k, v in rec.items()
+        }
+    attrs = [
+        "provider",
+        "model",
+        "prompt_tokens",
+        "completion_tokens",
+        "total_tokens",
+        "duration",
+        "success",
+        "cached",
+        "timestamp",
+        "prompt",
+        "response",
+        "agent_name",
+        "file_path",
+    ]
+    out: Dict[str, Any] = {}
+    for attr in attrs:
+        if hasattr(rec, attr):
+            v = getattr(rec, attr)
+            out[attr] = str(v) if not isinstance(v, (str, int, float, bool)) and v is not None else v
+        else:
+            out[attr] = ""
+    return out
+
+
 class SecurityScanner:
     """安全扫描器
 
@@ -1012,7 +1046,7 @@ class SecurityScanner:
             ):
                 result.debug_logs = self.pure_ai_analyzer.debug_logs
 
-            # 添加Token使用记录
+            # 添加Token使用记录（转为纯 dict，保证 JSON 报告可解析）
             if hasattr(self, "pure_ai_analyzer") and self.pure_ai_analyzer:
                 token_tracker = (
                     self.pure_ai_analyzer.pipeline.token_tracker
@@ -1020,7 +1054,9 @@ class SecurityScanner:
                     else None
                 )
                 if token_tracker:
-                    result.token_records = token_tracker._token_usage[-100:]  # 最近100条
+                    result.token_records = [
+                        _token_record_to_dict(rec) for rec in token_tracker._token_usage[-100:]
+                    ]
 
         else:
             # 正常模式：执行所有后处理步骤

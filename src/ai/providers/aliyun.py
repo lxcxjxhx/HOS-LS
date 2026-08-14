@@ -98,13 +98,19 @@ class AliyunClient(AIClient):
         logger.info(f"Aliyun API 调用，使用模型: {model}")
 
         try:
-            response = await self._client.chat.completions.create(
-                model=model,
-                messages=cast(Any, messages),
-                max_tokens=request.max_tokens,
-                temperature=request.temperature,
-                stream=False,
-            )
+            kwargs: Dict[str, Any] = {
+                "model": model,
+                "messages": cast(Any, messages),
+                "max_tokens": request.max_tokens,
+                "temperature": request.temperature,
+                "stream": False,
+            }
+            request_timeout = request.timeout or getattr(self.config.ai, "request_timeout", 180) or 180
+            kwargs["timeout"] = request_timeout
+            if request.response_format:
+                kwargs["response_format"] = request.response_format
+
+            response = await self._client.chat.completions.create(**kwargs)
 
             # 类型断言：确保 response 不是流式响应
             assert hasattr(response, "choices")
