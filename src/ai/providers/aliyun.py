@@ -53,7 +53,12 @@ class AliyunClient(AIClient):
         if not api_key:
             raise ValueError("Aliyun API 密钥未设置，请设置 ALIYUN_API_KEY 环境变量或配置 aliyun.api_key")
 
-        self._client = AsyncOpenAI(api_key=api_key, base_url=base_url)
+        self._client = AsyncOpenAI(
+            api_key=api_key,
+            base_url=base_url,
+            timeout=getattr(self.config.ai, "request_timeout", 180),
+            max_retries=0,
+        )
         self._initialized = True
 
     async def close(self) -> None:

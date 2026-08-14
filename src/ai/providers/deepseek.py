@@ -85,7 +85,14 @@ class DeepSeekClient(AIClient):
         base_url = self.config.ai.base_url or self.DEFAULT_BASE_URL
 
         # 使用 OpenAI SDK 创建客户端
-        self._client = AsyncOpenAI(api_key=api_key, base_url=base_url)
+        # max_retries=0：内部重试会吞掉超时（每次尝试都可能吃满超时），
+        # 统一由 AIClient.generate_with_retry 层做带退避的重试
+        self._client = AsyncOpenAI(
+            api_key=api_key,
+            base_url=base_url,
+            timeout=getattr(self.config.ai, "request_timeout", 180),
+            max_retries=0,
+        )
         self._initialized = True
 
     async def close(self) -> None:

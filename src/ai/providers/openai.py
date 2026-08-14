@@ -39,6 +39,8 @@ class OpenAIClient(AIClient):
         self._client = AsyncOpenAI(
             api_key=api_key,
             base_url=self.config.ai.base_url,
+            timeout=getattr(self.config.ai, "request_timeout", 180),
+            max_retries=0,
         )
         self._initialized = True
 
