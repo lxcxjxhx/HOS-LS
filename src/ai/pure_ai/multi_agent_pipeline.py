@@ -815,6 +815,7 @@ class MultiAgentPipeline:
             self.reject_on_signal_creation = config.get("reject_on_signal_creation", True)
             self.json_mode = config.get("json_mode", "auto")
             self.request_timeout = config.get("request_timeout", 180)
+            self.ast_evidence_enabled = config.get("ast_evidence_enabled", True)
         else:
             self.max_retries = getattr(config, "max_retries", 3)
             self.model = (
@@ -833,6 +834,11 @@ class MultiAgentPipeline:
                 getattr(config, "ai", {}).get("request_timeout", 180)
                 if hasattr(config, "ai")
                 else 180
+            )
+            self.ast_evidence_enabled = (
+                getattr(config, "ai", {}).get("ast_evidence_enabled", True)
+                if hasattr(config, "ai")
+                else True
             )
 
         logger.debug(
@@ -2586,9 +2592,11 @@ class MultiAgentPipeline:
         logger.debug(f" {queue_info}")
 
         # AST/污点确定性预验证证据（M4）：机器可查事实，供 Agent-3 验证时引用
-        ast_evidence = self._build_ast_evidence(
-            risks, file_path, file_content, detected_language
-        )
+        ast_evidence = ""
+        if getattr(self, "ast_evidence_enabled", True):
+            ast_evidence = self._build_ast_evidence(
+                risks, file_path, file_content, detected_language
+            )
 
         prompt = self.prompt_engine.render_agent_prompt(
             "vulnerability_verification",
