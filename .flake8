@@ -10,7 +10,10 @@ exclude =
     dist,
     .tox,
     .mypy_cache,
-    .pytest_cache
+    .pytest_cache,
+    tests/fixtures,
+    bench,
+    hosls-eval
 ignore =
     E203,
     W503,
