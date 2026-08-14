@@ -228,7 +228,7 @@ class DeepSeekClient(AIClient):
                 return False, "Client not initialized"
 
             # 简单的测试调用以验证 API 访问
-            response = await self._client.chat.completions.create(
+            await self._client.chat.completions.create(
                 model="deepseek-v4-flash",
                 messages=[{"role": "user", "content": "Hello"}],
                 max_tokens=10,
