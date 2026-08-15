@@ -815,7 +815,8 @@ class MultiAgentPipeline:
             self.reject_on_signal_creation = config.get("reject_on_signal_creation", True)
             self.json_mode = config.get("json_mode", "auto")
             self.request_timeout = config.get("request_timeout", 180)
-            self.ast_evidence_enabled = config.get("ast_evidence_enabled", True)
+            self.ast_evidence_enabled = config.get("ast_evidence_enabled", False)
+            self.cwe_guidance_enabled = config.get("cwe_guidance_enabled", False)
         else:
             self.max_retries = getattr(config, "max_retries", 3)
             self.model = (
@@ -836,9 +837,14 @@ class MultiAgentPipeline:
                 else 180
             )
             self.ast_evidence_enabled = (
-                getattr(config, "ai", {}).get("ast_evidence_enabled", True)
+                getattr(config, "ai", {}).get("ast_evidence_enabled", False)
                 if hasattr(config, "ai")
-                else True
+                else False
+            )
+            self.cwe_guidance_enabled = (
+                getattr(config, "ai", {}).get("cwe_guidance_enabled", False)
+                if hasattr(config, "ai")
+                else False
             )
 
         logger.debug(
@@ -2423,6 +2429,37 @@ class MultiAgentPipeline:
 
         return "\n".join(lines)
 
+    def _build_cwe_guidance(self, file_content: str, file_path: str, detected_language: str) -> str:
+        """CWE 专项检测指引（M7）：按代码启发式检测 CWE 类型，注入对应验证要点。
+
+        配置门 cwe_guidance_enabled 默认关闭；每模板约 1K token，最多 2 个。
+        """
+        if not file_content:
+            return ""
+        try:
+            from src.ai.pure_ai.cwe_prompt_selector import get_cwe_prompt_selector
+
+            selector = get_cwe_prompt_selector()
+            templates = selector.get_cwe_templates_for_code(
+                file_content,
+                max_templates=2,
+                file_path=file_path,
+                file_content=file_content,
+                detected_language=detected_language,
+            )
+            if not templates:
+                return ""
+            parts = ["[CWE 专项验证要点（来自 CWE 知识库模板）]"]
+            for t in templates:
+                content = (t.get("template_content") or "")[:1600]
+                parts.append(f"## {t.get('cwe_id')} ({t.get('cwe_name', '')})")
+                parts.append(content)
+            parts.append("[END CWE GUIDANCE]")
+            return "\n".join(parts)
+        except Exception as e:
+            logger.debug(f"[M7] CWE 指引构建失败: {e}")
+            return ""
+
     def _build_ast_evidence(
         self,
         risks: List[Dict[str, Any]],
@@ -2593,10 +2630,15 @@ class MultiAgentPipeline:
 
         # AST/污点确定性预验证证据（M4）：机器可查事实，供 Agent-3 验证时引用
         ast_evidence = ""
-        if getattr(self, "ast_evidence_enabled", True):
+        if getattr(self, "ast_evidence_enabled", False):
             ast_evidence = self._build_ast_evidence(
                 risks, file_path, file_content, detected_language
             )
+
+        # CWE 专项检测指引（M7）
+        cwe_guidance = ""
+        if getattr(self, "cwe_guidance_enabled", False):
+            cwe_guidance = self._build_cwe_guidance(file_content, file_path, detected_language)
 
         prompt = self.prompt_engine.render_agent_prompt(
             "vulnerability_verification",
@@ -2610,6 +2652,7 @@ class MultiAgentPipeline:
             context_mappings=context_mappings_summary,
             queue_info=queue_info,
             ast_evidence=ast_evidence,
+            cwe_guidance=cwe_guidance,
         )
 
         agent_start_time = time.time()
