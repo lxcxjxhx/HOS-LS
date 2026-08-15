@@ -852,6 +852,8 @@ class MultiAgentPipeline:
                 if hasattr(config, "ai")
                 else False
             )
+        # [OPT-SASTR] SAST 前置过滤证据（由 scanner 在批量分析前注入）
+        self.sast_evidence: Dict[str, str] = {}
 
         logger.debug(
             f" Pipeline 使用模型: {self.model}, Temperature: {self.temperature}, reject_on_signal_creation: {self.reject_on_signal_creation}"
@@ -2743,6 +2745,14 @@ class MultiAgentPipeline:
             ast_evidence = self._build_ast_evidence(
                 risks, file_path, file_content, detected_language
             )
+
+        # [OPT-SASTR] SAST 前置过滤证据注入（与 M4 同通道，AI 有据验证）
+        if getattr(self, "sast_evidence", None):
+            sast_evidence = self.sast_evidence.get(str(file_path), "") or ""
+            if sast_evidence:
+                ast_evidence = (
+                    ast_evidence + "\n" + sast_evidence if ast_evidence else sast_evidence
+                )
 
         # CWE 专项检测指引（M7）
         cwe_guidance = ""

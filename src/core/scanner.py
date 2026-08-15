@@ -2143,17 +2143,69 @@ class SecurityScanner:
                         f"[bold cyan][TOOL] AI analyzing {len(pending_files)} files...[/bold cyan]"
                     )
 
+                    # [OPT-SASTR] SAST 深度前置过滤：AI 之前先收窄候选（0 LLM token）
+                    sast_filtered_paths: set = set()
+                    sast_pipeline_evidence: Dict[str, str] = {}
+                    sast_cfg = getattr(self.config, "sast_prefilter", None)
+                    if self.config.pure_ai and sast_cfg and sast_cfg.enabled:
+                        try:
+                            from src.analyzers.sast_prefilter import SastPrefilter
+
+                            sast = SastPrefilter(sast_cfg)
+                            pre = sast.prefilter_batch(
+                                [str(file_info.path) for _, file_info in pending_files]
+                            )
+                            sast_pipeline_evidence = {
+                                str(file_info.path): pre.get(str(file_info.path), {}).get(
+                                    "evidence", ""
+                                )
+                                for _, file_info in pending_files
+                            }
+                            if sast.skip_ai_if_no_hits:
+                                keep = []
+                                for i, file_info in pending_files:
+                                    if pre.get(str(file_info.path), {}).get("hits"):
+                                        keep.append((i, file_info))
+                                    else:
+                                        sast_filtered_paths.add(str(file_info.path))
+                                if len(sast_filtered_paths):
+                                    console.print(
+                                        f"[yellow][SAST] 前置过滤跳过 {len(sast_filtered_paths)} 个零命中文件（省 AI token）[/yellow]"
+                                    )
+                                pending_files = keep
+                        except Exception as e:
+                            logger.debug(f"[SAST] 前置过滤失败，降级为全部 AI 分析: {e}")
+
                     # 执行批量分析（并发数可配置，默认与 --workers 一致）
                     if pending_files:
+                        if (
+                            self.pure_ai_analyzer
+                            and self.pure_ai_analyzer.pipeline
+                            and sast_pipeline_evidence
+                        ):
+                            self.pure_ai_analyzer.pipeline.sast_evidence = sast_pipeline_evidence
                         max_concurrent = getattr(self.config.scan, "max_workers", 4) or 3
-                        batch_results = await self.pure_ai_analyzer.analyze_batch(
-                            [file_info for _, file_info in pending_files],
-                            max_concurrent=max_concurrent,
-                        )
+                        ai_pending = [
+                            (i, file_info)
+                            for i, file_info in pending_files
+                            if str(file_info.path) not in sast_filtered_paths
+                        ]
+                        batch_results_map: Dict[str, list] = {}
+                        if ai_pending:
+                            batch_results_list = await self.pure_ai_analyzer.analyze_batch(
+                                [file_info for _, file_info in ai_pending],
+                                max_concurrent=max_concurrent,
+                            )
+                            for (_, file_info), result in zip(ai_pending, batch_results_list):
+                                batch_results_map[str(file_info.path)] = result
 
                         # 收集结果
                         for idx, (i, file_info) in enumerate(pending_files):
-                            result = batch_results[idx]
+                            result = batch_results_map.get(str(file_info.path), [])
+                            if str(file_info.path) in sast_filtered_paths:
+                                logger.debug(
+                                    f"[SAST] {Path(file_info.path).name} 零命中，跳过 AI（0 token）"
+                                )
                             ai_findings.extend(result)
 
                             # 保存文件分析结果到缓存

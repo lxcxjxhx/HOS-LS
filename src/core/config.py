@@ -392,6 +392,34 @@ class ToolConfig(BaseModel):
     gitleaks: GitleaksConfig = Field(default_factory=GitleaksConfig)
 
 
+class SastPrefilterConfig(BaseModel):
+    """[OPT-SASTR] SAST 深度前置过滤配置（AI 之前的候选收窄，0 LLM token）。
+
+    后端优先级：codeql（仓库级深度分析底座，环境安装后自动启用）> semgrep（功能探测）>
+    builtin（内置规则引擎，始终可用）。软门控（skip_ai_if_no_hits=False，默认）保留盲区
+    检出；硬门控（=True）零命中文件完全跳过 AI（最大 token 节省，召回=过滤层召回）。
+    """
+
+    enabled: bool = Field(
+        default=False,
+        description="pure-ai 模式是否启用 SAST 前置过滤（默认关，保持旧行为；评测/生产按需开启）",
+    )
+    skip_ai_if_no_hits: bool = Field(
+        default=False,
+        description="True=硬门控：零命中文件完全跳过 AI；False=软门控：仍走 AI 早停路径（保留盲区检出）",
+    )
+    inject_evidence: bool = Field(
+        default=True,
+        description="将 SAST 候选命中注入 Agent-3 证据块（AI 有据验证，提升精度）",
+    )
+    backends: List[str] = Field(
+        default_factory=lambda: ["codeql", "semgrep", "builtin"],
+        description="启用后端顺序",
+    )
+    min_severity: str = Field(default="medium", description="最低保留严重度")
+    codeql_db_path: str = Field(default="", description="CodeQL 数据库路径（留空自动建）")
+
+
 class PriorityWeightsConfig(BaseModel):
     """优先级权重配置"""
 
@@ -475,6 +503,7 @@ class Config(BaseSettings):
     nvd: NVDConfig = Field(default_factory=NVDConfig)
     data_preload: DataPreloadConfig = Field(default_factory=DataPreloadConfig)
     tools: ToolConfig = Field(default_factory=ToolConfig)
+    sast_prefilter: SastPrefilterConfig = Field(default_factory=SastPrefilterConfig)
     priority: PriorityConfig = Field(default_factory=PriorityConfig)
     validation: ValidationConfig = Field(default_factory=ValidationConfig)
     agent: AgentConfig = Field(default_factory=AgentConfig)

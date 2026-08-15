@@ -31,10 +31,10 @@ ai:
   cpg_context_enabled: true       # OPT-P0: 深 CPG 跨文件被调函数注入（预算受限，仓库级收益）
 
 # [OPT-SASTR] SAST 深度前置过滤（CodeQL 为仓库级底座，环境装好自动启用）
-# 软门控：零命中文件仍走 AI 早停路径（保留盲区检出），SAST 证据注入 Agent-3 提升精度
+# 本变体 = 硬门控：零命中文件完全跳过 AI（最大 token 节省；召回=过滤层召回）
 sast_prefilter:
   enabled: true
-  skip_ai_if_no_hits: false
+  skip_ai_if_no_hits: true
   inject_evidence: true
   backends: ["codeql", "semgrep", "builtin"]
   min_severity: medium
