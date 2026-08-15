@@ -87,6 +87,14 @@ class AIConfig(BaseModel):
         default=False,
         description="是否向 Agent-3 注入 CWE 专项检测指引（M7；每模板约 1K token，默认关闭）",
     )
+    deterministic_promote_enabled: bool = Field(
+        default=False,
+        description="[OPT-P1/P3] 确定性升级：高危 finding 若 Agent-3 验证 CONFIRMED，覆盖 Agent-6 的 WEAK/REFINED 保守裁决升级为 CONFIRMED（验证优先于拒绝，可消融）",
+    )
+    cpg_context_enabled: bool = Field(
+        default=False,
+        description="[OPT-P0] 深 CPG 上下文注入：解析 import 并注入跨文件被调函数定义（预算受限，仓库级扫描收益最大；函数级样本无收益）",
+    )
     enable_learning: bool = Field(default=True, description="是否启用 AI 学习")
     allow_fallback: bool = Field(default=True, description="当主provider失败时是否允许自动切换到其他provider")
 

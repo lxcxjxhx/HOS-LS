@@ -140,6 +140,12 @@ class PureAIAnalyzer:
                     "cwe_guidance_enabled": getattr(
                         self.config.ai, "cwe_guidance_enabled", False
                     ),
+                    "deterministic_promote_enabled": getattr(
+                        self.config.ai, "deterministic_promote_enabled", False
+                    ),
+                    "cpg_context_enabled": getattr(
+                        self.config.ai, "cpg_context_enabled", False
+                    ),
                 }
                 self.pipeline = MultiAgentPipeline(self.client, pipeline_config)
                 self.initialized = True  # 标记初始化成功

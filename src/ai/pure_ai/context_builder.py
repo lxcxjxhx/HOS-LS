@@ -195,8 +195,95 @@ class ContextBuilder:
         self._file_cache: Dict[str, str] = {}
         if isinstance(config, dict):
             self.max_related_files = config.get("max_related_files", 3)
+            self.cpg_context_enabled = config.get("cpg_context_enabled", False)
+            self.cpg_max_chars = config.get("cpg_max_chars", 6000)
         else:
             self.max_related_files = getattr(config, "max_related_files", 3)
+            self.cpg_context_enabled = getattr(config, "cpg_context_enabled", False)
+            self.cpg_max_chars = getattr(config, "cpg_max_chars", 6000)
+
+    def _build_cpg_context(self, file_path: str) -> str:
+        """[OPT-P0] 深 CPG：跨文件被调函数定义注入（预算受限，Python）。
+
+        解析目标文件 import → 收集文件内全部函数调用 → 对 module.attr 形式的
+        跨文件调用，从本地模块提取被调函数完整源码并注入（最多 cpg_max_chars
+        字符）。同文件被调函数已在 file_content 中，跳过。stdlib/第三方/解析
+        失败一律跳过。全部为本地确定性计算，0 token 成本；无结果返回空串。
+        """
+        try:
+            src = open(file_path, encoding="utf-8", errors="replace").read()
+            tree = ast.parse(src)
+            base_dir = os.path.dirname(os.path.abspath(file_path))
+            mod_map: Dict[str, str] = {}
+            for node in ast.walk(tree):
+                if isinstance(node, ast.Import):
+                    for a in node.names:
+                        p = os.path.join(base_dir, a.name.replace(".", os.sep) + ".py")
+                        if os.path.exists(p):
+                            mod_map[a.name] = p
+                elif isinstance(node, ast.ImportFrom) and node.module:
+                    p = os.path.join(base_dir, node.module.replace(".", os.sep) + ".py")
+                    if os.path.exists(p):
+                        mod_map[node.module] = p
+                    for alias in node.names:
+                        if alias.name == "*":
+                            continue
+                        p2 = os.path.join(base_dir, alias.name + ".py")
+                        if os.path.exists(p2):
+                            mod_map[alias.name] = p2
+            calls = set()
+            for n in ast.walk(tree):
+                if isinstance(n, ast.Call):
+                    if isinstance(n.func, ast.Name):
+                        calls.add(n.func.id)
+                    elif isinstance(n.func, ast.Attribute) and isinstance(n.func.value, ast.Name):
+                        calls.add((n.func.value.id, n.func.attr))
+            local_funcs = {
+                n.name
+                for n in ast.walk(tree)
+                if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))
+            }
+            parts: List[str] = []
+            seen: set = set()
+            budget = 0
+            for c in calls:
+                if not isinstance(c, tuple):
+                    continue
+                mod, func = c
+                if mod in local_funcs:
+                    continue  # 同文件调用，源码已在 file_content
+                mpath = mod_map.get(mod)
+                if not mpath or mpath in seen:
+                    continue
+                try:
+                    mtree = ast.parse(open(mpath, encoding="utf-8", errors="replace").read())
+                except Exception:
+                    continue
+                for n in ast.walk(mtree):
+                    if (
+                        isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))
+                        and n.name == func
+                    ):
+                        seg = (
+                            ast.get_source_segment(
+                                open(mpath, encoding="utf-8", errors="replace").read(), n
+                            )
+                            or ""
+                        )
+                        if not seg or budget + len(seg) > self.cpg_max_chars:
+                            continue
+                        parts.append(
+                            f"# === 跨文件被调函数 {mod}.{func} ({os.path.relpath(mpath, base_dir)}) ==="
+                        )
+                        parts.append(seg)
+                        seen.add(mpath)
+                        budget += len(seg)
+                        break
+            if not parts:
+                return ""
+            return "\n\n".join(parts)
+        except Exception:
+            return ""
 
     SIR_PATTERNS = {
         "inputs": {
@@ -695,6 +782,21 @@ class ContextBuilder:
         context["related_files"] = self._load_related_files(file_path)
         context["file_structure"] = self._extract_file_structure(file_path)
         context["data_flow"] = self._track_data_flow(file_path)
+
+        # [OPT-P0] 深 CPG 跨文件被调函数注入（预算受限，0 token 成本）
+        if getattr(self, "cpg_context_enabled", False):
+            cpg = self._build_cpg_context(file_path)
+            if cpg:
+                context["cpg_context"] = cpg
+                context["file_content"] = (
+                    context["file_content"]
+                    + "\n\n# ==== [CPG 相关被调函数上下文开始] ====\n"
+                    + cpg
+                    + "\n# ==== [CPG 上下文结束] ===="
+                )
+                logger.debug(
+                    f" [OPT-P0] CPG 上下文注入: {len(cpg)} 字符 (文件 {Path(file_path).name})"
+                )
 
         logger.debug(f" 上下文构建完成，文件内容长度: {len(context['file_content'])} 字符")
         return context
