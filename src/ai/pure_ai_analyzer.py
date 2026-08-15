@@ -135,7 +135,10 @@ class PureAIAnalyzer:
                     "json_mode": getattr(self.config.ai, "json_mode", "auto"),
                     "request_timeout": getattr(self.config.ai, "request_timeout", 180),
                     "ast_evidence_enabled": getattr(
-                        self.config.ai, "ast_evidence_enabled", True
+                        self.config.ai, "ast_evidence_enabled", False
+                    ),
+                    "cwe_guidance_enabled": getattr(
+                        self.config.ai, "cwe_guidance_enabled", False
                     ),
                 }
                 self.pipeline = MultiAgentPipeline(self.client, pipeline_config)
