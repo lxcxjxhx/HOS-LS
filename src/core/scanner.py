@@ -1057,6 +1057,13 @@ class SecurityScanner:
                     result.token_records = [
                         _token_record_to_dict(rec) for rec in token_tracker._token_usage[-100:]
                     ]
+                    # 响应缓存命中统计（M6）
+                    try:
+                        cache_stats = token_tracker.get_cache_stats()
+                        if isinstance(result.metadata, dict):
+                            result.metadata["llm_cache_stats"] = cache_stats
+                    except Exception:
+                        pass
 
         else:
             # 正常模式：执行所有后处理步骤
@@ -2136,10 +2143,12 @@ class SecurityScanner:
                         f"[bold cyan][TOOL] AI analyzing {len(pending_files)} files...[/bold cyan]"
                     )
 
-                    # 执行批量分析
+                    # 执行批量分析（并发数可配置，默认与 --workers 一致）
                     if pending_files:
+                        max_concurrent = getattr(self.config.scan, "max_workers", 4) or 3
                         batch_results = await self.pure_ai_analyzer.analyze_batch(
-                            [file_info for _, file_info in pending_files], max_concurrent=3
+                            [file_info for _, file_info in pending_files],
+                            max_concurrent=max_concurrent,
                         )
 
                         # 收集结果
