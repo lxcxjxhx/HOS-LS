@@ -68,3 +68,6 @@ bench-tmp/
 
 # HOS-LS indexes
 .hos-ls/indexes/
+
+# CodeGraph pre-index (token-saving code intelligence)
+.codegraph/
