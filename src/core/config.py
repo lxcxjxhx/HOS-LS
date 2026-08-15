@@ -79,6 +79,10 @@ class AIConfig(BaseModel):
         default="auto",
         description="JSON 结构化输出模式: auto/on/off（auto=供应商支持时启用 response_format=json_object）",
     )
+    ast_evidence_enabled: bool = Field(
+        default=False,
+        description="是否向 Agent-3 注入 AST/污点确定性预验证证据（M4；实测对裁决有扰动，默认关闭，可开启）",
+    )
     enable_learning: bool = Field(default=True, description="是否启用 AI 学习")
     allow_fallback: bool = Field(default=True, description="当主provider失败时是否允许自动切换到其他provider")
 

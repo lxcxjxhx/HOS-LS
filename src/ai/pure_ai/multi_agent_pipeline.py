@@ -815,6 +815,7 @@ class MultiAgentPipeline:
             self.reject_on_signal_creation = config.get("reject_on_signal_creation", True)
             self.json_mode = config.get("json_mode", "auto")
             self.request_timeout = config.get("request_timeout", 180)
+            self.ast_evidence_enabled = config.get("ast_evidence_enabled", True)
         else:
             self.max_retries = getattr(config, "max_retries", 3)
             self.model = (
@@ -833,6 +834,11 @@ class MultiAgentPipeline:
                 getattr(config, "ai", {}).get("request_timeout", 180)
                 if hasattr(config, "ai")
                 else 180
+            )
+            self.ast_evidence_enabled = (
+                getattr(config, "ai", {}).get("ast_evidence_enabled", True)
+                if hasattr(config, "ai")
+                else True
             )
 
         logger.debug(
@@ -2417,6 +2423,74 @@ class MultiAgentPipeline:
 
         return "\n".join(lines)
 
+    def _build_ast_evidence(
+        self,
+        risks: List[Dict[str, Any]],
+        file_path: str,
+        file_content: str,
+        detected_language: str = "Unknown",
+    ) -> str:
+        """AST/污点确定性预验证（M4）：对每个候选风险生成机器可查证据块。
+
+        使用 InputTracer 判断输入可控性/可利用性，输出紧凑 JSON 证据，
+        供 Agent-3 在验证时引用（减少纯 LLM 猜测，提升精度）。
+        全部为本地确定性计算，不消耗 token；异常时返回空。
+        """
+        if not risks:
+            return ""
+        try:
+            from src.analyzers.input_tracer import InputTracer
+
+            project_root = str(Path(file_path).parent)
+            tracer = InputTracer(project_root)
+            evidence_items = []
+            for risk in risks[:10]:  # 最多 10 条，避免 prompt 膨胀
+                if not isinstance(risk, dict):
+                    continue
+                signal_id = risk.get("signal_id", "")
+                location = risk.get("location", "")
+                line_number = 0
+                if location:
+                    try:
+                        line_number = int(str(location).rsplit(":", 1)[-1])
+                    except ValueError:
+                        line_number = 0
+                snippet = ""
+                if line_number > 0 and file_content:
+                    lines = file_content.split("\n")
+                    if 1 <= line_number <= len(lines):
+                        start = max(0, line_number - 2)
+                        snippet = "\n".join(lines[start:line_number + 2])
+                try:
+                    result = tracer.trace_controllability(
+                        str(file_path), line_number, snippet or ""
+                    )
+                    item = {
+                        "signal_id": signal_id,
+                        "location": location,
+                        "is_direct_user_input": result.is_direct_user_input,
+                        "is_indirect": result.is_indirect,
+                        "is_internal": result.is_internal,
+                        "is_exploitable": result.is_exploitable,
+                        "controllability_level": result.controllability_level.value,
+                        "confidence": round(float(result.confidence), 2),
+                        "attack_prerequisites": (result.attack_prerequisites or [])[:3],
+                        "summary": (result.summary or "")[:120],
+                    }
+                except Exception as e:
+                    item = {
+                        "signal_id": signal_id,
+                        "location": location,
+                        "error": str(e)[:80],
+                    }
+                evidence_items.append(item)
+            if not evidence_items:
+                return ""
+            return json.dumps({"ast_evidence": evidence_items}, ensure_ascii=False, indent=1)
+        except Exception as e:
+            logger.debug(f"[M4] AST 证据构建失败: {e}")
+            return ""
+
     async def _run_agent_3(
         self,
         file_path: str,
@@ -2517,6 +2591,13 @@ class MultiAgentPipeline:
         queue_info = f"共 {len(self._signal_queue)} 个信号进入验证队列"
         logger.debug(f" {queue_info}")
 
+        # AST/污点确定性预验证证据（M4）：机器可查事实，供 Agent-3 验证时引用
+        ast_evidence = ""
+        if getattr(self, "ast_evidence_enabled", True):
+            ast_evidence = self._build_ast_evidence(
+                risks, file_path, file_content, detected_language
+            )
+
         prompt = self.prompt_engine.render_agent_prompt(
             "vulnerability_verification",
             file_path=file_path,
@@ -2528,6 +2609,7 @@ class MultiAgentPipeline:
             line_counts=line_counts,
             context_mappings=context_mappings_summary,
             queue_info=queue_info,
+            ast_evidence=ast_evidence,
         )
 
         agent_start_time = time.time()
