@@ -66,6 +66,9 @@ hosls-eval/
 bench/artifacts/
 bench-tmp/
 
+# RULEDROID 自动生成的 semgrep 规则（scripts/gen_semgrep_rules.py 可再生成）
+envs/semgrep-rules/auto/
+
 # HOS-LS indexes
 .hos-ls/indexes/
 
