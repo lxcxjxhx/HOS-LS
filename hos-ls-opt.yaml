@@ -201,7 +201,7 @@ quiet: false
 #   - 超长上下文适合代码仓库分析
 #
 # 【阿里云百炼配置】
-# - API Key: sk-ada1f16bc0e64ce0a76762dfea0f566a
+# - API Key: <env:HOS_LS_ALIYUN_API_KEY>（已清理，勿硬编码；通过环境变量注入）
 # - Base URL: https://dashscope.aliyuncs.com/compatible-mode/v1
 # - 推荐模型: qwen3-coder-next
 #
