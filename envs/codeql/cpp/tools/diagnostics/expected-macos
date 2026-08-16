@@ -1,8 +1,0 @@
-SOURCE_ID=cpp/autobuilder/expected-macos
-SOURCE_NAME="Incompatible operating system (expected macOS)"
-SEVERITY=error
-MARKDOWN_MESSAGE="While running \`%s\`, the macOS command \`%s\` was invoked.
-
-[Change the action runner][1] to a macOS one.
-
-[1]: https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idruns-on"

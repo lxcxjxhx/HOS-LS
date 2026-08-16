@@ -1,8 +1,0 @@
-SOURCE_ID=cpp/autobuilder/buildless/mode-active
-SOURCE_NAME="C/C++ was extracted with build-mode set to 'none'"
-SEVERITY=note
-MARKDOWN_MESSAGE="C/C++ was extracted with build-mode set to 'none'. This means that all C/C++ source in the working directory will be scanned.
-
-If you would prefer to analyse using a build command, see the manual[1].
-
-[1]: https://docs.github.com/en/enterprise-server/code-security/code-scanning/automatically-scanning-your-code-for-vulnerabilities-and-errors/configuring-the-codeql-workflow-for-compiled-languages#adding-build-steps-for-a-compiled-language"

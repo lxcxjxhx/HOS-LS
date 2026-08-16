@@ -1,5 +1,0 @@
-SOURCE_ID=cpp/autobuilder/summary
-SOURCE_NAME="autobuild summary"
-STATUS_PAGE=false
-CLI_SUMMARY_TABLE=false
-TELEMETRY=true

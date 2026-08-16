@@ -74,3 +74,9 @@ envs/semgrep-rules/auto/
 
 # CodeGraph pre-index (token-saving code intelligence)
 .codegraph/
+
+# External toolchain & rule sets (rebuild via envs/scripts, not versioned)
+envs/codeql/
+envs/codeql-packs/
+envs/semgrep-rules/
+envs/sast-venv/

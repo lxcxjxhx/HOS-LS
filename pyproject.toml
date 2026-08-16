@@ -4,15 +4,14 @@ version = "0.3.3.17"
 description = "HOS-LS: AI生成代码安全扫描工具 - 基于LangGraph的Multi-Agent架构，支持语义搜索、两阶段扫描、CVE集成、攻击链分析和断点续传"
 authors = ["HOS Team <team@hos-ls.com>"]
 readme = "README.md"
-license = "MIT"
-homepage = "https://github.com/hos-ls/hos-ls"
-repository = "https://github.com/hos-ls/hos-ls"
-documentation = "https://hos-ls.readthedocs.io"
+license = "AGPL-3.0-only"
+homepage = "https://github.com/lxcxjxhx/HOS-LS"
+repository = "https://github.com/lxcxjxhx/HOS-LS"
 keywords = ["security", "ai", "code-scanning", "vulnerability-detection", "static-analysis"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
+    "License :: OSI Approved :: GNU Affero General Public License v3 or later (AGPLv3+)",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
@@ -124,6 +123,9 @@ isort = "^5.12.0"
 flake8 = "^6.0.0"
 mypy = "^1.5.0"
 pre-commit = "^3.5.0"
+
+[tool.poetry.packages]
+include = ["src"]
 
 [tool.poetry.scripts]
 hos-ls = "src.cli.main:main"

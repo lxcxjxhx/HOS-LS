@@ -1,8 +1,0 @@
-SOURCE_ID=cpp/autobuilder/build-command-failed
-SOURCE_NAME="No supported build command succeeded"
-SEVERITY=error
-MARKDOWN_MESSAGE="All detected build commands failed (tried %s).
-
-Set up a [manual build command][1] if other error messages do not help.
-
-[1]: https://docs.github.com/en/enterprise-server/code-security/code-scanning/automatically-scanning-your-code-for-vulnerabilities-and-errors/configuring-the-codeql-workflow-for-compiled-languages#adding-build-steps-for-a-compiled-language"

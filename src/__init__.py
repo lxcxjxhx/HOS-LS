@@ -8,6 +8,6 @@ Version: 0.3.3.17
 
 __version__ = "0.3.3.17"
 __author__ = "HOS Team"
-__license__ = "MIT"
+__license__ = "AGPL-3.0"
 
 __all__ = ["__version__"]

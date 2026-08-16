@@ -1,5 +1,0 @@
-name: codeql/java-downgrades
-groups: java
-downgrades: .
-library: true
-warnOnImplicitThis: true
