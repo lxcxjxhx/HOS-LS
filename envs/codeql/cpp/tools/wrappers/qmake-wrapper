@@ -1,0 +1,62 @@
+#!/usr/bin/python3
+import os
+import platform
+import sys
+import re
+import shutil
+import subprocess
+
+script = os.path.realpath(__file__)
+qmake_executable = shutil.which('qmake')
+if not qmake_executable:
+    print("\nqmake-wrapper: no qmake found", file=sys.stderr)
+    sys.exit(128)
+qmake_argv = [qmake_executable] + sys.argv[1:]
+
+# We write all debug info to stderr so stdout is not affected by the wrapper.
+# Other programs, like CMake's FindQt4 module, may parse the output of QMake.
+sys.stderr.write("\nqmake-wrapper: first run\n")
+sys.stderr.flush()
+
+# qmake will trigger installation of qtchooser, but then in order to trigger installation
+# of actual required qt5 files, you need to specify you want qt5
+# TODO see whether qt6 or precise selection of the qt version is required
+os.environ["QT_SELECT"] = "qt5"
+
+# The Qt module .pri files live under the Debian multiarch directory, whose triplet differs
+# between architectures (e.g. x86_64-linux-gnu vs aarch64-linux-gnu). Probing the concrete path
+# is what makes deptrace resolve and install the owning package, so it must match the host arch.
+_multiarch = f"{platform.machine()}-linux-gnu"
+
+def process_output(data, sink):
+    data = data.decode("utf-8")
+    for line in data.splitlines():
+        sink.write(line)
+        sink.write('\n')
+        matches = re.match(r'Project ERROR: Unknown module\(s\) in QT: (.*)$', line)
+        if matches:
+            modules = matches.group(1).split(' ')
+            for module in modules:
+                sys.stderr.write("qmake-wrapper: Probing for module '" +
+                                 module + "'\n")
+                sys.stderr.flush()
+                # It's important that we've flushed stderr since our output may be
+                # interrupted by deptrace package installation at this point.
+                os.path.isfile(
+                    '/usr/lib/' + _multiarch + '/qt5/mkspecs/modules/qt_lib_' +
+                    module + '.pri')
+
+p = subprocess.Popen(
+        qmake_argv,
+        executable=qmake_executable,
+        stderr=subprocess.PIPE,
+        stdout=subprocess.PIPE)
+
+p_stdout, p_stderr = p.communicate()
+process_output(p_stdout, sys.stdout)
+process_output(p_stderr, sys.stderr)
+
+if p.returncode != 0:
+    sys.stderr.write("\nqmake-wrapper: second (final) run\n")
+    sys.stderr.flush()
+    subprocess.Popen(qmake_argv, executable=qmake_executable).wait()

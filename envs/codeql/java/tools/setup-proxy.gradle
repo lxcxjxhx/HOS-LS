@@ -1,0 +1,34 @@
+initscript {
+  String proxyHost = System.getenv("CODEQL_PROXY_HOST")
+  String proxyPort = System.getenv("CODEQL_PROXY_PORT")
+  String proxyUser = System.getenv("CODEQL_PROXY_USER")
+  String proxyPassword = System.getenv("CODEQL_PROXY_PASSWORD")
+  if (proxyHost != null && proxyPort != null) {
+    System.setProperty("http.proxyHost", proxyHost)
+    System.setProperty("http.proxyPort", proxyPort)
+    System.setProperty("https.proxyHost", proxyHost)
+    System.setProperty("https.proxyPort", proxyPort)
+    if (proxyUser != null && proxyPassword != null) {
+      System.setProperty("http.proxyUser", proxyUser)
+      System.setProperty("http.proxyPassword", proxyPassword)
+      System.setProperty("https.proxyUser", proxyUser)
+      System.setProperty("https.proxyPassword", proxyPassword)
+    }
+  }
+}
+
+allprojects {
+  repositories {
+    def proxyUrls = System.getenv("CODEQL_PROXY_URLS")
+    if (proxyUrls && !proxyUrls.isEmpty()) {
+      def parsedJson = new groovy.json.JsonSlurper().parseText(proxyUrls)
+      parsedJson.each { config ->
+        if (config.type == "maven_repository") {
+          maven {
+            url = uri(config.url)
+          }
+        }
+      }
+    }
+  }
+}

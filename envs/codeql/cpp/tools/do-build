@@ -1,0 +1,44 @@
+#!/bin/bash -eu
+
+set -o pipefail
+
+. "$AUTOBUILD_ROOT/lib/build.sh"
+
+if [[ -L _codeql_detected_source_root ]]; then
+  cd "$(readlink _codeql_detected_source_root)"
+fi
+
+if [[ -d _codeql_build_dir ]]; then
+  pushd _codeql_build_dir
+else
+  pushd .
+fi
+
+if [ -x "$(command -v nproc)" ]; then
+  JOBS="-j $(nproc)"
+else
+  JOBS="-j 2"
+fi
+
+# Try multi-threaded build first as it's likely to be faster, but fall back to single-threaded as
+# it's more robust (e.g. if build dependencies aren't complete).
+[[ -f SConstruct ]] && try_running scons $JOBS && exit 0
+[[ -f SConstruct ]] && try_running scons && exit 0
+[[ -f wscript && -x waf ]] && try_running ./waf && exit 0
+[[ -f Makefile || -f makefile || -f GNUmakefile ]] && try_running make $JOBS && exit 0
+[[ -f Makefile || -f makefile || -f GNUmakefile ]] && try_running make && exit 0
+[[ -f build.ninja ]] && try_running ninja && exit 0
+
+popd
+
+for f in build build.sh; do
+  [[ -x $f && -f $f ]] && try_running ./$f && exit 0
+done
+
+[[ -f setup.py ]] && try_running python setup.py build && exit 0
+
+[[ -f package-lock.json ]] && try_running npm install . && exit 0
+
+[[ -n "$(find . -name '*.vcxproj' | head -1)" ]] && emit_diagnostics expected-windows
+
+tried_everything

@@ -1,0 +1,100 @@
+name: "cpp"
+aliases:
+  - c-cpp
+  - c
+  - c++
+  - c-c++
+display_name: "C/C++"
+version: 1.22.1
+column_kind: "utf8"
+overlay_support_version: 20250626
+build_modes:
+  - autobuild
+  - manual
+  - none
+default_queries:
+  - codeql/cpp-queries
+file_coverage_languages:
+  - name: c
+    display_name: C
+    scc_languages:
+      - C
+      - C Header
+  - name: cpp
+    display_name: C++
+    scc_languages:
+      - C++
+      - C++ Header
+github_api_languages:
+  - C
+  - C++
+scc_languages:
+  - C
+  - C Header
+  - C++
+  - C++ Header
+file_types:
+  - name: c
+    display_name: C sources
+    extensions:
+      - .c
+      - .h
+  - name: cpp
+    display_name: C++ sources
+    extensions:
+      - .cc
+      - .cpp
+      - .cxx
+      - .hh
+      - .hpp
+      - .hxx
+legacy_qltest_extraction: true
+options:
+  trap:
+    title: TRAP options
+    description: Options about how the extractor handles TRAP files
+    type: object
+    visibility: 3
+    properties:
+      cache:
+        title: TRAP cache options
+        description: Options about how the extractor handles its TRAP cache
+        type: object
+        properties:
+          dir:
+            title: TRAP cache directory
+            description: The directory of the TRAP cache to use
+            type: string
+          bound:
+            title: TRAP cache bound
+            description: A soft limit (in MB) on the size of the TRAP cache
+            type: string
+            pattern: "[0-9]+"
+          write:
+            title: TRAP cache writeable
+            description: Whether to write to the TRAP cache as well as reading it
+            type: string
+            pattern: "(true|TRUE|false|FALSE)"
+  scale_timeouts:
+    title: Value to scale compiler introspection timeouts with
+    description: >
+      The extractor attempts to determine what compiler the source code being extracted
+      is compiled with. To this end the extractor makes additional calls to the compiler,
+      some of which are expected to return within a certain fixed time (either 10s or 15s).
+      On some systems that are under high load this time might be too short, and can be
+      scaled up using this option.
+    type: string
+    pattern: "[0-9]+"
+  log_verbosity:
+    title: Verbosity of the extractor logging
+    description: >
+      Set the verbosity of the extractor logging to 'quiet' (0), 'normal' (1), 'chatty' (2),
+      or 'noisy' (3). The default is 'normal'.
+    type: string
+    pattern: "[0-3]"
+  frontend_options:
+    title: C/C++ extractor frontend options
+    visibility: 3
+    description: >
+      Set additional options that should be passed to the C/C++ extractor frontend.
+    type: array

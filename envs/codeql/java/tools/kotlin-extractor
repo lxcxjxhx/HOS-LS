@@ -1,0 +1,141 @@
+#!/usr/bin/python3
+
+import os
+import platform
+import re
+import shutil
+import subprocess
+import sys
+import tempfile
+
+# This wrapper script is used in the Kotlin extractor tests.
+# It calls kotlinc and sets up its options to run the extraction.
+
+# The content should be kept in sync with com.semmle.extractor.java.interceptors.KotlinInterceptor.
+
+print('Kotlin extractor wrapper started')
+sys.stdout.flush()
+
+debug = False
+earlyExit = True
+javaHome = None
+
+args = sys.argv[1:]
+while args != []:
+    arg = args[0]
+    if arg == '--':
+        args.pop(0)
+        break
+    elif arg == '--java-home':
+        args.pop(0)
+        javaHome = args.pop(0)
+    elif arg == '--early-exit':
+        args.pop(0)
+        earlyExit = True
+    elif arg == '--no-early-exit':
+        args.pop(0)
+        earlyExit = False
+    elif arg == '--debug':
+        args.pop(0)
+        debug = True
+    else:
+        break
+
+for arg in args:
+    if '-Xplugin' in arg and 'codeql-extractor-kotlin' in arg:
+        print('Nested Kotlin extractor intercepted; exiting')
+        sys.exit(0)
+
+my_directory = os.path.dirname(os.path.realpath(__file__))
+
+java_root = os.environ.get('CODEQL_EXTRACTOR_JAVA_ROOT', '')
+if java_root == '':
+    java_root = os.path.dirname(my_directory)
+
+trap_root = os.environ.get('CODEQL_EXTRACTOR_JAVA_TRAP_DIR', '')
+if trap_root == '':
+    # This default should be kept in sync with KotlinExtractorExtension.kt
+    trap_root = 'kotlin-extractor/trap'
+
+defaultKotlinDependencyVersion = subprocess.check_output([
+    sys.executable,
+    f"{java_root}/tools/pick-kotlin-version.py",
+    f"@{java_root}/tools/kotlin-versions.list",
+], text=True).strip()
+
+kotlin_extractor_jar = java_root + '/tools/codeql-extractor-kotlin-standalone-' + defaultKotlinDependencyVersion + '.jar'
+if not os.path.exists(kotlin_extractor_jar):
+    raise Exception("Don't know where to find the Kotlin extractor jar (tried " + kotlin_extractor_jar + ")")
+
+simple_arg_re = re.compile('^[-a-zA-Z0-9_./:][-a-zA-Z0-9_.+/:=]*$')
+
+def write_list(tf, name, xs):
+    tf.write('// ' + name.replace('\n', '\n//     ') + ':')
+    for x in xs:
+        if not simple_arg_re.match(x):
+            x = "'" + x.replace("'", "'\\''") + "'"
+        tf.write(' ' + x.replace('\n', '\n//     '))
+    tf.write('\n')
+
+def trap_string(str):
+    return '"' + str.replace('"', '""') + '"'
+
+cwd = os.getcwd()
+
+invocation_trap_dir = trap_root + '/invocations'
+os.makedirs(invocation_trap_dir, exist_ok=True)
+tf = tempfile.NamedTemporaryFile(mode='w', delete=False, dir=invocation_trap_dir, prefix='kotlin.', suffix='.trap')
+
+print('Kotlin extractor for ' + tf.name)
+sys.stdout.flush()
+
+if javaHome is not None:
+    os.environ['JAVA_HOME'] = javaHome
+kotlinc_cmd = shutil.which('kotlinc')
+if kotlinc_cmd is None:
+    raise Exception('Cannot find kotlinc')
+extractor_args = [kotlinc_cmd]
+if debug:
+    # This assumes JDK 9 or later
+    extractor_args.append('-J-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=*:5005')
+extractor_args.extend(args)
+extractor_args.append('-Xplugin=' + kotlin_extractor_jar)
+extractor_args.append('-P')
+extractor_args.append('plugin:kotlin-extractor:invocationTrapFile=' + tf.name)
+extractor_args.append('-P')
+extractor_args.append('plugin:kotlin-extractor:checkTrapIdentical=true')
+if earlyExit:
+    extractor_args.append('-P')
+    extractor_args.append('plugin:kotlin-extractor:exitAfterExtraction=true')
+
+write_list(tf, 'Invocation of ' + sys.executable, sys.argv)
+tf.write('// Working directory: ')
+tf.write(cwd.replace('\n', '\n//     '))
+tf.write('\n')
+if javaHome is None:
+    tf.write('// Java home not given\n')
+else:
+    tf.write('// Java home: ')
+    tf.write(javaHome.replace('\n', '\n//     '))
+    tf.write('\n')
+tf.write('// Environment:\n')
+for k, v in os.environ.items():
+    tf.write(('//    ' + k + ' = ' + v).replace('\n', '\n//         '))
+    tf.write('\n')
+
+write_list(tf, 'Arguments', args)
+write_list(tf, 'Extractor command', extractor_args)
+
+tf.write('#compilation = *\n')
+tf.write('compilations(#compilation, 2, ' + trap_string(cwd) + ', ' + trap_string(tf.name) + ')\n')
+for index, arg in enumerate(args):
+    tf.write('compilation_args(#compilation, ' + str(index) + ', ' + trap_string(arg) + ')\n')
+tf.close()
+
+if platform.system() == 'Windows':
+    extractor_cmd = ' '.join(map(lambda x: '"' + x + '"' if '=' in x else x, extractor_args))
+    cp = subprocess.run(extractor_cmd)
+else:
+    cp = subprocess.run(extractor_args)
+print('Kotlin extractor exiting with ' + str(cp.returncode))
+sys.exit(cp.returncode)

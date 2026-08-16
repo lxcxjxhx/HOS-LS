@@ -1,0 +1,81 @@
+name: semgrep-rule-lints
+
+on:
+  pull_request:
+  push:
+    branches: [develop]
+
+jobs:
+  semgrep:
+    runs-on: ubuntu-22.04
+    name: semgrep-rule-lints
+    steps:
+      - uses: actions/checkout@0717577d45739eb3c851188b29f50ed6c0b2194e # v2.8.0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: '3.10'
+      - name: install semgrep
+        run: pip3 install semgrep
+      - name: lints for semgrep rules
+        run: |
+          semgrep \
+            --error \
+            --config yaml/semgrep/duplicate-id.yaml \
+            --config yaml/semgrep/duplicate-pattern.yaml \
+            --config yaml/semgrep/unsatisfiable.yaml \
+            --config yaml/semgrep/empty-message.yaml \
+            --config yaml/semgrep/missing-message-field.yaml \
+            --config yaml/semgrep/missing-language-field.yaml \
+            --config yaml/semgrep/metadata-confidence.yaml \
+            --config yaml/semgrep/metadata-likelihood.yaml \
+            --config yaml/semgrep/metadata-impact.yaml \
+            --config yaml/semgrep/metadata-subcategory.yaml \
+            --config yaml/semgrep/metadata-confidence-incorrect-value.yaml \
+            --config yaml/semgrep/metadata-likelihood-incorrect-value.yaml \
+            --config yaml/semgrep/metadata-impact-incorrect-value.yaml \
+            --config yaml/semgrep/metadata-subcategory-incorrect-value.yaml \
+            --config yaml/semgrep/metadata-incorrect-option.yaml \
+            --config yaml/semgrep/metadata-technology.yaml \
+            --config yaml/semgrep/metadata-category.yaml \
+            --config yaml/semgrep/multi-line-message.yaml \
+            --config yaml/semgrep/message-whitespace.yaml \
+            --config yaml/semgrep/metadata-deepsemgrep.yaml \
+            --config yaml/semgrep/slow-pattern-top-ellipsis.yaml \
+            --config yaml/semgrep/rule-missing-deconstructed-value.yaml \
+            --exclude *.test.yaml \
+            --exclude contrib/ \
+            --exclude stats/ \
+            --exclude .github/ \
+            --exclude yaml/semgrep/
+
+  semgrep-changed-files:
+    runs-on: ubuntu-22.04
+    name: semgrep-rules-on-changed-files
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@0717577d45739eb3c851188b29f50ed6c0b2194e # v2.8.0
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: '3.10'
+      - name: install semgrep
+        run: pip3 install semgrep
+      - name: Get changed files
+        id: changed-files
+        run: |
+          echo "CHANGED_FILES=$(git diff --name-only --diff-filter=ACMRT origin/${{ github.base_ref }} ${{ github.sha }} | grep -E "\.ya?ml$" | grep -v "\.test\.ya?ml$" | grep -v "^contrib/" | grep -v "^stats/" | grep -v "^yaml/semgrep/" | tr '\n' ' ')" >> $GITHUB_ENV
+      - name: Run strict lints on changed files only
+        if: env.CHANGED_FILES != ''
+        run: |
+          echo "Running stricter lints on changed files: ${{ env.CHANGED_FILES }}"
+          # Add stricter lints here that are hard to enforce on existing rules
+          semgrep \
+            --error \
+            --config yaml/semgrep/metadata-cwe-prohibited-or-discouraged.yaml \
+            --exclude .github/ \
+            --exclude *.test.yaml \
+            --exclude contrib/ \
+            --exclude stats/ \
+            --exclude yaml/semgrep/ \
+            ${{ env.CHANGED_FILES }}

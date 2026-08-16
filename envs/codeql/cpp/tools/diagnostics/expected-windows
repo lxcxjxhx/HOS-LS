@@ -1,0 +1,8 @@
+SOURCE_ID=cpp/autobuilder/expected-windows
+SOURCE_NAME="Incompatible operating system (expected Windows)"
+SEVERITY=error
+MARKDOWN_MESSAGE="A Visual C++ project was detected.
+
+[Change the action runner][1] to a Windows one.
+
+[1]: https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idruns-on"

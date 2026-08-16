@@ -1,0 +1,15 @@
+name: Deploy to semgrep.dev
+
+on:
+  push:
+    branches:
+    - release
+
+jobs:
+  do-update:
+    if: github.repository == 'semgrep/semgrep-rules'
+    name: Update semgrep.dev
+    runs-on: ubuntu-latest
+    steps:
+    - name: update semgrep.dev
+      run: curl --fail -X POST -L https://semgrep.dev/api/admin/update-registry?rule_type=sast

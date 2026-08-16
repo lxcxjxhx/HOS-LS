@@ -1,0 +1,80 @@
+name: "java"
+aliases:
+  - java-kotlin
+  - kotlin
+display_name: "Java/Kotlin"
+version: 1.22.1
+column_kind: utf16
+build_modes:
+  - autobuild
+  - manual
+  - none
+default_queries:
+  - codeql/java-queries
+file_coverage_languages:
+  - name: java
+    display_name: Java
+    scc_languages:
+      - Java
+  - name: kotlin
+    display_name: Kotlin
+    scc_languages:
+      - Kotlin
+github_api_languages:
+  - Java
+  - Kotlin
+scc_languages:
+  - Java
+  - Kotlin
+file_types:
+  - name: java
+    display_name: Java sources
+    extensions:
+      - .java
+  - name: kotlin
+    display_name: Kotlin sources
+    extensions:
+      - .kt
+legacy_qltest_extraction: true
+overlay_support_version: 20250626
+options:
+  exclude:
+    title: A glob excluding files from analysis.
+    description: >
+      A glob indicating what files to exclude from the analysis.
+      This accepts glob patterns that are supported by Java's 'getPathMatcher' implementation.
+    type: string
+  add_prefer_source:
+    title: Whether to always prefer source files over class files.
+    description: >
+      A value indicating whether source files should be preferred over class files.
+      If set to 'true', the extraction adds '-Xprefer:source' to the javac command line.
+      If set to 'false', the extraction uses the default javac behavior ('-Xprefer:newer').
+      The default is 'true'.
+    type: string
+    pattern: "^(false|true)$"
+  buildless:
+    title: Whether to use buildless (standalone) extraction (experimental).
+    description: >
+      A value indicating, which type of extraction the autobuilder should perform.
+      If 'true', then the standalone extractor will be used, otherwise tracing extraction
+      will be performed.
+      The default is 'false'.
+      Note that buildless extraction will generally yield less accurate analysis results,
+      and should only be used in cases where it is not possible to build
+      the code (for example if it uses inaccessible dependencies).
+    type: string
+    pattern: "^(false|true)$"
+  buildless_dependency_dir:
+    title: The path where buildless (standalone) extraction should keep dependencies.
+    description: >
+      If set, the buildless (standalone) extractor will store dependencies in this directory.
+    type: string
+  minimize_dependency_jars:
+    title: Whether to rewrite and minimize downloaded JAR dependencies (experimental).
+    description: >
+      If 'true', JAR dependencies downloaded during extraction will be
+      rewritten to remove unneeded data, such as method bodies. The default is
+      'false'.
+    type: string
+    pattern: "^(false|true)$"

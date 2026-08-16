@@ -1,0 +1,301 @@
+#!/usr/bin/perl
+use warnings;
+use strict;
+use Cwd;
+
+# Bypass the wrapper if CMake seems to have run already in this directory or if
+# we are given an option to do something other than configuring the build.
+if (-e 'CMakeCache.txt' or
+    grep m[^(--build$
+            |-E
+            |-P
+            |--find-package$
+            |--graphviz$
+            |--system-information$
+            |-N
+            |-L
+            |-U
+            |/V|--version$|-version$
+            |-h|-H|-usage|--help|-help # deliberately no `$` here
+            )]x, @ARGV)
+{
+    exec "cmake", @ARGV or die;
+}
+
+print "cmake-wrapper: invoked with args @ARGV\n";
+print "               in directory ", getcwd, "\n";
+
+# https://cmake.org/cmake/help/v3.5/command/find_library.html
+my $FIND_LIBRARY_KW = [qw(
+    NAMES NAMES_PER_DIR HINTS ENV PATHS ENV PATH_SUFFIXES DOC NO_DEFAULT_PATH
+    NO_CMAKE_ENVIRONMENT_PATH NO_CMAKE_PATH NO_SYSTEM_ENVIRONMENT_PATH
+    NO_CMAKE_SYSTEM_PATH CMAKE_FIND_ROOT_PATH_BOTH ONLY_CMAKE_FIND_ROOT_PATH
+    NO_CMAKE_FIND_ROOT_PATH
+)];
+
+# Standard search path for find_library. These work well with Ubuntu.
+my @LIB_PATHS = qw(
+    /usr/lib
+    /usr/lib/x86_64-linux-gnu
+);
+
+# This global var keeps track of all directories where we might trigger an
+# installation of a library file with find_library.
+my %all_lib_paths_seen = map { $_ => 1 } @LIB_PATHS;
+
+$| = 1; # disable stdout buffering
+
+# Parameters:
+#   A CMake argument string, followed by a list ref of keywords.
+# Returns:
+#   A hash that maps keywords to lists of arguments, where the special key "",
+#   which is always present, gives the arguments that came before the first
+#   keyword.
+# Example:
+#   parse_command_with_keywords(
+#       "z NAMES_PER_DIR HINTS /usr/lib/x86_64-linux-gnu/hdf5/serial",
+#       [qw(NAMES NAMES_PER_DIR HINTS PATHS)]
+#   )
+#   returns
+#   ( '' => ['z'],
+#     HINTS => ['/usr/lib/x86_64-linux-gnu/hdf5/serial'],
+#     NAMES_PER_DIR => [] )
+sub parse_command_with_keywords {
+    # The input text has been pretty-printed by CMake, so it's in a somewhat
+    # canonical form with no tabs, newlines, etc. even if such characters were
+    # present in the source. Lists that were created programmatically, like
+    # with CMake's APPEND command, will have elements separated by semicolons.
+    my @words = split /[ ;]+/, $_[0];
+    my %is_keyword = map { $_ => 1 } @{$_[1]};
+
+    my %result = ("" => []);
+
+    my $current_kw = "";
+    for my $word (@words) {
+        if ($is_keyword{$word}) {
+            $current_kw = $word;
+            $result{$current_kw} ||= [];
+        } else {
+            push @{$result{$current_kw}}, $word;
+        }
+    }
+    return %result;
+}
+
+# Returns undef or the lower-cased package name
+sub parse_find_package {
+    $_[0] =~ /^([^\s]+)/ or return;
+    return lc $1;
+}
+
+# Returns a list of candidate files (full paths)
+sub parse_find_library {
+    my %parsed = parse_command_with_keywords($_[0], $FIND_LIBRARY_KW);
+    my @positional = @{$parsed{""}};
+    shift @positional; # first arg is a variable name
+
+    my @names = (@positional,
+                 @{$parsed{NAMES} || []});
+
+    my @paths;
+    push @paths, grep m#/#, @{$parsed{HINTS} || []};
+    push @paths, @LIB_PATHS unless $parsed{NO_DEFAULT_PATH};
+    push @paths, grep m#/#, @{$parsed{PATHS} || []};
+
+    my @path_suffixes = (".",
+                         @{$parsed{PATH_SUFFIXES} || []});
+
+    my @results;
+    for my $path_prefix (@paths) {
+        for my $path_suffix (@path_suffixes) {
+            my $path = "$path_prefix/$path_suffix";
+            $path =~ s#/\.$##;
+            $all_lib_paths_seen{$path} = 1;
+            for my $name (@names) {
+                # CMake will add platform-specific prefixes/suffixes to the
+                # library name if needed. This regex does not accurately mirror
+                # what CMake does but should work in practice.
+                if ($name =~ /^lib.*\.so/) {
+                    push @results, "$path/$name";
+                } else {
+                    push @results, "$path/lib$name.so";
+                }
+            }
+        }
+    }
+    return @results;
+}
+
+# XXX invoke these unit tests with `--unit-test`
+if (@ARGV > 0 and $ARGV[0] eq "--unit-test") {
+    my $has_failed = 0;
+    @LIB_PATHS = qw(/1 /2); # simple predictable names for test
+
+    use Data::Dumper;
+    sub do_test {
+        my ($input, @expected) = @_;
+        @expected = sort { $a cmp $b } @expected;
+        my @output = sort { $a cmp $b } parse_find_library($input);
+        if (Dumper(\@output) eq Dumper(\@expected)) {
+            print "ok: $input\n";
+        } else {
+            $has_failed = 1;
+            printf "FAIL: %s\nOutput: %sExpected: %s",
+                $input, Dumper(\@output), Dumper(\@expected);
+        }
+    }
+
+    do_test("X GL", qw(/1/libGL.so /2/libGL.so));
+    do_test("X PATHS /lib64 NAMES GL", qw(/lib64/libGL.so /1/libGL.so /2/libGL.so));
+    do_test("X GL PATHS /lib64", qw(/lib64/libGL.so /1/libGL.so /2/libGL.so));
+
+    # From https://github.com/fogleman/Craft
+    do_test("OPENGL_gl_LIBRARY NAMES GL MesaGL PATHS /opt/graphics/OpenGL/lib /usr/openwin/lib /usr/shlib /usr/X11R6/lib",
+        '/1/libGL.so',
+        '/1/libMesaGL.so',
+        '/2/libGL.so',
+        '/2/libMesaGL.so',
+        '/opt/graphics/OpenGL/lib/libGL.so',
+        '/opt/graphics/OpenGL/lib/libMesaGL.so',
+        '/usr/X11R6/lib/libGL.so',
+        '/usr/X11R6/lib/libMesaGL.so',
+        '/usr/openwin/lib/libGL.so',
+        '/usr/openwin/lib/libMesaGL.so',
+        '/usr/shlib/libGL.so',
+        '/usr/shlib/libMesaGL.so'
+    );
+
+    do_test("OPENGL_glu_LIBRARY NAMES GLU MesaGLU PATHS OPENGL_gl_LIBRARY-NOTFOUND /opt/graphics/OpenGL/lib /usr/openwin/lib /usr/shlib /usr/X11R6/lib",
+        '/1/libGLU.so',
+        '/1/libMesaGLU.so',
+        '/2/libGLU.so',
+        '/2/libMesaGLU.so',
+        '/opt/graphics/OpenGL/lib/libGLU.so',
+        '/opt/graphics/OpenGL/lib/libMesaGLU.so',
+        '/usr/X11R6/lib/libGLU.so',
+        '/usr/X11R6/lib/libMesaGLU.so',
+        '/usr/openwin/lib/libGLU.so',
+        '/usr/openwin/lib/libMesaGLU.so',
+        '/usr/shlib/libGLU.so',
+        '/usr/shlib/libMesaGLU.so',
+    );
+
+    # From https://github.com/conradsnicta/armadillo-code
+    do_test("HDF5_C_LIBRARY_hdf5 NAMES  hdf5 NAMES_PER_DIR HINTS /usr/lib/x86_64-linux-gnu/hdf5/serial",
+        '/1/libhdf5.so',
+        '/2/libhdf5.so',
+        '/usr/lib/x86_64-linux-gnu/hdf5/serial/libhdf5.so'
+    );
+
+    # From https://github.com/Gnucash/gnucash
+    do_test("LIBDBI_DRIVERS_DIR NAMES dbdmysql dbdpgsql dbdsqlite3 NAMES_PER_DIR PATH_SUFFIXES dbd libdbi-drivers/dbd HINTS LIBDBI_LIBRARY PATHS GNC_DBD_DIR DOC Libdbi Drivers Directory",
+        '/1/libdbdmysql.so',
+        '/1/dbd/libdbdmysql.so',
+        '/1/libdbi-drivers/dbd/libdbdmysql.so',
+        '/2/libdbdmysql.so',
+        '/2/dbd/libdbdmysql.so',
+        '/2/libdbi-drivers/dbd/libdbdmysql.so',
+        '/1/libdbdpgsql.so',
+        '/1/dbd/libdbdpgsql.so',
+        '/1/libdbi-drivers/dbd/libdbdpgsql.so',
+        '/2/libdbdpgsql.so',
+        '/2/dbd/libdbdpgsql.so',
+        '/2/libdbi-drivers/dbd/libdbdpgsql.so',
+        '/1/libdbdsqlite3.so',
+        '/1/dbd/libdbdsqlite3.so',
+        '/1/libdbi-drivers/dbd/libdbdsqlite3.so',
+        '/2/libdbdsqlite3.so',
+        '/2/dbd/libdbdsqlite3.so',
+        '/2/libdbi-drivers/dbd/libdbdsqlite3.so',
+    );
+
+    # From https://github.com/xmidt-org/xmidt-agent
+    do_test('CURL_LIBRARY_DIR NAMES libcurl.so PATHS ./build PATH_SUFFIXES lib lib64 NO_DEFAULT_PATH',
+        './build/lib/libcurl.so',
+        './build/lib64/libcurl.so',
+        './build/libcurl.so',
+    );
+
+    exit $has_failed;
+}
+
+# lower-case package name => list of .cmake files
+my %cmake_config_files;
+{
+    open my $db, "<", "$ENV{CODEQL_DEPTRACE_CMAKE_CONFIGS}" or die;
+    while (<$db>) {
+        if (m#(.*/([^/]+)(?:Config|-config)\.cmake)$#) {
+            my ($file, $package) = ($1, $2);
+            push @{$cmake_config_files{lc $package}}, $file;
+        }
+    }
+}
+
+sub list_packages {
+    open my $dpkg_query, "-|",
+        qw(dpkg-query --show --showformat ${binary:Package}\n) or die;
+    my @packages = <$dpkg_query>;
+    close $dpkg_query;
+    return @packages;
+}
+
+# This map keeps track of all the Debian packages we have observed to be
+# installed on the system at some point. Eventually this map stops growing,
+# which means we should stop iterating.
+my %packages_seen = map { $_ => 1 } list_packages();
+
+# Iterate this loop as long as new packages are getting installed. Because we
+# are reacting to the debug output of CMake, we're always one step behind it so
+# it will likely fail before we can install the packages it's looking for. It
+# might also succeed if the packages are optional, in which case we also want
+# to iterate the loop again to ensure it picks up the optional packages.
+for my $iteration (1 .. 40) { # limit max iterations
+    print "cmake-wrapper: Running cmake, capturing its output...\n";
+    my $child_pid = open(my $fh, "-|") // die;
+    if ($child_pid == 0) {
+        open STDERR, ">&", \*STDOUT or die; # 2>&1
+        exec "cmake", "--trace-expand", @ARGV or die;
+    }
+
+    while (<$fh>) {
+        print ".";
+        if (m[^/.*?\(\d+\):  find_library\(\s*(.*?)\s*\)]i) {
+            print "\ncmake-wrapper: find_library($1)\n";
+            for my $file (parse_find_library($1)) {
+                print "cmake-wrapper: probing for $file\n";
+                -e $file;
+            }
+
+        } elsif (m[^/.*?\(\d+\):  find_package\(\s*(.*?)\s*\)]i) {
+            print "\ncmake-wrapper: find_package($1)\n";
+            if (my $package = parse_find_package($1)) {
+                print "cmake-wrapper: lowercase package: $package\n";
+                for my $file (@{$cmake_config_files{$package}}) {
+                    print "cmake-wrapper: probing for $file\n";
+                    -e $file;
+                }
+            }
+        }
+    }
+    print "\n";
+
+    close $fh;
+    unlink "CMakeCache.txt";
+
+    my $new_packages = 0;
+    for my $package (list_packages()) {
+        if (not $packages_seen{$package}) {
+            $packages_seen{$package} = 1;
+            $new_packages++;
+        }
+    }
+
+    print "Iteration $iteration installed $new_packages new packages\n";
+    last if $new_packages == 0;
+}
+
+# Do a final run of CMake so the user can see its non-trace output and diagnose
+# any problems there might be, whether it succeeds or not. This is done with
+# CMakeCache.txt deleted since otherwise it does not print the full output.
+print "cmake-wrapper: final run of cmake...\n";
+exec "cmake", @ARGV or die;

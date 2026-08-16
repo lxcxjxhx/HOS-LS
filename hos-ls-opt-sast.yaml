@@ -30,15 +30,18 @@ ai:
   deterministic_promote_enabled: true  # OPT-P1/P3: Agent-3 CONFIRMED + 高危 → 覆盖 Agent-6 保守裁决
   cpg_context_enabled: true       # OPT-P0: 深 CPG 跨文件被调函数注入（预算受限，仓库级收益）
 
-# [OPT-SASTR] SAST 深度前置过滤（CodeQL 为仓库级底座，环境装好自动启用）
-# 本变体 = 硬门控：零命中文件完全跳过 AI（最大 token 节省；召回=过滤层召回）
+# [OPT-SASTR] SAST 深度前置过滤（三级 cascade：semgrep/bandit 快扫 → CodeQL 深扫 → AI 盲区）
+# 本变体与 hos-ls-opt.yaml 同构（cascade 为唯一默认）；保留旧 skip 语义参考
 sast_prefilter:
   enabled: true
-  skip_ai_if_no_hits: true
+  mode: cascade
+  skip_ai_if_no_hits: false
   inject_evidence: true
-  backends: ["codeql", "semgrep", "builtin"]
-  min_severity: medium
+  backends: ["codeql", "semgrep", "bandit"]
+  min_severity: warning
   codeql_db_path: ""
+  codeql_pack_dir: "envs/codeql-packs"
+  semgrep_rules_dir: "envs/semgrep-rules/python"
 
   # DeepSeek API配置
   deepseek:

@@ -1,0 +1,24 @@
+# ruleid: invalid-base-url
+baseURL = "example.com"
+languageCode = "en-us"
+title = "Example"
+theme = "ananke"
+uglyurls = true
+
+MetaDataFormat = "yaml"
+DefaultContentLanguage = "en"
+Paginate = 10
+enableRobotsTXT = true
+
+[menu]
+[[menu.main]]
+identifer = "about"
+name = "About"
+url = "/about.html"
+weight = -110
+
+# ok: invalid-base-url
+baseURL = "http://example.com"
+
+# ok: invalid-base-url
+baseURL = "https://example.com"

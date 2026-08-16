@@ -1,0 +1,6 @@
+SOURCE_ID=cpp/autobuilder/deptrace
+SOURCE_NAME="deptrace was enabled"
+SEVERITY=note
+STATUS_PAGE=false
+CLI_SUMMARY_TABLE=false
+TELEMETRY=true

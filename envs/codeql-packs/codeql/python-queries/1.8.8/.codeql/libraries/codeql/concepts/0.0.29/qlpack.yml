@@ -1,0 +1,13 @@
+---
+library: true
+warnOnImplicitThis: true
+name: codeql/concepts
+version: 0.0.29
+buildMetadata:
+  sha: 44a68d3a47fcbcd6a6a76ec7d1c1b3a1a28b201e
+  cliVersion: 2.26.3
+dependencies:
+  codeql/dataflow: 2.1.11
+  codeql/util: 2.0.42
+groups:
+ - shared

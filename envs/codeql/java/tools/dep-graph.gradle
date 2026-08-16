@@ -1,0 +1,96 @@
+import org.gradle.github.GitHubDependencyGraphPlugin
+import org.gradle.api.Project
+import org.gradle.dependencygraph.util.JacksonJsonSerializer
+import org.gradle.dependencygraph.util.PluginParameters
+import java.nio.file.Paths
+import java.util.concurrent.atomic.AtomicInteger
+
+initscript {
+
+  def repoDir = Paths.get(System.getenv("CODEQL_EXTRACTOR_JAVA_ROOT")).resolve("tools").resolve("depgraph-plugin-maven-repo")
+
+  repositories {
+    maven {
+      url = uri(repoDir)
+    }
+
+    // Make private registries available before the public plugin repo
+    def proxyUrls = System.getenv("CODEQL_PROXY_URLS")
+    if (proxyUrls && !proxyUrls.isEmpty()) {
+      def parsedJson = new groovy.json.JsonSlurper().parseText(proxyUrls)
+      parsedJson.each { config ->
+        if (config.type == "maven_repository") {
+          maven {
+            url = uri(config.url)
+          }
+        }
+      }
+    }
+
+    maven {
+      url = uri("https://plugins.gradle.org/m2/")
+    }
+  }
+  dependencies {
+    classpath("org.gradle:github-dependency-graph-gradle-plugin:1.4.2")
+  }
+}
+
+apply plugin: GitHubDependencyGraphPlugin
+
+// For each resolvable `*Classpath` configuration, records the resolved artifacts and their
+// classifiers/extensions to `<correlator>-configurations-N.json`. The CodeQL Java autobuilder
+// (DependencyGraphConverter in Gradle.java) reads these to order a dependency's primary artifact
+// ahead of secondary ones such as a `-tests` jar when building the classpath.
+class ExportConfigurationArtifacts {
+
+  static final AtomicInteger uniqueFileNumber = new AtomicInteger(1)
+
+  void export(Project project) {
+    // Plain maps rather than typed classes: Gradle instruments script-defined classes, so Jackson would leak `originalClassName`/`contentHash`.
+    def report = project.configurations.findAll { it.canBeResolved && it.name.endsWith("Classpath") }.collectEntries {
+      try {
+        def artifacts = it.resolvedConfiguration.lenientConfiguration.artifacts.collect { it2 ->
+          [
+            group     : it2.moduleVersion.id.group,
+            name      : it2.moduleVersion.id.name,
+            version   : it2.moduleVersion.id.version,
+            classifier: it2.classifier,
+            extension : it2.extension,
+          ]
+        }
+        [(it.name): [artifacts: artifacts, exception: null]]
+      } catch (Exception e) {
+        [(it.name): [artifacts: null, exception: e.toString()]]
+      }
+    }
+    if (!report.isEmpty()) {
+      def pluginParams = new PluginParameters()
+      def outputDir = pluginParams.loadOptional("DEPENDENCY_GRAPH_REPORT_DIR") ?: "."
+      def fileNamePrefix = pluginParams.load("GITHUB_DEPENDENCY_GRAPH_JOB_CORRELATOR", null)
+      def fileNumber = uniqueFileNumber.getAndIncrement()
+      def outputFile = new File(outputDir, "${fileNamePrefix}-configurations-${fileNumber}.json")
+      try {
+        new File(outputDir).mkdirs()
+      } catch (Exception e) {
+      }
+      def reportJson = JacksonJsonSerializer.INSTANCE.serializeToJson(report)
+      outputFile.text = reportJson
+    }
+  }
+}
+
+// The dependency-graph plugin registers `ForceDependencyResolutionPlugin_resolveProjectDependencies`
+// per project; attach the export as a `doLast` on that task.
+gradle.allprojects { project ->
+  project.tasks.matching { it.name == "ForceDependencyResolutionPlugin_resolveProjectDependencies" }.configureEach { task ->
+    // `export` reads `lenientConfiguration` and the live `project`, neither of which is compatible
+    // with the configuration cache, so opt the task out.
+    if (task.metaClass.respondsTo(task, "notCompatibleWithConfigurationCache", String)) {
+      task.notCompatibleWithConfigurationCache("Need to access unresolved artifact information only available via lenientConfiguration")
+    }
+    task.doLast {
+      new ExportConfigurationArtifacts().export(project)
+    }
+  }
+}

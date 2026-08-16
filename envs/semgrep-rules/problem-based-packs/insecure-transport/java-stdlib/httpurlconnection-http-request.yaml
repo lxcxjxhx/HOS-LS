@@ -1,0 +1,45 @@
+rules:
+- id: httpurlconnection-http-request
+  message: >-
+    Detected an HTTP request sent via HttpURLConnection.
+    This could lead to sensitive information
+    being sent over an insecure channel.
+    Instead, it is recommended to send requests over HTTPS.
+  severity: WARNING
+  metadata:
+    likelihood: MEDIUM
+    impact: MEDIUM
+    confidence: MEDIUM
+    category: security
+    cwe: 'CWE-319: Cleartext Transmission of Sensitive Information'
+    owasp: 'A03:2017 - Sensitive Data Exposure'
+    references:
+    - https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/net/URLConnection.html
+    - https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/net/URL.html#openConnection()
+    subcategory:
+    - vuln
+    technology:
+    - java
+    vulnerability: Insecure Transport
+  languages:
+  - java
+  fix-regex:
+    regex: '[Hh][Tt][Tt][Pp]://'
+    replacement: https://
+    count: 1
+  patterns:
+  - pattern: |
+      "=~/[Hh][Tt][Tt][Pp]://.*/"
+  - pattern-either:
+    - pattern-inside: |
+        URL $URL = new URL ("=~/[Hh][Tt][Tt][Pp]://.*/", ...);
+        ...
+        $CON = (HttpURLConnection) $URL.openConnection(...);
+        ...
+        $CON.$FUNC(...);
+    - pattern-inside: |
+        URL $URL = new URL ("=~/[Hh][Tt][Tt][Pp]://.*/", ...);
+        ...
+        $CON = $URL.openConnection(...);
+        ...
+        $CON.$FUNC(...);

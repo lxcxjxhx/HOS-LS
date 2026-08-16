@@ -1,0 +1,66 @@
+/*- Configuration files with key value pairs -*/
+
+configs(
+  unique int id: @config
+);
+
+configNames(
+  unique int id: @configName,
+  int config: @config ref,
+  string name: string ref
+);
+
+configValues(
+  unique int id: @configValue,
+  int config: @config ref,
+  string value: string ref
+);
+
+configLocations(
+  int locatable: @configLocatable ref,
+  int location: @location_default ref
+);
+
+@configLocatable = @config | @configName | @configValue;
+
+/*- Files and folders -*/
+
+/**
+ * The location of an element.
+ * The location spans column `startcolumn` of line `startline` to
+ * column `endcolumn` of line `endline` in file `file`.
+ * For more information, see
+ * [Locations](https://codeql.github.com/docs/writing-codeql-queries/providing-locations-in-codeql-queries/).
+ */
+locations_default(
+  unique int id: @location_default,
+  int file: @file ref,
+  int beginLine: int ref,
+  int beginColumn: int ref,
+  int endLine: int ref,
+  int endColumn: int ref
+);
+
+files(
+  unique int id: @file,
+  string name: string ref
+);
+
+folders(
+  unique int id: @folder,
+  string name: string ref
+);
+
+@container = @file | @folder
+
+containerparent(
+  int parent: @container ref,
+  unique int child: @container ref
+);
+
+/*- Source location prefix -*/
+
+/**
+ * The source location of the snapshot.
+ */
+sourceLocationPrefix(string prefix : string ref);

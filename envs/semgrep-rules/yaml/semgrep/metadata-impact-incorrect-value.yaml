@@ -1,0 +1,32 @@
+rules:
+- id: metadata-impact-incorrect-value
+  message: >-
+    Semgrep rule impact: $VALUE detected, but the value must be LOW, MEDIUM, or HIGH. For more information
+    visit: https://semgrep.dev/docs/contributing/contributing-to-semgrep-rules-repository/
+  severity: WARNING
+  metadata:
+    category: correctness
+    references:
+    - https://semgrep.dev/docs/contributing/contributing-to-semgrep-rules-repository/
+    technology:
+    - semgrep
+  languages:
+  - yaml
+  patterns:
+  - pattern-inside: |
+      rules: 
+        ...
+  - pattern-inside: |
+      metadata: 
+        ...
+        category: security
+        ...
+  - pattern: |
+      impact: $VALUE
+  - pattern-not: |
+      impact: LOW
+  - pattern-not: |
+      impact: MEDIUM
+  - pattern-not: |
+      impact: HIGH
+

@@ -395,29 +395,44 @@ class ToolConfig(BaseModel):
 class SastPrefilterConfig(BaseModel):
     """[OPT-SASTR] SAST 深度前置过滤配置（AI 之前的候选收窄，0 LLM token）。
 
-    后端优先级：codeql（仓库级深度分析底座，环境安装后自动启用）> semgrep（功能探测）>
-    builtin（内置规则引擎，始终可用）。软门控（skip_ai_if_no_hits=False，默认）保留盲区
-    检出；硬门控（=True）零命中文件完全跳过 AI（最大 token 节省，召回=过滤层召回）。
+    mode：
+    - `cascade`（默认，用户指定）：semgrep 快扫 → CodeQL 深扫 → pure-AI 盲区。
+      CodeQL 确认的文件 → 硬 findings（0 AI token）；其余（含盲区 06fdf927/08926a1a 类）→ AI。
+    - `hard-first`：codeql 命中 → 硬 findings；未命中 → AI（同 cascade 的 AI 集合，无 semgrep 层）。
+    - `skip`（废弃）：零命中跳过 AI（丢盲区检出，不推荐）。
+    - `evidence-only`：全部仍走 AI，证据注入 Agent-3。
+    - `off`：关闭。
+    后端：codeql（仓库级底座）> semgrep（快层，社区规则库，环境功能探测）。
     """
 
     enabled: bool = Field(
         default=False,
         description="pure-ai 模式是否启用 SAST 前置过滤（默认关，保持旧行为；评测/生产按需开启）",
     )
+    mode: str = Field(
+        default="cascade",
+        description="cascade / hard-first / skip / evidence-only / off",
+    )
     skip_ai_if_no_hits: bool = Field(
         default=False,
-        description="True=硬门控：零命中文件完全跳过 AI；False=软门控：仍走 AI 早停路径（保留盲区检出）",
+        description="[兼容旧配置] True=硬门控：零命中文件完全跳过 AI；False=软门控",
     )
     inject_evidence: bool = Field(
         default=True,
         description="将 SAST 候选命中注入 Agent-3 证据块（AI 有据验证，提升精度）",
     )
     backends: List[str] = Field(
-        default_factory=lambda: ["codeql", "semgrep", "builtin"],
+        default_factory=lambda: ["codeql", "semgrep"],
         description="启用后端顺序",
     )
-    min_severity: str = Field(default="medium", description="最低保留严重度")
+    min_severity: str = Field(default="warning", description="最低保留严重度")
+    semgrep_rules_dir: str = Field(
+        default="",
+        description="semgrep 本地规则目录（社区规则离线集；留空则用 --config auto）",
+    )
     codeql_db_path: str = Field(default="", description="CodeQL 数据库路径（留空自动建）")
+    codeql_queries: str = Field(default="", description="CodeQL 查询套件路径（留空自动解析）")
+    codeql_pack_dir: str = Field(default="", description="CodeQL 查询包缓存目录（--search-path）")
 
 
 class PriorityWeightsConfig(BaseModel):

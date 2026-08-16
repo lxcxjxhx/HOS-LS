@@ -1,0 +1,34 @@
+rules:
+- id: aws-s3-bucket-object-encrypted-with-cmk
+  patterns:
+  - pattern: |
+      resource "aws_s3_bucket_object" $ANYTHING {
+        ...
+      }
+  - pattern-not-inside: |
+      resource "aws_s3_bucket_object" $ANYTHING {
+        ...
+        kms_key_id = ...
+        ...
+      }
+  message: >-
+    Ensure S3 bucket object is encrypted at rest using KMS CMKs. CMKs gives you control over the encryption
+    key in terms of access and rotation.
+  metadata:
+    category: security
+    technology:
+    - terraform
+    - aws
+    owasp:
+    - A03:2017 - Sensitive Data Exposure
+    cwe:
+    - 'CWE-320: CWE CATEGORY: Key Management Errors'
+    references:
+    - https://owasp.org/Top10/A02_2021-Cryptographic_Failures
+    subcategory:
+    - audit
+    likelihood: LOW
+    impact: LOW
+    confidence: LOW
+  languages: [hcl]
+  severity: WARNING

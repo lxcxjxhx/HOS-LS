@@ -2143,36 +2143,79 @@ class SecurityScanner:
                         f"[bold cyan][TOOL] AI analyzing {len(pending_files)} files...[/bold cyan]"
                     )
 
-                    # [OPT-SASTR] SAST 深度前置过滤：AI 之前先收窄候选（0 LLM token）
+                    # [OPT-SASTR] SAST 深度前置过滤：AI 之前先让硬检测出结果（0 LLM token）
                     sast_filtered_paths: set = set()
                     sast_pipeline_evidence: Dict[str, str] = {}
+                    hard_sast_findings: list = []
                     sast_cfg = getattr(self.config, "sast_prefilter", None)
                     if self.config.pure_ai and sast_cfg and sast_cfg.enabled:
                         try:
                             from src.analyzers.sast_prefilter import SastPrefilter
 
                             sast = SastPrefilter(sast_cfg)
-                            pre = sast.prefilter_batch(
-                                [str(file_info.path) for _, file_info in pending_files]
-                            )
-                            sast_pipeline_evidence = {
-                                str(file_info.path): pre.get(str(file_info.path), {}).get(
-                                    "evidence", ""
-                                )
-                                for _, file_info in pending_files
-                            }
-                            if sast.skip_ai_if_no_hits:
-                                keep = []
-                                for i, file_info in pending_files:
-                                    if pre.get(str(file_info.path), {}).get("hits"):
-                                        keep.append((i, file_info))
-                                    else:
-                                        sast_filtered_paths.add(str(file_info.path))
-                                if len(sast_filtered_paths):
+                            mode = getattr(sast, "mode", "cascade")
+                            paths = [str(file_info.path) for _, file_info in pending_files]
+                            if mode == "cascade" or mode == "hard-first":
+                                # 三级/硬优先：codeql 确认 -> 硬 findings（不耗 AI）；其余 -> AI
+                                src_root = os.path.commonpath(paths) if paths else "."
+                                if mode == "cascade":
+                                    c = sast.cascade(src_root, paths)
+                                else:
+                                    s2 = sast.codeql_hits_for(src_root, paths)
+                                    c = {"s1_by_file": {}, "s2_by_file": s2,
+                                         "hard_files": list(s2.keys()),
+                                         "ai_files": [p for p in paths if p not in s2],
+                                         "note": "hard-first"}
+                                if c.get("hard_files"):
+                                    from src.core.engine import Finding, Location, Severity
+
+                                    for hpath in c["hard_files"]:
+                                        for h in c["s2_by_file"].get(hpath, []):
+                                            sev = Severity.HIGH if str(h.get("severity", "")).lower() in (
+                                                "error", "high", "critical") else Severity.MEDIUM
+                                            hard_sast_findings.append(Finding(
+                                                rule_id=str(h.get("rule", "codeql")),
+                                                rule_name=f"CodeQL {h.get('rule', '')}",
+                                                description=str(h.get("message", ""))[:300],
+                                                severity=sev,
+                                                location=Location(file=hpath, line=int(h.get("line", 0) or 1), column=0),
+                                                confidence=0.9,
+                                                message=str(h.get("message", ""))[:200],
+                                                code_snippet="",
+                                                fix_suggestion="",
+                                                references=[],
+                                                metadata={"source": "codeql", "cwe": h.get("cwe", "")},
+                                            ))
+                                        sast_filtered_paths.add(hpath)
                                     console.print(
-                                        f"[yellow][SAST] 前置过滤跳过 {len(sast_filtered_paths)} 个零命中文件（省 AI token）[/yellow]"
+                                        f"[bold green][SAST] CodeQL 硬检出 {len(c['hard_files'])} 个文件（0 AI token）[/bold green]"
                                     )
-                                pending_files = keep
+                                # 剩余文件进 AI（候选验证 + 盲区）
+                                pending_files = [
+                                    (i, fi) for i, fi in pending_files
+                                    if str(fi.path) not in sast_filtered_paths
+                                ]
+                            else:
+                                # skip / evidence-only：单文件证据 + 旧门控
+                                pre = sast.prefilter_batch(paths)
+                                sast_pipeline_evidence = {
+                                    str(file_info.path): pre.get(str(file_info.path), {}).get(
+                                        "evidence", ""
+                                    )
+                                    for _, file_info in pending_files
+                                }
+                                if mode == "skip":
+                                    keep = []
+                                    for i, file_info in pending_files:
+                                        if pre.get(str(file_info.path), {}).get("hits"):
+                                            keep.append((i, file_info))
+                                        else:
+                                            sast_filtered_paths.add(str(file_info.path))
+                                    if len(sast_filtered_paths):
+                                        console.print(
+                                            f"[yellow][SAST] 前置过滤跳过 {len(sast_filtered_paths)} 个零命中文件（省 AI token）[/yellow]"
+                                        )
+                                    pending_files = keep
                         except Exception as e:
                             logger.debug(f"[SAST] 前置过滤失败，降级为全部 AI 分析: {e}")
 
@@ -2204,7 +2247,7 @@ class SecurityScanner:
                             result = batch_results_map.get(str(file_info.path), [])
                             if str(file_info.path) in sast_filtered_paths:
                                 logger.debug(
-                                    f"[SAST] {Path(file_info.path).name} 零命中，跳过 AI（0 token）"
+                                    f"[SAST] {Path(file_info.path).name} 由硬检出覆盖，跳过 AI（0 token）"
                                 )
                             ai_findings.extend(result)
 
@@ -2258,6 +2301,23 @@ class SecurityScanner:
 
                         # 最终保存状态
                         scan_state.save(str(state_file))
+
+                    # [OPT-SASTR] 硬检出（codeql 确认）findings 并入结果 + 状态落盘（0 AI token）
+                    if hard_sast_findings:
+                        ai_findings.extend(hard_sast_findings)
+                        for hf in hard_sast_findings:
+                            path = getattr(getattr(hf, "location", None), "file", "")
+                            if not path:
+                                continue
+                            try:
+                                self._save_file_result(path, [hf])
+                                fd = hf.to_dict() if hasattr(hf, "to_dict") else hf.__dict__
+                                scan_state.add_completed_file(path, [fd])
+                            except Exception as e:
+                                logger.debug(f"[SAST] 硬检出落盘失败 {path}: {e}")
+                        console.print(
+                            f"[bold green][SAST] 并入 {len(hard_sast_findings)} 条 CodeQL 硬检出（不消耗 AI token）[/bold green]"
+                        )
 
                     # 收集调试日志（从 pure_ai_analyzer 获取）
                     if self.pure_ai_analyzer and hasattr(self.pure_ai_analyzer, "debug_logs"):
