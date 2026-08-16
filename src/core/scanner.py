@@ -2158,6 +2158,8 @@ class SecurityScanner:
                     sast_filtered_paths: set = set()
                     sast_pipeline_evidence: Dict[str, str] = {}
                     hard_sast_findings: list = []
+                    # [OPT-DEDUP] SAST 候选 (file -> 行号集合)，供 AI 结果去重归属
+                    sast_candidate_lines: Dict[str, set] = {}
                     sast_cfg = getattr(self.config, "sast_prefilter", None)
                     if self.config.pure_ai and sast_cfg and sast_cfg.enabled:
                         try:
@@ -2239,6 +2241,15 @@ class SecurityScanner:
                                     (i, fi) for i, fi in pending_files
                                     if str(fi.path) not in sast_filtered_paths
                                 ]
+                                # [OPT-DEDUP] 收集 SAST 候选位置（S1 semgrep/bandit + S2 codeql）
+                                for _sfile, _hits in (c.get("s1_by_file") or {}).items():
+                                    sast_candidate_lines.setdefault(_sfile, set()).update(
+                                        int(h.get("line", 0) or 0) for h in _hits
+                                    )
+                                for _sfile, _hits in (c.get("s2_by_file") or {}).items():
+                                    sast_candidate_lines.setdefault(_sfile, set()).update(
+                                        int(h.get("line", 0) or 0) for h in _hits
+                                    )
                             else:
                                 # skip / evidence-only：单文件证据 + 旧门控
                                 pre = sast.prefilter_batch(paths)
@@ -2364,6 +2375,44 @@ class SecurityScanner:
 
                         # 最终保存状态
                         scan_state.save(str(state_file))
+
+                    # [OPT-DEDUP] SAST 候选经 AI 二次核验的发现：打标归属 SAST 层（AI 只保留新发现）
+                    if sast_candidate_lines and ai_findings:
+                        deduped = 0
+                        _kept: list = []
+                        for _f in ai_findings:
+                            _loc = getattr(_f, "location", None)
+                            _fname = str(getattr(_loc, "file", ""))
+                            _line = int(getattr(_loc, "line", 0) or 0)
+                            _matched = False
+                            if _fname and _line:
+                                for _cfile, _clines in sast_candidate_lines.items():
+                                    if (
+                                        os.path.basename(_cfile) == os.path.basename(_fname)
+                                        or _cfile == _fname
+                                    ) and any(abs(_line - _cl) <= 3 for _cl in _clines):
+                                        _matched = True
+                                        break
+                            if _matched:
+                                try:
+                                    _md = getattr(_f, "metadata", {})
+                                    if isinstance(_md, dict):
+                                        _md["sast_verified"] = True
+                                        _md["sast_source"] = "semgrep/codeql"
+                                    else:
+                                        setattr(_f, "metadata", {"sast_verified": True, "sast_source": "semgrep/codeql"})
+                                except Exception:
+                                    pass
+                                deduped += 1
+                                _kept.append(_f)  # 保留在结果中（归属 SAST 层），供报表区分
+                            else:
+                                _kept.append(_f)
+                        if deduped:
+                            logger.debug(f"[OPT-DEDUP] {deduped} 条 SAST 候选经 AI 核验打标归属 SAST 层")
+                            console.print(
+                                f"[green][OPT-DEDUP] {deduped} 条 SAST 候选经 AI 核验 → 归属 SAST 层（AI 只保留新发现）[/green]"
+                            )
+                        ai_findings = _kept
 
                     # [OPT-SASTR] 硬检出（codeql 确认）findings 并入结果 + 状态落盘（0 AI token）
                     if hard_sast_findings:
