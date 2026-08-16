@@ -435,6 +435,17 @@ class SecurityScanner:
                 pass
             self.current_session = None
 
+    @staticmethod
+    def _content_hash(file_path: str) -> str:
+        """[OPT-CACHE] 文件内容哈希（批量去重用）。"""
+        import hashlib
+
+        try:
+            with open(file_path, "rb") as f:
+                return hashlib.sha256(f.read()).hexdigest()[:16]
+        except Exception:
+            return str(file_path)
+
     def _save_file_result(
         self, file_path: str, vulnerabilities: List[Any], error: Optional[str] = None
     ) -> None:
@@ -2169,7 +2180,40 @@ class SecurityScanner:
                                 if c.get("hard_files"):
                                     from src.core.engine import Finding, Location, Severity
 
+                                    # [OPT-C1] 相关性筛选：硬候选过确定性污点门（M4 InputTracer）
+                                    # 可解释性不足（is_exploitable=False）的 codeql 命中降级回 AI，避免硬层 FP
+                                    hard_keep, demoted = [], []
+                                    try:
+                                        from src.analyzers.input_tracer import InputTracer
+
+                                        tracer = InputTracer(src_root)
+                                    except Exception:
+                                        tracer = None
                                     for hpath in c["hard_files"]:
+                                        hhits = c["s2_by_file"].get(hpath, [])
+                                        if tracer is not None and hhits:
+                                            taint_ok = False
+                                            for h in hhits:
+                                                try:
+                                                    r_ = tracer.trace_controllability(
+                                                        hpath, int(h.get("line", 0) or 0), ""
+                                                    )
+                                                    if getattr(r_, "is_exploitable", False):
+                                                        taint_ok = True
+                                                        break
+                                                except Exception:
+                                                    pass
+                                            if not taint_ok:
+                                                demoted.append(hpath)
+                                                continue
+                                        hard_keep.append(hpath)
+                                    for hpath in demoted:
+                                        sast_filtered_paths.discard(hpath)
+                                    if demoted:
+                                        console.print(
+                                            f"[yellow][SAST] {len(demoted)} 个 codeql 候选未过污点门，降级回 AI 验证[/yellow]"
+                                        )
+                                    for hpath in hard_keep:
                                         for h in c["s2_by_file"].get(hpath, []):
                                             sev = Severity.HIGH if str(h.get("severity", "")).lower() in (
                                                 "error", "high", "critical") else Severity.MEDIUM
@@ -2188,7 +2232,7 @@ class SecurityScanner:
                                             ))
                                         sast_filtered_paths.add(hpath)
                                     console.print(
-                                        f"[bold green][SAST] CodeQL 硬检出 {len(c['hard_files'])} 个文件（0 AI token）[/bold green]"
+                                        f"[bold green][SAST] CodeQL 硬检出 {len(hard_keep)} 个文件（0 AI token）[/bold green]"
                                     )
                                 # 剩余文件进 AI（候选验证 + 盲区）
                                 pending_files = [
@@ -2235,12 +2279,31 @@ class SecurityScanner:
                         ]
                         batch_results_map: Dict[str, list] = {}
                         if ai_pending:
-                            batch_results_list = await self.pure_ai_analyzer.analyze_batch(
-                                [file_info for _, file_info in ai_pending],
+                            # [OPT-CACHE] 批量内容哈希去重：同内容文件只分析一次，结果复用（省 token）
+                            hash_map: Dict[str, list] = {}
+                            try:
+                                for i, file_info in ai_pending:
+                                    h = self._content_hash(str(file_info.path))
+                                    hash_map.setdefault(h, []).append((i, file_info))
+                            except Exception:
+                                hash_map = {f"u{idx}": [(i, fi)] for idx, (i, fi) in enumerate(ai_pending)}
+                            unique_items = [lst[0] for lst in hash_map.values()]
+                            unique_results = await self.pure_ai_analyzer.analyze_batch(
+                                [file_info for _, file_info in unique_items],
                                 max_concurrent=max_concurrent,
                             )
-                            for (_, file_info), result in zip(ai_pending, batch_results_list):
+                            for (_, file_info), result in zip(unique_items, unique_results):
                                 batch_results_map[str(file_info.path)] = result
+                            # 复用：同哈希文件共享结果
+                            if len(hash_map) < len(ai_pending):
+                                for lst in hash_map.values():
+                                    if len(lst) > 1:
+                                        shared = batch_results_map.get(str(lst[0][1].path), [])
+                                        for _, dup in lst[1:]:
+                                            batch_results_map[str(dup.path)] = shared
+                                        logger.debug(
+                                            f"[OPT-CACHE] {len(lst)} 个同内容文件共享一次 AI 分析"
+                                        )
 
                         # 收集结果
                         for idx, (i, file_info) in enumerate(pending_files):

@@ -20,7 +20,7 @@ ai:
   api_key: "sk-8f11abaa800447e898e01a27036f1a9d"  # DeepSeek API Key
   base_url: "https://api.deepseek.com"
   max_tokens: 4096
-  temperature: 0.1
+  temperature: 0.0   # [OPT-DETERMINISM] 0：降低 2→1→0 波动；评测/CI 口径可复现
   timeout: 60
   allow_fallback: false  # true: 允许自动切换到其他provider; false: 禁用回退机制
 

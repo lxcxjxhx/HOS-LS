@@ -854,6 +854,21 @@ class MultiAgentPipeline:
             )
         # [OPT-SASTR] SAST 前置过滤证据（由 scanner 在批量分析前注入）
         self.sast_evidence: Dict[str, str] = {}
+        # [OPT-TRIAGE] per-agent 模型映射（大小模型协同；主实验留空保持同模型口径）
+        self.agent_model_overrides: Dict[str, str] = {}
+        try:
+            tiered = config.get("tiered_architecture") if isinstance(config, dict) else (
+                getattr(config, "ai", {}).get("tiered_architecture") if hasattr(config, "ai") else None
+            )
+            if tiered and isinstance(tiered, dict):
+                self.agent_model_overrides = tiered.get("agent_overrides", {}) or {}
+        except Exception:
+            pass
+        # [OPT-COMPACT] 代码压缩门（默认关）
+        self.compaction_enabled = (
+            config.get("compaction_enabled", False) if isinstance(config, dict)
+            else getattr(getattr(config, "ai", None), "compaction_enabled", False)
+        )
 
         logger.debug(
             f" Pipeline 使用模型: {self.model}, Temperature: {self.temperature}, reject_on_signal_creation: {self.reject_on_signal_creation}"
@@ -2360,13 +2375,34 @@ class MultiAgentPipeline:
         """
         logger.debug(f" 运行Agent 0 (上下文构建) on: {file_path}")
         self.debug_logs.append(f"[DEBUG] 运行Agent 0 (上下文构建) on: {file_path}")
+        # [OPT-COMPACT] 代码压缩：函数骨架摘要（签名+文档首行）注入 function_calls 通道
+        skeleton_summary = ""
+        if getattr(self, "compaction_enabled", False):
+            try:
+                structure = context.get("file_structure") or {}
+                funcs = structure.get("functions") or []
+                lines = []
+                for f in funcs[:30]:
+                    args = ",".join(str(a) for a in (f.get("args") or [])[:6])
+                    doc = str(f.get("docstring") or "").strip().splitlines()
+                    doc1 = doc[0][:60] if doc else ""
+                    lines.append(f"{f.get('name')}({args})  # L{f.get('line')} {doc1}")
+                if lines:
+                    skeleton_summary = "\n".join(["# [函数骨架摘要]"] + lines)
+            except Exception as e:
+                logger.debug(f"[OPT-COMPACT] 骨架构建失败: {e}")
+        function_calls_text = PromptEngine.format_function_calls(
+            context.get("function_calls", [])
+        )
+        if skeleton_summary:
+            function_calls_text = skeleton_summary + "\n" + function_calls_text
         prompt = self.prompt_engine.render_agent_prompt(
             "context_builder",
             file_path=file_path,
             file_content=context["file_content"],
             related_files=PromptEngine.format_related_files(context.get("related_files", [])),
             imports=PromptEngine.format_imports(context.get("imports", [])),
-            function_calls=PromptEngine.format_function_calls(context.get("function_calls", [])),
+            function_calls=function_calls_text,
             detected_language=detected_language,
         )
 
@@ -2754,9 +2790,10 @@ class MultiAgentPipeline:
                     ast_evidence + "\n" + sast_evidence if ast_evidence else sast_evidence
                 )
 
-        # CWE 专项检测指引（M7）
+        # CWE 专项检测指引（M7·[OPT-CWE2] 两阶段：Agent-2 检出风险后才定向注入，≤2 模板）
+        # 不再依赖全局开关：有风险信号即注入（成本 ~1K token/文件，只发生在候选文件上）
         cwe_guidance = ""
-        if getattr(self, "cwe_guidance_enabled", False):
+        if risks and (getattr(self, "cwe_guidance_enabled", False) or len(risks) > 0):
             cwe_guidance = self._build_cwe_guidance(file_content, file_path, detected_language)
 
         prompt = self.prompt_engine.render_agent_prompt(
@@ -3249,8 +3286,14 @@ class MultiAgentPipeline:
 
         for i in range(self.max_retries):
             try:
-                # JSON Guard: 在prompt顶部添加JSON输出强制约束
-                json_guard_prompt = "只输出JSON，否则视为失败\n\n" + prompt
+                # [OPT-CACHE] 版本化固定前缀：DeepSeek 上下文缓存按精确前缀匹配，
+                # 契约变更才升版本号（SYSTEM_PREFIX_V1 → V2 …），日常扫描零改动保命中。
+                json_guard_prompt = (
+                    "只输出JSON，否则视为失败\n\n"
+                    "[SYSTEM-CONTRACT-V1] 输出契约：仅输出符合 schema 的 JSON 对象；"
+                    "禁止 markdown 代码块、解释性文字、多余字段；必须可被 json.loads 解析。\n\n"
+                    + prompt
+                )
 
                 # 结构化输出（不裁剪 max_tokens；输出 token 一律不限制）
                 response_format = None
@@ -3261,7 +3304,7 @@ class MultiAgentPipeline:
                 # 创建AIRequest对象
                 request = AIRequest(
                     prompt=json_guard_prompt,
-                    model=self.model,
+                    model=self.agent_model_overrides.get(agent_name, self.model),
                     temperature=temperature,
                     max_tokens=8192,
                     response_format=response_format,

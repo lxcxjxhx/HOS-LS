@@ -61,6 +61,12 @@ class TieredArchitectureConfig(BaseModel):
         ),
         description="第二层模型配置",
     )
+    agent_overrides: Dict[str, str] = Field(
+        default_factory=dict,
+        description="[OPT-TRIAGE] per-agent 模型映射（如 {'agent_2':'qwen3-flash','agent_3':'deepseek-v4-flash'}）。"
+                    "大小模型协同：轻量 Agent 用便宜/免费模型，深度验证 Agent 用主模型。"
+                    "主实验保持同模型口径（留空）；分诊只进独立成本实验。",
+    )
 
 
 class AIConfig(BaseModel):
@@ -94,6 +100,10 @@ class AIConfig(BaseModel):
     cpg_context_enabled: bool = Field(
         default=False,
         description="[OPT-P0] 深 CPG 上下文注入：解析 import 并注入跨文件被调函数定义（预算受限，仓库级扫描收益最大；函数级样本无收益）",
+    )
+    compaction_enabled: bool = Field(
+        default=False,
+        description="[OPT-COMPACT] 代码压缩：Agent-0 输入注入函数骨架摘要（签名+文档首行），压缩长文件 token；默认关保持基线稳定，实验可开",
     )
     enable_learning: bool = Field(default=True, description="是否启用 AI 学习")
     allow_fallback: bool = Field(default=True, description="当主provider失败时是否允许自动切换到其他provider")
