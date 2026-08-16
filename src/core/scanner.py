@@ -754,6 +754,10 @@ class SecurityScanner:
             f"[bold cyan][TIME] Start time:[/bold cyan] [bold]{time.strftime('%Y-%m-%d %H:%M:%S')}[/bold]"
         )
 
+        # [COST] 运行前消费预估 + API 余额自动检查（纯 AI / AI 模式默认开启，可配置关闭）
+        if not self.config.quiet:
+            self._pre_scan_cost_check(str(target))
+
         # 纯AI模式下确保分析器已初始化
         if self.config.pure_ai and self.pure_ai_analyzer:
             if not self.pure_ai_analyzer.initialized:
@@ -1458,6 +1462,72 @@ class SecurityScanner:
         self._end_session()
 
         return result
+
+    def _pre_scan_cost_check(self, target: str) -> None:
+        """[COST] 运行前消费预估 + API 余额自动检查。
+
+        纯 AI / AI 模式下扫描开始前执行：
+            1. 估算目标文件数与预计 token/费用（基于历史均值或默认均值 × 模型单价）；
+            2. 自动查询 API 账户余额（DeepSeek /user/balance 等），余额过低时告警；
+            3. 任何查询失败均不阻塞扫描（best-effort）。
+        """
+        try:
+            from src.ai.balance import check_balance
+            from src.ai.cost_estimator import get_cost_estimator
+
+            # 余额检查（仅 AI 模式；查询失败/不可用自动跳过）
+            if getattr(self.config.ai, "balance_check_enabled", True):
+                try:
+                    provider = (
+                        self.pure_ai_analyzer.ai_provider
+                        if self.pure_ai_analyzer
+                        else (self.config.ai.provider or "deepseek")
+                    )
+                    info = check_balance(self.config, provider=provider)
+                    if info.available and info.low_balance and not self.config.quiet:
+                        console.print(
+                            f"[bold red]⚠ 账户余额不足（{info.total_balance:.2f} {info.currency}），"
+                            f"低于阈值 {getattr(self.config.ai, 'min_balance_cny', 5.0)} CNY，建议先充值[/bold red]"
+                        )
+                except Exception as exc:  # pragma: no cover - 余额失败不阻塞预估
+                    if self.config.debug:
+                        console.print(f"[dim][DEBUG] 余额检查失败: {exc}[/dim]")
+
+            # 运行前消费预估（默认开启；pure_ai 单文件不重复估算）
+            if getattr(self.config.ai, "cost_estimate_enabled", True) and (
+                self.config.pure_ai or getattr(self.config, "scan_mode", "") == "pure-ai"
+            ):
+                target_path = Path(target)
+                if target_path.is_dir():
+                    from src.utils.file_discovery import FileDiscoveryEngine
+
+                    engine = FileDiscoveryEngine()
+                    files = engine.discover_files(str(target_path))
+                    file_count = len(files)
+                else:
+                    file_count = 1
+
+                if file_count > 0:
+                    provider = (
+                        self.pure_ai_analyzer.ai_provider
+                        if self.pure_ai_analyzer
+                        else (self.config.ai.provider or "deepseek")
+                    )
+                    model = (
+                        self.pure_ai_analyzer.ai_model
+                        if self.pure_ai_analyzer
+                        else self.config.ai.get_model("pure_ai")
+                    )
+                    est = get_cost_estimator().estimate(file_count, provider, model)
+                    console.print(
+                        f"[bold yellow][COST] 预估: {file_count} 文件 × {est.avg_tokens_per_file:,} token/文件 "
+                        f"≈ {est.estimated_total_tokens:,} tokens | "
+                        f"≈ ${est.estimated_total_cost_usd:.4f} (¥{est.estimated_cost_cny:.2f})[/bold yellow]"
+                    )
+                    console.print(f"[dim]  定价来源: {est.pricing_source}[/dim]")
+        except Exception as exc:  # pragma: no cover - 预估/余额检查失败不阻塞扫描
+            if self.config.debug:
+                console.print(f"[dim][DEBUG] 运行前成本检查跳过: {exc}[/dim]")
 
     def scan_sync(self, target: Union[str, Path]) -> ScanResult:
         """执行同步扫描

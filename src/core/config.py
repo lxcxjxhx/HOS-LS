@@ -105,6 +105,18 @@ class AIConfig(BaseModel):
         default=False,
         description="[OPT-COMPACT] 代码压缩：Agent-0 输入注入函数骨架摘要（签名+文档首行），压缩长文件 token；默认关保持基线稳定，实验可开",
     )
+    cost_estimate_enabled: bool = Field(
+        default=True,
+        description="[COST] 扫描开始前显示运行成本预估（文件数 × 每文件 token 均值 × 模型单价）；纯 AI 模式下默认开启",
+    )
+    balance_check_enabled: bool = Field(
+        default=True,
+        description="[COST] 扫描开始前自动查询 API 账户余额，余额低于阈值时告警；查询失败不阻塞扫描",
+    )
+    min_balance_cny: float = Field(
+        default=5.0,
+        description="[COST] 余额告警阈值（人民币），低于该值提示充值",
+    )
     enable_learning: bool = Field(default=True, description="是否启用 AI 学习")
     allow_fallback: bool = Field(default=True, description="当主provider失败时是否允许自动切换到其他provider")
 
