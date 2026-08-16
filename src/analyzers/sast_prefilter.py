@@ -114,11 +114,13 @@ class SastPrefilter:
                     versions = sorted(os.listdir(qp), reverse=True)
                     if versions:
                         candidates.insert(0, os.path.join(qp, versions[0]))
-                        # 优先官方安全套件（已验证可跑，无 @kind 元数据问题）
-                        suite = os.path.join(qp, versions[0], "codeql-suites",
-                                             "python-security-and-quality.qls")
-                        if os.path.exists(suite):
-                            return suite
+                        # 硬层优先 security-only 套件（code-scanning）；
+                        # security-and-quality 混入质量类查询会污染硬检出
+                        for suite_name in ("python-code-scanning.qls",
+                                           "python-security-and-quality.qls"):
+                            suite = os.path.join(qp, versions[0], "codeql-suites", suite_name)
+                            if os.path.exists(suite):
+                                return suite
         for c in candidates:
             if os.path.exists(c):
                 return c

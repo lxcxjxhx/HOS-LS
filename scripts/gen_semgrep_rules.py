@@ -61,17 +61,28 @@ def gen_rules(items):
         "只输出 YAML，不要解释。\n\n" + json.dumps(items, ensure_ascii=False, indent=1)
     )
     body = json.dumps({
-        "model": "deepseek-v4-flash", "temperature": 0.2, "max_tokens": 3000,
+        "model": "deepseek-v4-flash", "temperature": 0.2, "max_tokens": 8192,
         "messages": [{"role": "user", "content": prompt}],
     }).encode()
     req = urllib.request.Request(base + "/chat/completions", data=body,
                                  headers={"Content-Type": "application/json",
                                           "Authorization": f"Bearer {api_key}"})
     try:
-        with urllib.request.urlopen(req, timeout=180) as resp:
+        with urllib.request.urlopen(req, timeout=300) as resp:
             data = json.load(resp)
-        content = data["choices"][0]["message"]["content"]
-        return [content]
+        content = data["choices"][0]["message"].get("content", "")
+        # deepseek-v4-flash 为推理模型：max_tokens 不足会被 reasoning 吃光，content 为空
+        if not content:
+            reasoning = str(data["choices"][0]["message"].get("reasoning_content", ""))[:200]
+            print("LLM content 为空（推理模型吞满 token），reasoning 前 200 字:", reasoning)
+            print("提示：重试时增大 max_tokens 或缩短输入；本调用未计为成功")
+            return []
+        # 去掉 markdown 代码围栏（```yaml ... ```）
+        stripped = content.strip()
+        if stripped.startswith("```"):
+            stripped = re.sub(r"^```[a-zA-Z]*\s*", "", stripped)
+            stripped = re.sub(r"\s*```\s*$", "", stripped)
+        return [stripped]
     except Exception as e:
         print("LLM 调用失败:", str(e)[:200])
         return []
