@@ -1,0 +1,33 @@
+# Running the tests in the repo using `semgrep test` (osemgrep) and
+# the semgrep/semgrep:pro-develop docker image (the bleeding edge!).
+
+name: semgrep-rules-test-develop
+on:
+  pull_request:
+    branches:
+    - develop
+    - release
+  push:
+    branches:
+    - develop
+    - release
+jobs:
+  test-develop:
+    name: rules-test-develop
+    # alt: use directly the semgrep/semgrep:pro-develop container here so we
+    # don't need the calls to 'docker run ...' below
+    runs-on: ubuntu-22.04
+    # TODO: remove the with: path: below to simplify
+    steps:
+    - uses: actions/checkout@0717577d45739eb3c851188b29f50ed6c0b2194e # v2.8.0
+      with:
+        path: semgrep-rules
+    # alt: call 'make validate' but would require 'make' in the docker image
+    # alt: export SEMGREP="docker run --rm -w ... semgrep"
+    #    make -C "$GITHUB_WORKSPACE"/semgrep-rules validate
+    #TODO: this actually currently fails because of errors in stats/ but GHA
+    # still continue, weird
+    - name: run osemgrep validate --pro
+      run: docker run --rm -w /src -v ${GITHUB_WORKSPACE}/semgrep-rules:/src semgrep/semgrep-nightly:develop semgrep validate --pro .
+    - name: run osemgrep test --pro
+      run: docker run --rm -w /src -v ${GITHUB_WORKSPACE}/semgrep-rules:/src semgrep/semgrep-nightly:develop semgrep test --pro .

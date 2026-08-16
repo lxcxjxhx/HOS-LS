@@ -1,0 +1,8 @@
+SOURCE_ID=cpp/autobuilder/expected-ubuntu
+SOURCE_NAME="Incompatible operating system (expected Ubuntu or another Debian-based distribution)"
+SEVERITY=error
+MARKDOWN_MESSAGE="While running \`%s\`, the package manager command \`%s\` was invoked.
+
+[Change the action runner][1] to an Ubuntu one.
+
+[1]: https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idruns-on"

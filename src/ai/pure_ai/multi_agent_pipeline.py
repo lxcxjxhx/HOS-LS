@@ -817,6 +817,7 @@ class MultiAgentPipeline:
             self.request_timeout = config.get("request_timeout", 180)
             self.ast_evidence_enabled = config.get("ast_evidence_enabled", False)
             self.cwe_guidance_enabled = config.get("cwe_guidance_enabled", False)
+            self.deterministic_promote_enabled = config.get("deterministic_promote_enabled", False)
         else:
             self.max_retries = getattr(config, "max_retries", 3)
             self.model = (
@@ -846,6 +847,28 @@ class MultiAgentPipeline:
                 if hasattr(config, "ai")
                 else False
             )
+            self.deterministic_promote_enabled = (
+                getattr(config, "ai", {}).get("deterministic_promote_enabled", False)
+                if hasattr(config, "ai")
+                else False
+            )
+        # [OPT-SASTR] SAST 前置过滤证据（由 scanner 在批量分析前注入）
+        self.sast_evidence: Dict[str, str] = {}
+        # [OPT-TRIAGE] per-agent 模型映射（大小模型协同；主实验留空保持同模型口径）
+        self.agent_model_overrides: Dict[str, str] = {}
+        try:
+            tiered = config.get("tiered_architecture") if isinstance(config, dict) else (
+                getattr(config, "ai", {}).get("tiered_architecture") if hasattr(config, "ai") else None
+            )
+            if tiered and isinstance(tiered, dict):
+                self.agent_model_overrides = tiered.get("agent_overrides", {}) or {}
+        except Exception:
+            pass
+        # [OPT-COMPACT] 代码压缩门（默认关）
+        self.compaction_enabled = (
+            config.get("compaction_enabled", False) if isinstance(config, dict)
+            else getattr(getattr(config, "ai", None), "compaction_enabled", False)
+        )
 
         logger.debug(
             f" Pipeline 使用模型: {self.model}, Temperature: {self.temperature}, reject_on_signal_creation: {self.reject_on_signal_creation}"
@@ -1208,6 +1231,9 @@ class MultiAgentPipeline:
                 )
                 validated_final_decision = self._validate_final_findings(
                     final_decision, context, vulnerability_verification
+                )
+                validated_final_decision = self._deterministic_promote(
+                    validated_final_decision, vulnerability_verification
                 )
                 elapsed = time.time() - start_time
                 self._agent_timings["agent_6"] = elapsed
@@ -2019,6 +2045,92 @@ class MultiAgentPipeline:
 
         return {"final_findings": valid_findings, "summary": summary}
 
+    def _deterministic_promote(
+        self,
+        final_decision: Dict[str, Any],
+        vulnerability_verification: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
+        """[OPT-P1/P3] 确定性升级：验证优先于 LLM 保守裁决。
+
+        规则（全部基于机器可查事实，不引入新的 LLM 判断）：
+        1. 高危/严重（HIGH/CRITICAL）finding，Agent-3 验证决策为 CONFIRMED，
+           但 Agent-6 因"攻击链/数据流未走完"压为 WEAK/REFINED/UNCERTAIN →
+           升级为 CONFIRMED，并记录 deterministic_basis（验证优先于拒绝，与
+           论文 C2 声称「CONFIRMED 优先于 REJECTED」一致）。
+        2. 高危 finding 且 Agent-3 验证决策为 REFINED → 保持 REFINED 但标记
+           requires_human_review=True（不静默丢弃，回收 Sifting-the-Noise 类
+           "被吞真漏洞"）。
+        仅在 deterministic_promote_enabled=True 时生效（可消融）。
+        """
+        if not getattr(self, "deterministic_promote_enabled", False):
+            return final_decision
+        try:
+            findings = final_decision.get("final_findings") or []
+            if not findings or not isinstance(vulnerability_verification, dict):
+                return final_decision
+            vulns = vulnerability_verification.get("vulnerabilities") or []
+            # signal_id -> Agent-3 验证决策
+            verify_map = {}
+            for v in vulns:
+                if not isinstance(v, dict):
+                    continue
+                sid = v.get("signal_id") or ""
+                if sid:
+                    verify_map[sid] = (
+                        v.get("verification_decision") or v.get("signal_state") or "UNKNOWN"
+                    )
+            promoted = 0
+            marked_review = 0
+            for f in findings:
+                if not isinstance(f, dict):
+                    continue
+                severity = str(f.get("severity", "")).upper()
+                if severity not in ("HIGH", "CRITICAL"):
+                    continue
+                status = str(f.get("status", "")).upper()
+                if status in ("CONFIRMED", "REJECTED", "INVALID"):
+                    continue
+                # 收集该 finding 关联的 Agent-3 决策
+                linked = f.get("linked_signals") or []
+                if isinstance(linked, str):
+                    linked = [linked]
+                decisions = [
+                    verify_map.get(str(s), "UNKNOWN")
+                    for s in (linked or [])
+                    if str(s) in verify_map
+                ]
+                if not decisions:
+                    decisions = [
+                        verify_map.get(str(f.get("signal_id", "")), "UNKNOWN")
+                    ]
+                if any(d == "CONFIRMED" for d in decisions):
+                    f["status"] = "CONFIRMED"
+                    f["signal_state"] = "CONFIRMED"
+                    f["promoted_by"] = "deterministic-evidence"
+                    f["deterministic_basis"] = (
+                        "Agent-3 CONFIRMED + HIGH/CRITICAL：验证优先于 Agent-6 保守裁决"
+                    )
+                    f["requires_human_review"] = False
+                    promoted += 1
+                elif any(d == "REFINED" for d in decisions):
+                    f["requires_human_review"] = True
+                    f["review_note"] = "高危信号 Agent-3 已细化但验证链未完整，保留人工复核"
+                    marked_review += 1
+            if promoted or marked_review:
+                logger.info(
+                    f"[OPT-P1/P3] 确定性升级: {promoted} 条 WEAK→CONFIRMED, {marked_review} 条标记人工复核"
+                )
+                self.debug_logs.append(
+                    f"[OPT-P1/P3] 确定性升级: {promoted} 条 WEAK→CONFIRMED, {marked_review} 条标记人工复核"
+                )
+                summary = final_decision.get("summary", {})
+                summary["deterministic_promoted"] = promoted
+                summary["deterministic_marked_review"] = marked_review
+                final_decision["summary"] = summary
+        except Exception as e:
+            logger.debug(f"[OPT-P1/P3] 确定性升级失败: {e}")
+        return final_decision
+
     def _validate_result_consistency(self, result: Dict[str, Any]) -> Dict[str, Any]:
         """验证结果一致性
 
@@ -2234,6 +2346,20 @@ class MultiAgentPipeline:
             logger.debug(f" 命中缓存: {Path(file_path).name} (hash: {content_hash})")
         return cached
 
+    def _slim_json_for_prompt(self, obj: Any, max_len: int = 12000) -> str:
+        """[OPT-TOKEN] 序列化对象并截断到 max_len 字符（保留头部，标注截断）。
+
+        用于 Agent-4/5 输出传入下游 Agent 时压缩 prompt token；
+        截断只影响 prompt 展示，不影响完整结果落盘。
+        """
+        try:
+            s = json.dumps(obj, ensure_ascii=False)
+        except Exception:
+            s = str(obj)[: max_len // 2]
+        if len(s) > max_len:
+            return s[:max_len] + f"\n...[已截断 {len(s) - max_len} 字符，完整数据见上游 Agent 结果]"
+        return s
+
     async def _run_agent_0(
         self, file_path: str, context: Dict[str, Any], detected_language: str = "Unknown"
     ) -> Tuple[Dict[str, Any], Dict[str, int]]:
@@ -2249,13 +2375,34 @@ class MultiAgentPipeline:
         """
         logger.debug(f" 运行Agent 0 (上下文构建) on: {file_path}")
         self.debug_logs.append(f"[DEBUG] 运行Agent 0 (上下文构建) on: {file_path}")
+        # [OPT-COMPACT] 代码压缩：函数骨架摘要（签名+文档首行）注入 function_calls 通道
+        skeleton_summary = ""
+        if getattr(self, "compaction_enabled", False):
+            try:
+                structure = context.get("file_structure") or {}
+                funcs = structure.get("functions") or []
+                lines = []
+                for f in funcs[:30]:
+                    args = ",".join(str(a) for a in (f.get("args") or [])[:6])
+                    doc = str(f.get("docstring") or "").strip().splitlines()
+                    doc1 = doc[0][:60] if doc else ""
+                    lines.append(f"{f.get('name')}({args})  # L{f.get('line')} {doc1}")
+                if lines:
+                    skeleton_summary = "\n".join(["# [函数骨架摘要]"] + lines)
+            except Exception as e:
+                logger.debug(f"[OPT-COMPACT] 骨架构建失败: {e}")
+        function_calls_text = PromptEngine.format_function_calls(
+            context.get("function_calls", [])
+        )
+        if skeleton_summary:
+            function_calls_text = skeleton_summary + "\n" + function_calls_text
         prompt = self.prompt_engine.render_agent_prompt(
             "context_builder",
             file_path=file_path,
             file_content=context["file_content"],
             related_files=PromptEngine.format_related_files(context.get("related_files", [])),
             imports=PromptEngine.format_imports(context.get("imports", [])),
-            function_calls=PromptEngine.format_function_calls(context.get("function_calls", [])),
+            function_calls=function_calls_text,
             detected_language=detected_language,
         )
 
@@ -2635,9 +2782,18 @@ class MultiAgentPipeline:
                 risks, file_path, file_content, detected_language
             )
 
-        # CWE 专项检测指引（M7）
+        # [OPT-SASTR] SAST 前置过滤证据注入（与 M4 同通道，AI 有据验证）
+        if getattr(self, "sast_evidence", None):
+            sast_evidence = self.sast_evidence.get(str(file_path), "") or ""
+            if sast_evidence:
+                ast_evidence = (
+                    ast_evidence + "\n" + sast_evidence if ast_evidence else sast_evidence
+                )
+
+        # CWE 专项检测指引（M7·[OPT-CWE2] 两阶段：Agent-2 检出风险后才定向注入，≤2 模板）
+        # 不再依赖全局开关：有风险信号即注入（成本 ~1K token/文件，只发生在候选文件上）
         cwe_guidance = ""
-        if getattr(self, "cwe_guidance_enabled", False):
+        if risks and (getattr(self, "cwe_guidance_enabled", False) or len(risks) > 0):
             cwe_guidance = self._build_cwe_guidance(file_content, file_path, detected_language)
 
         prompt = self.prompt_engine.render_agent_prompt(
@@ -2942,9 +3098,87 @@ class MultiAgentPipeline:
             prompt, "Agent 4", temperature=self.temperature
         )
         result = self._parse_json_response(response, schema_name="attack_chain")
+        # [OPT-P2] Agent-4 确定性兜底：LLM 未生成攻击链时，从 Agent-3 已验证漏洞
+        # 合成最小单步攻击链，保证 Agent-5/6 输入不为空（历史根因：空链→裁决保守拒绝）
+        result = self._fallback_attack_chains(result, vulnerability_verification)
         logger.debug(f" Agent 4 完成，令牌使用: {token_usage['total_tokens']}")
         self.debug_logs.append(f"[DEBUG] Agent 4 完成，令牌使用: {token_usage['total_tokens']}")
         return result, token_usage
+
+    def _fallback_attack_chains(
+        self,
+        result: Dict[str, Any],
+        vulnerability_verification: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
+        """[OPT-P2] 攻击链确定性兜底（不消耗 token）。
+
+        当 Agent-4 输出为空链或解析失败时，从 Agent-3 的 CONFIRMED/REFINED 漏洞
+        合成最小单步攻击链（signal 直接到影响），并附 note 标记为确定性兜底生成。
+        """
+        try:
+            if not isinstance(result, dict):
+                result = {}
+            chains = result.get("attack_chains") or []
+            if chains:
+                return result
+            vulns = []
+            if isinstance(vulnerability_verification, dict):
+                vulns = vulnerability_verification.get("vulnerabilities") or []
+            verified = [
+                v
+                for v in vulns
+                if isinstance(v, dict)
+                and (v.get("verification_decision") or v.get("signal_state"))
+                in ("CONFIRMED", "REFINED")
+            ]
+            if not verified:
+                return result
+            fallback_chains = []
+            for i, v in enumerate(verified[:6], 1):
+                title = v.get("title") or v.get("vulnerability") or "未命名漏洞"
+                location = v.get("location") or ""
+                severity = v.get("severity") or "HIGH"
+                fallback_chains.append(
+                    {
+                        "name": f"单步可达链-{title}",
+                        "steps": [
+                            {
+                                "step": 1,
+                                "description": f"利用已确认漏洞 {title}（{location}）直接触发安全影响",
+                                "prerequisites": [],
+                                "payload": "",
+                                "evidence": [],
+                            }
+                        ],
+                        "final_impact": f"利用 {title} 达成未授权影响",
+                        "severity": severity,
+                        "cvss_score": v.get("cvss_score") or "",
+                        "defense_bypasses": [],
+                        "signal_id": f"CHAIN-FB-{i}",
+                        "signal_state": "NEW",
+                        "linked_signal_ids": [v.get("signal_id") or f"RISK-{i}"],
+                        "evidence": [
+                            {
+                                "type": "flow",
+                                "location": location,
+                                "reason": "Agent-4 未生成完整攻击链，由确定性兜底从已验证漏洞合成",
+                                "confidence": 0.6,
+                            }
+                        ],
+                        "fallback_generated": True,
+                    }
+                )
+            result["attack_chains"] = fallback_chains
+            result["fallback_generated"] = True
+            logger.debug(
+                f"[OPT-P2] Agent-4 兜底合成 {len(fallback_chains)} 条单步攻击链（原输出为空）"
+            )
+            self.debug_logs.append(
+                f"[OPT-P2] Agent-4 兜底合成 {len(fallback_chains)} 条单步攻击链（原输出为空）"
+            )
+        except Exception as e:
+            logger.debug(f"[OPT-P2] 攻击链兜底失败: {e}")
+        return result
 
     async def _run_agent_5(
         self,
@@ -2966,7 +3200,8 @@ class MultiAgentPipeline:
         """
         logger.debug(f" 运行Agent 5 (对抗验证) on: {file_path}")
         self.debug_logs.append(f"[DEBUG] 运行Agent 5 (对抗验证) on: {file_path}")
-        attack_chain_json = json.dumps(attack_chain_analysis, ensure_ascii=False)
+        # [OPT-TOKEN] 压缩攻击链输入：只保留必要字段，控制 Agent-5 prompt token
+        attack_chain_json = self._slim_json_for_prompt(attack_chain_analysis, max_len=12000)
         prompt = self.prompt_engine.render_agent_prompt(
             "adversarial_validation",
             file_path=file_path,
@@ -3005,8 +3240,9 @@ class MultiAgentPipeline:
         """
         logger.debug(f" 运行Agent 6 (最终裁决) on: {file_path}")
         self.debug_logs.append(f"[DEBUG] 运行Agent 6 (最终裁决) on: {file_path}")
-        adversarial_results = json.dumps(adversarial_validation, ensure_ascii=False)
-        verification_results = json.dumps(vulnerability_verification, ensure_ascii=False)
+        # [OPT-TOKEN] 压缩上游输入：对抗验证 + 漏洞验证结果只保留骨架，控制 Agent-6 prompt token
+        adversarial_results = self._slim_json_for_prompt(adversarial_validation, max_len=12000)
+        verification_results = self._slim_json_for_prompt(vulnerability_verification, max_len=16000)
         known_files_summary = self._file_registry.get_file_summary()
         known_file_paths = self._file_registry.get_known_file_paths()
         line_counts = self._file_registry._line_counts
@@ -3050,8 +3286,14 @@ class MultiAgentPipeline:
 
         for i in range(self.max_retries):
             try:
-                # JSON Guard: 在prompt顶部添加JSON输出强制约束
-                json_guard_prompt = "只输出JSON，否则视为失败\n\n" + prompt
+                # [OPT-CACHE] 版本化固定前缀：DeepSeek 上下文缓存按精确前缀匹配，
+                # 契约变更才升版本号（SYSTEM_PREFIX_V1 → V2 …），日常扫描零改动保命中。
+                json_guard_prompt = (
+                    "只输出JSON，否则视为失败\n\n"
+                    "[SYSTEM-CONTRACT-V1] 输出契约：仅输出符合 schema 的 JSON 对象；"
+                    "禁止 markdown 代码块、解释性文字、多余字段；必须可被 json.loads 解析。\n\n"
+                    + prompt
+                )
 
                 # 结构化输出（不裁剪 max_tokens；输出 token 一律不限制）
                 response_format = None
@@ -3062,7 +3304,7 @@ class MultiAgentPipeline:
                 # 创建AIRequest对象
                 request = AIRequest(
                     prompt=json_guard_prompt,
-                    model=self.model,
+                    model=self.agent_model_overrides.get(agent_name, self.model),
                     temperature=temperature,
                     max_tokens=8192,
                     response_format=response_format,
@@ -3598,6 +3840,9 @@ class MultiAgentPipeline:
                         validated_final_decision = self._validate_final_findings(
                             final_decision, context, vulnerability_verification
                         )
+                        validated_final_decision = self._deterministic_promote(
+                            validated_final_decision, vulnerability_verification
+                        )
                         elapsed = time.time() - start_time
                         self._agent_timings["agent_6"] = elapsed
                         total_token_usage["prompt_tokens"] += token_usage["prompt_tokens"]
@@ -3813,6 +4058,9 @@ class MultiAgentPipeline:
                 )
                 validated_final_decision = self._validate_final_findings(
                     final_decision, context, vulnerability_verification or {}
+                )
+                validated_final_decision = self._deterministic_promote(
+                    validated_final_decision, vulnerability_verification or {}
                 )
                 elapsed = time.time() - start_time
                 self._agent_timings["agent_6"] = elapsed

@@ -70,3 +70,12 @@ requests>=2.31.0
 beautifulsoup4>=4.12.0
 lxml>=4.9.0
 ratelimit>=2.2.1
+
+# ===== SAST 前置过滤（OPT-SASTR 三级流水线）=====
+# 注意：SAST 工具链建议装在项目内独立环境（envs/sast-venv），见 envs/README.md。
+# pip 依赖（单独安装：pip install -r requirements-sast.txt 或见 envs/install.ps1）：
+#   semgrep>=1.159.0   # S1 快扫层（社区规则库最全）；Windows 需完整权限访问系统证书库
+#   bandit>=1.7.9      # 兜底快层（纯 Python，无证书库依赖）
+# 独立二进制（非 pip，装 envs/ 子目录，见 envs/scripts/install-codeql.ps1）：
+#   codeql>=2.26.3     # S2 深扫底座（仓库级污点分析）；查询包 codeql/python-queries@1.8.8
+#   gitleaks / trivy  # 生产模式工具链（可选，环境就绪自动启用）

@@ -61,6 +61,12 @@ class TieredArchitectureConfig(BaseModel):
         ),
         description="第二层模型配置",
     )
+    agent_overrides: Dict[str, str] = Field(
+        default_factory=dict,
+        description="[OPT-TRIAGE] per-agent 模型映射（如 {'agent_2':'qwen3-flash','agent_3':'deepseek-v4-flash'}）。"
+                    "大小模型协同：轻量 Agent 用便宜/免费模型，深度验证 Agent 用主模型。"
+                    "主实验保持同模型口径（留空）；分诊只进独立成本实验。",
+    )
 
 
 class AIConfig(BaseModel):
@@ -86,6 +92,18 @@ class AIConfig(BaseModel):
     cwe_guidance_enabled: bool = Field(
         default=False,
         description="是否向 Agent-3 注入 CWE 专项检测指引（M7；每模板约 1K token，默认关闭）",
+    )
+    deterministic_promote_enabled: bool = Field(
+        default=False,
+        description="[OPT-P1/P3] 确定性升级：高危 finding 若 Agent-3 验证 CONFIRMED，覆盖 Agent-6 的 WEAK/REFINED 保守裁决升级为 CONFIRMED（验证优先于拒绝，可消融）",
+    )
+    cpg_context_enabled: bool = Field(
+        default=False,
+        description="[OPT-P0] 深 CPG 上下文注入：解析 import 并注入跨文件被调函数定义（预算受限，仓库级扫描收益最大；函数级样本无收益）",
+    )
+    compaction_enabled: bool = Field(
+        default=False,
+        description="[OPT-COMPACT] 代码压缩：Agent-0 输入注入函数骨架摘要（签名+文档首行），压缩长文件 token；默认关保持基线稳定，实验可开",
     )
     enable_learning: bool = Field(default=True, description="是否启用 AI 学习")
     allow_fallback: bool = Field(default=True, description="当主provider失败时是否允许自动切换到其他provider")
@@ -384,6 +402,49 @@ class ToolConfig(BaseModel):
     gitleaks: GitleaksConfig = Field(default_factory=GitleaksConfig)
 
 
+class SastPrefilterConfig(BaseModel):
+    """[OPT-SASTR] SAST 深度前置过滤配置（AI 之前的候选收窄，0 LLM token）。
+
+    mode：
+    - `cascade`（默认，用户指定）：semgrep 快扫 → CodeQL 深扫 → pure-AI 盲区。
+      CodeQL 确认的文件 → 硬 findings（0 AI token）；其余（含盲区 06fdf927/08926a1a 类）→ AI。
+    - `hard-first`：codeql 命中 → 硬 findings；未命中 → AI（同 cascade 的 AI 集合，无 semgrep 层）。
+    - `skip`（废弃）：零命中跳过 AI（丢盲区检出，不推荐）。
+    - `evidence-only`：全部仍走 AI，证据注入 Agent-3。
+    - `off`：关闭。
+    后端：codeql（仓库级底座）> semgrep（快层，社区规则库，环境功能探测）。
+    """
+
+    enabled: bool = Field(
+        default=False,
+        description="pure-ai 模式是否启用 SAST 前置过滤（默认关，保持旧行为；评测/生产按需开启）",
+    )
+    mode: str = Field(
+        default="cascade",
+        description="cascade / hard-first / skip / evidence-only / off",
+    )
+    skip_ai_if_no_hits: bool = Field(
+        default=False,
+        description="[兼容旧配置] True=硬门控：零命中文件完全跳过 AI；False=软门控",
+    )
+    inject_evidence: bool = Field(
+        default=True,
+        description="将 SAST 候选命中注入 Agent-3 证据块（AI 有据验证，提升精度）",
+    )
+    backends: List[str] = Field(
+        default_factory=lambda: ["codeql", "semgrep"],
+        description="启用后端顺序",
+    )
+    min_severity: str = Field(default="warning", description="最低保留严重度")
+    semgrep_rules_dir: str = Field(
+        default="",
+        description="semgrep 本地规则目录（社区规则离线集；留空则用 --config auto）",
+    )
+    codeql_db_path: str = Field(default="", description="CodeQL 数据库路径（留空自动建）")
+    codeql_queries: str = Field(default="", description="CodeQL 查询套件路径（留空自动解析）")
+    codeql_pack_dir: str = Field(default="", description="CodeQL 查询包缓存目录（--search-path）")
+
+
 class PriorityWeightsConfig(BaseModel):
     """优先级权重配置"""
 
@@ -467,6 +528,7 @@ class Config(BaseSettings):
     nvd: NVDConfig = Field(default_factory=NVDConfig)
     data_preload: DataPreloadConfig = Field(default_factory=DataPreloadConfig)
     tools: ToolConfig = Field(default_factory=ToolConfig)
+    sast_prefilter: SastPrefilterConfig = Field(default_factory=SastPrefilterConfig)
     priority: PriorityConfig = Field(default_factory=PriorityConfig)
     validation: ValidationConfig = Field(default_factory=ValidationConfig)
     agent: AgentConfig = Field(default_factory=AgentConfig)

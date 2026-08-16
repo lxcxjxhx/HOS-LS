@@ -1,0 +1,11 @@
+---
+library: false
+warnOnImplicitThis: true
+name: codeql/suite-helpers
+version: 1.0.55
+buildMetadata:
+  sha: 44a68d3a47fcbcd6a6a76ec7d1c1b3a1a28b201e
+  cliVersion: 2.26.3
+dependencies: {}
+groups:
+ - shared

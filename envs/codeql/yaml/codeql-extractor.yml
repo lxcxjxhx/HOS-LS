@@ -1,0 +1,13 @@
+name: "yaml"
+display_name: "YAML"
+version: 1.27.0
+column_kind: "utf16"
+legacy_qltest_extraction: true
+file_types:
+  - name: yaml
+    display_name: YAML files
+    extensions:
+      - .yml
+      - .yaml
+build_modes:
+  - none

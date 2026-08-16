@@ -1,0 +1,27 @@
+---
+library: true
+warnOnImplicitThis: true
+compileForOverlayEval: true
+name: codeql/python-all
+version: 7.2.3
+buildMetadata:
+  sha: 44a68d3a47fcbcd6a6a76ec7d1c1b3a1a28b201e
+  cliVersion: 2.26.3
+dependencies:
+  codeql/concepts: 0.0.29
+  codeql/dataflow: 2.1.11
+  codeql/mad: 1.0.55
+  codeql/regex: 1.0.55
+  codeql/threat-models: 1.0.55
+  codeql/tutorial: 1.0.55
+  codeql/util: 2.0.42
+  codeql/xml: 1.0.55
+  codeql/yaml: 1.0.55
+dbscheme: semmlecode.python.dbscheme
+extractor: python
+upgrades: upgrades
+groups:
+ - python
+dataExtensions:
+ - semmle/python/frameworks/**/*.model.yml
+ - ext/*.model.yml

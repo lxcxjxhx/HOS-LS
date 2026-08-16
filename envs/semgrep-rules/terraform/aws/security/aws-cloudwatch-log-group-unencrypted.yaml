@@ -1,0 +1,37 @@
+rules:
+- id: aws-cloudwatch-log-group-unencrypted
+  patterns:
+  - pattern: |
+      resource "aws_cloudwatch_log_group" $ANYTHING {
+        ...
+      }
+  - pattern-not-inside: |
+      resource "aws_cloudwatch_log_group" $ANYTHING {
+        ...
+        kms_key_id = ...
+        ...
+      }
+  message: >-
+    By default, AWS CloudWatch Log Group is encrypted using AWS-managed keys.
+    However, for added security, it's recommended to configure your own AWS KMS encryption key to protect your log group in CloudWatch.
+    You can either create a new aws_kms_key resource or use the ARN of an existing key in your AWS account to do so.
+  languages: [hcl]
+  severity: WARNING
+  metadata:
+    owasp:
+    - A02:2021 - Cryptographic Failures
+    - A04:2025 - Cryptographic Failures
+    cwe:
+    - 'CWE-732: Incorrect Permission Assignment for Critical Resource'
+    technology:
+    - aws
+    - terraform
+    category: security
+    references:
+    - https://cwe.mitre.org/data/definitions/732.html
+    cwe2021-top25: true
+    subcategory:
+    - audit
+    likelihood: LOW
+    impact: LOW
+    confidence: LOW
