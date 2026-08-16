@@ -17,7 +17,7 @@ ai:
   enabled: true
   provider: deepseek  # 可选: deepseek, aliyun
   model: deepseek-v4-flash  # 默认模型（所有模块的fallback）
-  api_key: "sk-8f11abaa800447e898e01a27036f1a9d"  # DeepSeek API Key
+  api_key: ""  # 从环境变量 HOS_LS_AI_API_KEY / DEEPSEEK_API_KEY 读取（勿硬编码）
   base_url: "https://api.deepseek.com"
   max_tokens: 4096
   temperature: 0.1
@@ -46,7 +46,7 @@ sast_prefilter:
   # DeepSeek API配置
   deepseek:
     enabled: true  # 设置为true启用DeepSeek API
-    api_key: "sk-8f11abaa800447e898e01a27036f1a9d"  # DeepSeek API Key
+    api_key: ""  # 从环境变量 HOS_LS_AI_API_KEY / DEEPSEEK_API_KEY 读取（勿硬编码）
     base_url: "https://api.deepseek.com"
     model: deepseek-v4-flash  # 使用 DeepSeek-V4-Flash
 
