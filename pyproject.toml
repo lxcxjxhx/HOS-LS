@@ -124,8 +124,8 @@ flake8 = "^6.0.0"
 mypy = "^1.5.0"
 pre-commit = "^3.5.0"
 
-[tool.poetry.packages]
-include = ["src"]
+[[tool.poetry.packages]]
+include = "src"
 
 [tool.poetry.scripts]
 hos-ls = "src.cli.main:main"
