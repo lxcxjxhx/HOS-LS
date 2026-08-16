@@ -21,12 +21,14 @@ class TestCostEstimator(unittest.TestCase):
         self.assertIsInstance(est, CostEstimate)
         self.assertEqual(est.file_count, 10)
         self.assertEqual(est.avg_tokens_per_file, DEFAULT_AVG_TOKENS_PER_FILE)
-        # 10 文件 × 65000 token/文件
-        self.assertEqual(est.estimated_total_tokens, 650000)
+        # 10 文件 × 默认均值（2026-08-16 实测校准 70,807）
+        self.assertEqual(est.estimated_total_tokens, DEFAULT_AVG_TOKENS_PER_FILE * 10)
         self.assertGreater(est.estimated_total_cost_usd, 0)
         # 兼容 scanner 的字段名
         self.assertEqual(est.estimated_total_cost, est.estimated_total_cost_usd)
         self.assertIn("deepseek-v4-flash", est.pricing_source)
+        # 费用上界说明（缓存未命中）
+        self.assertIn("缓存", est.pricing_source)
 
     def test_estimate_custom_avg(self):
         est = CostEstimator().estimate(5, "deepseek", "deepseek-chat", avg_tokens_per_file=1000)

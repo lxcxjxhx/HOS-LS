@@ -6,9 +6,19 @@
 主要功能：
     - 按 provider/model 的单价表（USD / 1K tokens）估算费用
     - 用 TokenTracker 历史统计校准「每文件平均 token」，
-      无历史时回退到默认均值（deepseek-v4-flash 7-Agent 纯 AI 实测约 65K/文件）
+      无历史时回退到默认均值（2026-08-16 实测校准：70,807 token/文件，
+      含 token 优化后实际消耗）
     - 支持 USD/CNY 双币种显示（人民币按 7.0 汇率估算）
     - get_cost_estimator() 工厂，供 scanner 的 try/except 钩子使用
+
+⚠️ 费用口径说明（重要）：
+    本模块按「缓存未命中（cache miss）」单价估算，是**费用上界（保守值）**。
+    DeepSeek 等 provider 对缓存命中（相同前缀 prompt）按约 1/10 单价计费；
+    HOS-LS 的 LLM 响应缓存（token_tracker 的 diskcache）与扫描内重复 prompt
+    会命中缓存。2026-08-16 实测：RepoPairBench 50+10 样本双侧按理论单价
+    估算 ¥25.4，实际账户扣费 ¥5.02（约 1/5）——实际花费通常显著低于本模块
+    输出。因此本模块预估用于「预算上界」与「超额告警」，实际账单以余额
+    变化为准。
 
 Author: HOS-LS Team
 """
@@ -53,9 +63,10 @@ MODEL_PRICING: Dict[str, Dict[str, float]] = {
 
 DEFAULT_PRICING: Dict[str, float] = {"prompt": 0.00040, "completion": 0.00160}
 
-# 纯 AI 7-Agent 模式下的每文件 token 默认均值（2026-08 实测 RepoPairBench 10 样本：
-# 单文件约 33K~96K，均值约 65K；无历史统计时用此值）
-DEFAULT_AVG_TOKENS_PER_FILE: int = 65000
+# 纯 AI 7-Agent 模式下的每文件 token 默认均值（2026-08-16 实测校准：
+# RepoPairBench 10+50 样本双侧 4 轮实测 token Σ，均值 70,807 token/文件，
+# 范围 66,111–75,191；含 token 优化（早停/压缩/分层）后的实际消耗）
+DEFAULT_AVG_TOKENS_PER_FILE: int = 70807
 
 # 默认每文件输入/输出 token 占比（估算用）
 DEFAULT_PROMPT_RATIO: float = 0.80
@@ -186,7 +197,10 @@ class CostEstimator:
             if using_history
             else f"默认均值({avg_tokens_per_file:.0f} token/文件)"
         )
-        pricing_source += f" + {model} 单价(prompt ${pricing['prompt']}/1K, completion ${pricing['completion']}/1K)"
+        pricing_source += (
+            f" + {model} 单价(prompt ${pricing['prompt']}/1K, completion ${pricing['completion']}/1K)"
+            "（按缓存未命中价，为费用上界；缓存命中约 1/10）"
+        )
 
         return CostEstimate(
             file_count=file_count,
