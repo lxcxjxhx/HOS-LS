@@ -1,0 +1,12 @@
+{
+  "locator_only": {
+    "pair_correct_rate": 0.0,
+    "vuln_recall": 0.0,
+    "elapsed_seconds": 0.0009882450103759766
+  },
+  "full": {
+    "pair_correct_rate": 0.0,
+    "vuln_recall": 0.0,
+    "elapsed_seconds": 0.0012199878692626953
+  }
+}
