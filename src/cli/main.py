@@ -481,8 +481,11 @@ def scan(
             from src.core.config import AIModuleConfig
 
             config.ai.modules["pure_ai"] = AIModuleConfig()
-        config.ai.modules["pure_ai"].provider = "deepseek"
-        config.ai.modules["pure_ai"].model = "deepseek-v4-flash"
+        # 使用配置文件中的provider和model，不硬编码
+        if not config.ai.modules["pure_ai"].provider:
+            config.ai.modules["pure_ai"].provider = config.ai.provider
+        if not config.ai.modules["pure_ai"].model:
+            config.ai.modules["pure_ai"].model = config.ai.model
 
         # 端口扫描配置
         if scan_ports:

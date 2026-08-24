@@ -73,10 +73,9 @@ class PureAIAnalyzer:
 
             # 为纯AI模式创建临时配置
             from src.ai.client import AIModelManager
-            from src.core.config import get_config
 
-            # 创建临时配置，使用纯AI的提供商和模型
-            temp_config = get_config()
+            # 使用传入的配置（包含正确的base_url等）
+            temp_config = self.config
             temp_config.ai.provider = self.ai_provider
             temp_config.ai.model = self.ai_model
             temp_config.ai.api_key = api_key
