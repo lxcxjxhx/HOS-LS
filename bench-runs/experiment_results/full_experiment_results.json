@@ -1,0 +1,62 @@
+{
+  "metrics": {
+    "total_samples": 5,
+    "correct": 2,
+    "accuracy": 0.4,
+    "recall": 0.4,
+    "by_type": {
+      "Command Injection": {
+        "total": 5,
+        "correct": 2
+      }
+    }
+  },
+  "elapsed_seconds": 142.77538633346558,
+  "results": [
+    {
+      "sample_id": "commandi_01",
+      "ground_truth": true,
+      "prediction": false,
+      "confidence": 0.0,
+      "explanation": "The provided code snippet contains only a license header and no executable PHP code. There are no patterns of user input being used without sanitizati",
+      "vuln_type_detected": null,
+      "location": "lib/rrd.php:1-20"
+    },
+    {
+      "sample_id": "commandi_02",
+      "ground_truth": true,
+      "prediction": false,
+      "confidence": 0.0,
+      "explanation": "The provided code snippet contains only the license header of a PHP file. It does not include any executable PHP code that could contain command injec",
+      "vuln_type_detected": null,
+      "location": "file:settings.php:92,111 (not present in provided snippet)"
+    },
+    {
+      "sample_id": "commandi_03",
+      "ground_truth": true,
+      "prediction": false,
+      "confidence": 0.5,
+      "explanation": "The provided code snippet only contains the file header and copyright notice. There is no executable code present in the provided excerpt. Without the",
+      "vuln_type_detected": null,
+      "location": "remote_agent.php (insufficient code provided)"
+    },
+    {
+      "sample_id": "commandi_04",
+      "ground_truth": true,
+      "prediction": true,
+      "confidence": 0.85,
+      "explanation": "The provided code snippet only contains the copyright header, not the actual vulnerable lines (175, 200). However, based on contextual indicators (fil",
+      "vuln_type_detected": "Command Injection (CWE-78)",
+      "location": "lib/snmp.php:175 and lib/snmp.php:200"
+    },
+    {
+      "sample_id": "commandi_05",
+      "ground_truth": true,
+      "prediction": true,
+      "confidence": 0.85,
+      "explanation": "The code appears vulnerable to command injection in the 'scan' parameter handling branch. While the 'file' parameter is sanitized via check_file_dir_n",
+      "vuln_type_detected": "Command Injection",
+      "location": "interface/fax/fax_dispatch.php:20-25"
+    }
+  ]
+}
