@@ -1,0 +1,322 @@
+{
+  "metrics": {
+    "total": 30,
+    "correct": 12,
+    "accuracy": 0.4,
+    "by_type": {
+      "Path Traversal": {
+        "total": 4,
+        "detected": 1
+      },
+      "XXE": {
+        "total": 1,
+        "detected": 0
+      },
+      "Missing Authentication": {
+        "total": 1,
+        "detected": 1
+      },
+      "File Upload": {
+        "total": 1,
+        "detected": 0
+      },
+      "Unknown": {
+        "total": 15,
+        "detected": 7
+      },
+      "SSRF": {
+        "total": 2,
+        "detected": 1
+      },
+      "Command Injection": {
+        "total": 1,
+        "detected": 0
+      },
+      "Code Injection": {
+        "total": 1,
+        "detected": 0
+      },
+      "Authentication Bypass": {
+        "total": 1,
+        "detected": 0
+      },
+      "XSS": {
+        "total": 3,
+        "detected": 2
+      }
+    }
+  },
+  "elapsed_seconds": 539.0779511928558,
+  "results": [
+    {
+      "sample_id": "00c73b6e",
+      "vuln_type": "Path Traversal",
+      "cwe_id": "CWE-22",
+      "prediction": false,
+      "confidence": 0.0,
+      "reason": "",
+      "ground_truth": true
+    },
+    {
+      "sample_id": "0294b9f1",
+      "vuln_type": "XXE",
+      "cwe_id": "CWE-611",
+      "prediction": false,
+      "confidence": 0.0,
+      "reason": "",
+      "ground_truth": true
+    },
+    {
+      "sample_id": "03e97308",
+      "vuln_type": "Missing Authentication",
+      "cwe_id": "CWE-306",
+      "prediction": true,
+      "confidence": 0.95,
+      "reason": "The 'before' code lacks any authentication or authorization checks, allowing any unauthenticated req",
+      "ground_truth": true
+    },
+    {
+      "sample_id": "06fdf927",
+      "vuln_type": "File Upload",
+      "cwe_id": "CWE-434",
+      "prediction": false,
+      "confidence": 0.0,
+      "reason": "",
+      "ground_truth": true
+    },
+    {
+      "sample_id": "08926a1a",
+      "vuln_type": "Path Traversal",
+      "cwe_id": "CWE-22",
+      "prediction": true,
+      "confidence": 0.95,
+      "reason": "The 'before' code has a path traversal vulnerability because its defense against archive slip attack",
+      "ground_truth": true
+    },
+    {
+      "sample_id": "0a06f338",
+      "vuln_type": "Unknown",
+      "cwe_id": "CWE-601",
+      "prediction": true,
+      "confidence": 1.0,
+      "reason": "The original code only checked if the URL started with a slash, allowing open redirect attacks (CWE-",
+      "ground_truth": true
+    },
+    {
+      "sample_id": "0bb1aef8",
+      "vuln_type": "Unknown",
+      "cwe_id": "CWE-20",
+      "prediction": false,
+      "confidence": 0.0,
+      "reason": "",
+      "ground_truth": true
+    },
+    {
+      "sample_id": "0c8d2aef",
+      "vuln_type": "Unknown",
+      "cwe_id": "CWE-400",
+      "prediction": true,
+      "confidence": 0.9,
+      "reason": "The 'before' code processes ZIP files without validation, making it vulnerable to ZIP bomb attacks t",
+      "ground_truth": true
+    },
+    {
+      "sample_id": "0dc2e99d",
+      "vuln_type": "Unknown",
+      "cwe_id": "CWE-20",
+      "prediction": false,
+      "confidence": 0.0,
+      "reason": "",
+      "ground_truth": true
+    },
+    {
+      "sample_id": "0f0215bf",
+      "vuln_type": "SSRF",
+      "cwe_id": "CWE-918",
+      "prediction": true,
+      "confidence": 0.95,
+      "reason": "The 'before' code has two key SSRF bypass vectors: (1) It fails to block '0.0.0.0' and '::' (which c",
+      "ground_truth": true
+    },
+    {
+      "sample_id": "18e78647",
+      "vuln_type": "Unknown",
+      "cwe_id": "CWE-346",
+      "prediction": false,
+      "confidence": 0.0,
+      "reason": "",
+      "ground_truth": true
+    },
+    {
+      "sample_id": "193c77fa",
+      "vuln_type": "Command Injection",
+      "cwe_id": "CWE-78",
+      "prediction": false,
+      "confidence": 0.0,
+      "reason": "",
+      "ground_truth": true
+    },
+    {
+      "sample_id": "1a1914c0",
+      "vuln_type": "Path Traversal",
+      "cwe_id": "CWE-22",
+      "prediction": false,
+      "confidence": 0.0,
+      "reason": "",
+      "ground_truth": true
+    },
+    {
+      "sample_id": "1b48a788",
+      "vuln_type": "Code Injection",
+      "cwe_id": "CWE-94",
+      "prediction": false,
+      "confidence": 0.0,
+      "reason": "",
+      "ground_truth": true
+    },
+    {
+      "sample_id": "1bdfa375",
+      "vuln_type": "Unknown",
+      "cwe_id": "CWE-20",
+      "prediction": true,
+      "confidence": 1.0,
+      "reason": "The 'before' code directly uses unsanitized user input in a subprocess command with shell=True, allo",
+      "ground_truth": true
+    },
+    {
+      "sample_id": "2082c6c6",
+      "vuln_type": "Authentication Bypass",
+      "cwe_id": "CWE-287",
+      "prediction": false,
+      "confidence": 0.0,
+      "reason": "",
+      "ground_truth": true
+    },
+    {
+      "sample_id": "233c9513",
+      "vuln_type": "Unknown",
+      "cwe_id": "CWE-284",
+      "prediction": false,
+      "confidence": 0.0,
+      "reason": "",
+      "ground_truth": true
+    },
+    {
+      "sample_id": "24e78349",
+      "vuln_type": "XSS",
+      "cwe_id": "CWE-79",
+      "prediction": true,
+      "confidence": 0.9,
+      "reason": "The vulnerable code directly passes unsanitized user input (event, domain, admin) to the HTML templa",
+      "ground_truth": true
+    },
+    {
+      "sample_id": "256a7c28",
+      "vuln_type": "Unknown",
+      "cwe_id": "CWE-200",
+      "prediction": false,
+      "confidence": 0.0,
+      "reason": "",
+      "ground_truth": true
+    },
+    {
+      "sample_id": "28f88073",
+      "vuln_type": "XSS",
+      "cwe_id": "CWE-79",
+      "prediction": true,
+      "confidence": 1.0,
+      "reason": "The 'before' code initializes Jinja2's Environment without autoescaping enabled, which could allow u",
+      "ground_truth": true
+    },
+    {
+      "sample_id": "2b5e4ebf",
+      "vuln_type": "Unknown",
+      "cwe_id": "CWE-369",
+      "prediction": true,
+      "confidence": 0.9,
+      "reason": "The before code does not explicitly check for zero dimensions in dims, which can lead to division by",
+      "ground_truth": true
+    },
+    {
+      "sample_id": "2d8d5c4c",
+      "vuln_type": "Unknown",
+      "cwe_id": "CWE-617",
+      "prediction": false,
+      "confidence": 0.0,
+      "reason": "",
+      "ground_truth": true
+    },
+    {
+      "sample_id": "306f60dc",
+      "vuln_type": "Unknown",
+      "cwe_id": "CWE-200",
+      "prediction": false,
+      "confidence": 0.0,
+      "reason": "",
+      "ground_truth": true
+    },
+    {
+      "sample_id": "36b71012",
+      "vuln_type": "Unknown",
+      "cwe_id": "CWE-253",
+      "prediction": false,
+      "confidence": 0.0,
+      "reason": "",
+      "ground_truth": true
+    },
+    {
+      "sample_id": "3b525f26",
+      "vuln_type": "Unknown",
+      "cwe_id": "CWE-1336",
+      "prediction": true,
+      "confidence": 0.95,
+      "reason": "The before code uses an unsandboxed Jinja2 environment, which allows arbitrary code execution if the",
+      "ground_truth": true
+    },
+    {
+      "sample_id": "3eff03b7",
+      "vuln_type": "SSRF",
+      "cwe_id": "CWE-918",
+      "prediction": false,
+      "confidence": 0.0,
+      "reason": "{\"vulnerable\": true, \"confidence\": 0.9, \"reason\": \"The 'before' code allows 'file://' scheme URLs, w",
+      "ground_truth": true
+    },
+    {
+      "sample_id": "3f154463",
+      "vuln_type": "Unknown",
+      "cwe_id": "CWE-116",
+      "prediction": true,
+      "confidence": 0.85,
+      "reason": "The 'before' code directly uses panel_obj['panel_name'] in a filename without sanitization, which co",
+      "ground_truth": true
+    },
+    {
+      "sample_id": "439a5d03",
+      "vuln_type": "Unknown",
+      "cwe_id": "CWE-601",
+      "prediction": true,
+      "confidence": 1.0,
+      "reason": "The code before fix uses unvalidated 'next' parameter from GET request for redirect after login, whi",
+      "ground_truth": true
+    },
+    {
+      "sample_id": "491d4e03",
+      "vuln_type": "XSS",
+      "cwe_id": "CWE-79",
+      "prediction": false,
+      "confidence": 0.0,
+      "reason": "",
+      "ground_truth": true
+    },
+    {
+      "sample_id": "4b250f6b",
+      "vuln_type": "Path Traversal",
+      "cwe_id": "CWE-22",
+      "prediction": false,
+      "confidence": 0.0,
+      "reason": "",
+      "ground_truth": true
+    }
+  ]
+}
