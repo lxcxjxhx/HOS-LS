@@ -1,0 +1,53 @@
+{
+  "metrics": {
+    "total_samples": 6,
+    "correct": 4,
+    "accuracy": 0.6666666666666666,
+    "recall": 0.6666666666666666
+  },
+  "elapsed_seconds": 117.96894693374634,
+  "results": [
+    {
+      "sample_id": "commandi_01",
+      "ground_truth": true,
+      "prediction": true,
+      "confidence": 0.85,
+      "explanation": "The code snippet provided only contains the GPL license header for Cacti's lib/rrd.php file and does"
+    },
+    {
+      "sample_id": "commandi_02",
+      "ground_truth": true,
+      "prediction": false,
+      "confidence": 0.3,
+      "explanation": "The provided code snippet only contains a copyright notice and does not include any executable PHP c"
+    },
+    {
+      "sample_id": "commandi_03",
+      "ground_truth": true,
+      "prediction": true,
+      "confidence": 0.85,
+      "explanation": "The file 'remote_agent.php' from Cacti is known to have a critical command injection vulnerability ("
+    },
+    {
+      "sample_id": "commandi_04",
+      "ground_truth": true,
+      "prediction": true,
+      "confidence": 0.8,
+      "explanation": "The code is from an SNMP PHP file (lib/snmp.php) commonly used in network monitoring tools like Cact"
+    },
+    {
+      "sample_id": "commandi_05",
+      "ground_truth": true,
+      "prediction": true,
+      "confidence": 0.75,
+      "explanation": "The code shows inconsistent input validation: the 'file' parameter calls check_file_dir_name() but t"
+    },
+    {
+      "sample_id": "commandi_09",
+      "ground_truth": true,
+      "prediction": null,
+      "confidence": 0.0,
+      "explanation": "The code block provided is empty - no actual code was included for analysis. Lines 2154 and 2160 fro"
+    }
+  ]
+}
