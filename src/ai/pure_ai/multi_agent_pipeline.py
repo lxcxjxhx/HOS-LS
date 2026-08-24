@@ -810,7 +810,7 @@ class MultiAgentPipeline:
         self.reject_on_signal_creation: bool = True
         if hasattr(config, "get") and config is not None:
             self.max_retries = config.get("max_retries", 3)
-            self.model = config.get("model", "deepseek-v4-flash")
+            self.model = config.get("model", "mimo-v2.5-pro")
             self.temperature = config.get("temperature", 0.1)
             self.reject_on_signal_creation = config.get("reject_on_signal_creation", True)
             self.json_mode = config.get("json_mode", "auto")
@@ -821,9 +821,9 @@ class MultiAgentPipeline:
         else:
             self.max_retries = getattr(config, "max_retries", 3)
             self.model = (
-                getattr(config, "ai", {}).get("model", "deepseek-v4-flash")
+                getattr(config, "ai", {}).get("model", "mimo-v2.5-pro")
                 if hasattr(config, "ai")
-                else "deepseek-v4-flash"
+                else "mimo-v2.5-pro"
             )
             self.temperature = (
                 getattr(config, "ai", {}).get("temperature", 0.1) if hasattr(config, "ai") else 0.1

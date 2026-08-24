@@ -371,8 +371,8 @@ class ResultReviewer:
                     evidence={"fallback_reason": fallback_reason},
                 )
 
-            base_url = os.getenv("HOS_LS_AI_BASE_URL", "https://api.deepseek.com")
-            model = os.getenv("HOS_LS_AI_MODEL", "deepseek-v4-flash")
+            base_url = os.getenv("HOS_LS_AI_BASE_URL", "https://token-plan-cn.xiaomimimo.com/v1")
+            model = os.getenv("HOS_LS_AI_MODEL", "mimo-v2.5-pro")
 
             client = OpenAI(api_key=api_key, base_url=base_url)
             response = client.chat.completions.create(
