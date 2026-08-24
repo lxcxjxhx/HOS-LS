@@ -1,0 +1,140 @@
+{
+  "ase": {
+    "dataset": "A.S.E",
+    "metrics": {
+      "total": 0,
+      "correct": 0,
+      "accuracy": 0,
+      "by_type": {}
+    },
+    "elapsed_seconds": 9.5367431640625e-07,
+    "results": []
+  },
+  "drea": {
+    "dataset": "DREA",
+    "metrics": {
+      "total": 10,
+      "correct": 9,
+      "accuracy": 0.9,
+      "by_type": {
+        "Path Traversal": {
+          "total": 2,
+          "detected": 2
+        },
+        "XXE": {
+          "total": 1,
+          "detected": 1
+        },
+        "Missing Authentication": {
+          "total": 1,
+          "detected": 1
+        },
+        "File Upload": {
+          "total": 1,
+          "detected": 1
+        },
+        "Unknown": {
+          "total": 4,
+          "detected": 3
+        },
+        "SSRF": {
+          "total": 1,
+          "detected": 1
+        }
+      }
+    },
+    "elapsed_seconds": 218.0953724384308,
+    "results": [
+      {
+        "sample_id": "00c73b6e",
+        "vuln_type": "Path Traversal",
+        "cwe_id": "CWE-22",
+        "prediction": true,
+        "confidence": 0.9,
+        "reason": "The original code uses `secure_filename` but then passes the path directly to `os.path.join`, which ",
+        "ground_truth": true
+      },
+      {
+        "sample_id": "0294b9f1",
+        "vuln_type": "XXE",
+        "cwe_id": "CWE-611",
+        "prediction": true,
+        "confidence": 0.95,
+        "reason": "The before code does not disable XML external entity resolution in the lxml parser, leaving it susce",
+        "ground_truth": true
+      },
+      {
+        "sample_id": "03e97308",
+        "vuln_type": "Missing Authentication",
+        "cwe_id": "CWE-306",
+        "prediction": true,
+        "confidence": 1.0,
+        "reason": "The 'before' code lacks any authentication or authorization checks, allowing any unauthenticated use",
+        "ground_truth": true
+      },
+      {
+        "sample_id": "06fdf927",
+        "vuln_type": "File Upload",
+        "cwe_id": "CWE-434",
+        "prediction": true,
+        "confidence": 0.95,
+        "reason": "The 'before' code directly inserts user-controlled data (test_plan.name) into HTML without sanitizat",
+        "ground_truth": true
+      },
+      {
+        "sample_id": "08926a1a",
+        "vuln_type": "Path Traversal",
+        "cwe_id": "CWE-22",
+        "prediction": true,
+        "confidence": 0.95,
+        "reason": "The 'before' code uses simple string replacement to filter '../' and '..\\' patterns, which is insuff",
+        "ground_truth": true
+      },
+      {
+        "sample_id": "0a06f338",
+        "vuln_type": "Unknown",
+        "cwe_id": "CWE-601",
+        "prediction": true,
+        "confidence": 0.95,
+        "reason": "The 'before' code uses a simple check for a leading '/' to validate the redirect URL, which fails to",
+        "ground_truth": true
+      },
+      {
+        "sample_id": "0bb1aef8",
+        "vuln_type": "Unknown",
+        "cwe_id": "CWE-20",
+        "prediction": false,
+        "confidence": 0.85,
+        "reason": "The 'before' code appears to be a test case that correctly checks for invalid inputs by expecting er",
+        "ground_truth": true
+      },
+      {
+        "sample_id": "0c8d2aef",
+        "vuln_type": "Unknown",
+        "cwe_id": "CWE-400",
+        "prediction": true,
+        "confidence": 0.8,
+        "reason": "The 'before' code processes zip files without validating their size or structure, potentially leadin",
+        "ground_truth": true
+      },
+      {
+        "sample_id": "0dc2e99d",
+        "vuln_type": "Unknown",
+        "cwe_id": "CWE-20",
+        "prediction": true,
+        "confidence": 0.9,
+        "reason": "The 'before' code improperly excluded URLs from watchlist regex matching by returning False early wh",
+        "ground_truth": true
+      },
+      {
+        "sample_id": "0f0215bf",
+        "vuln_type": "SSRF",
+        "cwe_id": "CWE-918",
+        "prediction": true,
+        "confidence": 0.95,
+        "reason": "The before code failed to block '0.0.0.0' and '::' addresses, which can access localhost/internal se",
+        "ground_truth": true
+      }
+    ]
+  }
+}
