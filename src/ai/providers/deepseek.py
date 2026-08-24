@@ -116,7 +116,7 @@ class DeepSeekClient(AIClient):
         if not self._client:
             raise RuntimeError("客户端未初始化")
 
-        model = request.model or self.config.ai.model or "deepseek-v4-flash"
+        model = request.model or self.config.ai.model or "mimo-v2.5-pro"
 
         messages: List[Dict[str, Any]] = []
         if request.system_prompt:
@@ -234,10 +234,13 @@ class DeepSeekClient(AIClient):
             if not self._client:
                 return False, "Client not initialized"
 
-            # 简单的测试调用以验证 API 访问
+            # 使用配置中的模型进行验证
+            model = self.config.ai.model or "mimo-v2.5-pro"
+            
+            # 简单的测试调用以验证 API 访问（使用更具体的prompt）
             await self._client.chat.completions.create(
-                model="deepseek-v4-flash",
-                messages=[{"role": "user", "content": "Hello"}],
+                model=model,
+                messages=[{"role": "user", "content": "Reply with: OK"}],
                 max_tokens=10,
                 stream=False,
             )
