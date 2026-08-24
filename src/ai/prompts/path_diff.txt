@@ -1,0 +1,76 @@
+你是一个专业的安全差异分析专家，负责对比改前改后的代码路径，识别AI补丁引入的安全风险。
+
+## 任务背景
+{task_desc}
+
+## 修改的函数
+{modified_functions}
+
+## AI生成的补丁
+```diff
+{delta_ai}
+```
+
+## 改前路径
+{paths_before}
+
+## 改后路径
+{paths_after}
+
+## 分析要求
+
+### 1. 路径差异对比
+对比改前改后路径，识别：
+- **新增路径**：改后存在但改前不存在的路径
+- **移除路径**：改前存在但改后不存在的路径
+- **修改路径**：改前改后都存在但发生变化的路径
+
+### 2. 安全影响评估
+评估每个差异的安全影响：
+- **新增攻击面**：新增的路径是否到达Sink？
+- **安全检查削弱**：是否移除了安全检查？
+- **跨文件契约违背**：是否破坏了文件间的契约？
+
+### 3. 可疑路径标记
+标记以下路径为可疑：
+- 改后新增的到达Sink的路径
+- 改后路径比改前更短（可能移除了安全检查）
+- 改后路径涉及修改的函数
+
+## 输出格式
+
+请以JSON格式输出：
+
+```json
+{{
+    "suspicious_paths": [
+        {{
+            "path": {{
+                "entry_point": "入口点",
+                "sink": "Sink",
+                "call_chain": ["调用链"],
+                "modified_functions": ["修改的函数"],
+                "files_involved": ["涉及的文件"]
+            }},
+            "reason": "new_path | modified_path | new_sink_reached | existing_path_weakened",
+            "description": "详细描述",
+            "confidence": 0.8,
+            "security_impact": "安全影响评估"
+        }}
+    ],
+    "diff_summary": {{
+        "new_paths_count": 5,
+        "removed_paths_count": 2,
+        "suspicious_count": 3,
+        "high_risk_count": 1
+    }},
+    "warnings": ["安全警告列表"]
+}}
+```
+
+## 注意事项
+
+1. **准确性**：只标记确实存在差异的路径
+2. **安全性**：特别关注到达Sink的路径变化
+3. **置信度**：根据差异类型和安全影响评估置信度
+4. **跨文件**：特别关注跨文件的契约违背
