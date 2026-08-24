@@ -16,27 +16,28 @@ rules:
 ai:
   enabled: true
   provider: deepseek  # 可选: deepseek, aliyun
-  model: deepseek-v4-flash  # 默认模型（所有模块的fallback）
+  model: mimo-v2.5-pro  # 默认模型
   api_key: ""  # 从环境变量 HOS_LS_AI_API_KEY / DEEPSEEK_API_KEY 读取（勿硬编码）
-  base_url: "https://api.deepseek.com"
+  base_url: "https://token-plan-cn.xiaomimimo.com/v1"
   max_tokens: 4096
   temperature: 0.1
-  timeout: 60
+  timeout: 120  # 增加超时时间
+  request_timeout: 180  # 单次请求超时
   allow_fallback: false  # true: 允许自动切换到其他provider; false: 禁用回退机制
 
   # DeepSeek API配置
   deepseek:
     enabled: true  # 设置为true启用DeepSeek API
     api_key: ""  # 从环境变量 HOS_LS_AI_API_KEY / DEEPSEEK_API_KEY 读取（勿硬编码）
-    base_url: "https://api.deepseek.com"
-    model: deepseek-v4-flash  # 使用 DeepSeek-V4-Flash
+    base_url: "https://token-plan-cn.xiaomimimo.com/v1"  # 使用自定义API
+    model: mimo-v2.5-pro  # 使用 mimo-v2.5-pro
 
   # 模块级配置（可选，不设置则使用上面的默认值）
   modules:
     # 纯AI深度分析模块
     pure_ai:
       enabled: true
-      model: deepseek-v4-flash  # 使用 DeepSeek-V4-Flash
+      model: mimo-v2.5-pro  # 使用 mimo-v2.5-pro
       provider: deepseek  # 指定使用 DeepSeek
     # RAG检索模块
     rag:
