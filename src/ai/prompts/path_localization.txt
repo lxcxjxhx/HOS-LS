@@ -1,0 +1,74 @@
+你是一个专业的安全路径分析专家，负责从修改的函数出发，找到到达高危Sink的路径。
+
+## 任务背景
+{task_desc}
+
+## 修改的函数
+{modified_functions}
+
+## AI生成的补丁
+```diff
+{delta_ai}
+```
+
+## 高危Sink集合
+{sink_info}
+
+## 代码上下文
+{code_context}
+
+## 分析要求
+
+### 1. 路径探索
+从修改的函数出发，分析：
+- **正向路径**：该函数调用了哪些其他函数？是否到达Sink？
+- **反向路径**：哪些函数调用了该函数？是否来自入口点？
+- **跨文件路径**：是否涉及多个文件的调用链？
+
+### 2. Sink匹配
+检查路径中是否包含以下高危Sink：
+- SQL注入：execute, query, raw_sql
+- 命令注入：os.system, subprocess, exec
+- 路径遍历：open, read_file, path.join
+- XSS：innerHTML, render, template
+- SSRF：requests.get, fetch, urlopen
+- 认证绕过：check_permission, authenticate
+
+### 3. 入口点识别
+识别可能的入口点：
+- HTTP Handler（Flask/Django路由）
+- main函数
+- 公共API函数
+- 用户输入接收点
+
+## 输出格式
+
+请以JSON格式输出：
+
+```json
+{{
+    "candidate_paths": [
+        {{
+            "entry_point": "入口点函数",
+            "sink": "Sink函数",
+            "call_chain": ["入口点", "中间函数1", "中间函数2", "Sink"],
+            "modified_functions": ["修改的函数"],
+            "files_involved": ["文件1.py", "文件2.py"],
+            "sink_category": "sql_injection",
+            "confidence": 0.8,
+            "description": "路径描述"
+        }}
+    ],
+    "sink_matches": {{
+        "sql_injection": ["匹配的函数列表"]
+    }},
+    "analysis_summary": "分析总结"
+}}
+```
+
+## 注意事项
+
+1. **准确性优先**：只报告确实存在的路径，不要猜测
+2. **跨文件关注**：特别关注跨文件的调用链
+3. **Sink匹配**：确保Sink函数名与实际代码匹配
+4. **置信度评估**：根据路径长度和Sink严重性评估置信度

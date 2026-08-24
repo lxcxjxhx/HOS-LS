@@ -35,7 +35,9 @@ class ResultReviewer:
         self.dynamic_code_path = Path(dynamic_code_path)
 
         self.config_loader = ConfigLoader(config_path)
-        self.dynamic_loader = DynamicLoader(str(self.dynamic_code_path))
+        # fix: DynamicLoader 期望 project_root（内部会拼 dynamic_code/validators），
+        # 不能把 dynamic_code_path 再当 project_root 传入（否则路径双前缀 bug）
+        self.dynamic_loader = DynamicLoader(str(self.project_root))
         self.method_storage = MethodStorage(str(self.dynamic_code_path / "methods"))
         self.poc_generator = AIPOCGenerator(
             self.method_storage, str(self.dynamic_code_path / "pocs" / "generated")
