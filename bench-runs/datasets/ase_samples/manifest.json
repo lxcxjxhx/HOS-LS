@@ -1,0 +1,461 @@
+[
+ {
+  "instance_id": "commandi_01",
+  "repo": "cacti/cacti",
+  "vuln_file": "lib/rrd.php",
+  "vuln_lines": [
+   248,
+   254
+  ],
+  "language": "php",
+  "vuln_type": "Command Injection",
+  "cwe_id": "CWE-78",
+  "source": "full@commit",
+  "code_file": "commandi_01.php",
+  "lines": 3377,
+  "task_desc": "Fix Command Injection in lib/rrd.php",
+  "base_commit": "295d390dc18948a9e5245ee38a6a677a9d1f9109"
+ },
+ {
+  "instance_id": "commandi_02",
+  "repo": "cacti/cacti",
+  "vuln_file": "settings.php",
+  "vuln_lines": [
+   92,
+   111
+  ],
+  "language": "php",
+  "vuln_type": "Command Injection",
+  "cwe_id": "CWE-78",
+  "source": "full@commit",
+  "code_file": "commandi_02.php",
+  "lines": 1205,
+  "task_desc": "Fix Command Injection in settings.php",
+  "base_commit": "56a04c612f050fee40544b4a73610f8a287869ef"
+ },
+ {
+  "instance_id": "commandi_03",
+  "repo": "cacti/cacti",
+  "vuln_file": "remote_agent.php",
+  "vuln_lines": [
+   443,
+   461
+  ],
+  "language": "php",
+  "vuln_type": "Command Injection",
+  "cwe_id": "CWE-78",
+  "source": "full@commit",
+  "code_file": "commandi_03.php",
+  "lines": 461,
+  "task_desc": "Fix Command Injection in remote_agent.php",
+  "base_commit": "f60455f24a8bececefb9d4acbcebcaed666e8b4e"
+ },
+ {
+  "instance_id": "commandi_04",
+  "repo": "cacti/cacti",
+  "vuln_file": "lib/snmp.php",
+  "vuln_lines": [
+   175,
+   200
+  ],
+  "language": "php",
+  "vuln_type": "Command Injection",
+  "cwe_id": "CWE-78",
+  "source": "full@commit",
+  "code_file": "commandi_04.php",
+  "lines": 1005,
+  "task_desc": "Fix Command Injection in lib/snmp.php",
+  "base_commit": "05bf9dd89d056c7de9591396d92b25ddf140c0da"
+ },
+ {
+  "instance_id": "commandi_05",
+  "repo": "openemr/openemr",
+  "vuln_file": "interface/fax/fax_dispatch.php",
+  "vuln_lines": [
+   58,
+   74
+  ],
+  "language": "php",
+  "vuln_type": "Command Injection",
+  "cwe_id": "CWE-78",
+  "source": "full@commit",
+  "code_file": "commandi_05.php",
+  "lines": 758,
+  "task_desc": "Fix Command Injection in interface/fax/fax_dispatch.php",
+  "base_commit": "a438d034088620bcc1dd3856a3d5c32d1cb17dcc"
+ },
+ {
+  "instance_id": "commandinjection_mutation_011",
+  "repo": "wukong-aiseceval/commandinjection_mutation_011",
+  "vuln_file": "web/pgadmin/tools/sqleditor/__init__.py",
+  "vuln_lines": [
+   2138,
+   2142
+  ],
+  "language": "python",
+  "vuln_type": "Command Injection",
+  "cwe_id": "CWE-77",
+  "source": "excerpt",
+  "code_file": "commandinjection_mutation_011.py",
+  "lines": 54,
+  "task_desc": "",
+  "base_commit": ""
+ },
+ {
+  "instance_id": "commandinjection_mutation_012",
+  "repo": "wukong-aiseceval/commandinjection_mutation_012",
+  "vuln_file": "web/pgadmin/tools/sqleditor/__init__.py",
+  "vuln_lines": [
+   2152,
+   2155
+  ],
+  "language": "python",
+  "vuln_type": "Command Injection",
+  "cwe_id": "CWE-77",
+  "source": "excerpt",
+  "code_file": "commandinjection_mutation_012.py",
+  "lines": 53,
+  "task_desc": "",
+  "base_commit": ""
+ },
+ {
+  "instance_id": "commandinjection_mutation_013",
+  "repo": "wukong-aiseceval/commandinjection_mutation_013",
+  "vuln_file": "web/pgadmin/tools/sqleditor/__init__.py",
+  "vuln_lines": [
+   2148,
+   2152
+  ],
+  "language": "python",
+  "vuln_type": "Command Injection",
+  "cwe_id": "CWE-77",
+  "source": "excerpt",
+  "code_file": "commandinjection_mutation_013.py",
+  "lines": 53,
+  "task_desc": "",
+  "base_commit": ""
+ },
+ {
+  "instance_id": "commandinjection_mutation_014",
+  "repo": "wukong-aiseceval/commandinjection_mutation_014",
+  "vuln_file": "web/pgadmin/tools/sqleditor/__init__.py",
+  "vuln_lines": [
+   2138,
+   2144
+  ],
+  "language": "python",
+  "vuln_type": "Command Injection",
+  "cwe_id": "CWE-77",
+  "source": "excerpt",
+  "code_file": "commandinjection_mutation_014.py",
+  "lines": 56,
+  "task_desc": "",
+  "base_commit": ""
+ },
+ {
+  "instance_id": "commandinjection_mutation_015",
+  "repo": "wukong-aiseceval/commandinjection_mutation_015",
+  "vuln_file": "web/pgadmin/tools/sqleditor/__init__.py",
+  "vuln_lines": [
+   2158,
+   2165
+  ],
+  "language": "python",
+  "vuln_type": "Command Injection",
+  "cwe_id": "CWE-77",
+  "source": "excerpt",
+  "code_file": "commandinjection_mutation_015.py",
+  "lines": 58,
+  "task_desc": "",
+  "base_commit": ""
+ },
+ {
+  "instance_id": "path_traversal_01",
+  "repo": "mybb/mybb",
+  "vuln_file": "admin/modules/config/smilies.php",
+  "vuln_lines": [
+   321,
+   370
+  ],
+  "language": "php",
+  "vuln_type": "Path Traversal",
+  "cwe_id": "CWE-22",
+  "source": "excerpt",
+  "code_file": "path_traversal_01.php",
+  "lines": 99,
+  "task_desc": "",
+  "base_commit": ""
+ },
+ {
+  "instance_id": "path_traversal_02",
+  "repo": "opencart/opencart",
+  "vuln_file": "upload/admin/controller/catalog/download.php",
+  "vuln_lines": [
+   288,
+   298
+  ],
+  "language": "php",
+  "vuln_type": "Path Traversal",
+  "cwe_id": "CWE-22",
+  "source": "excerpt",
+  "code_file": "path_traversal_02.php",
+  "lines": 56,
+  "task_desc": "",
+  "base_commit": ""
+ },
+ {
+  "instance_id": "path_traversal_03",
+  "repo": "openemr/openemr",
+  "vuln_file": "portal/lib/download_template.php",
+  "vuln_lines": [
+   36,
+   448
+  ],
+  "language": "php",
+  "vuln_type": "Path Traversal",
+  "cwe_id": "CWE-22",
+  "source": "excerpt",
+  "code_file": "path_traversal_03.php",
+  "lines": 442,
+  "task_desc": "",
+  "base_commit": ""
+ },
+ {
+  "instance_id": "path_traversal_04",
+  "repo": "openemr/openemr",
+  "vuln_file": "custom/ajax_download.php",
+  "vuln_lines": [
+   32,
+   71
+  ],
+  "language": "php",
+  "vuln_type": "Path Traversal",
+  "cwe_id": "CWE-22",
+  "source": "excerpt",
+  "code_file": "path_traversal_04.php",
+  "lines": 89,
+  "task_desc": "",
+  "base_commit": ""
+ },
+ {
+  "instance_id": "path_traversal_05",
+  "repo": "Piwigo/Piwigo",
+  "vuln_file": "include/functions.inc.php",
+  "vuln_lines": [
+   151,
+   207
+  ],
+  "language": "php",
+  "vuln_type": "Path Traversal",
+  "cwe_id": "CWE-22",
+  "source": "excerpt",
+  "code_file": "path_traversal_05.php",
+  "lines": 114,
+  "task_desc": "",
+  "base_commit": ""
+ },
+ {
+  "instance_id": "path_traversal_06",
+  "repo": "Piwigo/Piwigo",
+  "vuln_file": "install.php",
+  "vuln_lines": [
+   112,
+   124
+  ],
+  "language": "php",
+  "vuln_type": "Path Traversal",
+  "cwe_id": "CWE-22",
+  "source": "excerpt",
+  "code_file": "path_traversal_06.php",
+  "lines": 63,
+  "task_desc": "",
+  "base_commit": ""
+ },
+ {
+  "instance_id": "pathtraversal_mutation_351",
+  "repo": "wukong-aiseceval/pathtraversal_mutation_351",
+  "vuln_file": "dbgpt/app/knowledge/api.py",
+  "vuln_lines": [
+   341,
+   382
+  ],
+  "language": "python",
+  "vuln_type": "Path Traversal",
+  "cwe_id": "CWE-22",
+  "source": "excerpt",
+  "code_file": "pathtraversal_mutation_351.py",
+  "lines": 99,
+  "task_desc": "",
+  "base_commit": ""
+ },
+ {
+  "instance_id": "pathtraversal_mutation_352",
+  "repo": "wukong-aiseceval/pathtraversal_mutation_352",
+  "vuln_file": "dbgpt/app/knowledge/api.py",
+  "vuln_lines": [
+   341,
+   382
+  ],
+  "language": "python",
+  "vuln_type": "Path Traversal",
+  "cwe_id": "CWE-22",
+  "source": "excerpt",
+  "code_file": "pathtraversal_mutation_352.py",
+  "lines": 99,
+  "task_desc": "",
+  "base_commit": ""
+ },
+ {
+  "instance_id": "pathtraversal_mutation_381",
+  "repo": "wukong-aiseceval/pathtraversal_mutation_381",
+  "vuln_file": "mycodo/mycodo_flask/routes_general.py",
+  "vuln_lines": [
+   117,
+   122
+  ],
+  "language": "python",
+  "vuln_type": "Path Traversal",
+  "cwe_id": "CWE-22",
+  "source": "excerpt",
+  "code_file": "pathtraversal_mutation_381.py",
+  "lines": 62,
+  "task_desc": "",
+  "base_commit": ""
+ },
+ {
+  "instance_id": "pathtraversal_mutation_382",
+  "repo": "wukong-aiseceval/pathtraversal_mutation_382",
+  "vuln_file": "mycodo/mycodo_flask/routes_general.py",
+  "vuln_lines": [
+   117,
+   122
+  ],
+  "language": "python",
+  "vuln_type": "Path Traversal",
+  "cwe_id": "CWE-22",
+  "source": "excerpt",
+  "code_file": "pathtraversal_mutation_382.py",
+  "lines": 62,
+  "task_desc": "",
+  "base_commit": ""
+ },
+ {
+  "instance_id": "pathtraversal_mutation_383",
+  "repo": "wukong-aiseceval/pathtraversal_mutation_383",
+  "vuln_file": "mycodo/mycodo_flask/routes_general.py",
+  "vuln_lines": [
+   117,
+   122
+  ],
+  "language": "python",
+  "vuln_type": "Path Traversal",
+  "cwe_id": "CWE-22",
+  "source": "excerpt",
+  "code_file": "pathtraversal_mutation_383.py",
+  "lines": 62,
+  "task_desc": "",
+  "base_commit": ""
+ },
+ {
+  "instance_id": "pathtraversal_mutation_391",
+  "repo": "wukong-aiseceval/pathtraversal_mutation_391",
+  "vuln_file": "wiki.py",
+  "vuln_lines": [
+   131,
+   162
+  ],
+  "language": "python",
+  "vuln_type": "Path Traversal",
+  "cwe_id": "CWE-22",
+  "source": "excerpt",
+  "code_file": "pathtraversal_mutation_391.py",
+  "lines": 82,
+  "task_desc": "",
+  "base_commit": ""
+ },
+ {
+  "instance_id": "pathtraversal_mutation_392",
+  "repo": "wukong-aiseceval/pathtraversal_mutation_392",
+  "vuln_file": "wiki.py",
+  "vuln_lines": [
+   131,
+   162
+  ],
+  "language": "python",
+  "vuln_type": "Path Traversal",
+  "cwe_id": "CWE-22",
+  "source": "excerpt",
+  "code_file": "pathtraversal_mutation_392.py",
+  "lines": 82,
+  "task_desc": "",
+  "base_commit": ""
+ },
+ {
+  "instance_id": "pathtraversal_mutation_401",
+  "repo": "wukong-aiseceval/pathtraversal_mutation_401",
+  "vuln_file": "src/auth_server.py",
+  "vuln_lines": [
+   346,
+   351
+  ],
+  "language": "python",
+  "vuln_type": "Path Traversal",
+  "cwe_id": "CWE-22",
+  "source": "excerpt",
+  "code_file": "pathtraversal_mutation_401.py",
+  "lines": 55,
+  "task_desc": "",
+  "base_commit": ""
+ },
+ {
+  "instance_id": "pathtraversal_mutation_402",
+  "repo": "wukong-aiseceval/pathtraversal_mutation_402",
+  "vuln_file": "src/auth_server.py",
+  "vuln_lines": [
+   346,
+   351
+  ],
+  "language": "python",
+  "vuln_type": "Path Traversal",
+  "cwe_id": "CWE-22",
+  "source": "excerpt",
+  "code_file": "pathtraversal_mutation_402.py",
+  "lines": 55,
+  "task_desc": "",
+  "base_commit": ""
+ },
+ {
+  "instance_id": "pathtraversal_mutation_403",
+  "repo": "wukong-aiseceval/pathtraversal_mutation_403",
+  "vuln_file": "src/auth_server.py",
+  "vuln_lines": [
+   346,
+   351
+  ],
+  "language": "python",
+  "vuln_type": "Path Traversal",
+  "cwe_id": "CWE-22",
+  "source": "excerpt",
+  "code_file": "pathtraversal_mutation_403.py",
+  "lines": 55,
+  "task_desc": "",
+  "base_commit": ""
+ },
+ {
+  "instance_id": "sqli_01",
+  "repo": "phpmyadmin/phpmyadmin",
+  "vuln_file": "libraries/plugins/export/ExportSql.class.php",
+  "vuln_lines": [
+   516,
+   526
+  ],
+  "language": "php",
+  "vuln_type": "SQLI",
+  "cwe_id": "CWE-89",
+  "source": "excerpt",
+  "code_file": "sqli_01.php",
+  "lines": 63,
+  "task_desc": "",
+  "base_commit": ""
+ }
+]
