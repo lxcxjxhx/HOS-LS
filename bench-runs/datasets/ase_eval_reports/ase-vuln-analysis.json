@@ -1,0 +1,321 @@
+[
+ {
+  "iid": "commandi_01",
+  "cwe": "CWE-78",
+  "type": "Command Injection",
+  "src": "full@commit",
+  "lang": "php",
+  "n_conf": 0,
+  "cwe_hit": 0,
+  "other_conf": 0,
+  "rules": []
+ },
+ {
+  "iid": "commandi_02",
+  "cwe": "CWE-78",
+  "type": "Command Injection",
+  "src": "full@commit",
+  "lang": "php",
+  "n_conf": 0,
+  "cwe_hit": 0,
+  "other_conf": 0,
+  "rules": []
+ },
+ {
+  "iid": "commandi_03",
+  "cwe": "CWE-78",
+  "type": "Command Injection",
+  "src": "full@commit",
+  "lang": "php",
+  "n_conf": 0,
+  "cwe_hit": 0,
+  "other_conf": 0,
+  "rules": []
+ },
+ {
+  "iid": "commandi_04",
+  "cwe": "CWE-78",
+  "type": "Command Injection",
+  "src": "full@commit",
+  "lang": "php",
+  "n_conf": 0,
+  "cwe_hit": 0,
+  "other_conf": 0,
+  "rules": []
+ },
+ {
+  "iid": "commandi_05",
+  "cwe": "CWE-78",
+  "type": "Command Injection",
+  "src": "full@commit",
+  "lang": "php",
+  "n_conf": 0,
+  "cwe_hit": 0,
+  "other_conf": 0,
+  "rules": []
+ },
+ {
+  "iid": "commandinjection_mutation_011",
+  "cwe": "CWE-77",
+  "type": "Command Injection",
+  "src": "excerpt",
+  "lang": "python",
+  "n_conf": 1,
+  "cwe_hit": 0,
+  "other_conf": 1,
+  "rules": [
+   "eval()函数执行用户输入导致远程代码执行"
+  ]
+ },
+ {
+  "iid": "commandinjection_mutation_012",
+  "cwe": "CWE-77",
+  "type": "Command Injection",
+  "src": "excerpt",
+  "lang": "python",
+  "n_conf": 1,
+  "cwe_hit": 0,
+  "other_conf": 1,
+  "rules": [
+   "通过eval函数执行任意代码"
+  ]
+ },
+ {
+  "iid": "commandinjection_mutation_013",
+  "cwe": "CWE-77",
+  "type": "Command Injection",
+  "src": "excerpt",
+  "lang": "python",
+  "n_conf": 2,
+  "cwe_hit": 0,
+  "other_conf": 2,
+  "rules": [
+   "SQL注入漏洞",
+   "命令注入漏洞"
+  ]
+ },
+ {
+  "iid": "commandinjection_mutation_014",
+  "cwe": "CWE-77",
+  "type": "Command Injection",
+  "src": "excerpt",
+  "lang": "python",
+  "n_conf": 1,
+  "cwe_hit": 0,
+  "other_conf": 1,
+  "rules": [
+   "Python代码中存在eval函数的不安全使用"
+  ]
+ },
+ {
+  "iid": "commandinjection_mutation_015",
+  "cwe": "CWE-77",
+  "type": "Command Injection",
+  "src": "excerpt",
+  "lang": "python",
+  "n_conf": 0,
+  "cwe_hit": 0,
+  "other_conf": 0,
+  "rules": []
+ },
+ {
+  "iid": "path_traversal_01",
+  "cwe": "CWE-22",
+  "type": "Path Traversal",
+  "src": "excerpt",
+  "lang": "php",
+  "n_conf": 0,
+  "cwe_hit": 0,
+  "other_conf": 0,
+  "rules": []
+ },
+ {
+  "iid": "path_traversal_02",
+  "cwe": "CWE-22",
+  "type": "Path Traversal",
+  "src": "excerpt",
+  "lang": "php",
+  "n_conf": 0,
+  "cwe_hit": 0,
+  "other_conf": 0,
+  "rules": []
+ },
+ {
+  "iid": "path_traversal_03",
+  "cwe": "CWE-22",
+  "type": "Path Traversal",
+  "src": "excerpt",
+  "lang": "php",
+  "n_conf": 1,
+  "cwe_hit": 0,
+  "other_conf": 1,
+  "rules": [
+   "路径遍历漏洞"
+  ]
+ },
+ {
+  "iid": "path_traversal_04",
+  "cwe": "CWE-22",
+  "type": "Path Traversal",
+  "src": "excerpt",
+  "lang": "php",
+  "n_conf": 2,
+  "cwe_hit": 0,
+  "other_conf": 2,
+  "rules": [
+   "文件路径遍历漏洞",
+   "任意文件下载漏洞"
+  ]
+ },
+ {
+  "iid": "path_traversal_05",
+  "cwe": "CWE-22",
+  "type": "Path Traversal",
+  "src": "excerpt",
+  "lang": "php",
+  "n_conf": 0,
+  "cwe_hit": 0,
+  "other_conf": 0,
+  "rules": []
+ },
+ {
+  "iid": "path_traversal_06",
+  "cwe": "CWE-22",
+  "type": "Path Traversal",
+  "src": "excerpt",
+  "lang": "php",
+  "n_conf": 1,
+  "cwe_hit": 0,
+  "other_conf": 1,
+  "rules": [
+   "路径遍历漏洞"
+  ]
+ },
+ {
+  "iid": "pathtraversal_mutation_351",
+  "cwe": "CWE-22",
+  "type": "Path Traversal",
+  "src": "excerpt",
+  "lang": "python",
+  "n_conf": 0,
+  "cwe_hit": 0,
+  "other_conf": 0,
+  "rules": []
+ },
+ {
+  "iid": "pathtraversal_mutation_352",
+  "cwe": "CWE-22",
+  "type": "Path Traversal",
+  "src": "excerpt",
+  "lang": "python",
+  "n_conf": 1,
+  "cwe_hit": 0,
+  "other_conf": 1,
+  "rules": [
+   "文件上传路径遍历漏洞"
+  ]
+ },
+ {
+  "iid": "pathtraversal_mutation_381",
+  "cwe": "CWE-22",
+  "type": "Path Traversal",
+  "src": "excerpt",
+  "lang": "python",
+  "n_conf": 0,
+  "cwe_hit": 0,
+  "other_conf": 0,
+  "rules": []
+ },
+ {
+  "iid": "pathtraversal_mutation_382",
+  "cwe": "CWE-22",
+  "type": "Path Traversal",
+  "src": "excerpt",
+  "lang": "python",
+  "n_conf": 1,
+  "cwe_hit": 0,
+  "other_conf": 1,
+  "rules": [
+   "路径遍历漏洞"
+  ]
+ },
+ {
+  "iid": "pathtraversal_mutation_383",
+  "cwe": "CWE-22",
+  "type": "Path Traversal",
+  "src": "excerpt",
+  "lang": "python",
+  "n_conf": 0,
+  "cwe_hit": 0,
+  "other_conf": 0,
+  "rules": []
+ },
+ {
+  "iid": "pathtraversal_mutation_391",
+  "cwe": "CWE-22",
+  "type": "Path Traversal",
+  "src": "excerpt",
+  "lang": "python",
+  "n_conf": 0,
+  "cwe_hit": 0,
+  "other_conf": 0,
+  "rules": []
+ },
+ {
+  "iid": "pathtraversal_mutation_392",
+  "cwe": "CWE-22",
+  "type": "Path Traversal",
+  "src": "excerpt",
+  "lang": "python",
+  "n_conf": 1,
+  "cwe_hit": 0,
+  "other_conf": 1,
+  "rules": [
+   "路径遍历漏洞"
+  ]
+ },
+ {
+  "iid": "pathtraversal_mutation_401",
+  "cwe": "CWE-22",
+  "type": "Path Traversal",
+  "src": "excerpt",
+  "lang": "python",
+  "n_conf": 0,
+  "cwe_hit": 0,
+  "other_conf": 0,
+  "rules": []
+ },
+ {
+  "iid": "pathtraversal_mutation_402",
+  "cwe": "CWE-22",
+  "type": "Path Traversal",
+  "src": "excerpt",
+  "lang": "python",
+  "n_conf": 0,
+  "cwe_hit": 0,
+  "other_conf": 0,
+  "rules": []
+ },
+ {
+  "iid": "pathtraversal_mutation_403",
+  "cwe": "CWE-22",
+  "type": "Path Traversal",
+  "src": "excerpt",
+  "lang": "python",
+  "n_conf": 0,
+  "cwe_hit": 0,
+  "other_conf": 0,
+  "rules": []
+ },
+ {
+  "iid": "sqli_01",
+  "cwe": "CWE-89",
+  "type": "SQLI",
+  "src": "excerpt",
+  "lang": "php",
+  "n_conf": 0,
+  "cwe_hit": 0,
+  "other_conf": 0,
+  "rules": []
+ }
+]

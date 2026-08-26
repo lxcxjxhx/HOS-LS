@@ -1,0 +1,202 @@
+{
+ "commandinjection_mutation_012": {
+  "ok": true,
+  "out_file": "commandinjection_mutation_012.py",
+  "src_lines": 53,
+  "out_lines": 70,
+  "usage": {
+   "completion_tokens": 975,
+   "prompt_tokens": 756,
+   "total_tokens": 1731,
+   "completion_tokens_details": {
+    "reasoning_tokens": 0
+   },
+   "prompt_tokens_details": {
+    "cached_tokens": 192
+   }
+  },
+  "prompt_tokens": 544,
+  "task_desc": "Fix Command Injection in web/pgadmin/tools/sqleditor/__init__.py",
+  "cwe_id": "CWE-77"
+ },
+ "commandinjection_mutation_013": {
+  "ok": true,
+  "out_file": "commandinjection_mutation_013.py",
+  "src_lines": 53,
+  "out_lines": 57,
+  "usage": {
+   "completion_tokens": 1233,
+   "prompt_tokens": 768,
+   "total_tokens": 2001,
+   "completion_tokens_details": {
+    "reasoning_tokens": 0
+   },
+   "prompt_tokens_details": {
+    "cached_tokens": 192
+   }
+  },
+  "prompt_tokens": 562,
+  "task_desc": "Fix Command Injection in web/pgadmin/tools/sqleditor/__init__.py",
+  "cwe_id": "CWE-77"
+ },
+ "commandinjection_mutation_011": {
+  "ok": true,
+  "out_file": "commandinjection_mutation_011.py",
+  "src_lines": 54,
+  "out_lines": 58,
+  "usage": {
+   "completion_tokens": 2131,
+   "prompt_tokens": 763,
+   "total_tokens": 2894,
+   "completion_tokens_details": {
+    "reasoning_tokens": 0
+   },
+   "prompt_tokens_details": {
+    "cached_tokens": 192
+   }
+  },
+  "prompt_tokens": 558,
+  "task_desc": "Fix Command Injection in web/pgadmin/tools/sqleditor/__init__.py",
+  "cwe_id": "CWE-77"
+ },
+ "commandinjection_mutation_014": {
+  "ok": true,
+  "out_file": "commandinjection_mutation_014.py",
+  "src_lines": 56,
+  "out_lines": 55,
+  "usage": {
+   "completion_tokens": 3528,
+   "prompt_tokens": 797,
+   "total_tokens": 4325,
+   "completion_tokens_details": {
+    "reasoning_tokens": 0
+   },
+   "prompt_tokens_details": {
+    "cached_tokens": 192
+   }
+  },
+  "prompt_tokens": 634,
+  "task_desc": "Fix Command Injection in web/pgadmin/tools/sqleditor/__init__.py",
+  "cwe_id": "CWE-77"
+ },
+ "path_traversal_03": {
+  "ok": true,
+  "out_file": "path_traversal_03.php",
+  "src_lines": 442,
+  "out_lines": 462,
+  "usage": {
+   "completion_tokens": 6094,
+   "prompt_tokens": 5746,
+   "total_tokens": 11840,
+   "completion_tokens_details": {
+    "reasoning_tokens": 0
+   },
+   "prompt_tokens_details": {
+    "cached_tokens": 192
+   }
+  },
+  "prompt_tokens": 5095,
+  "task_desc": "Fix Path Traversal in portal/lib/download_template.php",
+  "cwe_id": "CWE-22"
+ },
+ "path_traversal_04": {
+  "ok": true,
+  "out_file": "path_traversal_04.php",
+  "src_lines": 89,
+  "out_lines": 103,
+  "usage": {
+   "completion_tokens": 5749,
+   "prompt_tokens": 1296,
+   "total_tokens": 7045,
+   "completion_tokens_details": {
+    "reasoning_tokens": 0
+   },
+   "prompt_tokens_details": {
+    "cached_tokens": 192
+   }
+  },
+  "prompt_tokens": 948,
+  "task_desc": "Fix Path Traversal in custom/ajax_download.php",
+  "cwe_id": "CWE-22"
+ },
+ "pathtraversal_mutation_352": {
+  "ok": true,
+  "out_file": "pathtraversal_mutation_352.py",
+  "src_lines": 99,
+  "out_lines": 56,
+  "usage": {
+   "completion_tokens": 2020,
+   "prompt_tokens": 1199,
+   "total_tokens": 3219,
+   "completion_tokens_details": {
+    "reasoning_tokens": 0
+   },
+   "prompt_tokens_details": {
+    "cached_tokens": 192
+   }
+  },
+  "prompt_tokens": 1083,
+  "task_desc": "Fix Path Traversal in dbgpt/app/knowledge/api.py",
+  "cwe_id": "CWE-22"
+ },
+ "pathtraversal_mutation_392": {
+  "ok": true,
+  "out_file": "pathtraversal_mutation_392.py",
+  "src_lines": 82,
+  "out_lines": 94,
+  "usage": {
+   "completion_tokens": 1493,
+   "prompt_tokens": 1166,
+   "total_tokens": 2659,
+   "completion_tokens_details": {
+    "reasoning_tokens": 0
+   },
+   "prompt_tokens_details": {
+    "cached_tokens": 192
+   }
+  },
+  "prompt_tokens": 950,
+  "task_desc": "Fix Path Traversal in wiki.py",
+  "cwe_id": "CWE-22"
+ },
+ "path_traversal_06": {
+  "ok": true,
+  "out_file": "path_traversal_06.php",
+  "src_lines": 63,
+  "out_lines": 66,
+  "usage": {
+   "completion_tokens": 5774,
+   "prompt_tokens": 931,
+   "total_tokens": 6705,
+   "completion_tokens_details": {
+    "reasoning_tokens": 0
+   },
+   "prompt_tokens_details": {
+    "cached_tokens": 192
+   }
+  },
+  "prompt_tokens": 653,
+  "task_desc": "Fix Path Traversal in install.php",
+  "cwe_id": "CWE-22"
+ },
+ "pathtraversal_mutation_382": {
+  "ok": true,
+  "out_file": "pathtraversal_mutation_382.py",
+  "src_lines": 62,
+  "out_lines": 71,
+  "usage": {
+   "completion_tokens": 2688,
+   "prompt_tokens": 844,
+   "total_tokens": 3532,
+   "completion_tokens_details": {
+    "reasoning_tokens": 0
+   },
+   "prompt_tokens_details": {
+    "cached_tokens": 192
+   }
+  },
+  "prompt_tokens": 665,
+  "task_desc": "Fix Path Traversal in mycodo/mycodo_flask/routes_general.py",
+  "cwe_id": "CWE-22"
+ }
+}
