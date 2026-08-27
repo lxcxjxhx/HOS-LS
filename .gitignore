@@ -80,3 +80,15 @@ envs/codeql/
 envs/codeql-packs/
 envs/semgrep-rules/
 envs/sast-venv/
+
+# Dataset directories (third-party data, not tracked)
+bench-runs/datasets/
+bench-runs/temp/
+bench-runs/temp_eval/
+bench-runs/temp_hosls/
+bench-runs/experiment_results/
+
+# Misc generated files
+hos-ls-deepinfra.yaml
+pr_final.md
+.gitconfig_proxy

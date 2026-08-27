@@ -1,3 +1,10 @@
+# HOS-LS 7-Agent LangGraph 扫描流程
+# 唯一入口: python -m src.cli.main scan <target> [--pure-ai]
+# 版本: v2.0 (2026-08-17)
+#   - taint_analysis_node → TaintEngine (v2.0: CWE-416/UAF/sizeof 改进)
+#   - 所有独立实验入口已合并到此模块
+#   - 所有冗余脚本已清理（见 docs/CHANGELOG.md）
+
 import functools
 import hashlib
 import json
