@@ -1,0 +1,212 @@
+{
+  "metrics": {
+    "total": 20,
+    "correct": 2,
+    "accuracy": 0.1,
+    "by_type": {
+      "Path Traversal": {
+        "total": 3,
+        "detected": 0
+      },
+      "XXE": {
+        "total": 1,
+        "detected": 0
+      },
+      "Missing Authentication": {
+        "total": 1,
+        "detected": 0
+      },
+      "File Upload": {
+        "total": 1,
+        "detected": 0
+      },
+      "Unknown": {
+        "total": 8,
+        "detected": 2
+      },
+      "SSRF": {
+        "total": 1,
+        "detected": 0
+      },
+      "Command Injection": {
+        "total": 1,
+        "detected": 0
+      },
+      "Code Injection": {
+        "total": 1,
+        "detected": 0
+      },
+      "Authentication Bypass": {
+        "total": 1,
+        "detected": 0
+      },
+      "XSS": {
+        "total": 2,
+        "detected": 0
+      }
+    }
+  },
+  "elapsed_seconds": 280.68805265426636,
+  "results": [
+    {
+      "sample_id": "00c73b6e",
+      "vuln_type": "Path Traversal",
+      "cwe_id": "CWE-22",
+      "prediction": false,
+      "confidence": 0.0,
+      "ground_truth": true
+    },
+    {
+      "sample_id": "0294b9f1",
+      "vuln_type": "XXE",
+      "cwe_id": "CWE-611",
+      "prediction": false,
+      "confidence": 0.0,
+      "ground_truth": true
+    },
+    {
+      "sample_id": "03e97308",
+      "vuln_type": "Missing Authentication",
+      "cwe_id": "CWE-306",
+      "prediction": false,
+      "confidence": 0.0,
+      "ground_truth": true
+    },
+    {
+      "sample_id": "06fdf927",
+      "vuln_type": "File Upload",
+      "cwe_id": "CWE-434",
+      "prediction": false,
+      "confidence": 0.0,
+      "ground_truth": true
+    },
+    {
+      "sample_id": "08926a1a",
+      "vuln_type": "Path Traversal",
+      "cwe_id": "CWE-22",
+      "prediction": false,
+      "confidence": 0.0,
+      "ground_truth": true
+    },
+    {
+      "sample_id": "0a06f338",
+      "vuln_type": "Unknown",
+      "cwe_id": "CWE-601",
+      "prediction": true,
+      "confidence": 0.95,
+      "ground_truth": true
+    },
+    {
+      "sample_id": "0bb1aef8",
+      "vuln_type": "Unknown",
+      "cwe_id": "CWE-20",
+      "prediction": false,
+      "confidence": 0.0,
+      "ground_truth": true
+    },
+    {
+      "sample_id": "0c8d2aef",
+      "vuln_type": "Unknown",
+      "cwe_id": "CWE-400",
+      "prediction": true,
+      "confidence": 0.7,
+      "ground_truth": true
+    },
+    {
+      "sample_id": "0dc2e99d",
+      "vuln_type": "Unknown",
+      "cwe_id": "CWE-20",
+      "prediction": false,
+      "confidence": 0.0,
+      "ground_truth": true
+    },
+    {
+      "sample_id": "0f0215bf",
+      "vuln_type": "SSRF",
+      "cwe_id": "CWE-918",
+      "prediction": false,
+      "confidence": 0.0,
+      "ground_truth": true
+    },
+    {
+      "sample_id": "18e78647",
+      "vuln_type": "Unknown",
+      "cwe_id": "CWE-346",
+      "prediction": false,
+      "confidence": 0.0,
+      "ground_truth": true
+    },
+    {
+      "sample_id": "193c77fa",
+      "vuln_type": "Command Injection",
+      "cwe_id": "CWE-78",
+      "prediction": false,
+      "confidence": 0.0,
+      "ground_truth": true
+    },
+    {
+      "sample_id": "1a1914c0",
+      "vuln_type": "Path Traversal",
+      "cwe_id": "CWE-22",
+      "prediction": false,
+      "confidence": 0.0,
+      "ground_truth": true
+    },
+    {
+      "sample_id": "1b48a788",
+      "vuln_type": "Code Injection",
+      "cwe_id": "CWE-94",
+      "prediction": false,
+      "confidence": 0.0,
+      "ground_truth": true
+    },
+    {
+      "sample_id": "1bdfa375",
+      "vuln_type": "Unknown",
+      "cwe_id": "CWE-20",
+      "prediction": false,
+      "confidence": 0.0,
+      "ground_truth": true
+    },
+    {
+      "sample_id": "2082c6c6",
+      "vuln_type": "Authentication Bypass",
+      "cwe_id": "CWE-287",
+      "prediction": false,
+      "confidence": 0.0,
+      "ground_truth": true
+    },
+    {
+      "sample_id": "233c9513",
+      "vuln_type": "Unknown",
+      "cwe_id": "CWE-284",
+      "prediction": false,
+      "confidence": 0.0,
+      "ground_truth": true
+    },
+    {
+      "sample_id": "24e78349",
+      "vuln_type": "XSS",
+      "cwe_id": "CWE-79",
+      "prediction": false,
+      "confidence": 0.0,
+      "ground_truth": true
+    },
+    {
+      "sample_id": "256a7c28",
+      "vuln_type": "Unknown",
+      "cwe_id": "CWE-200",
+      "prediction": false,
+      "confidence": 0.0,
+      "ground_truth": true
+    },
+    {
+      "sample_id": "28f88073",
+      "vuln_type": "XSS",
+      "cwe_id": "CWE-79",
+      "prediction": false,
+      "confidence": 0.0,
+      "ground_truth": true
+    }
+  ]
+}

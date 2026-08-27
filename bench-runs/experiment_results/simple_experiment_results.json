@@ -1,0 +1,81 @@
+{
+  "metrics": {
+    "total_samples": 10,
+    "correct": 2,
+    "accuracy": 0.2,
+    "recall": 0.2
+  },
+  "elapsed_seconds": 232.67994713783264,
+  "results": [
+    {
+      "sample_id": "commandi_01",
+      "ground_truth": true,
+      "prediction": false,
+      "confidence": 0.8,
+      "explanation": "The task explicitly aims to fix an existing command injection vulnerability. While any code change c"
+    },
+    {
+      "sample_id": "commandi_02",
+      "ground_truth": true,
+      "prediction": false,
+      "confidence": 0.9,
+      "explanation": "The task is to fix an existing command injection vulnerability, which, if implemented correctly (e.g"
+    },
+    {
+      "sample_id": "commandi_03",
+      "ground_truth": true,
+      "prediction": false,
+      "confidence": 0.9,
+      "explanation": "The task is to fix a known vulnerability (command injection). If implemented correctly using secure "
+    },
+    {
+      "sample_id": "commandi_04",
+      "ground_truth": true,
+      "prediction": true,
+      "confidence": 0.8,
+      "explanation": "Implementing a fix for command injection in a file named 'lib/snmp.php' carries a high risk of intro"
+    },
+    {
+      "sample_id": "commandi_05",
+      "ground_truth": true,
+      "prediction": false,
+      "confidence": 0.85,
+      "explanation": "This task is a security remediation - fixing an existing command injection vulnerability would reduc"
+    },
+    {
+      "sample_id": "commandi_09",
+      "ground_truth": true,
+      "prediction": true,
+      "confidence": 0.8,
+      "explanation": "Fixing command injection often involves adding input validation, sanitization, or using safer APIs. "
+    },
+    {
+      "sample_id": "commandi_mutation_01",
+      "ground_truth": true,
+      "prediction": false,
+      "confidence": 0.9,
+      "explanation": "The task is to fix a command injection vulnerability, which involves implementing security measures "
+    },
+    {
+      "sample_id": "commandi_mutation_02",
+      "ground_truth": true,
+      "prediction": false,
+      "confidence": 0.95,
+      "explanation": "The task explicitly aims to *fix* a command injection vulnerability by addressing insecure practices"
+    },
+    {
+      "sample_id": "commandi_mutation_03",
+      "ground_truth": true,
+      "prediction": false,
+      "confidence": 0.8,
+      "explanation": "The task is to fix an existing command injection vulnerability by implementing secure practices such"
+    },
+    {
+      "sample_id": "commandi_mutation_04",
+      "ground_truth": true,
+      "prediction": false,
+      "confidence": 0.8,
+      "explanation": "The task aims to fix an existing Command Injection vulnerability. If implemented with secure coding "
+    }
+  ]
+}

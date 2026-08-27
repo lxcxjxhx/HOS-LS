@@ -154,6 +154,10 @@ class DeepSeekClient(AIClient):
                 "stream": False,
                 "timeout": request_timeout,
             }
+            # DeepInfra Flex 服务层（8 折，慢响应，超时不收费）：仅当 HOSLS_SERVICE_TIER=flex 时启用
+            service_tier = os.environ.get("HOSLS_SERVICE_TIER", "")
+            if service_tier:
+                kwargs["service_tier"] = service_tier
             if request.response_format:
                 kwargs["response_format"] = request.response_format
 
@@ -193,6 +197,7 @@ class DeepSeekClient(AIClient):
                         temperature=request.temperature,
                         stream=False,
                         timeout=request_timeout,
+                        **({"service_tier": service_tier} if service_tier else {}),
                     )
                     choice = response.choices[0]
                     return AIResponse(
@@ -243,6 +248,7 @@ class DeepSeekClient(AIClient):
                 messages=[{"role": "user", "content": "Reply with: OK"}],
                 max_tokens=10,
                 stream=False,
+                **({"service_tier": os.environ.get("HOSLS_SERVICE_TIER", "")} if os.environ.get("HOSLS_SERVICE_TIER") else {}),
             )
 
             logger.info("DeepSeek API access validated successfully")

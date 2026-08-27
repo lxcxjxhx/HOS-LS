@@ -1,0 +1,433 @@
+{
+  "metrics": {
+    "total_samples": 60,
+    "accuracy": 0.5,
+    "vuln_recall": 0.0,
+    "pair_correct_rate": 0.0,
+    "precision": 0.0,
+    "f1_score": 0.0
+  },
+  "elapsed_seconds": 0.0015943050384521484,
+  "results": [
+    {
+      "sample_id": "mock_vuln_000",
+      "prediction": false,
+      "ground_truth": true,
+      "is_correct": false,
+      "confidence": 0.0
+    },
+    {
+      "sample_id": "mock_patched_000",
+      "prediction": false,
+      "ground_truth": false,
+      "is_correct": true,
+      "confidence": 0.0
+    },
+    {
+      "sample_id": "mock_vuln_001",
+      "prediction": false,
+      "ground_truth": true,
+      "is_correct": false,
+      "confidence": 0.0
+    },
+    {
+      "sample_id": "mock_patched_001",
+      "prediction": false,
+      "ground_truth": false,
+      "is_correct": true,
+      "confidence": 0.0
+    },
+    {
+      "sample_id": "mock_vuln_002",
+      "prediction": false,
+      "ground_truth": true,
+      "is_correct": false,
+      "confidence": 0.0
+    },
+    {
+      "sample_id": "mock_patched_002",
+      "prediction": false,
+      "ground_truth": false,
+      "is_correct": true,
+      "confidence": 0.0
+    },
+    {
+      "sample_id": "mock_vuln_003",
+      "prediction": false,
+      "ground_truth": true,
+      "is_correct": false,
+      "confidence": 0.0
+    },
+    {
+      "sample_id": "mock_patched_003",
+      "prediction": false,
+      "ground_truth": false,
+      "is_correct": true,
+      "confidence": 0.0
+    },
+    {
+      "sample_id": "mock_vuln_004",
+      "prediction": false,
+      "ground_truth": true,
+      "is_correct": false,
+      "confidence": 0.0
+    },
+    {
+      "sample_id": "mock_patched_004",
+      "prediction": false,
+      "ground_truth": false,
+      "is_correct": true,
+      "confidence": 0.0
+    },
+    {
+      "sample_id": "mock_vuln_005",
+      "prediction": false,
+      "ground_truth": true,
+      "is_correct": false,
+      "confidence": 0.0
+    },
+    {
+      "sample_id": "mock_patched_005",
+      "prediction": false,
+      "ground_truth": false,
+      "is_correct": true,
+      "confidence": 0.0
+    },
+    {
+      "sample_id": "mock_vuln_006",
+      "prediction": false,
+      "ground_truth": true,
+      "is_correct": false,
+      "confidence": 0.0
+    },
+    {
+      "sample_id": "mock_patched_006",
+      "prediction": false,
+      "ground_truth": false,
+      "is_correct": true,
+      "confidence": 0.0
+    },
+    {
+      "sample_id": "mock_vuln_007",
+      "prediction": false,
+      "ground_truth": true,
+      "is_correct": false,
+      "confidence": 0.0
+    },
+    {
+      "sample_id": "mock_patched_007",
+      "prediction": false,
+      "ground_truth": false,
+      "is_correct": true,
+      "confidence": 0.0
+    },
+    {
+      "sample_id": "mock_vuln_008",
+      "prediction": false,
+      "ground_truth": true,
+      "is_correct": false,
+      "confidence": 0.0
+    },
+    {
+      "sample_id": "mock_patched_008",
+      "prediction": false,
+      "ground_truth": false,
+      "is_correct": true,
+      "confidence": 0.0
+    },
+    {
+      "sample_id": "mock_vuln_009",
+      "prediction": false,
+      "ground_truth": true,
+      "is_correct": false,
+      "confidence": 0.0
+    },
+    {
+      "sample_id": "mock_patched_009",
+      "prediction": false,
+      "ground_truth": false,
+      "is_correct": true,
+      "confidence": 0.0
+    },
+    {
+      "sample_id": "mock_vuln_010",
+      "prediction": false,
+      "ground_truth": true,
+      "is_correct": false,
+      "confidence": 0.0
+    },
+    {
+      "sample_id": "mock_patched_010",
+      "prediction": false,
+      "ground_truth": false,
+      "is_correct": true,
+      "confidence": 0.0
+    },
+    {
+      "sample_id": "mock_vuln_011",
+      "prediction": false,
+      "ground_truth": true,
+      "is_correct": false,
+      "confidence": 0.0
+    },
+    {
+      "sample_id": "mock_patched_011",
+      "prediction": false,
+      "ground_truth": false,
+      "is_correct": true,
+      "confidence": 0.0
+    },
+    {
+      "sample_id": "mock_vuln_012",
+      "prediction": false,
+      "ground_truth": true,
+      "is_correct": false,
+      "confidence": 0.0
+    },
+    {
+      "sample_id": "mock_patched_012",
+      "prediction": false,
+      "ground_truth": false,
+      "is_correct": true,
+      "confidence": 0.0
+    },
+    {
+      "sample_id": "mock_vuln_013",
+      "prediction": false,
+      "ground_truth": true,
+      "is_correct": false,
+      "confidence": 0.0
+    },
+    {
+      "sample_id": "mock_patched_013",
+      "prediction": false,
+      "ground_truth": false,
+      "is_correct": true,
+      "confidence": 0.0
+    },
+    {
+      "sample_id": "mock_vuln_014",
+      "prediction": false,
+      "ground_truth": true,
+      "is_correct": false,
+      "confidence": 0.0
+    },
+    {
+      "sample_id": "mock_patched_014",
+      "prediction": false,
+      "ground_truth": false,
+      "is_correct": true,
+      "confidence": 0.0
+    },
+    {
+      "sample_id": "mock_vuln_015",
+      "prediction": false,
+      "ground_truth": true,
+      "is_correct": false,
+      "confidence": 0.0
+    },
+    {
+      "sample_id": "mock_patched_015",
+      "prediction": false,
+      "ground_truth": false,
+      "is_correct": true,
+      "confidence": 0.0
+    },
+    {
+      "sample_id": "mock_vuln_016",
+      "prediction": false,
+      "ground_truth": true,
+      "is_correct": false,
+      "confidence": 0.0
+    },
+    {
+      "sample_id": "mock_patched_016",
+      "prediction": false,
+      "ground_truth": false,
+      "is_correct": true,
+      "confidence": 0.0
+    },
+    {
+      "sample_id": "mock_vuln_017",
+      "prediction": false,
+      "ground_truth": true,
+      "is_correct": false,
+      "confidence": 0.0
+    },
+    {
+      "sample_id": "mock_patched_017",
+      "prediction": false,
+      "ground_truth": false,
+      "is_correct": true,
+      "confidence": 0.0
+    },
+    {
+      "sample_id": "mock_vuln_018",
+      "prediction": false,
+      "ground_truth": true,
+      "is_correct": false,
+      "confidence": 0.0
+    },
+    {
+      "sample_id": "mock_patched_018",
+      "prediction": false,
+      "ground_truth": false,
+      "is_correct": true,
+      "confidence": 0.0
+    },
+    {
+      "sample_id": "mock_vuln_019",
+      "prediction": false,
+      "ground_truth": true,
+      "is_correct": false,
+      "confidence": 0.0
+    },
+    {
+      "sample_id": "mock_patched_019",
+      "prediction": false,
+      "ground_truth": false,
+      "is_correct": true,
+      "confidence": 0.0
+    },
+    {
+      "sample_id": "mock_vuln_020",
+      "prediction": false,
+      "ground_truth": true,
+      "is_correct": false,
+      "confidence": 0.0
+    },
+    {
+      "sample_id": "mock_patched_020",
+      "prediction": false,
+      "ground_truth": false,
+      "is_correct": true,
+      "confidence": 0.0
+    },
+    {
+      "sample_id": "mock_vuln_021",
+      "prediction": false,
+      "ground_truth": true,
+      "is_correct": false,
+      "confidence": 0.0
+    },
+    {
+      "sample_id": "mock_patched_021",
+      "prediction": false,
+      "ground_truth": false,
+      "is_correct": true,
+      "confidence": 0.0
+    },
+    {
+      "sample_id": "mock_vuln_022",
+      "prediction": false,
+      "ground_truth": true,
+      "is_correct": false,
+      "confidence": 0.0
+    },
+    {
+      "sample_id": "mock_patched_022",
+      "prediction": false,
+      "ground_truth": false,
+      "is_correct": true,
+      "confidence": 0.0
+    },
+    {
+      "sample_id": "mock_vuln_023",
+      "prediction": false,
+      "ground_truth": true,
+      "is_correct": false,
+      "confidence": 0.0
+    },
+    {
+      "sample_id": "mock_patched_023",
+      "prediction": false,
+      "ground_truth": false,
+      "is_correct": true,
+      "confidence": 0.0
+    },
+    {
+      "sample_id": "mock_vuln_024",
+      "prediction": false,
+      "ground_truth": true,
+      "is_correct": false,
+      "confidence": 0.0
+    },
+    {
+      "sample_id": "mock_patched_024",
+      "prediction": false,
+      "ground_truth": false,
+      "is_correct": true,
+      "confidence": 0.0
+    },
+    {
+      "sample_id": "mock_vuln_025",
+      "prediction": false,
+      "ground_truth": true,
+      "is_correct": false,
+      "confidence": 0.0
+    },
+    {
+      "sample_id": "mock_patched_025",
+      "prediction": false,
+      "ground_truth": false,
+      "is_correct": true,
+      "confidence": 0.0
+    },
+    {
+      "sample_id": "mock_vuln_026",
+      "prediction": false,
+      "ground_truth": true,
+      "is_correct": false,
+      "confidence": 0.0
+    },
+    {
+      "sample_id": "mock_patched_026",
+      "prediction": false,
+      "ground_truth": false,
+      "is_correct": true,
+      "confidence": 0.0
+    },
+    {
+      "sample_id": "mock_vuln_027",
+      "prediction": false,
+      "ground_truth": true,
+      "is_correct": false,
+      "confidence": 0.0
+    },
+    {
+      "sample_id": "mock_patched_027",
+      "prediction": false,
+      "ground_truth": false,
+      "is_correct": true,
+      "confidence": 0.0
+    },
+    {
+      "sample_id": "mock_vuln_028",
+      "prediction": false,
+      "ground_truth": true,
+      "is_correct": false,
+      "confidence": 0.0
+    },
+    {
+      "sample_id": "mock_patched_028",
+      "prediction": false,
+      "ground_truth": false,
+      "is_correct": true,
+      "confidence": 0.0
+    },
+    {
+      "sample_id": "mock_vuln_029",
+      "prediction": false,
+      "ground_truth": true,
+      "is_correct": false,
+      "confidence": 0.0
+    },
+    {
+      "sample_id": "mock_patched_029",
+      "prediction": false,
+      "ground_truth": false,
+      "is_correct": true,
+      "confidence": 0.0
+    }
+  ]
+}

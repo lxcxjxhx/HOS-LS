@@ -1,0 +1,41 @@
+{
+  "metrics": {
+    "total_samples": 5,
+    "correct": 0,
+    "accuracy": 0.0,
+    "recall": 0.0
+  },
+  "elapsed_seconds": 36.30474305152893,
+  "results": [
+    {
+      "sample_id": "commandi_01",
+      "ground_truth": true,
+      "prediction": false,
+      "error": "Exit code: 2"
+    },
+    {
+      "sample_id": "commandi_02",
+      "ground_truth": true,
+      "prediction": false,
+      "error": "Exit code: 2"
+    },
+    {
+      "sample_id": "commandi_03",
+      "ground_truth": true,
+      "prediction": false,
+      "error": "Exit code: 2"
+    },
+    {
+      "sample_id": "commandi_04",
+      "ground_truth": true,
+      "prediction": false,
+      "error": "Exit code: 2"
+    },
+    {
+      "sample_id": "commandi_05",
+      "ground_truth": true,
+      "prediction": false,
+      "error": "Exit code: 2"
+    }
+  ]
+}
