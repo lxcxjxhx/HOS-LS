@@ -1352,14 +1352,15 @@ class FilePrioritizer:
         except Exception:
             return "无法获取项目结构"
 
-    def _pre_filter_by_rules(self, paths: list) -> list:
+    def _pre_filter_by_rules(self, paths: list, truncate: bool = True) -> list:
         """使用规则快速过滤文件，返回 TOP 30% 最重要的文件
 
         Args:
             paths: 文件路径列表
+            truncate: 是否截断 TOP30%（默认 True 保持向后兼容）
 
         Returns:
-            过滤后的文件路径列表（TOP 30%）
+            过滤后的文件路径列表
         """
         if not paths:
             return []
@@ -1389,9 +1390,15 @@ class FilePrioritizer:
 
         scored_files.sort(key=lambda x: x[1], reverse=True)
 
-        top_count = max(1, int(len(scored_files) * 0.3))
-
-        return [file_path for file_path, _ in scored_files[:top_count]]
+        if truncate:
+            top_count = max(1, int(len(scored_files) * 0.3))
+            return [file_path for file_path, _ in scored_files[:top_count]]
+        else:
+            # [FIX-PR1] 反转 prefilter: 不截断，返回全部文件
+            # SAST prefilter 先扫全部文件 → SAST-hard 直接给出（不走 AI）
+            # → 仅 SAST 不可识别的项目特有逻辑才进 AI 深度分析
+            # 不再以文件名/路径关键词（auth.py/security.py）决定哪些文件进 AI
+            return [file_path for file_path, _ in scored_files]
 
     async def calculate_priority_batch(
         self, paths: List[str], use_ai: bool = True, include_token_analysis: bool = True

@@ -1728,8 +1728,12 @@ class SecurityScanner:
                 max_files_limit = getattr(self.config, "max_files", 0)
 
                 if max_files_limit > 0:
+                    # [FIX-PR1] 反转 prefilter: truncate=False → 不截断 TOP30%
+                    # 全部文件先进 SAST prefilter 分类
+                    # SAST 可识别的直接 hard-finding（不走 AI）
+                    # 仅项目特有盲区进 AI 深度分析
                     top_files = pure_ai_prioritizer._pre_filter_by_rules(
-                        [f.path for f in files],
+                        [f.path for f in files], truncate=False,
                     )[:max_files_limit]
                     file_info_map = {str(f.path): f for f in files}
                     top_files_with_info = [
