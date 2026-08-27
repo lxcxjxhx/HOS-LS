@@ -854,6 +854,7 @@ class MultiAgentPipeline:
             )
         # [OPT-SASTR] SAST 前置过滤证据（由 scanner 在批量分析前注入）
         self.sast_evidence: Dict[str, str] = {}
+        self.sast_candidate_lines: Dict[str, set] = {}
         # [OPT-TRIAGE] per-agent 模型映射（大小模型协同；主实验留空保持同模型口径）
         self.agent_model_overrides: Dict[str, str] = {}
         try:
@@ -1071,7 +1072,7 @@ class MultiAgentPipeline:
                 main_task = progress.add_task(f"[cyan]分析: {Path(file_path).name}[/cyan]", total=7)
 
                 start_time = time.time()
-                context = self.context_builder.build_context(file_path)
+                context = self.context_builder.build_context(file_path, getattr(self, "sast_candidate_lines", None))
                 self._register_known_files(context)
                 self.line_number_mapper.record_file_snapshot(file_path, context["file_content"])
                 elapsed = time.time() - start_time
@@ -3749,7 +3750,7 @@ class MultiAgentPipeline:
                 )
 
                 start_time = time.time()
-                context = self.context_builder.build_context(file_path)
+                context = self.context_builder.build_context(file_path, getattr(self, "sast_candidate_lines", None))
                 self._register_known_files(context)
                 self.line_number_mapper.record_file_snapshot(file_path, context["file_content"])
                 elapsed = time.time() - start_time

@@ -345,11 +345,12 @@ class ContextBuilder:
         },
     }
 
-    def build_context(self, file_path: str) -> Dict[str, Any]:
+    def build_context(self, file_path: str, sast_hints: Optional[Dict[str, set]] = None) -> Dict[str, Any]:
         """构建文件的分析上下文
 
         Args:
             file_path: 文件路径
+            sast_hints: SAST 预过滤发现的候选行号 {file_path: {line_numbers}}
 
         Returns:
             包含上下文信息的字典
@@ -359,11 +360,29 @@ class ContextBuilder:
         ext = Path(file_path).suffix.lower()
 
         if ext == ".java":
-            return self._build_java_context(file_path)
+            ctx = self._build_java_context(file_path)
         elif ext in [".xml", ".yml", ".yaml", ".properties"]:
-            return self._build_config_context(file_path)
+            ctx = self._build_config_context(file_path)
         else:
-            return self._build_generic_context(file_path)
+            ctx = self._build_generic_context(file_path)
+
+        # [OPT-SASTR] SAST 候选行号注入 —— 告诉 agent 静态分析在哪里发现了可疑操作
+        if sast_hints:
+            hint_lines = set()
+            for _f, _lines in sast_hints.items():
+                if Path(_f).name == Path(file_path).name or _f == file_path:
+                    hint_lines.update(_lines)
+            if hint_lines:
+                sorted_lines = sorted(hint_lines)
+                ctx["sast_clues"] = (
+                    "【静态分析线索】以下代码行被传统 SAST 规则标记为可疑操作，"
+                    "验证时请重点分析：\n" +
+                    "\n".join(f"  - 第{l}行" for l in sorted_lines) +
+                    "\n（注：SAST 可能有误报，需你判断是否真实可利用）"
+                )
+                logger.debug(f"  注入 SAST 线索 {len(hint_lines)} 行: {sorted_lines}")
+
+        return ctx
 
     def _normalize_content_for_ai(self, content: str) -> str:
         """Normalize content for AI input to avoid line number shifts.

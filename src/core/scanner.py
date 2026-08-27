@@ -2250,6 +2250,12 @@ class SecurityScanner:
                             and sast_pipeline_evidence
                         ):
                             self.pure_ai_analyzer.pipeline.sast_evidence = sast_pipeline_evidence
+                        if (
+                            self.pure_ai_analyzer
+                            and self.pure_ai_analyzer.pipeline
+                            and sast_candidate_lines
+                        ):
+                            self.pure_ai_analyzer.pipeline.sast_candidate_lines = sast_candidate_lines
                         max_concurrent = getattr(self.config.scan, "max_workers", 4) or 3
                         ai_pending = [
                             (i, file_info)
