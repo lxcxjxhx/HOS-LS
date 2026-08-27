@@ -24,7 +24,7 @@ class AIRequest:
     prompt: str
     system_prompt: Optional[str] = None
     temperature: float = 0.0
-    max_tokens: int = 4096
+    max_tokens: int = 8192
     model: Optional[str] = None
     context: Optional[Dict[str, Any]] = None
     multimodal_content: Optional[List[AIContent]] = None

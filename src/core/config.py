@@ -78,7 +78,7 @@ class AIConfig(BaseModel):
     api_key: Optional[str] = Field(default=None, description="API 密钥")
     base_url: Optional[str] = Field(default=None, description="API 基础 URL")
     temperature: float = Field(default=0.0, description="默认温度参数")
-    max_tokens: int = Field(default=4096, description="最大令牌数")
+    max_tokens: int = Field(default=8192, description="最大令牌数")
     timeout: int = Field(default=60, description="超时时间（秒）")
     request_timeout: int = Field(default=180, description="单次 API 请求超时（秒），防止网络挂起拖垮扫描")
     json_mode: str = Field(
