@@ -2676,6 +2676,66 @@ class MultiAgentPipeline:
             logger.debug(f"[M4] AST 证据构建失败: {e}")
             return ""
 
+    def _trim_file_for_agent_3(
+        self, file_content: str, file_path: str, risks: list
+    ) -> str:
+        """[C''] 函数级验证：将 file_content 截断为仅含关键行 ±5 行的片段。
+
+        DREA 风格：给 agent 最关键的函数片段而不是整个文件，
+        避免全文件信息使 agent 因"上下文有防御代码"否决自己的判断。
+        """
+        if not file_content:
+            return file_content
+
+        lines = file_content.split("\n")
+        target_lines: set = set()
+
+        # 1. 从 SAST candidate_lines 提取行号
+        sast_hints = getattr(self, "sast_candidate_lines", {}) or {}
+        for f, ls in sast_hints.items():
+            if Path(f).name == Path(file_path).name or f == file_path:
+                target_lines.update(ls)
+
+        # 2. 从 risks 中提取信号行号
+        for risk in risks if isinstance(risks, list) else []:
+            if isinstance(risk, dict):
+                loc = str(risk.get("location", "") or "")
+                try:
+                    line_no = int(loc.split(":")[-1]) if ":" in loc else 0
+                except (ValueError, IndexError):
+                    line_no = 0
+                if line_no > 0:
+                    target_lines.add(line_no)
+
+        # 3. 如果没有线索行，返回原始内容（fallback）
+        if not target_lines:
+            return file_content
+
+        # 4. 扩展为 ±5 行上下文
+        expanded: set = set()
+        for ln in target_lines:
+            for offset in range(-5, 7):
+                expanded.add(ln + offset)
+        valid_lines = {ln for ln in expanded if 1 <= ln <= len(lines)}
+
+        # 5. 如果截取后只剩一点点就稍微放宽 -> 至少前 20 行
+        if len(valid_lines) < 3:
+            valid_lines = set(range(1, min(21, len(lines) + 1)))
+
+        # 6. 构建输出（保留原始行号前缀方便 agent 定位）
+        sorted_valid = sorted(valid_lines)
+        out_parts = []
+        for i, ln in enumerate(sorted_valid):
+            if i > 0 and ln - sorted_valid[i - 1] > 1:
+                out_parts.append("...")
+            out_parts.append(f"{ln:>4}|{lines[ln - 1]}")
+        result = "\n".join(out_parts)
+        logger.debug(
+            f"[C''] 函数级截断: {Path(file_path).name} {len(lines)}→{len(sorted_valid)} 行 "
+            f"({len(target_lines)} 线索)"
+        )
+        return result
+
     async def _run_agent_3(
         self,
         file_path: str,
@@ -2698,6 +2758,10 @@ class MultiAgentPipeline:
         """
         logger.debug(f" 运行Agent 3 (漏洞验证) on: {file_path}")
         self.debug_logs.append(f"[DEBUG] 运行Agent 3 (漏洞验证) on: {file_path}")
+
+        # [C''] 函数级验证：将 file_content 截断为仅含关键行 ±5 行的片段
+        # 避免全文件信息使 agent 因"上下文有防御代码"否决自己的判断
+        file_content = self._trim_file_for_agent_3(file_content, file_path, risks)
 
         if not isinstance(risk_enumeration, dict):
             logger.warning(
