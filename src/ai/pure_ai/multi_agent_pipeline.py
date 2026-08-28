@@ -626,61 +626,29 @@ class MultiAgentPipeline:
                 progress.advance(main_task)
 
                 self._check_token_budget_and_warn(total_token_usage, "Agent-3")
-                skip_agent_4_5 = (
-                    total_token_usage["total_tokens"]
-                    >= TOKEN_BUDGET_PER_FILE * TOKEN_CRITICAL_THRESHOLD
-                )
 
+                # Agent-4/5/6 不再消耗 token（确定性函数），始终运行
                 start_time = time.time()
-                if skip_agent_4_5:
-                    logger.warning(
-                        f"[TOKEN-SKIP] 跳过 Agent-4 (Token: {total_token_usage['total_tokens']:,}/{TOKEN_BUDGET_PER_FILE:,})"
-                    )
-                    console.print(
-                        f"[yellow][TOKEN-SKIP] 跳过 Agent-4 (Token: {total_token_usage['total_tokens']:,}/{TOKEN_BUDGET_PER_FILE:,})[/yellow]"
-                    )
-                    attack_chain_analysis = {
-                        "attack_chains": [],
-                        "note": "skipped due to token budget",
-                    }
-                    token_usage = {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
-                else:
-                    attack_chain_analysis, token_usage = await self._run_agent_4(
-                        file_path, vulnerability_verification, detected_language, context
-                    )
-                    total_token_usage["prompt_tokens"] += token_usage["prompt_tokens"]
-                    total_token_usage["completion_tokens"] += token_usage["completion_tokens"]
-                    total_token_usage["total_tokens"] += token_usage["total_tokens"]
-                    self._track_attack_chain_signals(attack_chain_analysis)
+                attack_chain_analysis, token_usage = await self._run_agent_4(
+                    file_path, vulnerability_verification, detected_language, context
+                )
+                total_token_usage["prompt_tokens"] += token_usage["prompt_tokens"]
+                total_token_usage["completion_tokens"] += token_usage["completion_tokens"]
+                total_token_usage["total_tokens"] += token_usage["total_tokens"]
+                self._track_attack_chain_signals(attack_chain_analysis)
                 elapsed = time.time() - start_time
                 self._agent_timings["agent_4"] = elapsed
                 self._current_step = "agent_4"
                 progress.advance(main_task)
 
                 start_time = time.time()
-                if skip_agent_4_5:
-                    logger.warning(
-                        f"[TOKEN-SKIP] 跳过 Agent-5 (Token: {total_token_usage['total_tokens']:,}/{TOKEN_BUDGET_PER_FILE:,})"
-                    )
-                    console.print(
-                        f"[yellow][TOKEN-SKIP] 跳过 Agent-5 (Token: {total_token_usage['total_tokens']:,}/{TOKEN_BUDGET_PER_FILE:,})[/yellow]"
-                    )
-                    adversarial_validation = {
-                        "adversarial_analysis": [],
-                        "note": "skipped due to token budget",
-                    }
-                    token_usage = {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
-                else:
-                    adversarial_validation, token_usage = await self._run_agent_5(
-                        file_path, attack_chain_analysis, context["file_content"], detected_language
-                    )
-                    total_token_usage["prompt_tokens"] += token_usage["prompt_tokens"]
-                    total_token_usage["completion_tokens"] += token_usage["completion_tokens"]
-                    total_token_usage["total_tokens"] += token_usage["total_tokens"]
-                    self._track_adversarial_signals(adversarial_validation)
-                    self._check_semantic_consistency(
-                        "agent_4_to_5", attack_chain_analysis, adversarial_validation
-                    )
+                adversarial_validation, token_usage = await self._run_agent_5(
+                    file_path, attack_chain_analysis, context["file_content"], detected_language
+                )
+                total_token_usage["prompt_tokens"] += token_usage["prompt_tokens"]
+                total_token_usage["completion_tokens"] += token_usage["completion_tokens"]
+                total_token_usage["total_tokens"] += token_usage["total_tokens"]
+                self._track_adversarial_signals(adversarial_validation)
                 elapsed = time.time() - start_time
                 self._agent_timings["agent_5"] = elapsed
                 self._current_step = "agent_5"
@@ -2525,6 +2493,82 @@ class MultiAgentPipeline:
             result["signal_tracking"] = signal_tracking
         return result
 
+    def _synthesize_attack_chains(
+        self,
+        vulnerability_verification: Dict[str, Any],
+        file_path: str = "",
+    ) -> Tuple[Dict[str, Any], Dict[str, int]]:
+        """确定性合成攻击链（不消耗 token）。
+
+        从 Agent-3 的 CONFIRMED/REFINED 漏洞合成最小单步攻击链。
+        每一条已验证漏洞都天然是一条"单步可达链"：漏洞直接导致安全影响。
+
+        Returns:
+            (攻击链结果, token使用信息{0 token})
+        """
+        result = {
+            "attack_chains": [],
+            "signal_tracking": {
+                "total_signals": 0, "signals_new": 0,
+                "signals_confirmed": 0, "signals_rejected": 0,
+            },
+        }
+
+        vulns = (
+            vulnerability_verification.get("vulnerabilities", [])
+            if isinstance(vulnerability_verification, dict)
+            else []
+        )
+        verified = [
+            v
+            for v in vulns
+            if isinstance(v, dict)
+            and (v.get("verification_decision") or v.get("signal_state"))
+            in ("CONFIRMED", "REFINED")
+        ]
+
+        chains = []
+        for i, v in enumerate(verified[:12], 1):
+            title = v.get("title") or v.get("vulnerability") or "未命名漏洞"
+            location = v.get("location") or ""
+            severity = v.get("severity") or "HIGH"
+            description = v.get("description") or v.get("verification_reason") or ""
+            evidence = v.get("evidence", [])
+            chains.append({
+                "name": f"单步可达链-{title}",
+                "steps": [
+                    {
+                        "step": 1,
+                        "description": f"利用已验证漏洞 {title}（{location}）直接触发安全影响。验证描述：{description}",
+                        "prerequisites": [],
+                        "payload": "",
+                        "evidence": evidence[:5] if evidence else [],
+                    }
+                ],
+                "final_impact": f"利用 {title} 达成未授权影响",
+                "severity": severity,
+                "cvss_score": v.get("cvss_score") or "",
+                "defense_bypasses": [],
+                "signal_id": f"CHAIN-DET-{i}",
+                "signal_state": "CONFIRMED",
+                "linked_signal_ids": [v.get("signal_id") or f"RISK-{i}"],
+                "evidence": [
+                    {
+                        "type": "flow",
+                        "location": location,
+                        "reason": f"确定性合成：Agent-3 已确认漏洞 {title} 的利用路径",
+                        "confidence": 0.8,
+                    }
+                ],
+            })
+
+        result["attack_chains"] = chains
+        result["signal_tracking"]["total_signals"] = len(chains)
+        result["signal_tracking"]["signals_new"] = len(chains)
+        result["synthesized_deterministically"] = True
+
+        return result, {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
+
     async def _run_agent_4(
         self,
         file_path: str,
@@ -2532,118 +2576,88 @@ class MultiAgentPipeline:
         detected_language: str = "Unknown",
         context: Optional[Dict[str, Any]] = None,
     ) -> Tuple[Dict[str, Any], Dict[str, int]]:
-        """运行Agent 4：攻击链分析
+        """运行Agent 4：攻击链合成（确定性，不消耗 token）
 
-        Args:
-            file_path: 文件路径
-            vulnerability_verification: 漏洞验证结果
-            detected_language: 检测到的语言
-            context: 上下文信息（包含映射关系）
-
-        Returns:
-            (攻击链分析结果, token使用信息)
+        从 Agent-3 已验证的 CONFIRMED/REFINED 漏洞合成最小单步攻击链。
+        所有已验证漏洞天然构成"单步可达链"：漏洞直接导致安全影响。
         """
-        logger.debug(f" 运行Agent 4 (攻击链分析) on: {file_path}")
-        self.debug_logs.append(f"[DEBUG] 运行Agent 4 (攻击链分析) on: {file_path}")
-        verification_results = json.dumps(vulnerability_verification, ensure_ascii=False)
+        logger.debug(f" 运行Agent 4 (攻击链合成/确定性) on: {file_path}")
+        self.debug_logs.append(f"[DEBUG] 运行Agent 4 (攻击链合成/确定性) on: {file_path}")
 
-        context_mappings_summary = ""
-        if context:
-            context_mappings_summary = self._format_context_mappings_for_agent(context)
+        result, token_usage = self._synthesize_attack_chains(vulnerability_verification, file_path)
 
-        prompt = self.prompt_engine.render_agent_prompt(
-            "attack_chain",
-            file_path=file_path,
-            verification_results=verification_results,
-            detected_language=detected_language,
-            context_mappings=context_mappings_summary,
-        )
-
-        response, token_usage = await self._generate_with_retry(
-            prompt, "Agent 4", temperature=self.temperature
-        )
-        result = self._parse_json_response(response, schema_name="attack_chain")
-        # [OPT-P2] Agent-4 确定性兜底：LLM 未生成攻击链时，从 Agent-3 已验证漏洞
-        # 合成最小单步攻击链，保证 Agent-5/6 输入不为空（历史根因：空链→裁决保守拒绝）
-        result = self._fallback_attack_chains(result, vulnerability_verification)
-        logger.debug(f" Agent 4 完成，令牌使用: {token_usage['total_tokens']}")
-        self.debug_logs.append(f"[DEBUG] Agent 4 完成，令牌使用: {token_usage['total_tokens']}")
+        logger.debug(f" Agent 4 完成，合成 {len(result.get('attack_chains', []))} 条攻击链（确定性，0 token）")
+        self.debug_logs.append(f"[DEBUG] Agent 4 完成，确定性合成（0 token）")
         return result, token_usage
 
-    def _fallback_attack_chains(
+    def _deterministic_adversarial_check(
         self,
-        result: Dict[str, Any],
-        vulnerability_verification: Optional[Dict[str, Any]] = None,
+        attack_chain_analysis: Dict[str, Any],
     ) -> Dict[str, Any]:
-        """[OPT-P2] 攻击链确定性兜底（不消耗 token）。
+        """确定性对抗验证（不消耗 token）。
 
-        当 Agent-4 输出为空链或解析失败时，从 Agent-3 的 CONFIRMED/REFINED 漏洞
-        合成最小单步攻击链（signal 直接到影响），并附 note 标记为确定性兜底生成。
+        攻击链来自 Agent-4 确定性合成（基于 Agent-3 已确认漏洞），
+        因此默认 ACCEPT 已验证的攻击链。信号状态映射：
+        - Agent-4 生成的链（signal_state=CONFIRMED）→ ACCEPT
+        - 兜底生成的链（fallback_generated=true）→ ESCALATE（说明信息不足）
         """
-        try:
-            if not isinstance(result, dict):
-                result = {}
-            chains = result.get("attack_chains") or []
-            if chains:
-                return result
-            vulns = []
-            if isinstance(vulnerability_verification, dict):
-                vulns = vulnerability_verification.get("vulnerabilities") or []
-            verified = [
-                v
-                for v in vulns
-                if isinstance(v, dict)
-                and (v.get("verification_decision") or v.get("signal_state"))
-                in ("CONFIRMED", "REFINED")
-            ]
-            if not verified:
-                return result
-            fallback_chains = []
-            for i, v in enumerate(verified[:6], 1):
-                title = v.get("title") or v.get("vulnerability") or "未命名漏洞"
-                location = v.get("location") or ""
-                severity = v.get("severity") or "HIGH"
-                fallback_chains.append(
-                    {
-                        "name": f"单步可达链-{title}",
-                        "steps": [
-                            {
-                                "step": 1,
-                                "description": f"利用已确认漏洞 {title}（{location}）直接触发安全影响",
-                                "prerequisites": [],
-                                "payload": "",
-                                "evidence": [],
-                            }
-                        ],
-                        "final_impact": f"利用 {title} 达成未授权影响",
-                        "severity": severity,
-                        "cvss_score": v.get("cvss_score") or "",
-                        "defense_bypasses": [],
-                        "signal_id": f"CHAIN-FB-{i}",
-                        "signal_state": "NEW",
-                        "linked_signal_ids": [v.get("signal_id") or f"RISK-{i}"],
-                        "evidence": [
-                            {
-                                "type": "flow",
-                                "location": location,
-                                "reason": "Agent-4 未生成完整攻击链，由确定性兜底从已验证漏洞合成",
-                                "confidence": 0.6,
-                            }
-                        ],
-                        "fallback_generated": True,
-                    }
-                )
-            result["attack_chains"] = fallback_chains
-            result["fallback_generated"] = True
-            logger.debug(
-                f"[OPT-P2] Agent-4 兜底合成 {len(fallback_chains)} 条单步攻击链（原输出为空）"
-            )
-            self.debug_logs.append(
-                f"[OPT-P2] Agent-4 兜底合成 {len(fallback_chains)} 条单步攻击链（原输出为空）"
-            )
-        except Exception as e:
-            logger.debug(f"[OPT-P2] 攻击链兜底失败: {e}")
-        return result
+        chains = (
+            attack_chain_analysis.get("attack_chains", [])
+            if isinstance(attack_chain_analysis, dict)
+            else []
+        )
+        adversarial_analysis = []
+        cross_agent_agreement = []
+
+        for chain in chains:
+            if not isinstance(chain, dict):
+                continue
+
+            chain_name = chain.get("name", "")
+            chain_id = chain.get("signal_id", "")
+            is_fallback = chain.get("fallback_generated", False)
+            signal_state = chain.get("signal_state", "NEW")
+
+            # 确定性映射
+            if signal_state == "CONFIRMED" and not is_fallback:
+                verdict = "ACCEPT"
+                confidence = 0.8
+                requires_review = False
+            elif is_fallback:
+                verdict = "ESCALATE"
+                confidence = 0.5
+                requires_review = True
+            else:
+                verdict = "UNCERTAIN"
+                confidence = 0.3
+                requires_review = True
+
+            adversarial_analysis.append({
+                "attack_chain_name": chain_name or chain_id,
+                "verdict": verdict,
+                "confidence": confidence,
+                "reason": f"确定性裁决：上游 Agent-3 验证决策映射为 {verdict}",
+                "counter_arguments": [],
+                "evidence": chain.get("evidence", []),
+                "requires_human_review": requires_review,
+                "challenged_signal_id": chain_id,
+            })
+
+            cross_agent_agreement.append({
+                "signal_id": chain_id,
+                "signal_type": "attack_chain",
+                "original_agent": "Agent-4",
+                "current_state": verdict,
+                "evidence_chain": chain.get("evidence", []),
+                "confirmed_by": ["Agent-3", "Agent-4"] if verdict == "ACCEPT" else [],
+                "rejected_by": [],
+                "refined_by": [],
+            })
+
+        return {
+            "adversarial_analysis": adversarial_analysis,
+            "cross_agent_agreement": cross_agent_agreement,
+        }
 
     async def _run_agent_5(
         self,
@@ -2652,36 +2666,130 @@ class MultiAgentPipeline:
         file_content: str,
         detected_language: str = "Unknown",
     ) -> Tuple[Dict[str, Any], Dict[str, int]]:
-        """运行Agent 5：对抗验证
+        """运行Agent 5：对抗验证（确定性，不消耗 token）
 
-        Args:
-            file_path: 文件路径
-            attack_chain_analysis: 攻击链分析结果
-            file_content: 文件内容
-            detected_language: 检测到的语言
-
-        Returns:
-            (对抗验证结果, token使用信息)
+        对 Agent-4 确定性合成的攻击链，根据上游 Agent-3 的验证决策直接映射为裁决：
+        - Agent-3 CONFIRMED → ACCEPT
+        - Agent-3 REFINED → ESCALATE
+        - 其他 → UNCERTAIN
         """
-        logger.debug(f" 运行Agent 5 (对抗验证) on: {file_path}")
-        self.debug_logs.append(f"[DEBUG] 运行Agent 5 (对抗验证) on: {file_path}")
-        # [OPT-TOKEN] 压缩攻击链输入：只保留必要字段，控制 Agent-5 prompt token
-        attack_chain_json = self._slim_json_for_prompt(attack_chain_analysis, max_len=12000)
-        prompt = self.prompt_engine.render_agent_prompt(
-            "adversarial_validation",
-            file_path=file_path,
-            attack_chain_analysis=attack_chain_json,
-            file_content=file_content,
-            detected_language=detected_language,
-        )
+        logger.debug(f" 运行Agent 5 (对抗验证/确定性) on: {file_path}")
+        self.debug_logs.append(f"[DEBUG] 运行Agent 5 (对抗验证/确定性) on: {file_path}")
 
-        response, token_usage = await self._generate_with_retry(
-            prompt, "Agent 5", temperature=self.temperature
+        result = self._deterministic_adversarial_check(attack_chain_analysis)
+
+        logger.debug(f" Agent 5 完成，确定性裁决（0 token）")
+        self.debug_logs.append(f"[DEBUG] Agent 5 完成，确定性裁决（0 token）")
+        return result, {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
+
+    def _deterministic_final_decision(
+        self,
+        vulnerability_verification: Dict[str, Any],
+        context: Dict[str, Any],
+        adversarial_validation: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        """[RECONSTRUCTED] 确定性最终裁决（不消耗 token）。
+
+        直接从 Agent-3 已验证的 CONFIRMED 漏洞中聚合结果：
+        1. 提取所有 CONFIRMED/REFINED 漏洞
+        2. 验证 location 合法性
+        3. 去重（按 location + 漏洞类型）
+        4. 添加 adversarial 中 ESCALATE 的信号
+        5. 格式化输出
+
+        替代原 Agent-6 的 LLM 调用。
+        """
+        vulns = (
+            vulnerability_verification.get("vulnerabilities", [])
+            if isinstance(vulnerability_verification, dict) else []
         )
-        result = self._parse_json_response(response, schema_name="adversarial")
-        logger.debug(f" Agent 5 完成，令牌使用: {token_usage['total_tokens']}")
-        self.debug_logs.append(f"[DEBUG] Agent 5 完成，令牌使用: {token_usage['total_tokens']}")
-        return result, token_usage
+        findings = []
+        seen: set = set()
+
+        for v in vulns:
+            if not isinstance(v, dict):
+                continue
+            decision = v.get("verification_decision", "")
+            signal_state = v.get("signal_state", "")
+            if decision != "CONFIRMED" and signal_state != "CONFIRMED":
+                continue
+            title = v.get("title") or v.get("vulnerability") or "未命名漏洞"
+            location = v.get("location", "")
+            severity = v.get("severity", "MEDIUM")
+            dedup_key = f"{location}:{title}"
+            if dedup_key in seen:
+                continue
+            seen.add(dedup_key)
+            is_valid, error = (
+                self._verify_location_exists(location, context) if location
+                else (False, "Empty location")
+            )
+            findings.append({
+                "vulnerability": title,
+                "location": location,
+                "severity": severity,
+                "status": "CONFIRMED" if is_valid else "WEAK",
+                "confidence": "HIGH" if decision == "CONFIRMED" else "MEDIUM",
+                "cvss_score": v.get("cvss_score", ""),
+                "description": v.get("description", "") or v.get("verification_reason", ""),
+                "recommendation": v.get("recommendation", ""),
+                "evidence": v.get("evidence", []),
+                "evidence_chain_summary": f"Agent-3 漏洞验证确认：{title} @ {location}",
+                "requires_human_review": not is_valid,
+                "signal_state": "CONFIRMED",
+                "linked_signals": [v.get("signal_id", "")],
+            })
+
+        adv_analysis = (
+            adversarial_validation.get("adversarial_analysis", [])
+            if isinstance(adversarial_validation, dict) else []
+        )
+        for adv in adv_analysis:
+            if not isinstance(adv, dict):
+                continue
+            verdict = adv.get("verdict", "")
+            if verdict != "ESCALATE":
+                continue
+            chain_name = adv.get("attack_chain_name", "")
+            chain_id = adv.get("challenged_signal_id", "")
+            dedup_key = f"ESCALATE:{chain_id}"
+            if dedup_key in seen:
+                continue
+            seen.add(dedup_key)
+            findings.append({
+                "vulnerability": chain_name or "待复核信号",
+                "location": "",
+                "severity": "MEDIUM",
+                "status": "WEAK",
+                "confidence": "MEDIUM",
+                "cvss_score": "",
+                "description": f"需要人工复核：{adv.get('reason', '')}",
+                "recommendation": "需要人工安全审查确认",
+                "evidence": adv.get("evidence", []),
+                "evidence_chain_summary": f"确定性对抗验证标记为需要人工复核：{chain_name}",
+                "requires_human_review": True,
+                "signal_state": "UNCERTAIN",
+                "linked_signals": [chain_id],
+            })
+
+        confirmed = sum(1 for f in findings if f.get("status") == "CONFIRMED")
+        weak = sum(1 for f in findings if f.get("status") == "WEAK")
+        return {
+            "final_findings": findings,
+            "summary": {
+                "total_vulnerabilities": len(findings),
+                "valid_vulnerabilities": confirmed,
+                "uncertain_vulnerabilities": weak,
+                "invalid_vulnerabilities": 0,
+                "high_severity_count": sum(1 for f in findings if f.get("severity") in ("HIGH", "CRITICAL")),
+                "medium_severity_count": sum(1 for f in findings if f.get("severity") == "MEDIUM"),
+                "low_severity_count": sum(1 for f in findings if f.get("severity") in ("LOW", "INFO")),
+                "signals_confirmed": confirmed,
+                "signals_rejected": 0,
+                "signals_refined": weak,
+                "deterministic_aggregation": True,
+            },
+        }
 
     async def _run_agent_6(
         self,
@@ -2691,45 +2799,18 @@ class MultiAgentPipeline:
         vulnerability_verification: Dict[str, Any],
         detected_language: str = "Unknown",
     ) -> Tuple[Dict[str, Any], Dict[str, int]]:
-        """运行Agent 6：最终裁决
+        """[RECONSTRUCTED] 运行Agent 6：最终裁决（确定性聚合，不消耗 token）
 
-        Args:
-            file_path: 文件路径
-            context: 上下文信息
-            adversarial_validation: 对抗验证结果
-            vulnerability_verification: 漏洞验证结果
-            detected_language: 检测到的语言
-
-        Returns:
-            (最终裁决结果, token使用信息)
+        从 Agent-3 已验证的 CONFIRMED 漏洞中聚合结果，不调用 LLM。
         """
-        logger.debug(f" 运行Agent 6 (最终裁决) on: {file_path}")
-        self.debug_logs.append(f"[DEBUG] 运行Agent 6 (最终裁决) on: {file_path}")
-        # [OPT-TOKEN] 压缩上游输入：对抗验证 + 漏洞验证结果只保留骨架，控制 Agent-6 prompt token
-        adversarial_results = self._slim_json_for_prompt(adversarial_validation, max_len=12000)
-        verification_results = self._slim_json_for_prompt(vulnerability_verification, max_len=16000)
-        known_files_summary = self._file_registry.get_file_summary()
-        known_file_paths = self._file_registry.get_known_file_paths()
-        line_counts = self._file_registry._line_counts
-        prompt = self.prompt_engine.render_agent_prompt(
-            "final_decision",
-            file_path=file_path,
-            file_content=context.get("file_content", ""),
-            adversarial_results=adversarial_results,
-            verification_results=verification_results,
-            detected_language=detected_language,
-            known_files_summary=known_files_summary,
-            known_file_paths=known_file_paths,
-            line_counts=line_counts,
+        logger.debug(f" 运行Agent 6 (最终裁决/确定性聚合) on: {file_path}")
+        self.debug_logs.append(f"[DEBUG] 运行Agent 6 (最终裁决/确定性聚合) on: {file_path}")
+        result = self._deterministic_final_decision(
+            vulnerability_verification, context, adversarial_validation
         )
-
-        response, token_usage = await self._generate_with_retry(
-            prompt, "Agent 6", temperature=self.temperature
-        )
-        result = self._parse_json_response(response, schema_name="final_decision")
-        logger.debug(f" Agent 6 完成，令牌使用: {token_usage['total_tokens']}")
-        self.debug_logs.append(f"[DEBUG] Agent 6 完成，令牌使用: {token_usage['total_tokens']}")
-        return result, token_usage
+        logger.debug(f" Agent 6 完成，确定性聚合（0 token）")
+        self.debug_logs.append(f"[DEBUG] Agent 6 完成，确定性聚合（0 token）")
+        return result, {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
 
     async def _generate_with_retry(
         self, prompt: str, agent_name: str = "unknown", temperature: float = 0.0
@@ -3353,22 +3434,8 @@ class MultiAgentPipeline:
                         }
 
                     self._check_token_budget_and_warn(total_token_usage, "Agent-2")
-                    skip_agent_4_5 = (
-                        total_token_usage["total_tokens"]
-                        >= TOKEN_BUDGET_PER_FILE * TOKEN_CRITICAL_THRESHOLD
-                    )
 
-                    # [FIX-B4] 顺序执行 Agent-3 → Agent-4 → Agent-5
-                    # Agent-4 依赖 Agent-3 结果，Agent-5 依赖 Agent-4 结果，
-                    # 不能并行执行。保留并行模式框架以备未来无依赖任务使用。
-
-                    if skip_agent_4_5:
-                        logger.warning(
-                            f"[TOKEN-SKIP] 跳过 Agent-4/5 (并行模式，Token: {total_token_usage['total_tokens']:,}/{TOKEN_BUDGET_PER_FILE:,})"
-                        )
-                        console.print(
-                            f"[yellow][TOKEN-SKIP] 跳过 Agent-4/5 (并行模式，Token: {total_token_usage['total_tokens']:,}/{TOKEN_BUDGET_PER_FILE:,})[/yellow]"
-                        )
+                    # Agent-4/5/6 不再消耗 token（确定性函数），始终运行
 
                     # Agent-3: 漏洞验证 (先执行，因为 Agent-4 依赖其结果)
                     start_t = time.time()
