@@ -1,6 +1,8 @@
 """纯AI分析器模块
 
-实现纯AI深度语义解析功能，默认使用 deepseek-v4-pro。
+实现纯AI深度语义解析功能，默认使用 deeps
+from src.ai.pure_ai.batch_engine import analyze_batch, resume, incremental_scan
+eek-v4-pro。
 """
 
 import asyncio

@@ -301,6 +301,8 @@ Layer 6: 入口
 | 拆分 | `multi_agent_pipeline.py` → `pipeline_llm.py` (_generate_with_retry + _parse_json_response) | ✅ |
 | 拆分 | `exploit_generator.py` (2053→1136行) → `exploit_types.py` / `exploit_templates.py` / `exploit_scorer.py` | ✅ |
 | 提取 | `cli/main.py` (2327行) → `commands/` 子目录 (7个命令文件) | ✅ |
+| 删除 | `multi_agent_pipeline.py` 重复类定义 (4173→3610行) | ✅ |
+| 拆分 | `exploit_generator.py` → `exploit_types.py` / `exploit_templates.py` / `exploit_scorer.py` | ✅ |
 | 创建 | `src/core/sal.py` (SAL 骨架) | ✅ |
 | 创建 | `src/core/dep.py` (DEP 骨架) | ✅ |
 | 创建 | `src/diff/` (差分证据分析模块) | ✅ |
