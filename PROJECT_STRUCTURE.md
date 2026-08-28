@@ -298,6 +298,9 @@ Layer 6: 入口
 | 提取 | `scanner.py` _analyze_files(1127行) → `analyze_files.py` | ✅ |
 | 拆分 | `multi_agent_pipeline.py` → `pipeline_constants.py` / `known_file_registry.py` / `evidence_chain.py` | ✅ |
 | 提取 | `pure_ai_analyzer.py` → `result_converter.py` | ✅ |
+| 拆分 | `multi_agent_pipeline.py` → `pipeline_llm.py` (_generate_with_retry + _parse_json_response) | ✅ |
+| 拆分 | `exploit_generator.py` (2053→1136行) → `exploit_types.py` / `exploit_templates.py` / `exploit_scorer.py` | ✅ |
+| 提取 | `cli/main.py` (2327行) → `commands/` 子目录 (7个命令文件) | ✅ |
 | 创建 | `src/core/sal.py` (SAL 骨架) | ✅ |
 | 创建 | `src/core/dep.py` (DEP 骨架) | ✅ |
 | 创建 | `src/diff/` (差分证据分析模块) | ✅ |
@@ -308,12 +311,12 @@ Layer 6: 入口
 | 优先级 | 文件 | 当前行数 | 建议方式 |
 |--------|------|---------|----------|
 | P0 | `src/core/scanner.py` | 2565 | 提取 scan() 方法到 scanner_run.py |
-| P1 | `src/ai/pure_ai/multi_agent_pipeline.py` | 3568 | 提取 Agent 0-6 运行器到 agents/ 子目录 |
+| P1 | `src/ai/pure_ai/multi_agent_pipeline.py` | 3816 | 提取 Agent 0-6 运行器到 agents/ 子目录 |
 | P2 | `src/ai/pure_ai_analyzer.py` | 3290 | 提取 analyze_batch/resume/incremental |
-| P3 | `src/cli/main.py` | 2327 | 拆分 Click 命令到 commands/ 子目录 |
+| P3 | `src/cli/main.py` | 2327 | ✅ 已完成 (命令拆分到 commands/) |
 | P4 | `src/ai/pure_ai/schema_validator.py` | 1442 | ✅ 已完成 |
 | P5 | `src/analyzers/dependency_chain_analyzer.py` | 1397 | ✅ 已完成 |
-| P6 | `src/analyzers/exploit_generator.py` | 1668 | 提取模板库 + 评分器 |
+| P6 | `src/analyzers/exploit_generator.py` | 1136 | ✅ 已完成 (提取 types/templates/scorer) |
 | P7 | `src/utils/priority_engine.py` | 784 | ✅ 已完成 |
 | P8 | `src/ai/pure_ai/context_builder.py` | 1524 | 提取 SIR / 数据流模块 |
 | P9 | `src/analyzers/tiered_analysis_pipeline.py` | 1328 | 提取正则模式库 |
