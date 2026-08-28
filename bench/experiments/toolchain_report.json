@@ -1,0 +1,124 @@
+{
+  "semgrep": {
+    "available": true,
+    "version": "1.150.0",
+    "rules_per_lang": {
+      "python": 151,
+      "javascript": 74,
+      "typescript": 74,
+      "java": 60,
+      "go": 42,
+      "c": 2,
+      "cpp": 0,
+      "ruby": 44,
+      "rust": 0
+    }
+  },
+  "codeql": {
+    "available": true,
+    "version": "CodeQL command-line toolchain release 2.26.4.",
+    "qlpack_dir": "C:\\1AAA-PROJECT\\HOS\\HOS-LS\\envs\\codeql-packs",
+    "qlpacks": [
+      ".devcontainer",
+      ".git",
+      ".github",
+      ".vscode",
+      "actions",
+      "change-notes",
+      "config",
+      "cpp",
+      "csharp",
+      "docs",
+      "go",
+      "java",
+      "javascript",
+      "misc",
+      "python",
+      "ql",
+      "ruby",
+      "rust",
+      "shared",
+      "swift",
+      "unified"
+    ]
+  },
+  "hosls_cli": {
+    "available": true,
+    "version": "┌──────────────────────────────────────────────────┐\n│ ╔══════════════════════════════════════╗     "
+  },
+  "local_repos": {
+    "count": 23,
+    "total_size_mb": 2740.4,
+    "repos": {
+      "adk-python": {
+        "size_mb": 33.8
+      },
+      "airflow": {
+        "size_mb": 178.9
+      },
+      "AutoGPT": {
+        "size_mb": 183.8
+      },
+      "fastmcp": {
+        "size_mb": 57.0
+      },
+      "Flowise": {
+        "size_mb": 42.3
+      },
+      "langchain": {
+        "size_mb": 39.3
+      },
+      "langflow": {
+        "size_mb": 206.5
+      },
+      "litellm": {
+        "size_mb": 158.4
+      },
+      "milvus": {
+        "size_mb": 116.7
+      },
+      "mlflow": {
+        "size_mb": 383.7
+      },
+      "n8n": {
+        "size_mb": 192.8
+      },
+      "n8n-mcp": {
+        "size_mb": 112.9
+      },
+      "NeMo": {
+        "size_mb": 132.5
+      },
+      "nltk": {
+        "size_mb": 9.3
+      },
+      "ollama": {
+        "size_mb": 52.7
+      },
+      "onnx": {
+        "size_mb": 23.0
+      },
+      "open-webui": {
+        "size_mb": 100.1
+      },
+      "openclaw": {
+        "size_mb": 421.3
+      },
+      "paperclip": {
+        "size_mb": 117.2
+      },
+      "trivy": {
+        "size_mb": 90.3
+      },
+      "typescript-sdk": {
+        "size_mb": 10.0
+      },
+      "vulngym-source": {
+        "size_mb": 2.0
+      },
+      "WeKnora": {
+        "size_mb": 75.9
+      }
+    }
+  }
+}

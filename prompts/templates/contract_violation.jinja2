@@ -1,0 +1,42 @@
+## 跨文件安全契约违背检测
+
+### 检测范围
+- 项目文件总数：{{ total_files }}
+- 安全契约定义数：{{ contract_count }}
+
+### 检测到的契约违背
+
+{% if violations %}
+| 类型 | 文件 | 行号 | 描述 | 涉及方法 | 置信度 |
+|------|------|------|------|----------|--------|
+{% for v in violations %}
+| {{ v.type }} | {{ v.file.split('/')[-1] }} | {{ v.line }} | {{ v.description }} | {{ v.contract_method }} | {{ v.confidence }} |
+{% endfor %}
+
+### 违背类型说明
+- **SCOPE_ERROR**: 权限检查作用域错误 — 安全方法在非安全上下文中被调用
+- **SIBLING_MISS**: 遗漏同级路径 — 主路径已修复但同级/异常路径未修复
+- **EXCEPTION_LEAK**: 异常路径泄露 — 安全异常被静默捕获（pass/log only）
+
+### 影响分析
+{% for v in violations %}
+{% if v.type == 'EXCEPTION_LEAK' %}
+- ⚠️ 高风险：安全异常被静默处理，攻击者可利用未被处理的异常路径绕过安全检查
+{% elif v.type == 'SIBLING_MISS' %}
+- ⚠️ 中风险：修复不完整，需要同步修复所有同级路径
+{% elif v.type == 'SCOPE_ERROR' %}
+- ⚠️ 中风险：敏感操作缺少必要的安全检查，应添加对应的注解/装饰器
+{% endif %}
+{% endfor %}
+{% else %}
+**未检测到安全契约违背。**
+{% endif %}
+
+### 输出格式
+```json
+{
+  "violations": [...],
+  "summary": "契约违背检测总结",
+  "signal_tracking": { "signals_new": 0 }
+}
+```

@@ -133,6 +133,45 @@ proxy:
   http_url: http://127.0.0.1:7897
   https_url: http://127.0.0.1:7897
 
+# SemgrepAgent 配置
+semgrep_agent:
+  enabled: true
+  rule_source: registry  # registry | local
+  registry_configs:
+    - p/default
+    - p/security-audit
+    - p/sql-injection
+    - p/xss
+  rule_store: ~/.hos-ls/semgrep-rules
+  sync_on_start: true
+  max_file_size: 10485760  # 10MB
+
+# DiffAnalysisAgent 配置
+diff_analysis_agent:
+  enabled: true
+  max_diff_size: 1048576  # 1MB
+  risk_threshold: 0.5
+
+# ContractViolationAgent 配置
+contract_violation_agent:
+  enabled: true
+  enable_cross_file: true
+  enable_exception_leak: true
+
+# CounterfactualAgent 配置
+counterfactual_agent:
+  enabled: true
+  verify_with_semgrep: true
+  fallback_to_rule: true
+
+# DeepInfra 配置
+deepinfra:
+  enabled: false
+  api_key: ""  # 从 .env 文件 HOS_LS_DEEPINFRA_API_KEY 读取
+  base_url: https://api.deepinfra.com/v1/openai
+  model: mistralai/Mixtral-8x22B-Instruct-v0.1
+  flex_mode: true  # flex 模式开启（仅 DeepInfra 支持）
+
 # 批量处理配置
 batch_processing:
   adaptive_batch_size:

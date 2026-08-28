@@ -93,6 +93,7 @@ class AIProvider(Enum):
     OPENAI = "openai"
     DEEPSEEK = "deepseek"
     ALIYUN = "aliyun"
+    DEEPINFRA = "deepinfra"
     LOCAL = "local"
 
 

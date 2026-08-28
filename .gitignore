@@ -80,3 +80,15 @@ envs/codeql/
 envs/codeql-packs/
 envs/semgrep-rules/
 envs/sast-venv/
+
+# Benchmark data — cloned repos and evaluation frameworks too large for versioning
+bench/datasets/repos/
+bench/datasets/SecureVibeBench/evaluation/
+bench/datasets/VulnGym/data/*.jsonl
+!bench/datasets/VulnGym/data/*.md
+
+# Experiment intermediate files
+bench/experiments/ai_patches/
+
+# Temp scripts
+_summary.py

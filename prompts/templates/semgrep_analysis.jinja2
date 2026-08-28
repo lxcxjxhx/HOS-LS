@@ -1,0 +1,24 @@
+{{ "{% if semgrep_hits %}" }}
+## Semgrep 硬性命中结果（已确认，直接输出）
+
+以下漏洞由 Semgrep 官方规则直接命中，已确认为有效发现：
+
+{% for hit in semgrep_hits %}
+### {{ hit.rule_id }} @ {{ hit.file }}:{{ hit.line }}
+- **严重程度**: {{ hit.severity }}
+- **CWE**: {{ hit.cwe or 'N/A' }}
+- **消息**: {{ hit.message }}
+- **命中代码**:
+```python
+{{ hit.snippet }}
+```
+
+{% endfor %}
+**共 {{ semgrep_hits|length }} 条硬命中，直接作为提交结果，无需进一步 LLM 分析。**
+
+{{ "{% else %}" }}
+## Semgrep 扫描结果：未命中
+
+无 Semgrep 规则命中，代码段进入下游 Agent 进行深度语义分析。
+
+{{ "{% endif %}" }}

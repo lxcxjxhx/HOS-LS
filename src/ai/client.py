@@ -179,6 +179,7 @@ class AIModelManager:
             "openai": AIProvider.OPENAI,
             "deepseek": AIProvider.DEEPSEEK,
             "aliyun": AIProvider.ALIYUN,
+            "deepinfra": AIProvider.DEEPINFRA,
             "local": AIProvider.LOCAL,
         }
 
@@ -225,6 +226,10 @@ class AIModelManager:
             from src.ai.providers.aliyun import AliyunClient
 
             client = AliyunClient(config)
+        elif provider == AIProvider.DEEPINFRA:
+            from src.ai.providers.deepinfra import DeepInfraClient
+
+            client = DeepInfraClient(config)
         else:
             return
 
@@ -258,6 +263,7 @@ class AIModelManager:
             "openai": AIProvider.OPENAI,
             "deepseek": AIProvider.DEEPSEEK,
             "aliyun": AIProvider.ALIYUN,
+            "deepinfra": AIProvider.DEEPINFRA,
             "local": AIProvider.LOCAL,
         }
         provider = provider_map.get(cfg.ai.provider)
