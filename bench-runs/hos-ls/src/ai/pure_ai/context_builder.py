@@ -214,7 +214,18 @@ class ContextBuilder:
         try:
             src = open(file_path, encoding="utf-8", errors="replace").read()
             tree = ast.parse(src)
-            base_dir = os.path.dirname(os.path.abspath(file_path))
+            abs_fp = os.path.abspath(file_path)
+            base_dir = os.path.dirname(abs_fp)
+            # 项目根目录：从 file_path 向上找到包含 src/ 或 hos-ls.yaml 的目录
+            project_root = base_dir
+            for _ in range(10):
+                if os.path.exists(os.path.join(project_root, "hos-ls.yaml")) or \
+                   os.path.isdir(os.path.join(project_root, "src")):
+                    break
+                parent = os.path.dirname(project_root)
+                if parent == project_root:
+                    break
+                project_root = parent
 
             # --- 1. 构建模块路径映射 mod_map & from_import 表 ---
             mod_map: Dict[str, str] = {}
@@ -223,26 +234,41 @@ class ContextBuilder:
             for node in ast.walk(tree):
                 if isinstance(node, ast.Import):
                     for a in node.names:
-                        p = os.path.join(base_dir, a.name.replace(".", os.sep) + ".py")
-                        if os.path.exists(p):
-                            mod_map[a.name] = p
+                        for root in (project_root, base_dir):
+                            p = os.path.join(root, a.name.replace(".", os.sep) + ".py")
+                            if os.path.exists(p):
+                                mod_map[a.name] = p
+                                break
                 elif isinstance(node, ast.ImportFrom) and node.module:
-                    # 找 module 自身的 .py
-                    module_py = os.path.join(base_dir, node.module.replace(".", os.sep) + ".py")
-                    if os.path.exists(module_py):
+                    # 优先从 project_root 解析，fallback 到 base_dir
+                    module_py = None
+                    for root in (project_root, base_dir):
+                        p = os.path.join(root, node.module.replace(".", os.sep) + ".py")
+                        if os.path.exists(p):
+                            module_py = p
+                            break
+                    if module_py:
                         mod_map[node.module] = module_py
                     # 找 module/__init__.py
-                    module_init = os.path.join(
-                        base_dir, node.module.replace(".", os.sep), "__init__.py"
-                    )
-                    if os.path.exists(module_init):
+                    module_init = None
+                    for root in (project_root, base_dir):
+                        p = os.path.join(root, node.module.replace(".", os.sep), "__init__.py")
+                        if os.path.exists(p):
+                            module_init = p
+                            break
+                    if module_init and module_init != module_py:
                         mod_map[node.module] = module_init
+                        if module_py is None:
+                            module_py = module_init
                     for alias in node.names:
                         if alias.name == "*":
                             continue
                         # from X import func：func 可能在 module.py 中定义
                         if module_py and os.path.exists(module_py):
                             from_import_map[alias.name] = (node.module, module_py)
+                        # 但不是当前文件自身
+                        if module_py and os.path.abspath(module_py) == abs_fp:
+                            continue
                         # 也可能是同目录下的 func.py
                         p2 = os.path.join(base_dir, alias.name + ".py")
                         if os.path.exists(p2):
