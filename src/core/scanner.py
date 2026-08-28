@@ -101,10 +101,6 @@ class SecurityScanner:
             config: 扫描配置
         """
         try:
-            from src.ai.analyzer import AIAnalyzer
-        except ImportError:
-            AIAnalyzer = None
-        try:
             from src.ai.local_semantic_analyzer import get_local_analyzer
         except ImportError:
 
@@ -131,7 +127,6 @@ class SecurityScanner:
         self.file_prioritizer = FilePrioritizer()  # 文件优先级评估器
         self.ast_analyzer = ASTAnalyzer()
         self.cst_analyzer = CSTAnalyzer()
-        self.ai_analyzer: Optional[Any] = None
         self.local_analyzer = get_local_analyzer()  # 本地语义分析器
         self.library_matcher = get_library_matcher()  # 库匹配器
         self.priority_evaluator: Optional[Any] = None
@@ -170,18 +165,6 @@ class SecurityScanner:
         except Exception as e:
             if self.config.debug:
                 console.print(f"[dim][DEBUG] AST 分析器初始化失败: {e}[/dim]")
-
-        if config.ai.enabled and not config.pure_ai:
-            try:
-                from src.attack.chain_analyzer import get_ai_attack_chain_builder
-
-                self.ai_analyzer = AIAnalyzer(config)
-                self.attack_chain_builder = get_ai_attack_chain_builder()
-                if self.config.debug:
-                    console.print("[dim][DEBUG] AI 分析器初始化成功[/dim]")
-            except Exception as e:
-                if self.config.debug:
-                    console.print(f"[dim][DEBUG] AI 分析器初始化失败: {e}[/dim]")
 
         # 初始化纯AI分析器
         self.pure_ai_analyzer = None
@@ -232,8 +215,6 @@ class SecurityScanner:
         if config.debug:
             console.print("[dim][DEBUG] 安全扫描器初始化完成，规则注册表已就绪（仅用于知识库检索）[/dim]")
             console.print("[dim][DEBUG] 本地语义分析器已启用[/dim]")
-            if config.ai.enabled:
-                console.print("[dim][DEBUG] 攻击链路分析器已启用[/dim]")
 
         self.is_vuln_lab_mode = config.scan_mode == ScanMode.VULN_LAB.value
         if self.is_vuln_lab_mode:
@@ -1663,21 +1644,21 @@ class SecurityScanner:
         )
 
     def _semantic_analyze(self, file_info: FileInfo) -> List:
-        """本地语义分析文件 (委托给 scanner_analyze.semantic_analyze)
+        """执行可选本地语义分析。
 
-        Args:
-            file_info: 文件信息
-
-        Returns:
-            发现的安全问题列表
+        当前发行包未包含 ``local_semantic_analyzer``，因此保持受控降级，
+        由 AST/CST、规则分析和 Pure-AI 流水线继续提供覆盖。
         """
-        from src.core.scanner_analyze import semantic_analyze as _semantic_analyze
+        if self.local_analyzer is None:
+            if self.config.debug:
+                console.print("[dim][DEBUG] 本地语义分析组件不可用，已跳过[/dim]")
+            return []
 
-        return _semantic_analyze(
-            file_info=file_info,
-            local_analyzer=self.local_analyzer,
-            config_debug=self.config.debug,
-        )
+        try:
+            return self.local_analyzer.analyze(file_info)
+        except Exception as exc:
+            logger.warning("Local semantic analysis failed for %s: %s", file_info.path, exc)
+            return []
 
     def _library_analyze(self, file_info: FileInfo) -> List:
         """库匹配分析文件
@@ -2237,57 +2218,6 @@ class SecurityScanner:
 
         # 去重
         return list(set(potential_vulnerabilities))
-
-    async def _ai_analyze(self, file_info: FileInfo) -> List:
-        """AI 分析文件
-
-        Args:
-            file_info: 文件信息
-
-        Returns:
-            发现的安全问题列表
-        """
-        findings = []
-
-        try:
-            if self.config.debug:
-                console.print(f"[dim][DEBUG] 开始执行完整 AI 分析: {file_info.path}[/dim]")
-
-            # 读取文件内容
-            with open(file_info.path, "r", encoding="utf-8") as f:
-                code_content = f.read()
-
-            # 创建分析上下文
-            context = AnalysisContext(
-                file_path=str(file_info.path),
-                code_content=code_content,
-                language=file_info.language.value,
-                analysis_level=AnalysisLevel.FILE,
-            )
-
-            if self.config.debug:
-                console.print("[dim][DEBUG] 调用 AI 分析器...[/dim]")
-
-            # 执行 AI 分析
-            assert self.ai_analyzer is not None
-            ai_result = await self.ai_analyzer.analyze(context)
-
-            if self.config.debug:
-                console.print(f"[dim][DEBUG] AI 分析完成，发现 {len(ai_result.findings)} 个问题[/dim]")
-
-            # 转换 AI 结果为标准格式
-            for finding in ai_result.findings:
-                converted = convert_to_finding(finding)
-                if converted:
-                    findings.append(converted)
-                    if self.config.debug:
-                        console.print(f"[dim][DEBUG] AI 发现: {converted.rule_name}[/dim]")
-
-        except Exception as e:
-            if self.config.debug:
-                console.print(f"[dim][DEBUG] AI 分析失败: {e}[/dim]")
-
-        return findings
 
     def _prioritize_findings(self, findings: List, files: List[FileInfo]) -> List:
         """评估漏洞优先级
