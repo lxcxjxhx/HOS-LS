@@ -30,7 +30,7 @@ logger = get_logger(__name__)
 
 try:
     from src.ai.pure_ai.schema import LineMatchStatus
-    from src.ai.pure_ai.schema_validator import LineNumberValidator
+    from src.ai.pure_ai.line_number_validator import LineNumberValidator
 
     LINENUMBER_VALIDATOR_AVAILABLE = True
 except ImportError:

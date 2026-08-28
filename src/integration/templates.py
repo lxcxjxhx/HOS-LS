@@ -189,7 +189,7 @@ class TemplateExecutor:
             await self._execute_hook(hook, params)
 
         # 执行扫描
-        from src.core.scanner import create_scanner
+        from src.core.remote_scanner import create_scanner
 
         scanner = create_scanner()
         result = scanner.scan_sync(

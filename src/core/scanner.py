@@ -21,6 +21,7 @@ from src.utils.file_discovery import FileDiscoveryEngine, FileInfo
 from src.utils.file_prioritizer import FilePrioritizer
 from src.utils.logger import get_logger
 from src.utils.priority_engine import FilePriorityEngine, PriorityStrategy
+from src.core.scanner_finding import (deduplicate_findings, merge_duplicate_findings, protect_verified_sources, convert_to_finding)
 
 logger = get_logger(__name__)
 
@@ -625,96 +626,21 @@ class SecurityScanner:
         return current_results
 
     async def _tool_prescan(self, target: str) -> List:
-        """执行基于工具的预扫描
+        """执行基于工具的预扫描"""
+        from src.core.scanner_tools import tool_prescan as _tool_prescan_impl
 
-        Args:
-            target: 扫描目标
+        project_root = getattr(self.config, "project_root", "") or str(
+            Path(target).parent if Path(target).is_file() else Path(target)
+        )
 
-        Returns:
-            工具发现的安全问题列表
-        """
-        if not self.tool_orchestrator:
-            return []
-
-        findings = []
-        tool_chain = self.custom_tool_chain if self.custom_tool_chain else ["semgrep", "bandit"]
-
-        if self.config.debug:
-            console.print(f"[dim][DEBUG] 开始工具链预扫描，使用工具: {tool_chain}[/dim]")
-
-        try:
-            from src.analyzers.finding_verifier import FindingVerifier
-
-            project_root = getattr(self.config, "project_root", "") or str(
-                Path(target).parent if Path(target).is_file() else Path(target)
-            )
-
-            nvd_db_path: Optional[str] = None
-            if (
-                hasattr(self, "nvd_adapter")
-                and self.nvd_adapter
-                and hasattr(self.nvd_adapter, "db_path")
-            ):
-                nvd_db_path = str(self.nvd_adapter.db_path) if self.nvd_adapter.db_path else None
-
-            finding_verifier = FindingVerifier(project_root, nvd_db_path or "")
-            self.tool_orchestrator.set_verifier(finding_verifier)
-            self.tool_orchestrator.set_project_root(project_root)
-
-            tool_results = self.tool_orchestrator.execute_chain(tool_chain, target)
-
-            if self.config.debug:
-                console.print(f"[dim][DEBUG] 工具链扫描完成，发现 {len(tool_results)} 个问题[/dim]")
-
-            from src.core.engine import Finding, Location, Severity
-
-            severity_map = {
-                "CRITICAL": Severity.CRITICAL,
-                "HIGH": Severity.HIGH,
-                "MEDIUM": Severity.MEDIUM,
-                "LOW": Severity.LOW,
-                "UNKNOWN": Severity.INFO,
-            }
-
-            for result in tool_results:
-                severity = severity_map.get(result.get("severity", "UNKNOWN"), Severity.INFO)
-
-                metadata = result.get("metadata", {}).copy()
-                metadata["source"] = result.get("source", "unknown")
-                metadata["tool_confidence"] = result.get("tool_confidence", 0.5)
-                if result.get("source_tools"):
-                    metadata["source_tools"] = result.get("source_tools")
-                if result.get("cwe_id"):
-                    metadata["cwe_id"] = result.get("cwe_id")
-                if result.get("cve_id"):
-                    metadata["cve_id"] = result.get("cve_id")
-
-                finding = Finding(
-                    rule_id=f"TOOL-{result.get('source', 'unknown').upper()}-{result.get('cwe_id', 'UNKNOWN') or result.get('check_id', 'UNKNOWN')}",
-                    rule_name=f"[{result.get('source', 'tool').upper()}] {result.get('cwe_id') or result.get('check_id', 'VULN')}",
-                    description=result.get("description", ""),
-                    severity=severity,
-                    location=Location(
-                        file=result.get("file", ""), line=result.get("line", 0), column=0
-                    ),
-                    confidence=result.get("confidence", 0.5),
-                    message=result.get("description", ""),
-                    code_snippet=metadata.get("code_snippet", ""),
-                    fix_suggestion=metadata.get("remediation", ""),
-                    references=[],
-                    metadata=metadata,
-                )
-                findings.append(finding)
-
-            if tool_results and self.config.debug:
-                stats = self.tool_orchestrator.get_statistics()
-                console.print(f"[dim][DEBUG] 工具执行统计: {stats}[/dim]")
-
-        except Exception as e:
-            if self.config.debug:
-                console.print(f"[dim][DEBUG] 工具链预扫描失败: {e}[/dim]")
-
-        return findings
+        return await _tool_prescan_impl(
+            tool_orchestrator=self.tool_orchestrator,
+            custom_tool_chain=self.custom_tool_chain,
+            config_debug=self.config.debug,
+            nvd_adapter=self.nvd_adapter if hasattr(self, "nvd_adapter") else None,
+            project_root=project_root,
+            target=target,
+        )
 
     async def scan(self, target: Union[str, Path]) -> ScanResult:
         """执行异步扫描
@@ -1560,104 +1486,14 @@ class SecurityScanner:
             return self.file_discovery.discover_files(target_path)
 
     async def _fallback_local_build(self, agent, target: str) -> List:
-        """本地构建fallback（当Docker不可用时）
+        """本地构建fallback（当Docker不可用时）"""
+        from src.core.scanner_tools import fallback_local_build as _fallback_local_build_impl
 
-        Args:
-            agent: ContainerizedBuildAgent实例
-            target: 目标路径
-
-        Returns:
-            发现的问题列表
-        """
-        findings: list = []
-
-        try:
-            from src.sandbox.build_agent.project_analyzer import ProjectAnalyzer
-
-            console.print("[bold cyan][TOOL] 分析项目类型...[/bold cyan]")
-            analyzer = ProjectAnalyzer(target)
-            project_info = analyzer.analyze()
-
-            console.print(f"[bold cyan][INFO] 项目类型: {project_info.project_type.value}[/bold cyan]")
-            console.print(
-                f"[bold cyan][INFO] 构建命令: {' '.join(project_info.build_command)}[/bold cyan]"
-            )
-            console.print(
-                f"[bold cyan][INFO] 运行命令: {' '.join(project_info.run_command)}[/bold cyan]"
-            )
-
-            project_type = project_info.project_type.value
-
-            if project_type == "java_maven":
-                console.print("[bold cyan][TOOL] 尝试使用Maven本地构建...[/bold cyan]")
-                try:
-                    import subprocess
-
-                    result = subprocess.run(
-                        ["mvn", "--version"], capture_output=True, text=True, timeout=10
-                    )
-                    if result.returncode == 0:
-                        console.print("[bold green][OK] Maven已安装[/bold green]")
-                        console.print(
-                            "[bold cyan][TOOL] 执行构建: mvn clean package -DskipTests[/bold cyan]"
-                        )
-
-                        build_result = subprocess.run(
-                            ["mvn", "clean", "package", "-DskipTests"],
-                            cwd=target,
-                            capture_output=True,
-                            text=True,
-                            timeout=600,
-                        )
-
-                        if build_result.returncode == 0:
-                            console.print("[bold green][OK] Maven构建成功[/bold green]")
-
-                            jar_files = list(Path(target).rglob("target/*.jar"))
-                            if jar_files:
-                                console.print(
-                                    f"[bold cyan][INFO] 找到 {len(jar_files)} 个JAR文件[/bold cyan]"
-                                )
-
-                                for jar in jar_files[:3]:
-                                    console.print(f"[bold cyan][INFO] JAR: {jar.name}[/bold cyan]")
-
-                                console.print(
-                                    "[bold yellow][WARN] 动态测试需要运行服务，请配置Docker环境[/bold yellow]"
-                                )
-                            else:
-                                console.print("[bold yellow][WARN] 未找到构建产物[/bold yellow]")
-                        else:
-                            console.print("[bold red][ERROR] Maven构建失败[/bold red]")
-                            console.print(f"[dim]{build_result.stdout[-500:]}[/dim]")
-                    else:
-                        console.print("[bold yellow][WARN] Maven未安装，跳过构建[/bold yellow]")
-                except FileNotFoundError:
-                    console.print("[bold yellow][WARN] Maven未安装，跳过构建[/bold yellow]")
-                except Exception as e:
-                    console.print(f"[bold yellow][WARN] Maven构建出错: {e}[/bold yellow]")
-
-            elif project_type == "java_gradle":
-                console.print("[bold yellow][WARN] Gradle构建暂未实现fallback[/bold yellow]")
-
-            elif project_type == "node_js":
-                console.print("[bold yellow][WARN] Node.js构建暂未实现fallback[/bold yellow]")
-
-            elif project_type == "python":
-                console.print("[bold yellow][WARN] Python项目暂不需要构建[/bold yellow]")
-                console.print("[bold yellow][WARN] 动态测试需要运行服务，请配置Docker环境[/bold yellow]")
-
-            else:
-                console.print(f"[bold yellow][WARN] 不支持的项目类型: {project_type}[/bold yellow]")
-
-        except Exception as e:
-            console.print(f"[bold red][ERROR] 本地构建分析失败: {e}[/bold red]")
-            if self.config.debug:
-                import traceback
-
-                console.print(f"[dim]{traceback.format_exc()}[/dim]")
-
-        return findings
+        return await _fallback_local_build_impl(
+            agent=agent,
+            target=target,
+            config_debug=self.config.debug,
+        )
 
     async def _analyze_files(self, files: List[FileInfo]) -> Tuple[List, int]:
         """分析文件
@@ -2621,12 +2457,12 @@ class SecurityScanner:
             findings.extend(ai_findings)
 
             # 合并重复发现：相同规则ID优先使用更高级别
-            findings = self._merge_duplicate_findings(findings)
+            findings = merge_duplicate_findings(findings)
 
             # 后处理：确保已验证来源的发现不被低级别发现覆盖
             # config_scanner 和 code_vuln_scanner 的发现是已知的、可复现的安全风险
             # 应该使用它们自己确定的严重级别，而不是被 AI 分析器的判定覆盖
-            findings = self._protect_verified_sources(findings)
+            findings = protect_verified_sources(findings)
 
             if self.config.debug:
                 console.print(f"[dim][DEBUG] 纯AI模式批量分析完成，发现 {len(ai_findings)} 个问题[/dim]")
@@ -2835,7 +2671,7 @@ class SecurityScanner:
                         console.print(f"[dim][DEBUG] AST 分析发现 {len(ast_result.issues)} 个问题[/dim]")
 
                     for issue in ast_result.issues:
-                        converted = self._convert_to_finding(issue)
+                        converted = convert_to_finding(issue)
                         if converted:
                             findings.append(converted)
                 else:
@@ -2879,7 +2715,7 @@ class SecurityScanner:
                             )
 
                         for issue in cst_result.issues:
-                            converted = self._convert_to_finding(issue)
+                            converted = convert_to_finding(issue)
                             if converted:
                                 findings.append(converted)
                     else:
@@ -2909,7 +2745,7 @@ class SecurityScanner:
                     findings.append(error_finding)
 
             # 去重静态分析结果
-            findings = self._deduplicate_findings(findings)
+            findings = deduplicate_findings(findings)
 
         except Exception as e:
             error_msg = f"静态分析失败: {e}"
@@ -2936,517 +2772,18 @@ class SecurityScanner:
         return findings
 
     def _rule_analyze(self, file_info: FileInfo, ai_findings: Optional[List] = None) -> List:
-        """基于 RAG 知识库检索的漏洞检测
-
-        仅用于 RAG 知识库检索和类似漏洞检测，减少纯 AI 扫描的 token 消耗
-
-        Args:
-            file_info: 文件信息
-            ai_findings: AI分析结果，用于调整RAG检索策略
-
-        Returns:
-            发现的安全问题列表
-        """
-        # 纯AI模式下跳过RAG分析
-        if self.config.pure_ai:
-            return []
-
-        findings = []
-
-        try:
-            # 读取文件内容
-            with open(file_info.path, "r", encoding="utf-8") as f:
-                file_content = f.read()
-
-            if self.config.debug:
-                console.print(f"[dim][DEBUG] 执行 RAG 知识库检索分析: {file_info.path}[/dim]")
-
-            # 导入 RAG 知识库
-            from src.storage.rag_knowledge_base import get_rag_knowledge_base
-
-            # 获取 RAG 知识库实例
-            rag_kb = get_rag_knowledge_base()
-
-            # 基于文件类型和AI分析结果构建更精确的搜索查询
-            search_query = file_content
-            if file_info.language:
-                language = file_info.language.value
-                # 根据文件类型添加前缀，提高检索相关性
-                if language == "python":
-                    search_query = f"Python code: {file_content}"
-                elif language == "javascript":
-                    search_query = f"JavaScript code: {file_content}"
-                elif language == "html":
-                    search_query = f"HTML code: {file_content}"
-
-            # 如果有AI分析结果，根据AI发现的漏洞类型调整搜索查询
-            if ai_findings:
-                # 提取AI发现的漏洞类型
-                ai_vulnerability_types = []
-                for ai_finding in ai_findings:
-                    for vuln_type in [
-                        "sql_injection",
-                        "command_injection",
-                        "ssrf",
-                        "xss",
-                        "csrf",
-                        "hardcoded_credentials",
-                        "weak_crypto",
-                        "insecure_random",
-                        "sensitive_data_exposure",
-                    ]:
-                        if (
-                            vuln_type in ai_finding.rule_name.lower()
-                            or vuln_type in ai_finding.description.lower()
-                        ):
-                            ai_vulnerability_types.append(vuln_type)
-                            break
-
-                # 如果有AI发现的漏洞类型，在搜索查询中添加这些类型
-                if ai_vulnerability_types:
-                    vuln_types_str = ", ".join(ai_vulnerability_types)
-                    search_query = f"{search_query} 相关漏洞: {vuln_types_str}"
-                    if self.config.debug:
-                        console.print(
-                            f"[dim][DEBUG] 根据AI分析结果调整RAG搜索查询，添加漏洞类型: {vuln_types_str}[/dim]"
-                        )
-
-            # 搜索 RAG 知识库
-            search_results = rag_kb.search_knowledge(search_query)
-
-            if search_results:
-                if self.config.debug:
-                    console.print(f"[dim][DEBUG] RAG 知识库检索发现 {len(search_results)} 个相关结果[/dim]")
-
-                # 过滤低相关性结果
-                relevant_results = [
-                    result for result in search_results if result.confidence >= 0.75
-                ]
-
-                if relevant_results:
-                    if self.config.debug:
-                        console.print(f"[dim][DEBUG] 过滤后保留 {len(relevant_results)} 个高相关性结果[/dim]")
-
-                    # 转换知识库结果为 Finding 对象
-                    from src.core.engine import Finding, Location, Severity
-
-                    for knowledge in relevant_results:
-                        # 提取严重级别
-                        severity_str = None
-                        for tag in knowledge.tags:
-                            if tag in ["critical", "high", "medium", "low", "info"]:
-                                severity_str = tag
-                                break
-
-                        if not severity_str:
-                            # 根据置信度设置默认严重级别
-                            if knowledge.confidence >= 0.9:
-                                severity_str = "high"
-                            elif knowledge.confidence >= 0.8:
-                                severity_str = "medium"
-                            else:
-                                severity_str = "low"
-
-                        # 检查知识内容是否与文件类型相关
-                        is_relevant = True
-                        if file_info.language:
-                            language = file_info.language.value
-                            # 简单的相关性检查
-                            if language == "python" and "python" not in knowledge.content.lower():
-                                # 对于Python文件，确保知识内容与Python相关
-                                if not any(
-                                    keyword in knowledge.content.lower()
-                                    for keyword in ["python", "pip", "django", "flask"]
-                                ):
-                                    is_relevant = False
-                            elif (
-                                language == "javascript"
-                                and "javascript" not in knowledge.content.lower()
-                            ):
-                                # 对于JavaScript文件，确保知识内容与JavaScript相关
-                                if not any(
-                                    keyword in knowledge.content.lower()
-                                    for keyword in ["javascript", "node", "react", "vue"]
-                                ):
-                                    is_relevant = False
-
-                        # 如果有AI分析结果，检查知识内容是否与AI发现相关
-                        if ai_findings and is_relevant:
-                            is_relevant_to_ai = False
-                            for ai_finding in ai_findings:
-                                if any(
-                                    keyword in knowledge.content.lower()
-                                    for keyword in ai_finding.rule_name.lower().split()
-                                ):
-                                    is_relevant_to_ai = True
-                                    # 提高与AI发现相关的RAG结果的置信度
-                                    knowledge.confidence = min(1.0, knowledge.confidence + 0.1)
-                                    break
-                            if not is_relevant_to_ai:
-                                # 如果知识内容与AI发现无关，降低置信度
-                                knowledge.confidence = max(0.5, knowledge.confidence - 0.1)
-                                # 如果置信度低于阈值，标记为不相关
-                                if knowledge.confidence < 0.7:
-                                    is_relevant = False
-
-                        if is_relevant:
-                            # 创建 Finding 对象
-                            finding = Finding(
-                                rule_id=f"RAG-{knowledge.id[:8]}",
-                                rule_name=knowledge.content[:50],
-                                description=knowledge.content,
-                                severity=Severity(severity_str),
-                                location=Location(file=str(file_info.path), line=1, column=0),
-                                confidence=knowledge.confidence,
-                                message=knowledge.content,
-                                code_snippet=(
-                                    file_content[:200] + "..."
-                                    if len(file_content) > 200
-                                    else file_content
-                                ),
-                                fix_suggestion="根据 RAG 知识库建议进行修复",
-                                references=[],
-                                metadata={
-                                    "knowledge_id": knowledge.id,
-                                    "knowledge_source": knowledge.source,
-                                    "rag_knowledge": True,
-                                },
-                            )
-                            findings.append(finding)
-
-            # 限制每个文件的RAG结果数量
-            max_findings = 5
-            if len(findings) > max_findings:
-                # 按置信度排序，保留高置信度的结果
-                findings.sort(key=lambda x: x.confidence, reverse=True)
-                findings = findings[:max_findings]
-                if self.config.debug:
-                    console.print(f"[dim][DEBUG] 限制RAG知识库结果数量为 {max_findings}[/dim]")
-
-        except Exception as e:
-            if self.config.debug:
-                console.print(f"[dim][DEBUG] RAG 知识库检索分析失败: {e}[/dim]")
-
-        return findings
-
-    def _deduplicate_findings(self, findings: List) -> List:
-        """去重发现的问题
-
-        基于 (rule_id, file_path, line_number, code_snippet) 进行去重
-
-        Args:
-            findings: 发现的问题列表
-
-        Returns:
-            去重后的问题列表
-        """
-        seen = set()
-        unique_findings = []
-
-        for finding in findings:
-            # 创建唯一键
-            file_path = getattr(finding.location, "file", "")
-            line = getattr(finding.location, "line", 0)
-            rule_id = finding.rule_id
-            code_snippet = finding.code_snippet[:50] if finding.code_snippet else ""  # 前50字符
-
-            key = (rule_id, file_path, line, code_snippet)
-
-            if key not in seen:
-                seen.add(key)
-                unique_findings.append(finding)
-
-        return unique_findings
-
-    def _merge_duplicate_findings(self, findings: List) -> List:
-        """合并重复发现，相同规则ID和文件优先使用更高级别
-
-        当多个发现在同一文件具有相同规则ID时，保留最严重级别的发现。
-        对于已验证的发现（verified=True），不会被AI发现的同名低级别发现覆盖。
-        不同文件的相同规则ID发现会分别保留。
-
-        Args:
-            findings: 发现的问题列表
-
-        Returns:
-            合并后的问题列表
-        """
-        seen = {}  # (rule_id, file_path) -> (finding, severity_level)
-
-        severity_order = {"critical": 0, "high": 1, "medium": 2, "low": 3, "info": 4}
-
-        def get_severity_level(severity):
-            if hasattr(severity, "value"):
-                sev_str = severity.value.lower()
-            elif hasattr(severity, "name"):
-                sev_str = severity.name.lower()
-            else:
-                sev_str = str(severity).lower()
-            return severity_order.get(sev_str, 999)
-
-        def get_metadata(finding) -> dict:
-            metadata = getattr(finding, "metadata", None)
-            if metadata is None:
-                return {}
-            if isinstance(metadata, dict):
-                return metadata
-            return {}
-
-        for finding in findings:
-            rule_id = finding.rule_id
-            file_path = (
-                getattr(finding.location, "file", "") if hasattr(finding, "location") else ""
-            )
-            key = (rule_id, file_path)
-
-            current_level = get_severity_level(finding.severity)
-            metadata = get_metadata(finding)
-            is_verified = metadata.get("verified", False)
-
-            if key not in seen:
-                seen[key] = (finding, current_level)
-            else:
-                existing_finding, existing_level = seen[key]
-                existing_metadata = get_metadata(existing_finding)
-                existing_verified = existing_metadata.get("verified", False)
-
-                if is_verified and not existing_verified:
-                    seen[key] = (finding, current_level)
-                elif is_verified == existing_verified:
-                    if current_level < existing_level:
-                        seen[key] = (finding, current_level)
-
-        return [f for f, _ in seen.values()]
-
-    def _protect_verified_sources(self, findings: List) -> List:
-        """保护已验证来源的发现不被覆盖
-
-        config_scanner 和 code_vuln_scanner 的发现是已知的、可复现的安全风险。
-        这些发现使用自己确定的严重级别，不应该被 AI 分析器的判定覆盖。
-
-        Args:
-            findings: 合并后的发现列表
-
-        Returns:
-            处理后的发现列表
-        """
-        verified_sources = {"config_scanner", "code_vuln_scanner"}
-        verified_findings = {}  # (rule_id, file_path) -> finding
-
-        def get_metadata_source(finding) -> str:
-            metadata = getattr(finding, "metadata", None)
-            if metadata is None:
-                return ""
-            if isinstance(metadata, dict):
-                return str(metadata.get("source", ""))
-            return ""
-
-        def get_metadata(finding) -> dict:
-            metadata = getattr(finding, "metadata", None)
-            if metadata is None:
-                return {}
-            if isinstance(metadata, dict):
-                return metadata
-            return {}
-
-        # 首先收集所有来自已验证来源的发现
-        for f in findings:
-            source = get_metadata_source(f)
-            if source in verified_sources:
-                key = (f.rule_id, getattr(f.location, "file", "") if hasattr(f, "location") else "")
-                if key not in verified_findings:
-                    verified_findings[key] = f
-
-        # 如果有已验证来源的发现，用它们替换列表中相同 key 的发现
-        if not verified_findings:
-            return findings
-
-        result = []
-        for f in findings:
-            source = get_metadata_source(f)
-            key = (f.rule_id, getattr(f.location, "file", "") if hasattr(f, "location") else "")
-
-            if key in verified_findings and source not in verified_sources:
-                # 来自 AI 分析器的发现被已验证来源的发现替换
-                result.append(verified_findings[key])
-            else:
-                result.append(f)
-
-        return result
-
-    def _convert_to_finding(self, issue) -> Optional[Any]:
-        """将分析问题转换为标准 Finding 对象
-
-        Args:
-            issue: 分析问题对象
-
-        Returns:
-            标准 Finding 对象
-        """
-        try:
-            from src.core.engine import Finding, Location, Severity
-
-            # 转换严重级别
-            severity_map = {
-                "critical": Severity.CRITICAL,
-                "high": Severity.HIGH,
-                "medium": Severity.MEDIUM,
-                "low": Severity.LOW,
-                "info": Severity.INFO,
-            }
-
-            # 清理和规范化字段
-            if hasattr(issue, "severity"):
-                severity_str = getattr(issue, "severity", "medium").lower()
-            elif isinstance(issue, dict) and "severity" in issue:
-                severity_str = str(issue["severity"]).lower()
-            else:
-                severity_str = "medium"
-            severity = severity_map.get(severity_str, Severity.MEDIUM)
-
-            # 获取并清理描述
-            if hasattr(issue, "description"):
-                description = getattr(issue, "description", "").strip()
-            elif isinstance(issue, dict) and "description" in issue:
-                description = str(issue["description"]).strip()
-            else:
-                description = ""
-
-            # 清理规则名称
-            if hasattr(issue, "rule_name"):
-                rule_name = getattr(issue, "rule_name", "Unknown Issue").strip()
-            elif isinstance(issue, dict) and "rule_name" in issue:
-                rule_name = str(issue["rule_name"]).strip()
-            else:
-                # 根据 rule_id 生成规则名称
-                if hasattr(issue, "rule_id"):
-                    rule_id = getattr(issue, "rule_id", "").strip()
-                elif isinstance(issue, dict) and "rule_id" in issue:
-                    rule_id = str(issue["rule_id"]).strip()
-                else:
-                    rule_id = ""
-
-                # 规则 ID 到规则名称的映射
-                rule_name_map = {
-                    "AST-DANGEROUS-FUNCTION": "危险函数调用",
-                    "AST-SENSITIVE-PARAM": "敏感参数缺少类型注解",
-                    "AST-MISSING-DOCSTRING": "函数缺少文档字符串",
-                    "AST-MISSING-CLASS-DOCSTRING": "类缺少文档字符串",
-                    "AST-WILDCARD-IMPORT": "通配符导入",
-                    "AST-DANGEROUS-MODULE": "危险模块导入",
-                    "AST-SENSITIVE-VARIABLE": "敏感变量定义",
-                    "AST-HARDCODED-SECRET": "硬编码敏感信息",
-                    "AST-CONSTANT-CONDITION": "常量条件",
-                    "AST-INFINITE-LOOP": "可能的无限循环",
-                    "AST-EMPTY-EXCEPT": "空的异常处理块",
-                    "AST-GENERIC-EXCEPTION": "通用异常",
-                    "AST-RETURN-SENSITIVE": "返回敏感信息",
-                    "AST-SQL-INJECTION": "SQL 注入风险",
-                    "AST-XSS": "XSS 风险",
-                    "AST-COMMAND-INJECTION": "命令注入风险",
-                    "AST-SENSITIVE-ATTRIBUTE": "类中存在敏感属性",
-                }
-
-                rule_name = rule_name_map.get(rule_id, "未知问题")
-
-            # 清理代码片段
-            if hasattr(issue, "code_snippet"):
-                code_snippet = getattr(issue, "code_snippet", "").strip()
-            elif isinstance(issue, dict) and "code_snippet" in issue:
-                code_snippet = str(issue["code_snippet"]).strip()
-            else:
-                code_snippet = ""
-
-            # 清理修复建议
-            if hasattr(issue, "fix_suggestion"):
-                fix_suggestion = getattr(issue, "fix_suggestion", "").strip()
-            elif isinstance(issue, dict) and "fix_suggestion" in issue:
-                fix_suggestion = str(issue["fix_suggestion"]).strip()
-            else:
-                fix_suggestion = ""
-
-            # 创建位置对象
-            if hasattr(issue, "location"):
-                location_dict = issue.location if isinstance(issue.location, dict) else {}
-            elif isinstance(issue, dict) and "location" in issue:
-                location_dict = issue["location"] if isinstance(issue["location"], dict) else {}
-            else:
-                location_dict = {}
-
-            # 获取文件路径
-            if hasattr(issue, "file_path"):
-                file_path = getattr(issue, "file_path", "")
-            elif isinstance(issue, dict) and "file_path" in issue:
-                file_path = issue["file_path"]
-            elif "file" in location_dict:
-                file_path = location_dict["file"]
-            else:
-                file_path = ""
-
-            location = Location(
-                file=file_path,
-                line=location_dict.get("line", 0),
-                column=location_dict.get("column", 0),
-                end_line=location_dict.get("end_line", 0),
-                end_column=location_dict.get("end_column", 0),
-            )
-
-            # 获取其他字段
-            if hasattr(issue, "rule_id"):
-                rule_id = getattr(issue, "rule_id", "UNKNOWN")
-            elif isinstance(issue, dict) and "rule_id" in issue:
-                rule_id = issue["rule_id"]
-            else:
-                rule_id = "UNKNOWN"
-
-            if hasattr(issue, "confidence"):
-                confidence = getattr(issue, "confidence", 0.5)
-            elif isinstance(issue, dict) and "confidence" in issue:
-                confidence = issue["confidence"]
-            else:
-                confidence = 0.5
-
-            if hasattr(issue, "references"):
-                references = getattr(issue, "references", [])
-            elif isinstance(issue, dict) and "references" in issue:
-                references = issue["references"]
-            else:
-                references = []
-
-            # 处理 metadata 字段
-            metadata: dict = {}
-            if hasattr(issue, "metadata"):
-                metadata = getattr(issue, "metadata", {})
-            elif isinstance(issue, dict) and "metadata" in issue:
-                metadata = issue["metadata"]
-
-            # 处理 exploit_status 字段
-            if hasattr(issue, "exploit_status"):
-                metadata["exploit_status"] = getattr(issue, "exploit_status", "possible")
-            elif isinstance(issue, dict) and "exploit_status" in issue:
-                metadata["exploit_status"] = issue["exploit_status"]
-
-            # 创建 Finding 对象
-            finding = Finding(
-                rule_id=rule_id,
-                rule_name=rule_name,
-                description=description,
-                severity=severity,
-                location=location,
-                confidence=confidence,
-                message=description,  # 使用清理后的描述作为消息
-                code_snippet=code_snippet,
-                fix_suggestion=fix_suggestion,
-                references=references,
-                metadata=metadata,
-            )
-
-            return finding
-        except Exception:
-            return None
+        """基于 RAG 知识库检索的漏洞检测"""
+        from src.core.scanner_rules import rule_analyze as _rule_analyze_func
+
+        return _rule_analyze_func(
+            file_info=file_info,
+            ai_findings=ai_findings,
+            config_debug=self.config.debug,
+            config_pure_ai=self.config.pure_ai,
+        )
 
     def _semantic_analyze(self, file_info: FileInfo) -> List:
-        """本地语义分析文件
+        """本地语义分析文件 (委托给 scanner_analyze.semantic_analyze)
 
         Args:
             file_info: 文件信息
@@ -3454,67 +2791,13 @@ class SecurityScanner:
         Returns:
             发现的安全问题列表
         """
-        findings = []
+        from src.core.scanner_analyze import semantic_analyze as _semantic_analyze
 
-        try:
-            # 读取文件内容
-            with open(file_info.path, "r", encoding="utf-8") as f:
-                code_content = f.read()
-
-            if self.config.debug:
-                console.print(f"[dim][DEBUG] 执行本地语义分析: {file_info.path}[/dim]")
-
-            # 执行本地语义分析
-            semantic_result = self.local_analyzer.analyze(
-                code=code_content, file_path=str(file_info.path)
-            )
-
-            # 如果检测到漏洞，转换为 Finding 对象
-            if semantic_result.is_vulnerable:
-                from src.core.engine import Finding, Location, Severity
-
-                # 将 RiskLevel 转换为 Severity
-                severity_map = {
-                    "critical": Severity.CRITICAL,
-                    "high": Severity.HIGH,
-                    "medium": Severity.MEDIUM,
-                    "low": Severity.LOW,
-                    "info": Severity.INFO,
-                }
-                severity = severity_map.get(semantic_result.risk_level.value, Severity.MEDIUM)
-
-                # 创建 Finding 对象
-                finding = Finding(
-                    rule_id="SEMANTIC-ANALYSIS",
-                    rule_name=f"语义分析: {semantic_result.reason[:50]}",
-                    description=semantic_result.reason,
-                    severity=severity,
-                    location=Location(
-                        file=str(file_info.path),
-                        line=1,
-                        column=0,
-                    ),
-                    confidence=semantic_result.confidence,
-                    message=semantic_result.reason,
-                    code_snippet=(
-                        code_content[:200] + "..." if len(code_content) > 200 else code_content
-                    ),
-                    fix_suggestion="; ".join(semantic_result.recommendations[:3]),
-                    references=[],
-                )
-                findings.append(finding)
-
-                if self.config.debug:
-                    console.print(f"[dim][DEBUG] 语义分析发现漏洞: {semantic_result.reason}[/dim]")
-                    console.print(
-                        f"[dim][DEBUG] 攻击链路: {' -> '.join(semantic_result.attack_chain)}[/dim]"
-                    )
-
-        except Exception as e:
-            if self.config.debug:
-                console.print(f"[dim][DEBUG] 语义分析失败: {e}[/dim]")
-
-        return findings
+        return _semantic_analyze(
+            file_info=file_info,
+            local_analyzer=self.local_analyzer,
+            config_debug=self.config.debug,
+        )
 
     def _library_analyze(self, file_info: FileInfo) -> List:
         """库匹配分析文件
@@ -4114,7 +3397,7 @@ class SecurityScanner:
 
             # 转换 AI 结果为标准格式
             for finding in ai_result.findings:
-                converted = self._convert_to_finding(finding)
+                converted = convert_to_finding(finding)
                 if converted:
                     findings.append(converted)
                     if self.config.debug:
@@ -4401,180 +3684,3 @@ class SecurityScanner:
                 filtered_findings.append(web_finding)
 
         return filtered_findings
-
-
-class RemoteSecurityScanner:
-    """远程安全扫描器
-
-    包装 SecurityScanner，使用远程文件发现。
-    """
-
-    def __init__(self, config: Config, remote_config: Dict[str, Any]):
-        """初始化远程安全扫描器
-
-        Args:
-            config: 扫描配置
-            remote_config: 远程扫描配置
-        """
-        self.config = config
-        self.remote_config = remote_config
-        self.remote_mode = True
-
-        from src.integration.remote_scan.network_scanner import NetworkScanner
-        from src.integration.remote_scan.serial_scanner import SerialScanner
-
-        scanner_type = remote_config.get("type", "ssh")
-        if scanner_type == "serial":
-            self.remote_scanner = SerialScanner(remote_config)
-        else:
-            self.remote_scanner = NetworkScanner(remote_config)
-
-        self._scanner = SecurityScanner(config)
-        self.findings: list = []
-
-    def scan_sync(self, target: Union[str, Path]) -> ScanResult:
-        """执行同步远程扫描
-
-        Args:
-            target: 扫描目标
-
-        Returns:
-            扫描结果
-        """
-        return asyncio.run(self.scan(target))
-
-    async def scan(self, target: Union[str, Path]) -> ScanResult:
-        """执行远程扫描
-
-        Args:
-            target: 扫描目标
-
-        Returns:
-            扫描结果
-        """
-        import os
-        import tempfile
-        from datetime import datetime
-
-        # start_time = time.time()
-        start_datetime = datetime.now()
-        temp_files = []
-
-        console.print(
-            f"[bold cyan][REMOTE] Connecting to remote target:[/bold cyan] [bold green]{target}[/bold green]"
-        )
-
-        if not self.remote_scanner.connect():
-            from src.core.engine import ScanStatus
-
-            result = ScanResult(
-                target=str(target), status=ScanStatus.FAILED, start_time=start_datetime
-            )
-            result.error_message = "Failed to connect to remote target"
-            return result
-
-        try:
-            console.print("[bold cyan][REMOTE] Discovering remote files...[/bold cyan]")
-            remote_files = self.remote_scanner.discover_files(str(target))
-
-            if not remote_files:
-                console.print(
-                    "[bold yellow][WARN] No files discovered on remote target[/bold yellow]"
-                )
-                from src.core.engine import ScanStatus
-
-                result = ScanResult(
-                    target=str(target), status=ScanStatus.COMPLETED, start_time=start_datetime
-                )
-                result.findings = []
-                return result
-
-            console.print(
-                f"[bold cyan][OK] Found[/bold cyan] [bold green]{len(remote_files)}[/bold green] remote files"
-            )
-
-            console.print("[bold cyan][REMOTE] Reading remote files and analyzing...[/bold cyan]")
-
-            file_infos = []
-            for remote_file in remote_files:
-                try:
-                    content = self.remote_scanner.read_file(remote_file.path)
-                    if content is None:
-                        continue
-
-                    content_str = content.decode("utf-8", errors="ignore")
-
-                    with tempfile.NamedTemporaryFile(
-                        mode="w", suffix=Path(remote_file.path).suffix, delete=False
-                    ) as f:
-                        f.write(content_str)
-                        temp_path = f.name
-                        temp_files.append(temp_path)
-
-                    from src.utils.file_discovery import FileType, Language
-
-                    file_info = FileInfo(
-                        path=Path(temp_path),
-                        size=len(content),
-                        language=Language.UNKNOWN,
-                        file_type=getattr(FileType, "UNKNOWN", "unknown"),  # type: ignore[arg-type]
-                        extension=Path(remote_file.path).suffix.lower(),
-                        encoding="utf-8",
-                        line_count=len(content_str.splitlines()),
-                        hash="",
-                        last_modified=datetime.fromtimestamp(remote_file.modified_time),
-                        metadata={"remote_path": remote_file.path, "remote": True},
-                    )
-                    file_infos.append(file_info)
-
-                except Exception as e:
-                    if self.config.debug:
-                        console.print(
-                            f"[dim][DEBUG] Failed to read remote file {remote_file.path}: {e}[/dim]"
-                        )
-                    continue
-
-            console.print(f"[bold cyan][TOOL] Analyzing {len(file_infos)} files...[/bold cyan]")
-
-            findings, analyzed_count = await self._scanner._analyze_files(file_infos)
-
-            console.print(
-                f"[bold cyan][OK] Found[/bold cyan] [bold red]{len(findings)}[/bold red] security issues"
-            )
-
-        finally:
-            self.remote_scanner.disconnect()
-
-            for temp_path in temp_files:
-                try:
-                    os.unlink(temp_path)
-                except Exception:
-                    pass
-
-        from src.core.engine import ScanStatus
-
-        result = ScanResult(
-            target=str(target), status=ScanStatus.COMPLETED, start_time=start_datetime
-        )
-        result.findings = findings
-        result.metadata["total_files"] = analyzed_count
-        result.metadata["remote_scan"] = True
-
-        return result
-
-
-def create_scanner(
-    config: Config, remote_config: Optional[Dict[str, Any]] = None
-) -> Union[SecurityScanner, RemoteSecurityScanner]:
-    """创建安全扫描器
-
-    Args:
-        config: 扫描配置
-        remote_config: 远程扫描配置（可选）
-
-    Returns:
-        安全扫描器实例（本地或远程）
-    """
-    if remote_config is not None:
-        return RemoteSecurityScanner(config, remote_config)
-    return SecurityScanner(config)

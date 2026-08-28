@@ -12,9 +12,9 @@ from typing import Any, Dict, List, Optional
 from rich.console import Console
 
 from src.ai.models import VulnerabilityFinding
-from src.ai.pure_ai.cache import CacheManager
+from src.ai.pure_ai.analysis_cache import CacheManager
 from src.ai.pure_ai.multi_agent_pipeline import MultiAgentPipeline
-from src.ai.pure_ai.schema_validator import LineNumberValidator
+from src.ai.pure_ai.line_number_validator import LineNumberValidator
 from src.core.config import Config
 from src.nvd.nvd_query_adapter import NVDQueryAdapter
 from src.utils.logger import get_logger

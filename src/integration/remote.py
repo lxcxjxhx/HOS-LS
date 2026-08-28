@@ -100,7 +100,7 @@ class RemoteExecutor:
     async def _execute_scan(self, parameters: Dict[str, Any]) -> Dict[str, Any]:
         """执行扫描"""
         from src.core.config import get_config
-        from src.core.scanner import create_scanner
+        from src.core.remote_scanner import create_scanner
 
         target = parameters.get("target", ".")
         # config = parameters.get("config", {})
