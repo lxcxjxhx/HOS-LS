@@ -33,6 +33,15 @@ class PureAIAnalyzer:
     实现纯AI深度语义解析功能，使用 Multi-Agent Pipeline 进行分析。
     """
 
+
+        # 初始化结果转换器
+        self.converter = ResultConverter(
+            config=self.config,
+            ai_model=getattr(self, "ai_model", None),
+            client=getattr(self, "client", None),
+            nvd_adapter=getattr(self, "nvd_adapter", None),
+            debug_logs=self.debug_logs if hasattr(self, "debug_logs") else [],
+        )
     def __init__(self, config: Config):
         """初始化纯AI分析器
 
