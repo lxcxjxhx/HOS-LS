@@ -21,6 +21,7 @@ from src.core.config import Config
 from src.nvd.nvd_query_adapter import NVDQueryAdapter
 from src.utils.logger import get_logger
 from src.ai.pure_ai.result_converter import ResultConverter
+from src.ai.pure_ai.result_converter import ResultConverter
 
 logger = get_logger(__name__)
 
@@ -32,10 +33,6 @@ class PureAIAnalyzer:
 
     实现纯AI深度语义解析功能，使用 Multi-Agent Pipeline 进行分析。
     """
-
-
-        # 初始化结果转换器
-        self.converter = ResultConverter(
             config=self.config,
             ai_model=getattr(self, "ai_model", None),
             client=getattr(self, "client", None),
@@ -59,6 +56,8 @@ class PureAIAnalyzer:
         self.debug_logs: List[str] = []
         self.nvd_adapter = NVDQueryAdapter()
         self.reject_unverified_findings: bool = getattr(config, "reject_unverified_findings", True)
+
+        self.converter = ResultConverter(self)
 
         self.converter = ResultConverter(self)
 
