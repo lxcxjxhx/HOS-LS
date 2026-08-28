@@ -1,4 +1,4 @@
-"""Agent 4-6：攻击链、对抗验证、最终裁决
+﻿"""Agent 4-6：攻击链、对抗验证、最终裁决
 
 从 MultiAgentPipeline 提取的确定性（不消耗 token）Agent 运行器。
 """
