@@ -747,18 +747,64 @@ class ContextBuilder:
                             break
 
         if len(related_files) < limit:
-            python_files = []
+            # 用 BM25 排序代替文件大小排序：以当前文件的 imports + function_calls 为查询，
+            # 对同目录 .py 文件按语义相关性排序，取 top-(limit - len(related_files))
+            remaining = limit - len(related_files)
+            candidates = []
             for file in current_dir.iterdir():
                 if file.suffix == ".py" and file.name != current_path.name:
                     try:
-                        file_size = file.stat().st_size
-                        python_files.append((file_size, file))
+                        candidates.append(file)
                     except Exception:
                         pass
 
-            python_files.sort(reverse=True, key=lambda x: x[0])
+            if candidates:
+                query_tokens = []
+                for imp in self._extract_imports(str(current_path)):
+                    query_tokens.extend(imp.lower().split())
+                for fc in self._extract_function_calls(str(current_path)):
+                    query_tokens.append(fc.lower())
+                query_tokens = list(set(query_tokens))
+                query_str = " ".join(query_tokens) if query_tokens else ""
 
-            for _, file in python_files:
+                if query_str:
+                    try:
+                        # 用 BM25 排序候选文件
+                        from src.ai.pure_ai.rag.bm25_index import BM25Okapi as BM25
+                        doc_texts = []
+                        valid_files = []
+                        for cf in candidates:
+                            try:
+                                ct = open(str(cf), encoding="utf-8", errors="replace").read()
+                                doc_texts.append(ct)
+                                valid_files.append(cf)
+                            except Exception:
+                                continue
+                        if doc_texts:
+                            bm25 = BM25(doc_texts)
+                            scores = bm25.get_scores(query_str)
+                            scored = list(zip(scores, valid_files))
+                            scored.sort(key=lambda x: -x[0])
+                            for _, file in scored:
+                                if len(related_files) >= limit:
+                                    break
+                                related_files.append(
+                                    {"path": str(file),
+                                     "content": self._read_file(str(file), max_size=524288)}
+                                )
+                            return related_files
+                    except Exception:
+                        pass
+
+            # fallback：按文件大小排序（原有逻辑）
+            fallback = []
+            for file in candidates:
+                try:
+                    fallback.append((file.stat().st_size, file))
+                except Exception:
+                    pass
+            fallback.sort(reverse=True, key=lambda x: x[0])
+            for _, file in fallback:
                 if len(related_files) >= limit:
                     break
                 related_files.append(
