@@ -36,6 +36,7 @@ from src.ai.pure_ai.pipeline_constants import (
 )
 from src.ai.pure_ai.known_file_registry import KnownFileRegistry
 from src.ai.pure_ai.evidence_chain import EvidenceChain
+from src.ai.pure_ai.pipeline_llm import (generate_with_retry as _generate_with_retry_impl, parse_json_response as _parse_json_response_impl)
 
 console = Console()
 
