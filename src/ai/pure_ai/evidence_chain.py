@@ -5,6 +5,7 @@
 
 from typing import Any, Dict, List, Optional, Tuple
 
+from src.ai.pure_ai.schema import SignalState
 from src.utils.logger import get_logger
 
 logger = get_logger(__name__)

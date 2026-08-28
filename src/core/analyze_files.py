@@ -9,7 +9,16 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from rich.console import Console
 
+from src.ai.models import AnalysisContext, SecurityAnalysisResult, VulnerabilityFinding
+from src.core.config import Config
+from src.core.engine import Finding, Location, Severity
+from src.core.file_filter import RiskLevel, SecurityFileFilter
+from src.core.scan_state import ScanState
+from src.core.scanner_finding import deduplicate_findings, merge_duplicate_findings, protect_verified_sources, convert_to_finding
+from src.core.types import AnalysisLevel
+from src.utils.file_discovery import FileInfo
 from src.utils.logger import get_logger
+from src.utils.priority_engine import FilePriorityEngine, PriorityStrategy
 
 logger = get_logger(__name__)
 console = Console()

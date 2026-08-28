@@ -58,7 +58,7 @@ def _track_risk_signals(self, risk_enumeration: Any) -> None:
             )
             risk_description = risk.get("description", "") or risk.get("reason", "")
 
-            if pipeline.reject_on_signal_creation and pipeline._should_reject_signal(risk_title):
+            if self.reject_on_signal_creation and self._should_reject_signal(risk_title):
                 logger.debug(
                     f"拒绝占位符信号: {risk_title} (signal_id: {signal_id}, original: {original_signal_id})"
                 )
@@ -130,7 +130,7 @@ def _track_risk_signals(self, risk_enumeration: Any) -> None:
                         risk.get("vulnerability", "") or risk.get("risk_type", "") or risk_title
                     )
 
-            pipeline.evidence_chain_tracker.add_signal(
+            self.evidence_chain_tracker.add_signal(
                 signal_id=signal_id,
                 signal_type="risk",
                 title=risk_title,
@@ -139,7 +139,7 @@ def _track_risk_signals(self, risk_enumeration: Any) -> None:
                 state=risk.get("signal_state", SignalState.NEW.value),
                 evidence=evidence,
             )
-            pipeline._current_file_signals.add(signal_id)
+            self._current_file_signals.add(signal_id)
             logger.debug(
                 f"Added risk signal: {signal_id} (original: {original_signal_id}) with title: {risk_title or 'UNKNOWN'}"
             )
@@ -182,17 +182,17 @@ def _track_verification_signals(self, vulnerability_verification: Any) -> None:
                 new_state = "REFINED"
 
             verification_reason = vuln.get("verification_reason", "")
-            old_signal = pipeline.evidence_chain_tracker.get_signal(signal_id)
+            old_signal = self.evidence_chain_tracker.get_signal(signal_id)
             if old_signal:
-                old_confidence = pipeline._get_avg_confidence(old_signal.get("evidence_chain", []))
-                new_confidence = pipeline._get_avg_confidence(evidence)
+                old_confidence = self._get_avg_confidence(old_signal.get("evidence_chain", []))
+                new_confidence = self._get_avg_confidence(evidence)
                 confidence_change = (
                     new_confidence - old_confidence
                     if old_confidence and new_confidence
                     else 0.0
                 )
 
-                pipeline.evidence_chain_tracker.update_signal_state(
+                self.evidence_chain_tracker.update_signal_state(
                     signal_id=signal_id,
                     agent="Agent-3",
                     new_state=new_state,
@@ -215,13 +215,13 @@ def _track_verification_signals(self, vulnerability_verification: Any) -> None:
                     "verification_reason", ""
                 )
 
-                if pipeline.reject_on_signal_creation and pipeline._should_reject_signal(
+                if self.reject_on_signal_creation and self._should_reject_signal(
                     vuln_title or ""
                 ):
                     logger.debug(f" 拒绝占位符验证信号: {vuln_title} (signal_id: {signal_id})")
                     continue
 
-                pipeline.evidence_chain_tracker.add_signal(
+                self.evidence_chain_tracker.add_signal(
                     signal_id=signal_id,
                     signal_type="verification",
                     title=vuln_title or "",
@@ -230,7 +230,7 @@ def _track_verification_signals(self, vulnerability_verification: Any) -> None:
                     state=new_state,
                     evidence=evidence,
                 )
-                pipeline._current_file_signals.add(signal_id)
+                self._current_file_signals.add(signal_id)
 
     unverified_signals = all_signal_ids - processed_signal_ids
     if unverified_signals:
@@ -245,7 +245,7 @@ def _track_verification_signals(self, vulnerability_verification: Any) -> None:
             logger.warning(
                 f" Agent-3 验证覆盖率低于50%阈值 ({coverage_ratio * 100:.1f}%)，尝试从风险列表匹配..."
             )
-            matched_count = pipeline._match_unverified_signals(
+            matched_count = self._match_unverified_signals(
                 unverified_signals, vulnerability_verification
             )
             adjusted_coverage = (
@@ -263,7 +263,7 @@ def _track_verification_signals(self, vulnerability_verification: Any) -> None:
         if coverage_ratio < 0.5:
             logger.debug("  将相关风险标记为需要人工复核")
             for signal_id in unverified_signals:
-                signal = pipeline.evidence_chain_tracker.get_signal(signal_id)
+                signal = self.evidence_chain_tracker.get_signal(signal_id)
                 if signal:
                     signal["requires_human_review"] = True
 
@@ -283,7 +283,7 @@ def _match_unverified_signals(
     vulnerabilities = vulnerability_verification.get("vulnerabilities", [])
 
     for signal_id in unverified_signals:
-        signal = pipeline.evidence_chain_tracker.get_signal(signal_id)
+        signal = self.evidence_chain_tracker.get_signal(signal_id)
         if not signal:
             continue
 
@@ -306,7 +306,7 @@ def _match_unverified_signals(
             vuln_type = vuln.get("vulnerability", vuln.get("type", ""))
             if location and vuln_location and location == vuln_location:
                 evidence = vuln.get("evidence", [])
-                pipeline.evidence_chain_tracker.update_signal_state(
+                self.evidence_chain_tracker.update_signal_state(
                     signal_id=signal_id,
                     agent="Agent-3",
                     new_state=vuln.get("signal_state", SignalState.REFINED.value),
@@ -317,7 +317,7 @@ def _match_unverified_signals(
                 break
             elif risk_type and vuln_type and risk_type.lower() in vuln_type.lower():
                 evidence = vuln.get("evidence", [])
-                pipeline.evidence_chain_tracker.update_signal_state(
+                self.evidence_chain_tracker.update_signal_state(
                     signal_id=signal_id,
                     agent="Agent-3",
                     new_state=vuln.get("signal_state", SignalState.REFINED.value),
@@ -342,7 +342,7 @@ def _track_attack_chain_signals(self, attack_chain_analysis: Any) -> None:
         signal_id = chain.get("signal_id", "")
         if signal_id:
             evidence = chain.get("evidence", [])
-            pipeline.evidence_chain_tracker.add_signal(
+            self.evidence_chain_tracker.add_signal(
                 signal_id=signal_id,
                 signal_type="attack_chain",
                 agent="Agent-4",
@@ -373,18 +373,18 @@ def _track_adversarial_signals(self, adversarial_validation: Any) -> None:
                 "UNCERTAIN": SignalState.UNCERTAIN.value,
             }
             new_state = state_mapping.get(verdict, SignalState.UNCERTAIN.value)
-            old_signal = pipeline.evidence_chain_tracker.get_signal(challenged_id)
+            old_signal = self.evidence_chain_tracker.get_signal(challenged_id)
             old_confidence = (
-                pipeline._get_avg_confidence(old_signal.get("evidence_chain", []))
+                self._get_avg_confidence(old_signal.get("evidence_chain", []))
                 if old_signal
                 else None
             )
-            new_confidence = pipeline._get_avg_confidence(evidence)
+            new_confidence = self._get_avg_confidence(evidence)
             confidence_change = (
                 new_confidence - old_confidence if old_confidence and new_confidence else None
             )
 
-            pipeline.evidence_chain_tracker.update_signal_state(
+            self.evidence_chain_tracker.update_signal_state(
                 signal_id=challenged_id,
                 agent="Agent-5",
                 new_state=new_state,
@@ -420,7 +420,7 @@ def _check_semantic_consistency(
             logger.debug(
                 f"Agent-2 produced {len(upstream_signals)} signals, Agent-3 consumed {len(downstream_signals)} signals"
             )
-            pipeline._fill_missing_signals_via_refinement(missing_signals, downstream, "risk")
+            self._fill_missing_signals_via_refinement(missing_signals, downstream, "risk")
             downstream_signals = set(
                 v.get("signal_id", "") for v in downstream.get("vulnerabilities", [])
             )
@@ -445,7 +445,7 @@ def _check_semantic_consistency(
             logger.debug(
                 f"Agent-4 produced {len(upstream_signals)} signals, Agent-5 consumed {len(downstream_signals)} signals"
             )
-            pipeline._fill_missing_signals_via_refinement(
+            self._fill_missing_signals_via_refinement(
                 missing_signals, downstream, "attack_chain"
             )
 
@@ -515,7 +515,7 @@ def _fill_missing_signals_via_refinement(
 
 def _get_signal_summary(self) -> Dict[str, Any]:
     """获取信号摘要"""
-    signals = pipeline.evidence_chain_tracker.get_all_signals()
+    signals = self.evidence_chain_tracker.get_all_signals()
     summary: Dict[str, Any] = {
         "total_signals": len(signals),
         "by_state": {},
@@ -692,13 +692,13 @@ def _validate_final_findings(
     findings = final_decision.get("final_findings", [])
 
     if vulnerability_verification:
-        findings = pipeline._check_agent3_agent6_consistency(findings, vulnerability_verification)
+        findings = self._check_agent3_agent6_consistency(findings, vulnerability_verification)
 
     if not findings:
         return final_decision
 
-    validator = LineNumberValidator(pipeline.line_number_mapper)
-    validator._snapshots = pipeline.line_number_mapper._snapshots
+    validator = LineNumberValidator(self.line_number_mapper)
+    validator._snapshots = self.line_number_mapper._snapshots
 
     valid_findings = []
     rejected_count = 0
@@ -713,7 +713,7 @@ def _validate_final_findings(
 
     for finding in findings:
         location = finding.get("location", "")
-        is_valid, error = pipeline._verify_location_exists(location, context)
+        is_valid, error = self._verify_location_exists(location, context)
 
         if is_valid:
             code_snippet = finding.get("code_snippet", "")
@@ -840,7 +840,7 @@ def _deterministic_promote(
             logger.info(
                 f"[OPT-P1/P3] 确定性升级: {promoted} 条 WEAK→CONFIRMED, {marked_review} 条标记人工复核"
             )
-            pipeline.debug_logs.append(
+            self.debug_logs.append(
                 f"[OPT-P1/P3] 确定性升级: {promoted} 条 WEAK→CONFIRMED, {marked_review} 条标记人工复核"
             )
             summary = final_decision.get("summary", {})
@@ -873,7 +873,7 @@ def _validate_result_consistency(self, result: Dict[str, Any]) -> Dict[str, Any]
     vuln_count = len(vuln_signals)
 
     tracker_signals = (
-        pipeline.evidence_chain_tracker.get_all_signals()
+        self.evidence_chain_tracker.get_all_signals()
         if hasattr(self, "evidence_chain_tracker")
         else {}
     )
@@ -899,11 +899,11 @@ def _validate_result_consistency(self, result: Dict[str, Any]) -> Dict[str, Any]
         if vuln_count < risk_count:
             stability_warning = f"[稳定性警告] 风险枚举({risk_count})与验证({vuln_count})信号数不一致，{risk_count - vuln_count}个信号未被验证"
             logger.debug(f" {stability_warning}")
-            pipeline.debug_logs.append(stability_warning)
+            self.debug_logs.append(stability_warning)
         else:
             stability_warning = f"[稳定性警告] 验证阶段发现了额外的{vuln_count - risk_count}个信号"
             logger.debug(f" {stability_warning}")
-            pipeline.debug_logs.append(stability_warning)
+            self.debug_logs.append(stability_warning)
 
     result["consistency_score"] = consistency_score
     result["stability_warning"] = stability_warning
