@@ -21,7 +21,6 @@ from src.core.config import Config
 from src.nvd.nvd_query_adapter import NVDQueryAdapter
 from src.utils.logger import get_logger
 from src.ai.pure_ai.result_converter import ResultConverter
-from src.ai.pure_ai.result_converter import ResultConverter
 
 logger = get_logger(__name__)
 
@@ -50,8 +49,6 @@ class PureAIAnalyzer:
         self.debug_logs: List[str] = []
         self.nvd_adapter = NVDQueryAdapter()
         self.reject_unverified_findings: bool = getattr(config, "reject_unverified_findings", True)
-
-        self.converter = ResultConverter(self)
 
         self.converter = ResultConverter(self)
 

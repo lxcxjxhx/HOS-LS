@@ -1,1 +1,1 @@
-"""Sink 级前提验证器"""
+"""Sink-anchored validators for differential vulnerability evidence."""

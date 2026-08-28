@@ -21,7 +21,7 @@ from src.utils.priority_models import (
     ReachabilityCalculator,
     ReachabilityLevel,
 )
-from src.utils.file_discovery import FileInfo
+from src.utils.file_discovery import FileInfo, FileType, Language
 
 logger = get_logger(__name__)
 

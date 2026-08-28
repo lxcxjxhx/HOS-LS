@@ -106,35 +106,38 @@ def show_risk_bar(percentage: float) -> None:
 @click.pass_context
 def cli(ctx: click.Context, config: Optional[str], verbose: bool, quiet: bool, debug: bool) -> None:
     """HOS-LS Security Scanner - 混合开源 + LLM 安全审计工具"""
-    if config:
-        ConfigManager.load(config)
+    ctx.ensure_object(dict)
+    loaded_config = ConfigManager.load(config) if config else ConfigManager.load()
+    ctx.obj["config"] = loaded_config
+
     if verbose:
         os.environ["HOS_LS_VERBOSE"] = "1"
     if quiet:
+        loaded_config.quiet = True
         os.environ["HOS_LS_QUIET"] = "1"
     if debug:
+        loaded_config.debug = True
         os.environ["HOS_LS_DEBUG"] = "1"
         import logging
         logging.getLogger().setLevel(logging.DEBUG)
 
-    ctx.ensure_object(dict)
-    # 使用一个标志位防止重复注册
-    if not ctx.obj.get("_commands_registered"):
-        from src.cli.commands.nvd_commands import nvd
-        cli.add_command(nvd)
-        from src.cli.commands.scan_cmd import scan
-        cli.add_command(scan)
-        from src.cli.commands.data_preload_commands import data_preload
-        cli.add_command(data_preload)
-        from src.cli.commands.model_commands import model
-        cli.add_command(model)
-        from src.cli.commands.import_scan_commands import import_scan, replay
-        cli.add_command(import_scan)
-        cli.add_command(replay)
-        from src.cli.commands.estimate_balance import register_commands as register_estimate_balance
-        register_estimate_balance(cli)
 
-        ctx.obj["_commands_registered"] = True
+# `scan` 必须在 Click 解析子命令前注册；在 group callback 内注册会让
+# `python -m src.cli.main scan ...` 在解析阶段误判为未知命令。
+from src.cli.commands.scan_cmd import scan as _scan_command  # noqa: E402
+from src.cli.commands.nvd_commands import nvd as _nvd_command  # noqa: E402
+from src.cli.commands.data_preload_commands import data_preload as _data_preload_command  # noqa: E402
+from src.cli.commands.model_commands import model as _model_command  # noqa: E402
+from src.cli.commands.import_scan_commands import import_scan as _import_scan_command, replay as _replay_command  # noqa: E402
+from src.cli.commands.estimate_balance import register_commands as _register_estimate_commands  # noqa: E402
+
+cli.add_command(_scan_command)
+cli.add_command(_nvd_command)
+cli.add_command(_data_preload_command)
+cli.add_command(_model_command)
+cli.add_command(_import_scan_command)
+cli.add_command(_replay_command)
+_register_estimate_commands(cli)
 
 
 # ---------------------------------------------------------------------------
