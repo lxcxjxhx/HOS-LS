@@ -1,0 +1,10 @@
+{
+  "total_instances": 105,
+  "hf_dataset": "iCSawyer/SecureVibeBench",
+  "language": "C/C++ (OSS-Fuzz/ARVO)",
+  "description_analysis": {
+    "other/unknown": 105
+  },
+  "status": "loaded",
+  "note": "SecureVibeBench 是 C/C++ 漏洞场景重建基准，不直接提供 vuln_category 字段"
+}

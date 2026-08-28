@@ -1,0 +1,2868 @@
+[
+  {
+    "commit": "f0c1294173a55f26e0b972c39c0c16917f5ca9e7",
+    "critical_operation": {
+      "code": "    return new Agent({",
+      "desc": "createPinnedAgent 于此用自定义 lookup 回调构造 HTTP/HTTPS Agent，将 target.ip（resolveAndValidate 本次解析所得地址）硬钉至后续所有连接。在调用栈上游 DNS 重绑定已将解析结果切换为内网地址时，该 Agent 会把请求直接投递至受保护服务，是漏洞链路中将 DNS 解析结果转化为实际出站连接的最终执行节点。",
+      "file": "packages/components/src/httpSecurity.ts",
+      "line": 233
+    },
+    "entry_id": "entry-00472",
+    "entry_point": {
+      "code": "    return await crawl(URLObj.protocol + '//' + URLObj.hostname, modifyURL, [], limit)",
+      "desc": "webCrawl 函数在调用 checkDenyList 完成首次 DNS 校验后，于此将 URLObj.hostname 重组为基础 URL 并调用 crawl 启动递归爬取。checkDenyList 独立执行的 DNS 解析已放行请求，但 crawl 下游将再触发第二次 DNS 查询；两次查询时序独立，攻击者借助低 TTL 域名可在两次解析之间切换目标地址，本行是该 TOCTOU 窗口的起点。",
+      "file": "packages/components/src/utils.ts",
+      "line": 461
+    },
+    "origin": "GitHub Advisory Database (reviewed)",
+    "project": "FlowiseAI/Flowise",
+    "repo_url": "https://github.com/FlowiseAI/Flowise",
+    "report_id": "GHSA-2X8M-83VC-6WV4",
+    "source_link": "https://github.com/advisories/GHSA-2x8m-83vc-6wv4",
+    "trace": [
+      {
+        "code": "    return await crawl(URLObj.protocol + '//' + URLObj.hostname, modifyURL, [], limit)",
+        "desc": "crawl 调用在此接收由 URLObj.hostname 重组的基础 URL 作为递归起点，标志着经 checkDenyList 放行后的第一次 HTTP 请求发起。checkDenyList 内的 DNS 查询已结束并返回允许结论，而 crawl 将在后续拉取过程中独立再次解析同一主机名；两次解析之间的时间窗口即 TOCTOU 竞态的开口，本行是漏洞调用链从准入校验切入实际网络访问的转折步骤。",
+        "file": "packages/components/src/utils.ts",
+        "line": 461
+      },
+      {
+        "code": "    return {",
+        "desc": "resolveAndValidate 于此将 dns.lookup 所得首选地址填入 ResolvedTarget 结构体并返回，完成从 crawl 下游调用方流向 createPinnedAgent 之间的数据传递段。随后若 HTTP_DENY_LIST 未配置，isDeniedIP 校验已在 if (denyList) 条件处被跳过，本次解析得到的任意 IP（含内网地址）将原样传出，为下游 Agent 构造步骤提供未经拦截的目标地址。",
+        "file": "packages/components/src/httpSecurity.ts",
+        "line": 222
+      },
+      {
+        "code": "    return new Agent({",
+        "desc": "resolveAndValidate 返回的 ResolvedTarget 在此被封入 Agent 的 lookup 回调，回调直接将 target.ip 传给底层连接层而不再执行任何 DNS 解析。这一绑定动作是整条调用链的最终数据流汇聚点：从 webCrawl 入口传入的外部 URL 经主机解析与 TOCTOU 窗口内的 IP 切换后，由此处的 lookup 将内网地址固定至出站请求，完成从入口到 SSRF 的全程数据流传递。",
+        "file": "packages/components/src/httpSecurity.ts",
+        "line": 233
+      }
+    ],
+    "verify": 1,
+    "vuln_category_l1": "业务逻辑",
+    "vuln_category_l2": "BL-INSECURE-DEFAULT(不安全默认配置)",
+    "vuln_ids": [
+      "GHSA-2X8M-83VC-6WV4"
+    ],
+    "vuln_title": "Flowise SSRF 防护绕过（DNS 重绑定 + 默认不安全配置） - httpSecurity.ts"
+  },
+  {
+    "commit": "e4f7155369e0789a95836cd77d6452848f98f804",
+    "critical_operation": {
+      "code": "    if (pathname === \"/cdp\") {\n      if (!extensionWs) {\n        rejectUpgrade(socket, 503, \"Extension not connected\");\n        return;\n      }\n      wssCdp.handleUpgrade(req, socket, head, (ws) => {\n        wssCdp.emit(\"connection\", ws, req);\n      });\n      return;\n    }",
+      "desc": "当 pathname 为 \"/cdp\" 时，此分支先核查 extensionWs 是否在线，再调用 wssCdp.handleUpgrade 完成协议握手并触发 connection 事件，后续命令最终会经 sendToExtension 转发至 Chrome 扩展执行。整段分支对 req.headers[\"origin\"] 及 x-openclaw-relay-token 均无任何验证，是缺失认证漏洞的核心决策点：通过回环地址过滤的本机连接将在此被无条件升级为具备 CDP 命令权限的客户端。",
+      "file": "src/browser/extension-relay.ts",
+      "line": 447
+    },
+    "entry_id": "entry-00127",
+    "entry_point": {
+      "code": "  server.on(\"upgrade\", (req, socket, head) => {",
+      "desc": "server.on(\"upgrade\", ...) 在本地 HTTP 服务器实例上注册 WebSocket 协议升级监听器，将所有升级请求的 req、socket 与 head 三元组交由回调统一处理。这是漏洞链路的起始入口：任何能访问本地端口的 WebSocket 握手请求（无论请求来源是否合法）均在此被接收，后续能否放行完全依赖回调内的地址校验与路径路由逻辑。",
+      "file": "src/browser/extension-relay.ts",
+      "line": 426
+    },
+    "origin": "GitHub Advisory Database (reviewed)",
+    "project": "openclaw",
+    "repo_url": "https://github.com/openclaw/openclaw",
+    "report_id": "GHSA-MR32-VWC2-5J6H",
+    "source_link": "https://github.com/advisories/GHSA-mr32-vwc2-5j6h",
+    "trace": [
+      {
+        "code": "    const remote = req.socket.remoteAddress;",
+        "desc": "const remote 从 req.socket 中读取当前 TCP 连接的对端 IP 地址，为调用链下游的 isLoopbackAddress 判断提供输入。此步骤是升级处理器在 entry_point 接收请求后执行的首项信息采集操作，决定后续唯一一道访问控制门的输入值，本身不含任何拒绝逻辑。",
+        "file": "src/browser/extension-relay.ts",
+        "line": 429
+      },
+      {
+        "code": "    if (!isLoopbackAddress(remote)) {\n      rejectUpgrade(socket, 403, \"Forbidden\");\n      return;\n    }",
+        "desc": "isLoopbackAddress(remote) 的返回值决定是否以 403 拒绝本次升级——仅当对端非回环地址时触发 rejectUpgrade，来自 127.x.x.x 或 ::1 的请求则直接放行进入后续路由。随后此处是整条链路唯一的访问控制屏障，但仅凭 TCP 来源 IP 无法区分合法扩展与本机恶意网页，Origin 头和共享令牌的双重缺失使该过滤形同虚设。",
+        "file": "src/browser/extension-relay.ts",
+        "line": 431
+      },
+      {
+        "code": "    if (pathname === \"/cdp\") {",
+        "desc": "if (pathname === \"/cdp\") 在通过回环地址检查后对请求路径进行分发，将路径为 \"/cdp\" 的升级请求导向 CDP 专属处理分支。随后在调用栈下游，此路由判断衔接 critical_operation 的完整代码块，是由「地址校验通过」过渡到「执行协议升级」的路径分叉节点，自身不含任何凭证验证逻辑。",
+        "file": "src/browser/extension-relay.ts",
+        "line": 447
+      },
+      {
+        "code": "      wssCdp.handleUpgrade(req, socket, head, (ws) => {\n        wssCdp.emit(\"connection\", ws, req);\n      });",
+        "desc": "wssCdp.handleUpgrade 将 HTTP 连接正式完成 WebSocket 握手，回调中的 wssCdp.emit(\"connection\", ws, req) 随即触发 wssCdp 的 connection 事件监听链。随后此调用是从「路径匹配」到「连接建立」的协议转化节点，升级一旦完成便不再有机会回退拒绝该连接，后续处理均在 WebSocket 层进行。",
+        "file": "src/browser/extension-relay.ts",
+        "line": 452
+      },
+      {
+        "code": "  wssCdp.on(\"connection\", (ws) => {\n    cdpClients.add(ws);",
+        "desc": "wssCdp.on(\"connection\", ...) 在握手完成后被触发，通过 cdpClients.add(ws) 将新建的 ws 实例注册进活跃 CDP 客户端集合。随后此处标志着未经认证的连接完成「合法注册」——cdpClients 中的成员与经授权客户端地位等同，后续发来的任意 CDP 命令均会被 routeCdpCommand 无差别接受并路由处理。",
+        "file": "src/browser/extension-relay.ts",
+        "line": 592
+      },
+      {
+        "code": "        const result = await routeCdpCommand(cmd);",
+        "desc": "routeCdpCommand(cmd) 接收来自 cdpClients 中 ws 的 CDP 命令对象，根据 cmd.method 在调用栈下游将其分发至对应处理分支。在调用栈下游，此节点是从「连接已建立」转向「命令被执行」的关键衔接，任何经未认证路径注册的客户端所发出的命令均在此被无差别路由，无法在此阶段再行校验连接来源的合法性。",
+        "file": "src/browser/extension-relay.ts",
+        "line": 619
+      },
+      {
+        "code": "      default: {\n        const id = nextExtensionId++;\n        return await sendToExtension({\n          id,\n          method: \"forwardCDPCommand\",\n          params: {\n            method: cmd.method,\n            sessionId: cmd.sessionId,\n            params: cmd.params,\n          },\n        });",
+        "desc": "sendToExtension 将 cmd.method、cmd.sessionId 与 cmd.params 封装为携带自增 id 的 forwardCDPCommand 消息，经 extensionWs 发送至已连接的 Chrome 扩展侧执行。这是漏洞链路的最终转发节点，与 critical_operation 中缺失认证的升级逻辑形成首尾呼应：任何通过未受保护的 /cdp 端点接入的连接，其发出的命令均经此处提交至浏览器扩展，可访问任意标签页数据或注入脚本。",
+        "file": "src/browser/extension-relay.ts",
+        "line": 297
+      }
+    ],
+    "verify": 1,
+    "vuln_category_l1": "业务逻辑",
+    "vuln_category_l2": "BL-AUTHZ-MISSING(授权缺失)",
+    "vuln_ids": [
+      "CVE-2026-28458",
+      "GHSA-MR32-VWC2-5J6H"
+    ],
+    "vuln_title": "OpenClaw Browser Relay /cdp WebSocket Missing Authentication (Cross-Tab Cookie Access) - extension-relay.ts"
+  },
+  {
+    "commit": "3af9095245be3aaad6bc16622f379f79c6c6068f",
+    "critical_operation": {
+      "code": "if (responseHeader) {",
+      "desc": "sendLegacyResponse 函数体内，if (responseHeader) { 对传入参数进行存在性判断，条件成立即调用 setResponseHeaders，将全部用户自定义头键值对无校验地写入 Express 响应对象。来自工作流节点配置的 content-security-policy 头因此得以覆盖系统沙盒 CSP，此判断是 CSP 绕过链路中的关键触发点。",
+      "file": "packages/cli/src/webhooks/webhook-request-handler.ts",
+      "line": 169
+    },
+    "entry_id": "entry-00190",
+    "entry_point": {
+      "code": "data: {",
+      "desc": "responseCallback 调用处，data: { 开启回调参数中的 data 子对象，将 Webhook 响应的核心字段封装为结构体。与此同时，调用链携带的 responseHeader（源自工作流节点的自定义配置）随整个参数对象被传入下游，标志着 helpers 层向 handler 层转发响应载荷与用户自定义头的起始位置。",
+      "file": "packages/cli/src/webhooks/webhook-helpers.ts",
+      "line": 849
+    },
+    "origin": "GitHub Advisory Database (reviewed)",
+    "project": "n8n",
+    "repo_url": "https://github.com/n8n-io/n8n",
+    "report_id": "GHSA-2P9H-RQJW-GM92",
+    "source_link": "https://github.com/advisories/GHSA-2p9h-rqjw-gm92",
+    "trace": [
+      {
+        "code": "data: {",
+        "desc": "trace 起点：data: { 标志着 responseCallback 参数包的构建开始，用户可控的 responseHeader 与 message 等字段同属该参数包，随后一同被传入 sendLegacyResponse，开启从 helpers 层到 handler 层的污染头信息传播链。",
+        "file": "packages/cli/src/webhooks/webhook-helpers.ts",
+        "line": 849
+      },
+      {
+        "code": "message:",
+        "desc": "message: 紧随 data: { 之后定义 data 子对象的消息文本字段，完成 helpers 层回调参数的数据结构组装。随后，包含 responseHeader 的完整参数包从 responseCallback 的调用处向调用栈下游流出，进入 webhook-request-handler.ts 的 sendLegacyResponse 函数，message 字段的存在标志该数据封装阶段结束。",
+        "file": "packages/cli/src/webhooks/webhook-helpers.ts",
+        "line": 850
+      },
+      {
+        "code": ") {",
+        "desc": "sendLegacyResponse 函数签名的闭括号处为函数体入口，函数在此正式接收来自 helpers 层的全部调用参数，其中包括源自工作流节点配置的 responseHeader。在调用栈下游，函数体将对 responseHeader 进行存在性检查，并据此决定是否触发 setResponseHeaders 将头键值对写入 Express 响应。",
+        "file": "packages/cli/src/webhooks/webhook-request-handler.ts",
+        "line": 167
+      },
+      {
+        "code": "if (responseHeader) {",
+        "desc": "trace 终点：经 helpers 层封装后传入的 responseHeader 在此被消费，存在性检查通过后 setResponseHeaders 将全部键值对写入 Express 响应，污点从工作流节点配置完整流到 HTTP 响应头，CSP 沙盒头在此被覆盖失效。",
+        "file": "packages/cli/src/webhooks/webhook-request-handler.ts",
+        "line": 169
+      }
+    ],
+    "verify": 1,
+    "vuln_category_l1": "XSS",
+    "vuln_category_l2": "存储型XSS",
+    "vuln_ids": [
+      "CVE-2026-27578",
+      "GHSA-2P9H-RQJW-GM92"
+    ],
+    "vuln_title": "n8n 工作流节点存储型 XSS (CVE-2026-27578) - webhook-request-handler.ts"
+  },
+  {
+    "commit": "66d8117d4483df542d450b9f4bb6dd2a2b769046",
+    "critical_operation": {
+      "code": "    await callGateway({",
+      "desc": "callGateway 以 GATEWAY_CLIENT_MODES.BACKEND 特权模式调用内部 RPC 方法 exec.approval.resolve，将解析得到的 id 与 decision 直接提交执行。至此调用栈中从未对发起方的 GatewayClientScopes 做过任何校验，持有 operator.write 的设备令牌同样可到达此处并完成审批操作，构成越权调用漏洞链路的最终触发点。",
+      "file": "src/auto-reply/reply/commands-approve.ts",
+      "line": 87
+    },
+    "entry_id": "entry-00147",
+    "entry_point": {
+      "code": "const ctx: MsgContext = {",
+      "desc": "chat.ts 中 WebSocket chat.send 处理器在第 457 行构造 MsgContext 对象，将 CommandAuthorized、SenderId 等字段写入 ctx，但始终未将 client.connect.scopes（即设备令牌携带的权限 scope 列表）注入为 GatewayClientScopes 字段。该遗漏使得整条命令处理链路自此丧失对调用方 scope 的感知能力，为后续 /approve 命令绕过 scope 校验埋下根源。",
+      "file": "src/gateway/server-methods/chat.ts",
+      "line": 457
+    },
+    "origin": "GitHub Advisory Database (reviewed)",
+    "project": "openclaw/openclaw",
+    "repo_url": "https://github.com/openclaw/openclaw",
+    "report_id": "GHSA-MQPW-46FH-299H",
+    "source_link": "https://github.com/advisories/GHSA-mqpw-46fh-299h",
+    "trace": [
+      {
+        "code": "const clientInfo = client?.connect?.client;",
+        "desc": "clientInfo 从 client?.connect?.client 读取网关连接的客户端元数据，这是调用链在 WebSocket 处理器中的第一步。此时 client.connect.scopes（令牌 scope 数组）在结构上可于此处被提取并向下传递，但后续代码并未执行这一操作，scope 信息就此被丢弃，成为漏洞链路中 scope 丢失的起始节点。",
+        "file": "src/gateway/server-methods/chat.ts",
+        "line": 451
+      },
+      {
+        "code": "      const ctx: MsgContext = {",
+        "desc": "随后，处理器将 clientInfo 中的标识字段（如 SenderId）写入 MsgContext，并将 CommandAuthorized 置为 true，但 GatewayClientScopes 字段既未被声明亦未被赋值。这一 ctx 对象将被传递给全部下游命令处理器，导致后续所有 scope 判断均无从读取真实 scope 值，是入口点与命令层之间 scope 截断的关键一环。",
+        "file": "src/gateway/server-methods/chat.ts",
+        "line": 457
+      },
+      {
+        "code": "      handleApproveCommand,",
+        "desc": "在调用栈下游，commands-core.ts 的 HANDLERS 数组在第 53 行将 handleApproveCommand 注册为内部信道消息的处理器之一。该注册逻辑不区分调用方的 scope，确保所有经过 isAuthorizedSender 检查的内部客户端均可触发 /approve 命令的处理流程，为低权限客户端进入审批处理路径提供了结构性条件。",
+        "file": "src/auto-reply/reply/commands-core.ts",
+        "line": 53
+      },
+      {
+        "code": "  const allowTextCommands = shouldHandleTextCommands({",
+        "desc": "随后，shouldHandleTextCommands 根据 cfg.commands.text 配置及 surface/commandSource 判断是否允许文本命令。该配置默认值为 true，在内部消息信道下不作额外限制，因此 /approve 等文本命令在默认部署中始终被允许执行，使调用路径在此节点畅通无阻地流向 handleApproveCommand。",
+        "file": "src/auto-reply/reply/commands-core.ts",
+        "line": 109
+      },
+      {
+        "code": "export const handleApproveCommand: CommandHandler = async (params, allowTextCommands) => {",
+        "desc": "handleApproveCommand 作为 CommandHandler 在第 65 行被调用，从 caller commands-core.ts 的调度循环流入本函数。入参 params.ctx 中已不含有效的 GatewayClientScopes（上游未注入），使得函数内部即便存在 scope 校验逻辑也无法获取真实 scope 值，该函数成为 scope 失效语义从上游传导至具体校验点的中间节点。",
+        "file": "src/auto-reply/reply/commands-approve.ts",
+        "line": 65
+      },
+      {
+        "code": "  if (!params.command.isAuthorizedSender) {",
+        "desc": "随后，函数以 isAuthorizedSender 作为唯一的发送方鉴权门控，仅验证发送者是否位于 allowFrom 白名单中。持有 operator.write 的网关客户端通常满足此条件，因此该检查并不能阻止低权限 scope 的设备令牌继续执行，漏洞链路在此节点未被拦截，执行流继续流向命令解析与 scope 校验区段。",
+        "file": "src/auto-reply/reply/commands-approve.ts",
+        "line": 74
+      },
+      {
+        "code": "  if (!parsed.ok) {",
+        "desc": "在调用栈继续下行至第 81 行时，代码仅对命令参数的解析结果做格式校验（parsed.ok）。此处本应插入对 GatewayClientScopes 的权限检查——要求来自内部消息信道的请求必须携带 operator.approvals 或 operator.admin——但该判断完全缺失，是漏洞链路上最关键的缺失防御点。",
+        "file": "src/auto-reply/reply/commands-approve.ts",
+        "line": 81
+      },
+      {
+        "code": "  const resolvedBy = buildResolvedByLabel(params);",
+        "desc": "buildResolvedByLabel 利用 params 构建用于标记本次审批操作的 resolvedBy 字符串。执行到此处意味着所有前置检查均已通过，无任何 scope 阻断逻辑介入，函数已进入准备发起特权 RPC 调用的阶段，在漏洞链路中标志着从鉴权层流向执行层的临界过渡节点。",
+        "file": "src/auto-reply/reply/commands-approve.ts",
+        "line": 85
+      },
+      {
+        "code": "    await callGateway({",
+        "desc": "最终，callGateway 以 BACKEND 特权模式向 exec.approval.resolve 发起 RPC，将 parsed.id 和 parsed.decision 提交给执行层。从 chat.ts 入口到此形成完整的越权调用路径——整条链路均未对网关客户端的 scope 做出任何有效限制，此为漏洞链路的最终执行节点，与 critical_operation 共同指向同一越权触发位置。",
+        "file": "src/auto-reply/reply/commands-approve.ts",
+        "line": 87
+      }
+    ],
+    "verify": 1,
+    "vuln_category_l1": "业务逻辑",
+    "vuln_category_l2": "BL-AUTHZ-BROKEN(授权逻辑错误)",
+    "vuln_ids": [
+      "CVE-2026-28473",
+      "GHSA-MQPW-46FH-299H"
+    ],
+    "vuln_title": "openclaw /approve 命令网关客户端 scope 校验缺失导致越权审批 exec 请求 (CVE-2026-28473)"
+  },
+  {
+    "commit": "55b6913c03f0dba37cc207975f0c0d0786e0f3c7",
+    "critical_operation": {
+      "code": "    if (currentUrl) {\n        await checkDenyList(currentUrl)\n    }",
+      "desc": "secureAxiosRequest 在发出出站请求前以 currentUrl 为参数调用 checkDenyList，该分支是唯一的 IP/域名过滤门控；当 HTTP_DENY_LIST 环境变量未配置时 checkDenyList 提前返回，门控完全失效，攻击者注入的内网地址得以穿透，构成漏洞链的决定性缺口。",
+      "file": "packages/components/src/httpSecurity.ts",
+      "line": "69-71"
+    },
+    "entry_id": "entry-00277",
+    "entry_point": {
+      "code": "const createPrediction = async (req: Request, res: Response, next: NextFunction) => {",
+      "desc": "createPrediction 控制器函数接收 HTTP POST 请求，从 req.body 读取 chatflow 标识与用户传入的配置参数（含 overrideConfig）；默认部署下不强制鉴权，攻击者可将内网 URL 写入请求体，此处是整条 SSRF 漏洞链的外部不可信输入入口。",
+      "file": "packages/server/src/controllers/predictions/index.ts",
+      "line": 14
+    },
+    "origin": "GitHub Advisory Database (reviewed)",
+    "project": "Flowise",
+    "repo_url": "https://github.com/FlowiseAI/Flowise",
+    "report_id": "GHSA-FVCW-9W9R-PXC7",
+    "source_link": "https://github.com/advisories/GHSA-fvcw-9w9r-pxc7",
+    "trace": [
+      {
+        "code": "const createPrediction = async (req: Request, res: Response, next: NextFunction) => {",
+        "desc": "createPrediction 作为 trace 起点，完整接收外部 HTTP 请求并将含有攻击者控制字段的 req 对象暴露给后续执行层，标志着不可信 URL 数据进入服务器处理流的第一个边界节点。",
+        "file": "packages/server/src/controllers/predictions/index.ts",
+        "line": 14
+      },
+      {
+        "code": "                    const apiResponse = await predictionsServices.buildChatflow(req)",
+        "desc": "紧随入口，createPrediction 以整个 req 对象为参数调用 predictionsServices.buildChatflow，将攻击者嵌入的 URL 字段原封不动地跨越控制器与服务层边界，apiResponse 承接其后续所有执行结果，污染数据在此向下传递。",
+        "file": "packages/server/src/controllers/predictions/index.ts",
+        "line": 79
+      },
+      {
+        "code": "        return executeAgentFlow({",
+        "desc": "buildChatflow 判定当前流类型为 agentflow 后调用 executeAgentFlow，把携带攻击者注入 URL 的完整 chatflow 配置交由代理流引擎处理，数据流由此从通用构建层进入 AgentFlow 节点的专属调度路径。",
+        "file": "packages/server/src/utils/buildChatflow.ts",
+        "line": 473
+      },
+      {
+        "code": "        const reactFlowNodeData: INodeData = await resolveVariables(",
+        "desc": "进入 executeAgentFlow 后，resolveVariables 对节点配置执行变量展开，将 $flow.* 或 $vars.* 模板中攻击者注入的 URL 解析并写入 reactFlowNodeData，完成从模板字符串到结构化节点参数 INodeData 的转化，污染源在此固化进配置对象。",
+        "file": "packages/server/src/utils/buildAgentflow.ts",
+        "line": 1105
+      },
+      {
+        "code": "        let results = await newNodeInstance.run(reactFlowNodeData, finalInput, runParams)",
+        "desc": "携带攻击者 URL 的 reactFlowNodeData 被传入 newNodeInstance.run，调度器据此将执行分发至对应的 HTTP 节点实例，数据流由通用 agentflow 引擎下沉至具体组件层，results 将承载该出站请求的响应内容，出站行为即将触发。",
+        "file": "packages/server/src/utils/buildAgentflow.ts",
+        "line": 1192
+      },
+      {
+        "code": "        const url = nodeData.inputs?.url as string",
+        "desc": "HTTP 节点 run 方法从 nodeData.inputs.url 直接读取字符串 url，此处不对字段来源做可信度校验，将攻击者写入的内网目标地址原样带入后续请求配置组装步骤，为最终的 SSRF 出站请求准备了目标地址。",
+        "file": "packages/components/nodes/agentflow/HTTP/HTTP.ts",
+        "line": 206
+      },
+      {
+        "code": "            const response = await secureAxiosRequest(requestConfig)",
+        "desc": "HTTP 节点将含攻击者 URL 的 requestConfig 传入 secureAxiosRequest，函数名暗示存在安全防护，但其核心依赖 checkDenyList 的运行时配置状态；这一调用是触发失效门控、正式发出出站请求的直接入口点。",
+        "file": "packages/components/nodes/agentflow/HTTP/HTTP.ts",
+        "line": 303
+      },
+      {
+        "code": "    if (currentUrl) {\n        await checkDenyList(currentUrl)\n    }",
+        "desc": "secureAxiosRequest 内部以 currentUrl 为条件调用 checkDenyList；当 HTTP_DENY_LIST 未设置时过滤逻辑被提前跳过，axios 直接向攻击者指定的内网地址发出请求，SSRF 漏洞在此处完全触发，与 critical_operation 标记的薄弱点汇合收尾。",
+        "file": "packages/components/src/httpSecurity.ts",
+        "line": "69-71"
+      }
+    ],
+    "verify": 1,
+    "vuln_category_l1": "SSRF",
+    "vuln_category_l2": "服务端请求伪造",
+    "vuln_ids": [
+      "CVE-2026-31829",
+      "GHSA-FVCW-9W9R-PXC7"
+    ],
+    "vuln_title": "Flowise HTTP Node 默认无 SSRF 防护 (CVE-2026-31829) - httpSecurity.ts"
+  },
+  {
+    "commit": "566fb73d9da2d73c0be0d9b8e5b762e4dcd8e81d",
+    "critical_operation": {
+      "code": "          if (\n            !device &&\n            (decision.kind !== \"allow\" ||\n              (!controlUiAuthPolicy.allowBypass &&\n                !preserveInsecureLocalControlUiScopes &&\n                (authMethod === \"token\" || authMethod === \"password\" || trustedProxyAuthOk)))\n          ) {\n            clearUnboundScopes();\n          }",
+      "desc": "第549行 if 条件块是 device-less 连接路径上 clearUnboundScopes() 的唯一触发门。条件右侧白名单含 token、password 与 trustedProxyAuthOk，但未纳入 trusted-proxy 方法。非 Control-UI 客户端经 trusted-proxy 认证时，isTrustedProxyControlUiOperatorAuth 因 isControlUi===false 返回 false，trustedProxyAuthOk 为 false，authMethod 亦不在白名单，整个条件为 false，clearUnboundScopes() 不执行，operator.admin scope 保留——这是漏洞链路的核心缺口。",
+      "file": "src/gateway/server/ws-connection/message-handler.ts",
+      "line": 549
+    },
+    "entry_id": "entry-00458",
+    "entry_point": {
+      "code": "  socket.on(\"message\", async (data) => {",
+      "desc": "socket.on(\"message\", ...) 在 message-handler.ts 中注册 WebSocket 消息帧监听器，接收外部客户端的入站数据，包含携带 connectParams 的初始 connect 帧。客户端在该帧中自我声明 role 和 scopes（如 [\"operator.admin\"]），这些声明在此处首次进入服务端处理流程，是整条 scope 保留漏洞链路的入口——后续认证判断与 scope 清除逻辑均以此处接收的载荷为起点。",
+      "file": "src/gateway/server/ws-connection/message-handler.ts",
+      "line": 264
+    },
+    "origin": "GitHub Advisory Database (reviewed)",
+    "project": "openclaw",
+    "repo_url": "https://github.com/openclaw/openclaw",
+    "report_id": "GHSA-G374-MGGX-P6XC",
+    "source_link": "https://github.com/advisories/GHSA-g374-mggx-p6xc",
+    "trace": [
+      {
+        "code": "        const roleRaw = connectParams.role ?? \"operator\";\n        const role = parseGatewayRole(roleRaw);",
+        "desc": "message-handler.ts 第 393 行从 connectParams 中读取 role 字段（缺省 \"operator\"），调用 parseGatewayRole 将其转换为类型化的 GatewayRole。这是 socket.on 消息处理器进入握手逻辑后第一个解析客户端声明的节点；role 值将随调用链流入 isTrustedProxyControlUiOperatorAuth 和 evaluateMissingDeviceIdentity，影响 trustedProxyAuthOk 的计算与 scope 清除条件的最终走向。",
+        "file": "src/gateway/server/ws-connection/message-handler.ts",
+        "line": 393
+      },
+      {
+        "code": "        let {\n          authResult,\n          authOk,\n          authMethod,\n          sharedAuthOk,\n          bootstrapTokenCandidate,\n          deviceTokenCandidate,\n          deviceTokenCandidateSource,\n        } = await resolveConnectAuthState({",
+        "desc": "message-handler.ts 第 466 行以 await 形式调用 resolveConnectAuthState，传入 resolvedAuth、connectAuth 及 device 标志等，析构返回的 authResult、authOk、authMethod、sharedAuthOk 等认证状态字段。随后 authMethod 与 sharedAuthOk 将分别决定 scope 清除条件的方法匹配与 operator 跳过设备身份检查的资格，是 socket 层向认证状态计算层的关键跳转点。",
+        "file": "src/gateway/server/ws-connection/message-handler.ts",
+        "line": 466
+      },
+      {
+        "code": "  const sharedAuthOk =\n    (sharedAuthResult?.ok === true &&\n      (sharedAuthResult.method === \"token\" || sharedAuthResult.method === \"password\")) ||\n    (authResult.ok && authResult.method === \"trusted-proxy\");",
+        "desc": "auth-context.ts 第 151 行在 resolveConnectAuthState 内部计算 sharedAuthOk：当 authResult.ok 为 true 且 authResult.method === \"trusted-proxy\" 时，sharedAuthOk 亦被置为 true。在调用栈下游，这一赋值使 roleCanSkipDeviceIdentity(\"operator\", true) 返回 true，进而推动 evaluateMissingDeviceIdentity 返回 {kind: \"allow\"}，最终使 scope 清除条件的右侧分支失去命中机会。",
+        "file": "src/gateway/server/ws-connection/auth-context.ts",
+        "line": 151
+      },
+      {
+        "code": "        const handleMissingDeviceIdentity = (): boolean => {\n          const trustedProxyAuthOk = isTrustedProxyControlUiOperatorAuth({\n            isControlUi,\n            role,\n            authMode: resolvedAuth.mode,\n            authOk,",
+        "desc": "message-handler.ts 第 522 行定义内部函数 handleMissingDeviceIdentity，并在函数体内调用 isTrustedProxyControlUiOperatorAuth（传入 isControlUi、role、resolvedAuth.mode、authOk 等）来计算 trustedProxyAuthOk。由于当前连接为非 Control-UI 类型（isControlUi===false），trustedProxyAuthOk 在此步已确定为 false；该值随后将被送入 evaluateMissingDeviceIdentity 和 scope 清除条件，是漏洞条件形成的关键计算节点。",
+        "file": "src/gateway/server/ws-connection/message-handler.ts",
+        "line": 522
+      },
+      {
+        "code": "export function isTrustedProxyControlUiOperatorAuth(params: {\n  isControlUi: boolean;\n  role: GatewayRole;\n  authMode: string;\n  authOk: boolean;\n  authMethod: string | undefined;\n}): boolean {\n  return (\n    params.isControlUi &&\n    params.role === \"operator\" &&",
+        "desc": "connect-policy.ts 第 62 行定义的 isTrustedProxyControlUiOperatorAuth 以 params.isControlUi && ... 作为返回表达式的首条件。isControlUi===false 时逻辑短路直接返回 false，无论 role 或 authMethod 取何值。在调用栈上游，message-handler.ts 以非 Control-UI 客户端的 isControlUi===false 调用此函数，trustedProxyAuthOk 必然为 false，将 trusted-proxy scope 清除通道严格锁定在 Control-UI 场景，在非 Control-UI 的 trusted-proxy 路径上留下了 scope 未清除的漏洞缺口。",
+        "file": "src/gateway/server/ws-connection/connect-policy.ts",
+        "line": 62
+      },
+      {
+        "code": "          const decision = evaluateMissingDeviceIdentity({\n            hasDeviceIdentity: Boolean(device),\n            role,\n            isControlUi,\n            controlUiAuthPolicy,\n            trustedProxyAuthOk,\n            sharedAuthOk,\n            authOk,\n            hasSharedAuth,\n            isLocalClient,\n          });",
+        "desc": "message-handler.ts 第 535 行调用 evaluateMissingDeviceIdentity，传入 hasDeviceIdentity=false、role=\"operator\"、trustedProxyAuthOk=false、sharedAuthOk=true 等参数，评估无设备身份情况下的连接许可决策。随后返回的 decision 对象将流入 scope 清除条件：decision.kind === \"allow\" 时清除逻辑须依赖 authMethod 或 trustedProxyAuthOk 为真，而此路径下两者均为 false，为最终 scope 保留奠定了条件。",
+        "file": "src/gateway/server/ws-connection/message-handler.ts",
+        "line": 535
+      },
+      {
+        "code": "  if (roleCanSkipDeviceIdentity(params.role, params.sharedAuthOk)) {\n    return { kind: \"allow\" };\n  }",
+        "desc": "connect-policy.ts 第 119 行在 evaluateMissingDeviceIdentity 内调用 roleCanSkipDeviceIdentity；当 role === \"operator\" 且 sharedAuthOk === true 时，函数直接返回 {kind: \"allow\"}。在调用栈上游，trusted-proxy 认证使 sharedAuthOk=true，满足跳过设备身份的条件。该 allow 决策随后流回 message-handler.ts：decision.kind === \"allow\" 使 scope 清除条件的左半部分为 false，进一步收窄 clearUnboundScopes() 触发的可能性。",
+        "file": "src/gateway/server/ws-connection/connect-policy.ts",
+        "line": 119
+      },
+      {
+        "code": "export function roleCanSkipDeviceIdentity(role: GatewayRole, sharedAuthOk: boolean): boolean {\n  return role === \"operator\" && sharedAuthOk;\n}",
+        "desc": "role-policy.ts 第 14 行的 roleCanSkipDeviceIdentity 仅凭 role === \"operator\" && sharedAuthOk 两个条件决定是否跳过设备身份验证。在调用栈下游的 evaluateMissingDeviceIdentity 中，trusted-proxy 认证路径使 sharedAuthOk=true，operator 角色同时满足，函数返回 true，推动 decision.kind 为 \"allow\"。此设计未区分设备身份缺失的成因，间接使 scope 清除条件在 trusted-proxy 路径下无法命中 clearUnboundScopes()。",
+        "file": "src/gateway/role-policy.ts",
+        "line": 14
+      },
+      {
+        "code": "          if (\n            !device &&\n            (decision.kind !== \"allow\" ||\n              (!controlUiAuthPolicy.allowBypass &&\n                !preserveInsecureLocalControlUiScopes &&\n                (authMethod === \"token\" || authMethod === \"password\" || trustedProxyAuthOk)))\n          ) {\n            clearUnboundScopes();\n          }",
+        "desc": "message-handler.ts 第 549 行 if 条件块作为整条调用链的收口：经 resolveConnectAuthState 确认 authMethod=\"trusted-proxy\"、sharedAuthOk=true，经 evaluateMissingDeviceIdentity 返回 decision.kind=\"allow\"，最终汇聚到此判断。由于 decision.kind === \"allow\"、authMethod 不在 token/password 白名单且 trustedProxyAuthOk===false，条件整体为 false，clearUnboundScopes() 不执行，客户端自我声明的 operator.admin scope 在握手结束后完整生效，权限提升链路完成闭合。",
+        "file": "src/gateway/server/ws-connection/message-handler.ts",
+        "line": 549
+      }
+    ],
+    "verify": 1,
+    "vuln_category_l1": "业务逻辑",
+    "vuln_category_l2": "BL-PRIV-ESC(特权提升)",
+    "vuln_ids": [
+      "GHSA-G374-MGGX-P6XC"
+    ],
+    "vuln_title": "openclaw privilege escalation via incomplete scope-clearing in trusted-proxy auth mode"
+  },
+  {
+    "commit": "8a5d4d5746f55a2fbb1566508bccfa729a304b60",
+    "critical_operation": {
+      "code": "return attributeValue ? `src=${attributeValue}` : '';",
+      "desc": "反引号模板将 attributeValue 不加引号地嵌入 src= 后构成属性片段并返回，是漏洞的直接输出点。若 attributeValue 含空格，浏览器 HTML 解析器会将空格后内容拆解为独立属性，注入的事件处理器随之执行，这一步直接决定了属性注入型 XSS 能否最终触发。",
+      "file": "packages/frontend/@n8n/design-system/src/components/N8nMarkdown/Markdown.vue",
+      "line": 121
+    },
+    "entry_id": "entry-00111",
+    "entry_point": {
+      "code": "imageUrls[image.id] = image.url;",
+      "desc": "imageUrls 以 image.id 为键写入 image.url，将 Markdown 渲染阶段收集到的图片 URL 暂存至组件级查找表。在漏洞链路中，这一步是受控 URL 值进入内存映射的起点：后续 fileId 解析路径将从此表读取原始 URL，最终经无引号属性拼接输出，导致属性注入风险。",
+      "file": "packages/frontend/@n8n/design-system/src/components/N8nMarkdown/Markdown.vue",
+      "line": 104
+    },
+    "origin": "GitHub Advisory Database (reviewed)",
+    "project": "n8n",
+    "repo_url": "https://github.com/n8n-io/n8n",
+    "report_id": "GHSA-QPQ4-PW7F-PP8W",
+    "source_link": "https://github.com/advisories/GHSA-qpq4-pw7f-pp8w",
+    "trace": [
+      {
+        "code": "imageUrls[image.id] = image.url;",
+        "desc": "数据流起始：Markdown.vue 在构建 imageUrls 映射时将当前 image.url 以 image.id 为键写入，完成从 markdown-it 解析结果到组件内查找表的数据流交接。这一步处于调用栈上游，为下游 fileId 属性解析分支提供待读取的原始 URL 值。",
+        "file": "packages/frontend/@n8n/design-system/src/components/N8nMarkdown/Markdown.vue",
+        "line": 104
+      },
+      {
+        "code": "if (value.match(fileIdRegex)) {",
+        "desc": "随后在 xss 库 onTagAttr 回调中，value.match(fileIdRegex) 对属性原始字符串执行正则判断，检测是否携带 fileId: 前缀标记。此分支条件将控制流引入 fileId 解析子路径，是连接属性原始输入与后续 URL 查找的关键调度节点，决定漏洞链路是否进入有效触发区间。",
+        "file": "packages/frontend/@n8n/design-system/src/components/N8nMarkdown/Markdown.vue",
+        "line": 118
+      },
+      {
+        "code": "const id = value.split('fileId:')[1];",
+        "desc": "在调用栈下游，value.split('fileId:')[1] 将通过分支检测的属性字符串按前缀切割，提取冒号后的 id 部分。此 id 将作为键在 imageUrls 映射中查找对应 URL，是将字符串解析结果与内存数据直接对接的中间步骤，id 的取值直接影响后续读取到的 URL 内容。",
+        "file": "packages/frontend/@n8n/design-system/src/components/N8nMarkdown/Markdown.vue",
+        "line": 119
+      },
+      {
+        "code": "const attributeValue = friendlyAttrValue(imageUrls[id]);",
+        "desc": "随后 imageUrls[id] 以提取的 id 为键取出原始 URL，再经 friendlyAttrValue() 做 HTML 实体转义，结果赋给 attributeValue。friendlyAttrValue 仅转义特殊字符，不在值两端补充双引号，含空格的 URL 经此处理后仍保留可被浏览器拆分的结构，为末尾的无引号拼接埋下直接成因。",
+        "file": "packages/frontend/@n8n/design-system/src/components/N8nMarkdown/Markdown.vue",
+        "line": 120
+      },
+      {
+        "code": "return attributeValue ? `src=${attributeValue}` : '';",
+        "desc": "在调用栈最下游，模板字符串将 attributeValue 拼入 src= 后不附引号地返回给 xss 净化回调，数据流在此完全闭合。从 imageUrls 写入（trace[0]）、fileId 匹配（trace[1]）、id 提取（trace[2]）到实体转义（trace[3]），最终在此步生成无引号属性输出，触发浏览器侧的属性注入缺陷。",
+        "file": "packages/frontend/@n8n/design-system/src/components/N8nMarkdown/Markdown.vue",
+        "line": 121
+      }
+    ],
+    "verify": 1,
+    "vuln_category_l1": "XSS",
+    "vuln_category_l2": "Stored XSS",
+    "vuln_ids": [
+      "CVE-2026-25054",
+      "GHSA-QPQ4-PW7F-PP8W"
+    ],
+    "vuln_title": "n8n Markdown.vue Stored XSS via unquoted HTML attribute injection - Markdown.vue"
+  },
+  {
+    "commit": "7325791599409de52534429897481918717a9e85",
+    "critical_operation": {
+      "code": "\tif err := m.Remove(); err != nil {",
+      "desc": "m.Remove() 调用底层存储接口，将指定模型的清单记录从本地文件系统删除。该调用位于整条处理链路的末端，其前序路径中没有任何一处执行了调用方身份验证或权限检查，因此这一删除操作可由任意未经授权的外部请求直接驱动，在漏洞链路中充当不可逆破坏的终止节点。",
+      "file": "server/routes.go",
+      "line": 1015
+    },
+    "entry_id": "entry-00075",
+    "entry_point": {
+      "code": "\tr.DELETE(\"/api/delete\", s.DeleteHandler)",
+      "desc": "r.DELETE 在全局路由器 r 上将路径 /api/delete 与 s.DeleteHandler 绑定，整个注册过程未附加任何认证或授权中间件。在漏洞链路中，这一语句是权限缺失的暴露起点：路由层不验证调用方身份，将所有命中该路径的 DELETE 请求统一派发至删除处理器。",
+      "file": "server/routes.go",
+      "line": 1508
+    },
+    "origin": "GitHub Advisory Database (reviewed)",
+    "project": "ollama",
+    "repo_url": "https://github.com/ollama/ollama",
+    "report_id": "GHSA-F6MR-38G8-39RG",
+    "source_link": "https://github.com/advisories/GHSA-f6mr-38g8-39rg",
+    "trace": [
+      {
+        "code": "\tr.DELETE(\"/api/delete\", s.DeleteHandler)",
+        "desc": "路由注册语句将 /api/delete 端点与 s.DeleteHandler 绑定，是漏洞调用链的起始节点；从 caller 视角看，路由器 r 在此处承担请求分发职责，将后续所有命中该路径的 DELETE 请求无鉴权地交付给 DeleteHandler，为整条未授权调用链路提供了第一跳入口。",
+        "file": "server/routes.go",
+        "line": 1508
+      },
+      {
+        "code": "func (s *Server) DeleteHandler(c *gin.Context) {\n\tvar r api.DeleteRequest\n\tif err := c.ShouldBindJSON(&r); errors.Is(err, io.EOF) {\n\t\tc.AbortWithStatusJSON(http.StatusBadRequest, gin.H{\"error\": \"missing request body\"})\n\t\treturn\n\t} else if err != nil {\n\t\tc.AbortWithStatusJSON(http.StatusBadRequest, gin.H{\"error\": err.Error()})\n\t\treturn\n\t}",
+        "desc": "DeleteHandler 是调用链从路由分发流入实际处理逻辑的 callee 入口，函数体通过 c.ShouldBindJSON 完成请求体格式合法性校验，确认 model 字段存在后即向下继续执行，全程未对调用方身份进行鉴权。随后控制流传递至模型查找与删除逻辑，这一函数体构成了从 HTTP 路由层到存储操作层的过渡节点，是权限缺失穿透至破坏性操作的关键中间跳。",
+        "file": "server/routes.go",
+        "line": "982-990"
+      },
+      {
+        "code": "\tif err := m.Remove(); err != nil {\n\t\tc.JSON(http.StatusInternalServerError, gin.H{\"error\": err.Error()})\n\t\treturn\n\t}\n\n\tif err := m.RemoveLayers(); err != nil {\n\t\tc.JSON(http.StatusInternalServerError, gin.H{\"error\": err.Error()})\n\t\treturn\n\t}",
+        "desc": "在调用栈下游，m.Remove() 删除模型清单记录，随后 m.RemoveLayers() 清除该模型关联的所有层数据 blob，两步操作共同完成对本地模型的完整移除。由于 DeleteHandler 未对请求来源执行身份验证，该代码块在漏洞链路中充当不可逆的终端破坏节点，任意未授权请求均可驱动其完整执行。",
+        "file": "server/routes.go",
+        "line": "1015-1023"
+      }
+    ],
+    "verify": 1,
+    "vuln_category_l1": "业务逻辑",
+    "vuln_category_l2": "BL-AUTHZ-MISSING(授权缺失)",
+    "vuln_ids": [
+      "CVE-2025-63389",
+      "GHSA-F6MR-38G8-39RG"
+    ],
+    "vuln_title": "Ollama 多个 API 端点缺少服务端认证导致未授权模型管理操作 (CVE-2025-63389) - routes.go"
+  },
+  {
+    "commit": "60670e1e40d304a4c46687a20ecaaf239e729632",
+    "critical_operation": {
+      "code": "streamToSend.pipe(res, { end: false });",
+      "desc": "streamToSend.pipe 在此将经过沙箱变换的字节流写入 HTTP 响应对象 res，完成污点数据从节点层到客户端浏览器的最终交付。上游因 HTML Content-Type 触发 createHtmlSandboxTransformStream 后，此处送出的响应体包含带过度宽松 sandbox 权限的 iframe 封装；浏览器接收后，沙箱内脚本可在用户手势时逃逸并在顶层窗口执行，漏洞危害在此节点完成最终兑现。",
+      "file": "packages/cli/src/webhooks/webhook-request-handler.ts",
+      "line": 133
+    },
+    "entry_id": "entry-00086",
+    "entry_point": {
+      "code": "if (shouldStream) {",
+      "desc": "shouldStream 条件在 RespondToWebhook 节点文本响应分支被求值，为真时执行流切入流式输出路径，rawBody 中的用户可控 HTML 内容随即通过 sendChunk 传向下游 CLI 层。此处是污点数据跨越模块边界进入流式管道的入口条件，也是下游 iframe 缺陷沙箱封装被激活的前提开关。",
+      "file": "packages/nodes-base/nodes/RespondToWebhook/RespondToWebhook.node.ts",
+      "line": 491
+    },
+    "origin": "GitHub Advisory Database (reviewed)",
+    "project": "n8n",
+    "repo_url": "https://github.com/n8n-io/n8n",
+    "report_id": "GHSA-58JC-RCG5-95F3",
+    "source_link": "https://github.com/advisories/GHSA-58jc-rcg5-95f3",
+    "trace": [
+      {
+        "code": "if (shouldStream) {",
+        "desc": "trace 链路从此处起步：shouldStream 为真时，RespondToWebhook 节点将 rawBody 中的用户可控 HTML 送入流式输出管道，开启跨模块的污点传播旅程。后续各步骤沿 sendChunk、Content-Type 检测、createHtmlSandboxTransformStream 变换，直至写入 HTTP 响应，共同构成本条漏洞链路的完整路径。",
+        "file": "packages/nodes-base/nodes/RespondToWebhook/RespondToWebhook.node.ts",
+        "line": 491
+      },
+      {
+        "code": "this.sendChunk('item', 0, rawBody);",
+        "desc": "随后 sendChunk 以 'item' 类型把 rawBody 作为流数据块从节点层发出，完成 RespondToWebhook 节点上下文到 CLI 响应基础设施的跨层投递。在调用栈下游，webhook 请求处理器将接收到该流并依据 Content-Type 决定是否进入 createHtmlSandboxTransformStream 变换分支，这是污点内容穿越模块边界的第一次显式跳转。",
+        "file": "packages/nodes-base/nodes/RespondToWebhook/RespondToWebhook.node.ts",
+        "line": 493
+      },
+      {
+        "code": "const needsSandbox = contentType && isHtmlRenderedContentType(contentType);",
+        "desc": "在调用栈下游的 webhook 请求处理器中，isHtmlRenderedContentType 检测响应流的 Content-Type 并把布尔结果存入 needsSandbox。该值在下一行决定是否调用 createHtmlSandboxTransformStream 进行沙箱封装；为真时触发的变换器携带过度宽松的 sandbox 权限属性集，使此判断成为漏洞路径的条件激活点。",
+        "file": "packages/cli/src/webhooks/webhook-request-handler.ts",
+        "line": 130
+      },
+      {
+        "code": "const streamToSend = needsSandbox ? stream.pipe(createHtmlSandboxTransformStream()) : stream;",
+        "desc": "streamToSend 根据 needsSandbox 在两条路径间分叉：HTML 类型时将原始流接入 createHtmlSandboxTransformStream，生成包含 iframe srcdoc 封装的变换流；否则直接引用未包装的原始流。HTML 分支触发的变换器在 suffix 缓冲区硬编码了含 allow-top-navigation-by-user-activation 的宽泛 sandbox 属性，此赋值是缺陷沙箱被引入输出链路的结构性分叉点。",
+        "file": "packages/cli/src/webhooks/webhook-request-handler.ts",
+        "line": 132
+      },
+      {
+        "code": "const prefix = Buffer.from('<iframe srcdoc=\"', 'utf8');",
+        "desc": "在 createHtmlSandboxTransformStream 内部，prefix 缓冲区被构造为 iframe 标签起始与 srcdoc 属性开头的字节序列。随后变换器在 prefix 之后拼接经属性编码的用户 HTML，再附上 suffix 闭合标签及权限属性；prefix 确立了 DOM 包裹结构的起始位置，是 html-sandbox.ts 字节构造层面的首个节点。",
+        "file": "packages/core/src/html-sandbox.ts",
+        "line": 110
+      },
+      {
+        "code": "const suffix = Buffer.from(",
+        "desc": "紧接 prefix 之后，suffix 从此行起声明 iframe 的闭合及 sandbox 属性集，其中硬编码了 allow-top-navigation-by-user-activation 与 allow-popups-to-escape-sandbox 等宽泛令牌并闭合 iframe 标签。前者允许沙箱内脚本在用户手势时导航顶层浏览上下文，后者允许弹窗继承非沙箱环境；此 Buffer 定义是沙箱防护失效的权限配置根因。",
+        "file": "packages/core/src/html-sandbox.ts",
+        "line": 111
+      },
+      {
+        "code": "streamToSend.pipe(res, { end: false });",
+        "desc": "trace 链路的末端节点：streamToSend.pipe 把从 shouldStream 分支出发、经 sendChunk 跨层传递、再经 createHtmlSandboxTransformStream 变换的字节流最终写入 HTTP 响应 res。污点穿越节点层与 CLI 层的多模块路径在此形成完整闭环，含缺陷沙箱配置的 iframe HTML 到达浏览器，等待用户手势触发逃逸条件。",
+        "file": "packages/cli/src/webhooks/webhook-request-handler.ts",
+        "line": 133
+      }
+    ],
+    "verify": 1,
+    "vuln_category_l1": "XSS",
+    "vuln_category_l2": "Stored XSS",
+    "vuln_ids": [
+      "CVE-2025-61914",
+      "GHSA-58JC-RCG5-95F3"
+    ],
+    "vuln_title": "n8n Stored XSS in 'Respond to Webhook' Node via iframe Sandbox Bypass - webhook-request-handler.ts"
+  },
+  {
+    "commit": "d08dafb08fee1e36ef929d6ccfdc322fdf52cee6",
+    "critical_operation": {
+      "code": "  const effectiveDmAllow = normalizeAllowFromWithStore({ allowFrom, storeAllowFrom, dmPolicy });",
+      "desc": "effectiveDmAllow 由 normalizeAllowFromWithStore 一次性计算得出，该调用将 allowFrom、storeAllowFrom 与 dmPolicy 同时传入，使 DM pairing-store 条目与静态配置在同一规范化步骤内合并；此处作为群组消息上下文中 DM 侧允许列表的最终赋值点，合并结果随后流入 evaluateTelegramGroupBaseAccess 的访问判断。",
+      "file": "src/telegram/bot-message-context.ts",
+      "line": 198
+    },
+    "entry_id": "entry-00218",
+    "entry_point": {
+      "code": "export async function readChannelAllowFromStore(",
+      "desc": "readChannelAllowFromStore 从持久化存储中读取指定 pairing channel 的 allow-from 条目列表，依据 accountId 是否为空分别走默认路径或非默认账户路径，并由 shouldIncludeLegacyAllowFromEntries 控制历史条目过滤；其返回值将作为 storeAllowFrom 参数被传入上层合并逻辑，是 DM 侧动态白名单条目的数据起点。",
+      "file": "src/pairing/pairing-store.ts",
+      "line": 386
+    },
+    "origin": "GitHub Advisory Database (reviewed)",
+    "project": "openclaw",
+    "repo_url": "https://github.com/openclaw/openclaw",
+    "report_id": "GHSA-JV6R-27WW-4GW4",
+    "source_link": "https://github.com/advisories/GHSA-jv6r-27ww-4gw4",
+    "trace": [
+      {
+        "code": "export const normalizeAllowFromWithStore = (params: {",
+        "desc": "normalizeAllowFromWithStore 处于调用栈中间层，从 bot-message-context 的调用点接收 allowFrom、storeAllowFrom、dmPolicy 三个参数，随后将其整体转发给 mergeAllowFromSources 执行来源合并，再对结果调用 normalizeAllowFrom 完成规范化；该函数将两阶段操作封装为单步出口，是 readChannelAllowFromStore 数据向 effectiveDmAllow 流动的关键中转节点。",
+        "file": "src/telegram/bot-access.ts",
+        "line": 56
+      },
+      {
+        "code": "import { firstDefined, isSenderIdAllowed, mergeAllowFromSources } from \"../channels/allow-from.js\";",
+        "desc": "bot-access.ts 模块头部从 ../channels/allow-from.js 导入 mergeAllowFromSources，在调用栈下游确立了 bot-access 对 allow-from 模块的静态依赖；该 import 声明表明 normalizeAllowFromWithStore 所依赖的来源合并能力由跨模块函数提供，是两个模块之间数据流路径的编译期绑定点。",
+        "file": "src/telegram/bot-access.ts",
+        "line": 1
+      },
+      {
+        "code": "export function mergeAllowFromSources(params: {",
+        "desc": "mergeAllowFromSources 位于调用链末端，接收 normalizeAllowFromWithStore 转发来的三个参数后，当 dmPolicy 不等于 allowlist 时将 storeAllowFrom 条目直接拼入 allowFrom 数组，最终返回字符串化的合并列表；该函数不区分调用方所处的消息上下文，使 DM 侧 pairing-store 动态条目得以进入统一返回值，构成授权判断差异的根源。",
+        "file": "src/channels/allow-from.ts",
+        "line": 1
+      }
+    ],
+    "verify": 1,
+    "vuln_category_l1": "业务逻辑",
+    "vuln_category_l2": "BL-AUTHZ-BROKEN(授权逻辑错误)",
+    "vuln_ids": [
+      "CVE-2026-32027",
+      "GHSA-JV6R-27WW-4GW4"
+    ],
+    "vuln_title": "openclaw DM pairing-store identity bypass group allowlist authorization - bot-message-context.ts"
+  },
+  {
+    "commit": "c861862aededc7294cea5634d77e6926444ca101",
+    "critical_operation": {
+      "code": "            response = await self._client.send(request)",
+      "desc": "self._client.send(request) 是漏洞链的最终触发环节：此处 OpenAPITool.run() 将经由 build() 构造的 httpx.Request 对象通过 AsyncClient 真正发送出去。request 所封装的 url 已在上游经过未编码的路径拼接，可能含有穿越序列，AsyncClient 在此不做二次校验而直接发出网络请求，完成服务端请求伪造的实质触发。",
+      "file": "src/fastmcp/server/providers/openapi/components.py",
+      "line": 209
+    },
+    "entry_id": "entry-00394",
+    "entry_point": {
+      "code": "        url = self._build_url(route.path, path_params, base_url)",
+      "desc": "build() 方法在此处将 route.path（OpenAPI 路径模板）与调用者传入的 path_params 一并交给 _build_url()，由此将外部输入引入 URL 构造层。此调用是漏洞链的入口：path_params 中的值在进入 _build_url() 后将被直接嵌入路径模板，缺乏任何字符级校验或编码处理。",
+      "file": "src/fastmcp/utilities/openapi/director.py",
+      "line": 54
+    },
+    "origin": "GitHub Advisory Database (reviewed)",
+    "project": "fastmcp",
+    "repo_url": "https://github.com/PrefectHQ/fastmcp",
+    "report_id": "GHSA-VV7Q-7JX5-F767",
+    "source_link": "https://github.com/advisories/GHSA-vv7q-7jx5-f767",
+    "trace": [
+      {
+        "code": "        url = self._build_url(route.path, path_params, base_url)",
+        "desc": "build() 向 _build_url() 的此次调用构成 trace 的起始步骤：route.path 路径模板与外部传入的 path_params 在此处作为参数下传，数据流从调用层进入路径拼接实现层。path_params 中携带的原始字符串值将在下一步被 _build_url() 直接替换进模板，是漏洞链的数据入口。",
+        "file": "src/fastmcp/utilities/openapi/director.py",
+        "line": 54
+      },
+      {
+        "code": "        # Substitute path parameters\n        url_path = path_template\n        for param_name, param_value in path_params.items():\n            placeholder = f\"{{{param_name}}}\"\n            if placeholder in url_path:",
+        "desc": "接续上一步从 build() 进入 _build_url() 后的内部执行段：_build_url() 在此初始化 url_path 并遍历 path_params，为每个参数构造占位符准备替换操作。此循环是路径参数直接写入 url_path 的关键环节，原始值逐一提取后将被替换进模板字符串；缺失编码处理使含穿越序列的值得以被完整保留并嵌入最终路径。",
+        "file": "src/fastmcp/utilities/openapi/director.py",
+        "line": "208-212"
+      },
+      {
+        "code": "        return httpx.Request(\n            method=method,\n            url=url,",
+        "desc": "随后，build() 将 _build_url() 返回的 url 传入 httpx.Request 构造器，完成从路径拼接层向请求封装层的过渡。此处 url 中可能已含有穿越序列，httpx.Request 不对 url 内容做语义校验，直接将其作为目标地址封装，漏洞载荷由此从字符串状态转变为可发送的请求对象。",
+        "file": "src/fastmcp/utilities/openapi/director.py",
+        "line": "71-73"
+      },
+      {
+        "code": "            ) from e\n\n        # Send the request and process the response.\n        try:\n            logger.debug(\n                f\"run - sending request; headers: {_redact_headers(request.headers)}\"\n            )\n\n            response = await self._client.send(request)\n            response.raise_for_status()",
+        "desc": "最终，run() 方法在此段代码将封装好的 request 对象传入 self._client.send()，完成从请求组装层到网络发送层的最后一跳。logger.debug 记录头部后立即执行发送，response.raise_for_status() 处理返回结果；整段逻辑不感知 url 中是否存在穿越序列，使上游 _build_url() 注入的路径直接由 AsyncClient 发出，构成服务端请求伪造的实质触发。",
+        "file": "src/fastmcp/server/providers/openapi/components.py",
+        "line": "201-210"
+      }
+    ],
+    "verify": 1,
+    "vuln_category_l1": "SSRF",
+    "vuln_category_l2": "路径穿越辅助 SSRF",
+    "vuln_ids": [
+      "CVE-2026-32871",
+      "GHSA-VV7Q-7JX5-F767"
+    ],
+    "vuln_title": "fastmcp OpenAPIProvider 路径参数未编码导致 SSRF + 路径穿越 (CVE-2026-32871) - director.py"
+  },
+  {
+    "commit": "67ae576b9e8713bbc4aec24f2b325ad8bc84e787",
+    "critical_operation": {
+      "code": "checkId: \"sandbox.browser_cdp_bridge_unrestricted\",\nseverity: \"warn\",  // 此处应有却缺失的约束：安全审计仅以 warn 级别提示，未阻断容器启动；且仅针对 network=bridge 做检查，其他 network 模式的暴露漏检",
+      "file": "src/security/audit-extra.sync.ts",
+      "line": 875
+    },
+    "entry_id": "entry-00499",
+    "entry_point": {
+      "code": "const browserExposurePaths: string[] = [];  // 安全审计入口：检查 CDP bridge 是否 unrestricted",
+      "file": "src/security/audit-extra.sync.ts",
+      "line": 848
+    },
+    "origin": "GitHub Advisory Database (reviewed)",
+    "project": "openclaw",
+    "repo_url": "https://github.com/openclaw/openclaw",
+    "report_id": "GHSA-525J-HQQ2-66R4",
+    "source_link": "https://github.com/advisories/GHSA-525j-hqq2-66r4",
+    "trace": [
+      {
+        "code": "if (\n  defaultBrowser.enabled &&\n  normalizeOptionalLowercaseString(defaultBrowser.network) === \"bridge\" &&\n  !defaultBrowser.cdpSourceRange?.trim()\n) {  // 仅检查默认 bridge 网络 + 未配置 cdpSourceRange 的情形",
+        "file": "src/security/audit-extra.sync.ts",
+        "line": 850
+      },
+      {
+        "code": "if (browserExposurePaths.length > 0) {\n  findings.push({ checkId: \"sandbox.browser_cdp_bridge_unrestricted\", severity: \"warn\", ... })\n}  // 结果仅为 warn，不阻断流程；且 audit 为离线检查，不影响运行中容器",
+        "file": "src/security/audit-extra.sync.ts",
+        "line": 873
+      }
+    ],
+    "verify": 1,
+    "vuln_category_l1": "业务逻辑",
+    "vuln_category_l2": "BL-INSECURE-DEFAULT(不安全默认配置)",
+    "vuln_ids": [
+      "GHSA-525J-HQQ2-66R4"
+    ],
+    "vuln_title": "openclaw 沙箱 CDP 中继器默认绑定 0.0.0.0 且无来源限制，导致同 Docker 网络容器可未授权访问 Chrome DevTools Protocol - audit-extra.sync.ts"
+  },
+  {
+    "commit": "eb35fb745de55194ab39b124de12c4ecbf24597e",
+    "critical_operation": {
+      "code": "    return await fs.open(outPath, OPEN_WRITE_FLAGS, 0o666);",
+      "desc": "fs.open 以 OPEN_WRITE_FLAGS 对 outPath 执行文件打开操作；该标志集在非 Windows 平台上条件性包含 O_NOFOLLOW，能检测最终路径分量本身为符号链接的情况并触发 ELOOP。然而 O_NOFOLLOW 仅保护末级分量：若 outPath 任一父目录在校验后被替换为越界符号链接，内核在解析父目录分段时仍会跟随该链接，导致文件创建或截断发生在目标目录之外，此处是漏洞利用链路的实际执行终点。",
+      "file": "src/infra/archive.ts",
+      "line": 280
+    },
+    "entry_id": "entry-00226",
+    "entry_point": {
+      "code": "export async function extractArchive(params: {",
+      "desc": "extractArchive 是归档解压的公开入口函数，接收 archivePath 与 destDir 等参数后按 kind 分发到对应处理分支。当归档类型为 zip 时，内部 extractZip 以 for-of 循环处理每个条目：循环体内先 await prepareZipOutputPath 执行路径校验，再 await writeZipFileEntry 执行写入，两次 await 之间存在可被并发操作利用的事件循环间隙，是整条竞态漏洞链路的结构性根源。",
+      "file": "src/infra/archive.ts",
+      "line": 526
+    },
+    "origin": "GitHub Advisory Database (reviewed)",
+    "project": "openclaw",
+    "repo_url": "https://github.com/openclaw/openclaw",
+    "report_id": "GHSA-R54R-WMMQ-MH84",
+    "source_link": "https://github.com/advisories/GHSA-r54r-wmmq-mh84",
+    "trace": [
+      {
+        "code": "export async function extractArchive(params: {",
+        "desc": "extractArchive 作为整条调用链的起点，此步骤是从外部调用方流向归档解压内部逻辑的入口跨越。函数将 archivePath 与 destDir 向下传递给 extractZip：archivePath 指向待解压的归档文件，destDir 是要求写入局限于其中的目标目录。随后在 for-of 条目循环中开始逐项执行路径校验与文件写入，漏洞的竞态窗口在此调用链中由此展开。",
+        "file": "src/infra/archive.ts",
+        "line": 526
+      },
+      {
+        "code": "    await prepareZipOutputPath({",
+        "desc": "prepareZipOutputPath 在 extractZip 条目循环体内被 await 调用，此步骤是从 extractZip（caller）流向 prepareZipOutputPath（callee）的跨越，携带 outPath、relPath 与 destinationRealDir 等关键参数。该函数内部依次完成符号链接遍历检测与父目录边界校验；函数正常返回后，控制权回到 extractZip 循环体，在继续执行 writeZipFileEntry 之前产生事件循环间隙，此间隙即竞态漏洞的核心窗口。",
+        "file": "src/infra/archive.ts",
+        "line": 439
+      },
+      {
+        "code": "  await assertNoSymlinkTraversal({",
+        "desc": "assertNoSymlinkTraversal 在 prepareZipOutputPath（caller）内部被 await 调用，此步骤从 prepareZipOutputPath 流向该遍历检测函数（callee）。函数将 relPath 按路径分隔符拆分，逐段拼接后以 fs.lstat 检查每个已存在分量；若任一分量为符号链接则立即抛出错误。随后控制权返回 prepareZipOutputPath 继续执行 assertResolvedInsideDestination；该结论基于 lstat 的瞬时快照，无法约束后续写入阶段的文件系统状态。",
+        "file": "src/infra/archive.ts",
+        "line": 352
+      },
+      {
+        "code": "  await assertResolvedInsideDestination({",
+        "desc": "assertResolvedInsideDestination 在 prepareZipOutputPath（caller）内部被 await 调用，紧接 assertNoSymlinkTraversal 之后执行，此步骤从 prepareZipOutputPath 流向该边界校验函数（callee）。函数以 fs.realpath 解析 parentDir 的真实路径，验证结果位于 destinationRealDir 之内。prepareZipOutputPath 在此步骤后即正常返回，但该校验结论不具有持续约束力：函数返回后，parentDir 在文件系统中的实际指向可能已被替换。",
+        "file": "src/infra/archive.ts",
+        "line": 370
+      },
+      {
+        "code": "    await writeZipFileEntry({",
+        "desc": "writeZipFileEntry 在 extractZip 条目循环体内紧接 prepareZipOutputPath 之后被 await 调用，此步骤从 extractZip（caller）流向 writeZipFileEntry（callee），标志调用链从校验阶段跨越到写入阶段。在调用栈下游，writeZipFileEntry 将立即以相同的 outPath 调用 openZipOutputFile；此处是竞态窗口的结束边界——若父目录在 prepareZipOutputPath 返回后已被替换为越界符号链接，此调用将直接触发越界写入。",
+        "file": "src/infra/archive.ts",
+        "line": 451
+      },
+      {
+        "code": "  const handle = await openZipOutputFile(params.outPath, params.entry.name);",
+        "desc": "openZipOutputFile 在 writeZipFileEntry（caller）内部被 await 调用，此步骤从 writeZipFileEntry 流向 openZipOutputFile（callee），携带经路径校验阶段确认的 outPath 与 entry.name。随后 openZipOutputFile 以 OPEN_WRITE_FLAGS 调用 fs.open，并仅对最终路径分量为符号链接时返回的 isSymlinkOpenError 执行兜底拦截；对父目录已被替换为越界符号链接的情形，此处不再执行任何路径合法性重验证。",
+        "file": "src/infra/archive.ts",
+        "line": 382
+      },
+      {
+        "code": "    return await fs.open(outPath, OPEN_WRITE_FLAGS, 0o666);",
+        "desc": "fs.open 以 OPEN_WRITE_FLAGS 对 outPath 发起内核文件打开调用，此步骤从 openZipOutputFile（caller）流向操作系统文件系统层（callee），是整条调用链的终端节点。OPEN_WRITE_FLAGS 在非 Windows 平台上条件性包含 O_NOFOLLOW，仅当末级路径分量本身为符号链接时触发 ELOOP；若越界符号链接位于父目录层级，内核路径解析已先行跟随该链接，O_NOFOLLOW 不再有效，文件将被创建或截断于目标目录之外，与 critical_operation 指示的危险写入点完全对应。",
+        "file": "src/infra/archive.ts",
+        "line": 280
+      }
+    ],
+    "verify": 1,
+    "vuln_category_l1": "路径穿越",
+    "vuln_category_l2": "ZIP解压路径穿越",
+    "vuln_ids": [
+      "CVE-2026-28483",
+      "GHSA-R54R-WMMQ-MH84"
+    ],
+    "vuln_title": "OpenClaw ZIP 解压 TOCTOU 竞态条件路径穿越（CVE-2026-28483）"
+  },
+  {
+    "commit": "73c1f203b0205d00928a0af7fa0e0fc93170f03e",
+    "critical_operation": {
+      "code": "    await cascade_delete_flow(session, flow.id)",
+      "desc": "在 _read_flow 返回未经所有权验证的 flow 对象后，此处以 flow.id 为参数调用 cascade_delete_flow，对该 flow 及其全部关联数据执行级联删除。由于上游所有权校验的缺失，此操作可被任意已认证用户触发于他人拥有的 flow；这是整条越权链路中产生不可逆破坏的终止点，攻击者由此实现对任意 flow 的跨用户删除。",
+      "file": "src/backend/base/langflow/api/v1/flows.py",
+      "line": 400
+    },
+    "entry_id": "entry-00374",
+    "entry_point": {
+      "code": "@router.delete(\"/{flow_id}\", status_code=200)",
+      "desc": "这是 FastAPI 路由装饰器，将 DELETE /{flow_id} HTTP 端点注册到路由器，返回状态码 200。任何已认证用户均可向该端点发起请求，URL 路径中的 flow_id 完全由调用方控制；漏洞链路从此处开始——端点接受外部传入的 UUID 后，未在入口处施加任何所有权限制，请求将无阻碍地进入后续处理逻辑。",
+      "file": "src/backend/base/langflow/api/v1/flows.py",
+      "line": 384
+    },
+    "origin": "GitHub Advisory Database (reviewed)",
+    "project": "langflow",
+    "repo_url": "https://github.com/langflow-ai/langflow",
+    "report_id": "GHSA-8C4J-F57C-35CF",
+    "source_link": "https://github.com/advisories/GHSA-8c4j-f57c-35cf",
+    "trace": [
+      {
+        "code": "@router.delete(\"/{flow_id}\", status_code=200)",
+        "desc": "DELETE /{flow_id} 路由装饰器标记了 HTTP 删除端点的调用入口，是整条调用链的第一跳。外部 HTTP 请求在此被 FastAPI 框架捕获并分发到处理函数；URL 路径段中的 flow_id 以调用方原始输入形式进入函数栈，随后沿调用链向下流向参数声明层和辅助函数层，此时尚无任何归属校验发生。",
+        "file": "src/backend/base/langflow/api/v1/flows.py",
+        "line": 384
+      },
+      {
+        "code": "    flow_id: UUID,",
+        "desc": "从路由处理函数的参数声明层看，flow_id 在此被声明为 UUID 类型的路径参数，接收来自上层 HTTP 路由分发的 flow 标识符。调用方可将其设置为任意合法 UUID；随后该值被原样向下传递给 _read_flow 辅助函数调用，所有权断言在这一层同样缺席，是攻击者借以注入目标 flow 标识的关键参数节点。",
+        "file": "src/backend/base/langflow/api/v1/flows.py",
+        "line": 388
+      },
+      {
+        "code": "    flow = await _read_flow(",
+        "desc": "在调用栈下游，端点将 flow_id 与当前用户信息传入 _read_flow 辅助函数，并等待异步返回 flow 对象。_read_flow 内部的条件逻辑在认证模式下缺少所有权过滤子句，数据库查询仅按 UUID 匹配记录而不核验归属用户；返回的 flow 对象因此可能属于任意他人，并随后被传递至级联删除调用。",
+        "file": "src/backend/base/langflow/api/v1/flows.py",
+        "line": 392
+      },
+      {
+        "code": "    await cascade_delete_flow(session, flow.id)",
+        "desc": "cascade_delete_flow 调用接收来自 _read_flow 返回值的 flow.id，对目标 flow 及其关联数据执行级联删除，是整条调用链的最终节点。由于入口层到此处的完整路径均未对 flow 归属进行核验，任意已认证用户均可将他人的 flow 推进至此删除节点，越权破坏在此完成闭环。",
+        "file": "src/backend/base/langflow/api/v1/flows.py",
+        "line": 400
+      }
+    ],
+    "verify": 1,
+    "vuln_category_l1": "业务逻辑",
+    "vuln_category_l2": "BL-AUTHZ-BROKEN(授权逻辑错误)",
+    "vuln_ids": [
+      "CVE-2026-34046",
+      "GHSA-8C4J-F57C-35CF"
+    ],
+    "vuln_title": "Langflow flow API 水平越权（CVE-2026-34046 / GHSA-8c4j-f57c-35cf） - flows.py"
+  },
+  {
+    "commit": "d1ecb46076145deb188abcba8f0699709ea17198",
+    "critical_operation": {
+      "code": "          const canSkipDevice = allowControlUiBypass ? hasSharedAuth : hasTokenAuth;",
+      "desc": "canSkipDevice 由三元表达式赋值：allowControlUiBypass 为真时取 hasSharedAuth，否则取 hasTokenAuth；两者均依赖 token 字段的存在性检查，而非共享密钥的实际校验结果。此处是漏洞的核心决策点——任意非空 token 即可令 hasTokenAuth 为 true，进而使设备身份检查被跳过。",
+      "file": "src/gateway/server/ws-connection/message-handler.ts",
+      "line": 381
+    },
+    "entry_id": "entry-00121",
+    "entry_point": {
+      "code": "  socket.on(\"message\", async (data) => {",
+      "desc": "socket.on(\"message\", ...) 在 gateway 端注册 WebSocket 消息事件监听，所有来自外部客户端的帧（包括 connect 帧）均在此进入服务端异步处理流程。该回调是外部输入进入认证逻辑链路的唯一入口，也是整条漏洞利用路径的起始节点。",
+      "file": "src/gateway/server/ws-connection/message-handler.ts",
+      "line": 233
+    },
+    "origin": "GitHub Advisory Database (reviewed)",
+    "project": "openclaw",
+    "repo_url": "https://github.com/openclaw/openclaw",
+    "report_id": "GHSA-RV39-79C4-7459",
+    "source_link": "https://github.com/advisories/GHSA-rv39-79c4-7459",
+    "trace": [
+      {
+        "code": "  socket.on(\"message\", async (data) => {",
+        "desc": "socket.on(\"message\", ...) 是从外部 WebSocket 客户端（caller）流向服务端消息处理回调（callee）的第一段入口。connect 帧在此被接收并进入异步执行上下文，调用栈从这里展开，后续 connectParams 解析、token 存在性判断、设备绕过决策等步骤均在此回调内依序发生。",
+        "file": "src/gateway/server/ws-connection/message-handler.ts",
+        "line": 233
+      },
+      {
+        "code": "        const connectParams = frame.params as ConnectParams;",
+        "desc": "从 entry_point 的消息接收流向下游，frame.params 被类型断言为 ConnectParams 并赋值给 connectParams，完成从外部帧原始数据到结构化参数对象的转换。connectParams 随后成为整条认证决策链路的数据源，其 auth.token 字段将在下一步被直接用于布尔化判断。",
+        "file": "src/gateway/server/ws-connection/message-handler.ts",
+        "line": 307
+      },
+      {
+        "code": "        const hasTokenAuth = Boolean(connectParams.auth?.token);",
+        "desc": "随后，hasTokenAuth 通过 Boolean() 对 connectParams.auth?.token 做存在性判断，字段非空即为 true，无需校验其真实合法性。这一步是漏洞的直接源头——外部传入的任意非空字符串经此转换即被视为已通过 token 认证；该值随后被用于合成 hasSharedAuth 及最终的 canSkipDevice。",
+        "file": "src/gateway/server/ws-connection/message-handler.ts",
+        "line": 370
+      },
+      {
+        "code": "        const hasSharedAuth = hasTokenAuth || hasPasswordAuth;",
+        "desc": "在调用栈下游，hasSharedAuth 由 hasTokenAuth 与 hasPasswordAuth 通过逻辑或合并：只要其中之一为真便成立。由于 hasTokenAuth 仅凭 token 字段存在性即可置为 true，hasSharedAuth 同样无需实际密钥验证，并在随后被传入 canSkipDevice 的三元表达式，扩大了可绕过的场景范围。",
+        "file": "src/gateway/server/ws-connection/message-handler.ts",
+        "line": 372
+      },
+      {
+        "code": "        const device = disableControlUiDeviceAuth ? null : deviceRaw;",
+        "desc": "随后，device 变量根据 disableControlUiDeviceAuth 标志决定取值：为真时强制赋 null，否则使用 deviceRaw。当 device 为 null 时，后续设备配对流程亦会被跳过，与 canSkipDevice 共同构成两条独立的设备身份检查绕过路径，共同影响最终的鉴权结果。",
+        "file": "src/gateway/server/ws-connection/message-handler.ts",
+        "line": 379
+      },
+      {
+        "code": "          const canSkipDevice = allowControlUiBypass ? hasSharedAuth : hasTokenAuth;",
+        "desc": "最终，canSkipDevice 在调用栈末端由三元表达式确定——allowControlUiBypass 为真时采用 hasSharedAuth，否则采用 hasTokenAuth。两个候选值均源于上游对 token 字段的存在性检查而非真实验证，持有任意非空 token 的调用方可令此值为 true，直接跳过下游 line 403 的设备身份必要性检查，完成漏洞利用链闭环。",
+        "file": "src/gateway/server/ws-connection/message-handler.ts",
+        "line": 381
+      }
+    ],
+    "verify": 1,
+    "vuln_category_l1": "业务逻辑",
+    "vuln_category_l2": "BL-AUTH-BYPASS(身份认证绕过)",
+    "vuln_ids": [
+      "CVE-2026-28472",
+      "GHSA-RV39-79C4-7459"
+    ],
+    "vuln_title": "OpenClaw gateway WebSocket authentication bypass via unvalidated token presence"
+  },
+  {
+    "commit": "60670e1e40d304a4c46687a20ecaaf239e729632",
+    "critical_operation": {
+      "code": "\t\t\t\tres.send(sandboxHtmlResponse(body));",
+      "desc": "res.send(sandboxHtmlResponse(body)) 将 iframe 封装后的响应体写入 HTTP 输出流并发送至客户端。sandboxHtmlResponse 在此处构造带有 sandbox 属性的 srcdoc iframe，但属性集中包含允许用户手势触发顶层导航的令牌，导致 iframe 内脚本可将浏览器顶层窗口重定向至恶意 URI，是漏洞链路的最终执行点。",
+      "file": "packages/cli/src/webhooks/webhook-request-handler.ts",
+      "line": 154
+    },
+    "entry_id": "entry-00085",
+    "entry_point": {
+      "code": "\t\t\t\tconst responseBodyParameter = this.getNodeParameter('responseBody', 0) as string;",
+      "desc": "responseBodyParameter 由 getNodeParameter('responseBody', 0) 赋值，从节点参数注册表中取出用户定义的响应体字符串。此处是攻击者可控的 HTML 内容进入运行时的最初位置，未经净化的字符串从此开始沿调用栈向下游传递，奠定了漏洞链路全程的输入基础。",
+      "file": "packages/nodes-base/nodes/RespondToWebhook/RespondToWebhook.node.ts",
+      "line": 411
+    },
+    "origin": "GitHub Advisory Database (reviewed)",
+    "project": "n8n",
+    "repo_url": "https://github.com/n8n-io/n8n",
+    "report_id": "GHSA-58JC-RCG5-95F3",
+    "source_link": "https://github.com/advisories/GHSA-58jc-rcg5-95f3",
+    "trace": [
+      {
+        "code": "\t\t\t\tconst responseBodyParameter = this.getNodeParameter('responseBody', 0) as string;",
+        "desc": "getNodeParameter('responseBody', 0) 从 caller（节点执行上下文的参数注册表）向 callee（节点内部处理逻辑）传递用户定义的响应体字符串，完成对 responseBodyParameter 的赋值。此步骤是漏洞链路在 RespondToWebhook 节点内部的起点，攻击者可控的 HTML 自此进入运行时，随后流向内容类型判断逻辑。",
+        "file": "packages/nodes-base/nodes/RespondToWebhook/RespondToWebhook.node.ts",
+        "line": 411
+      },
+      {
+        "code": "\t\t\tconst hasHtmlContentType =",
+        "desc": "hasHtmlContentType 在 responseBodyParameter 完成赋值后随即被计算，代表从参数读取阶段向内容类型判断阶段的过渡，是 caller（参数读取逻辑）流向 callee（内容类型分支逻辑）的关键中间量。该布尔值为 true 时将激活下游的沙箱封装条件，在漏洞链路中充当决定 HTML 处理路径是否被触发的分流开关。",
+        "file": "packages/nodes-base/nodes/RespondToWebhook/RespondToWebhook.node.ts",
+        "line": 405
+      },
+      {
+        "code": "\t\t\t\thasHtmlContentType &&",
+        "desc": "hasHtmlContentType 作为条件表达式的组成部分，标志着控制流从内容类型检测阶段（caller）流向沙箱包装阶段（callee）的转折。当该值为 true 时，执行路径进入 HTML 专用分支，随后 sandboxHtmlResponse 被调用以封装响应体，在漏洞链路中是触发缺陷沙箱包装的条件门控。",
+        "file": "packages/nodes-base/nodes/RespondToWebhook/RespondToWebhook.node.ts",
+        "line": 568
+      },
+      {
+        "code": "\t\t\t\tresponseBody = sandboxHtmlResponse(JSON.stringify(responseBody as string));",
+        "desc": "responseBody 在此处被 sandboxHtmlResponse 的返回值覆写，标志着从原始字符串阶段（caller 侧的 responseBody）流向 iframe 封装阶段（callee 侧的 sandboxHtmlResponse）的关键转变。JSON.stringify 将响应体序列化后传入包装函数，所生成的 iframe 携带存在权限缺陷的 sandbox 属性，随后向下游的 webhook 请求处理层传递，在漏洞链路中完成节点侧的沙箱包装动作。",
+        "file": "packages/nodes-base/nodes/RespondToWebhook/RespondToWebhook.node.ts",
+        "line": 573
+      },
+      {
+        "code": "\t\t\tconst needsSandbox = contentType && isHtmlRenderedContentType(contentType);",
+        "desc": "needsSandbox 在 webhook-request-handler 层被赋值，标志着调用链从 RespondToWebhook 节点层（caller）跨越至 webhook 请求处理层（callee）。isHtmlRenderedContentType(contentType) 对内容类型做二次判断，其结果决定是否再次调用 sandboxHtmlResponse；在漏洞链路中，此步骤是到达最终响应发送前的最后一道内容类型分流判断。",
+        "file": "packages/cli/src/webhooks/webhook-request-handler.ts",
+        "line": 152
+      },
+      {
+        "code": "\t\t\t\tres.send(sandboxHtmlResponse(body));",
+        "desc": "res.send(sandboxHtmlResponse(body)) 是调用链的末端段，从 webhook 请求处理层（caller 侧的处理逻辑）向客户端浏览器（callee 侧的 HTTP 响应接收方）输出最终响应。在调用栈下游，sandboxHtmlResponse 对 body 再次封装为 srcdoc iframe 并经 res.send 写入响应流，使携带恶意脚本的 HTML 抵达受害者浏览器，是漏洞链路中脚本逃逸的最终实现点。",
+        "file": "packages/cli/src/webhooks/webhook-request-handler.ts",
+        "line": 154
+      }
+    ],
+    "verify": 1,
+    "vuln_category_l1": "XSS",
+    "vuln_category_l2": "Stored XSS",
+    "vuln_ids": [
+      "CVE-2025-61914",
+      "GHSA-58JC-RCG5-95F3"
+    ],
+    "vuln_title": "n8n Stored XSS in 'Respond to Webhook' Node via iframe Sandbox Bypass - webhook-request-handler.ts"
+  },
+  {
+    "commit": "f0c1294173a55f26e0b972c39c0c16917f5ca9e7",
+    "critical_operation": {
+      "code": "                builtin: builtinDeps,",
+      "desc": "将 builtinDeps 直接作为 NodeVM 的 builtin 选项写入沙箱配置，使 http、https、net 等原生网络模块在虚拟机内部可被 require 调用。与经 secureWrappers 代理的 axios/node-fetch 不同，这三个模块完全绕过 SSRF 防护层；此行是漏洞得以成立的核心缺陷点，攻击者脚本由此获得不受过滤的原生网络访问能力。",
+      "file": "packages/components/src/utils.ts",
+      "line": 1671
+    },
+    "entry_id": "entry-00467",
+    "entry_point": {
+      "code": "        const apiResponse = await nodesService.executeCustomFunction(req.body, workspaceId, orgId)",
+      "desc": "HTTP 控制器接收认证用户提交的自定义函数执行请求，将 req.body（含攻击者可控的 javascriptFunction 字段）连同工作区标识一并转发至服务层。此处是整条攻击链的网络入口，用户提供的脚本字符串从这里进入系统，后续沙箱构造及执行流程均以本次调用所携带的请求体为数据源。",
+      "file": "packages/server/src/controllers/nodes/index.ts",
+      "line": 90
+    },
+    "origin": "GitHub Advisory Database (reviewed)",
+    "project": "Flowise",
+    "repo_url": "https://github.com/FlowiseAI/Flowise",
+    "report_id": "GHSA-XHMJ-RG95-44HV",
+    "source_link": "https://github.com/advisories/GHSA-xhmj-rg95-44hv",
+    "trace": [
+      {
+        "code": "        const apiResponse = await nodesService.executeCustomFunction(req.body, workspaceId, orgId)",
+        "desc": "攻击利用链的起始节点，HTTP 路由处理函数通过 nodesService.executeCustomFunction 将含有攻击者控制字段的 req.body 传入服务层。从 caller（HTTP 控制器）流向 callee（nodesService），携带原始请求体的调用由此展开，后续所有步骤均沿此调用链逐层向下传递。",
+        "file": "packages/server/src/controllers/nodes/index.ts",
+        "line": 90
+      },
+      {
+        "code": "        return await executeCustomNodeFunction(executeData)",
+        "desc": "随后，服务层 nodesService 完成执行参数组装后，从 caller（nodesService.executeCustomFunction）流向 callee（独立工具函数 executeCustomNodeFunction），将打包好的 executeData 整体转交。这是控制流离开 server 层进入专用工具模块的中转节点，javascriptFunction 字符串随 executeData 继续向下传递。",
+        "file": "packages/server/src/services/nodes/index.ts",
+        "line": 151
+      },
+      {
+        "code": "        const jsFunction = typeof body?.javascriptFunction === 'string' ? body.javascriptFunction : ''",
+        "desc": "在调用栈下游，executeCustomNodeFunction 从请求体中以类型守卫的方式提取 javascriptFunction 字符串，存入局部变量 jsFunction。此行完成对 body 参数的解包操作，不对脚本内容做任何净化或白名单验证，攻击者提供的任意合法 JavaScript 均可原样保留，随后流入节点初始化流程。",
+        "file": "packages/server/src/utils/executeCustomNodeFunction.ts",
+        "line": 24
+      },
+      {
+        "code": "                const returnData = await newNodeInstance.init(nodeData, '', options)",
+        "desc": "随后，executeCustomNodeFunction 实例化 CustomFunction 节点并调用其 init 方法，将含有 jsFunction 的 nodeData 与执行选项 options 一并传入。此步骤完成从 caller（executeCustomNodeFunction）到 callee（CustomFunction.init）的控制权移交，用户脚本字符串随 nodeData 正式进入组件层执行上下文。",
+        "file": "packages/server/src/utils/executeCustomNodeFunction.ts",
+        "line": 49
+      },
+      {
+        "code": "            const response = await executeJavaScriptCode(javascriptFunction, sandbox)",
+        "desc": "在调用栈下游，CustomFunction.init 将 javascriptFunction 字符串与预先构造的 sandbox 配置对象一同提交给 executeJavaScriptCode，正式触发 NodeVM 沙箱执行。此步骤是 caller（init 方法）向 callee（执行器）传递用户脚本的决定性调用，sandbox 中的 builtin 配置将在此后直接决定沙箱内可访问的模块范围。",
+        "file": "packages/components/nodes/utilities/CustomFunction/CustomFunction.ts",
+        "line": 140
+      },
+      {
+        "code": "        const builtinDeps = process.env.TOOL_FUNCTION_BUILTIN_DEP",
+        "desc": "随后进入沙箱选项构造阶段，executeJavaScriptCode 从环境变量 TOOL_FUNCTION_BUILTIN_DEP 读取允许暴露给虚拟机的内置模块列表并赋值给 builtinDeps。若该变量包含 http、https 或 net，则这些原生网络模块将在后续步骤中以不受过滤的形式直接注入沙箱，为漏洞最终触发奠定条件。",
+        "file": "packages/components/src/utils.ts",
+        "line": 1631
+      },
+      {
+        "code": "        const secureWrappers: ICommonObject = {}",
+        "desc": "随后初始化空的 secureWrappers 对象，用于存放经 SSRF 代理包装的第三方 HTTP 客户端。在后续逻辑中，仅 axios 与 node-fetch 会被添加至此对象并施加出站请求拦截；http、https、net 始终不被纳入 secureWrappers，在最终沙箱配置中形成防护结构性缺口。",
+        "file": "packages/components/src/utils.ts",
+        "line": 1640
+      },
+      {
+        "code": "                builtin: builtinDeps,",
+        "desc": "在调用栈下游，builtinDeps 被直接赋予 NodeVM options 的 builtin 字段，完成沙箱配置的最终组装。此处即 critical_operation 所在，http、https、net 等模块以不受任何 SSRF 过滤约束的形式最终注入虚拟机，攻击者的脚本通过 require 获取这些模块后可发起任意出站网络请求。",
+        "file": "packages/components/src/utils.ts",
+        "line": 1671
+      }
+    ],
+    "verify": 1,
+    "vuln_category_l1": "SSRF",
+    "vuln_category_l2": "沙箱安全控制绕过",
+    "vuln_ids": [
+      "GHSA-XHMJ-RG95-44HV"
+    ],
+    "vuln_title": "Flowise Custom Function SSRF Protection Bypass via Node.js Built-in Modules - utils.ts"
+  },
+  {
+    "commit": "3f02194f6d17bc2b8c682e38a891413e48cbd0c1",
+    "critical_operation": {
+      "code": "export const prepareFormFields = (context: IWebhookFunctions, fields: FormFieldsParameter) => {",
+      "desc": "prepareFormFields 函数声明处，是整个 Form 节点字段渲染管道的核心入口，也是二阶表达式求值漏洞的直接发生位置。函数接收经第一阶求值污染后的字段集合，逐字段检测 html 内容并调用 getResolvables 与 evaluateExpression，使攻击者在上一步表单中提交的任意表达式得到求值和执行。",
+      "file": "packages/nodes-base/nodes/Form/utils/utils.ts",
+      "line": 119
+    },
+    "entry_id": "entry-00173",
+    "entry_point": {
+      "code": "export async function prepareFormReturnItem(",
+      "desc": "HTTP webhook 入口函数，负责将多步骤表单的一次 POST 提交转换为工作流可消费的 n8n 执行项。在漏洞链路中，此处是攻击者注入的表达式字符串首次进入系统的起点，提交值经此函数存入执行上下文后可被后续表单节点通过 $input 引用，从而为二阶求值埋下前提条件。",
+      "file": "packages/nodes-base/nodes/Form/utils/utils.ts",
+      "line": 405
+    },
+    "origin": "GitHub Advisory Database (reviewed)",
+    "project": "n8n",
+    "repo_url": "https://github.com/n8n-io/n8n",
+    "report_id": "GHSA-75G8-RV7V-32F7",
+    "source_link": "https://github.com/advisories/GHSA-75g8-rv7v-32f7",
+    "trace": [
+      {
+        "code": "export async function prepareFormReturnItem(",
+        "desc": "漏洞调用链路的第一步，从 HTTP 层进入 prepareFormReturnItem 函数体。此处标志着攻击者提交的表单数据开始在工作流上下文中流动；后续各步均由此函数驱动，最终触发含恶意载荷的字段经两次求值到达渲染层。",
+        "file": "packages/nodes-base/nodes/Form/utils/utils.ts",
+        "line": 405
+      },
+      {
+        "code": "\tconst req = context.getRequestObject() as MultiPartFormData.Request;",
+        "desc": "从 caller prepareFormReturnItem 流向内部请求解析：此处将当前 HTTP 请求转型为 MultiPartFormData.Request，使函数可以从表单体中读取各字段值。在漏洞链路中，这是攻击者注入的字符串从网络层进入应用层解析的关键一步，为后续将字段值写入工作流上下文提供了原始来源。",
+        "file": "packages/nodes-base/nodes/Form/utils/utils.ts",
+        "line": 411
+      },
+      {
+        "code": "\t\t\t\tconst jsonOutput = context.getNodeParameter('jsonOutput', '', {\n\t\t\t\t\trawExpressions: true,\n\t\t\t\t}) as string;\n\n\t\t\t\tfields = tryToParseJsonToFormFields(resolveRawData(context, jsonOutput));",
+        "desc": "从 prepareFormReturnItem 调用链流向 Form.node.ts webhook 处理器的字段解析段：以 rawExpressions: true 模式获取节点参数后，resolveRawData 执行第一阶求值，将工作流作者配置的模板表达式解析为实际字符串。若攻击者在上一步提交了包含表达式语法的输入，第一阶求值会将其原样嵌入到 html 字段内容中，完成污染数据的传递。",
+        "file": "packages/nodes-base/nodes/Form/Form.node.ts",
+        "line": "370-374"
+      },
+      {
+        "code": "\t\tif (options.appendAttribution === false) {\n\t\t\tappendAttribution = false;\n\t\t}\n\n\t\tlet buttonLabel = 'Submit';\n\n\t\tif (options.buttonLabel) {\n\t\t\tbuttonLabel = options.buttonLabel;\n\t\t}",
+        "desc": "从 Form.node.ts webhook 处理器流向 prepareFormData 的渲染参数配置段：此块依次确定 appendAttribution 标志和提交按钮文本，是在第一阶求值完成后、第二阶求值发生前的中间环节。从漏洞链路角度看，这里建立了最终渲染调用所需的上下文选项，将字段数据与页面选项共同传递到下一步的 prepareFormData 调用中。",
+        "file": "packages/nodes-base/nodes/Form/utils/utils.ts",
+        "line": "663-671"
+      },
+      {
+        "code": "\tconst data = prepareFormData({",
+        "desc": "从渲染参数配置流向 prepareFormData 的调用点：此处将包含已污染 html 内容的字段集合与页面选项一并传入 prepareFormData，是漏洞链路中将恶意载荷从 webhook 处理层移交给字段渲染层的分界点。紧接着 prepareFormData 内部调用 prepareFormFields，第二阶求值由此被触发。",
+        "file": "packages/nodes-base/nodes/Form/utils/utils.ts",
+        "line": 557
+      },
+      {
+        "code": "export const prepareFormFields = (context: IWebhookFunctions, fields: FormFieldsParameter) => {",
+        "desc": "调用链路终点，从 prepareFormData 流向 prepareFormFields 函数入口，即二阶求值的执行现场。函数遍历各字段，对 html 类型字段调用 getResolvables 提取所有双花括号模式，再对每个模式调用 context.evaluateExpression 求值，将攻击者注入的表达式在工作流上下文特权下执行，完成本次漏洞链路的最终利用步骤。",
+        "file": "packages/nodes-base/nodes/Form/utils/utils.ts",
+        "line": 119
+      }
+    ],
+    "verify": 1,
+    "vuln_category_l1": "代码注入",
+    "vuln_category_l2": "表达式注入",
+    "vuln_ids": [
+      "CVE-2026-27493",
+      "GHSA-75G8-RV7V-32F7"
+    ],
+    "vuln_title": "n8n Form 节点二阶表达式注入 (CVE-2026-27493) - utils.ts"
+  },
+  {
+    "commit": "611dff985d4ecc442633a740f0918d9eb5c6bf36",
+    "critical_operation": {
+      "code": "  const execArgv = resolveSystemRunExecArgv({",
+      "desc": "resolveSystemRunExecArgv 在执行阶段依据 phase.plannedAllowlistArgv、phase.argv 及安全策略组装最终进程启动参数。此时若 cwd 路径中的可写父级符号链接已在审批后被重绑定，实际工作目录将偏离审批时记录的路径，导致经过审批的命令在非预期的文件系统位置执行，构成整条 TOCTOU 竞态绕过链路的最终触发点。",
+      "file": "src/node-host/invoke-system-run.ts",
+      "line": 659
+    },
+    "entry_id": "entry-00211",
+    "entry_point": {
+      "code": "      const record = manager.create(request, timeoutMs, explicitId);",
+      "desc": "manager.create 将携带原始 cwd 字符串的 request 对象登记为已批准的执行记录，正式开启审批生命周期。此刻 cwd 字段尚未经过符号链接解析或路径规范化，仅以字符串形式固化进审批快照，为后续 TOCTOU 竞态窗口埋下隐患——在审批完成后、执行前若改写 cwd 所指的父级可写符号链接，同一字符串将指向不同的文件系统位置。",
+      "file": "src/gateway/server-methods/exec-approval.ts",
+      "line": 127
+    },
+    "origin": "GitHub Advisory Database (reviewed)",
+    "project": "openclaw",
+    "repo_url": "https://github.com/openclaw/openclaw",
+    "report_id": "GHSA-F7WW-2725-QVW2",
+    "source_link": "https://github.com/advisories/GHSA-f7ww-2725-qvw2",
+    "trace": [
+      {
+        "code": "      const record = manager.create(request, timeoutMs, explicitId);",
+        "desc": "manager.create 以当前 request 负载中的原始 cwd 字符串初始化审批记录，标志着执行审批调用链的起点。该调用在清洗 turnSource* 等元数据字段后立即发生，未对 cwd 执行符号链接展开，审批快照因此仅捕获字符串表示而非规范化路径；随后调用栈将沿审批绑定构建路径向下传递至绑定函数。",
+        "file": "src/gateway/server-methods/exec-approval.ts",
+        "line": 127
+      },
+      {
+        "code": "export function buildSystemRunApprovalBindingV1(params: {",
+        "desc": "buildSystemRunApprovalBindingV1 接收来自上游的 argv、cwd、agentId、sessionKey、env 参数，调用 buildSystemRunApprovalEnvBinding 等辅助函数构造 SystemRunApprovalBindingV1 哈希绑定结构。关键在于 cwd 仅以原始字符串形式纳入绑定计算，未核查父级符号链接的可写性；随后该绑定成为 TOCTOU 检查阶段所依赖的基准快照，被传递至下游的审批匹配验证环节。",
+        "file": "src/infra/system-run-approval-binding.ts",
+        "line": 56
+      },
+      {
+        "code": "  const approvalMatch = evaluateSystemRunApprovalMatch({",
+        "desc": "evaluateSystemRunApprovalMatch 在执行前对比当前请求参数与审批快照，使用 normalizeString(p.cwd) 对工作目录做字符串级归一化后执行匹配校验。由于验证逻辑仅比较字符串形式而非解析后的规范路径，若 cwd 路径中的可写父级符号链接已在审批后被重绑定，该函数仍会判定匹配通过；随后执行权移交至调用栈下游的 resolveSystemRunExecArgv，审批校验实质上已被绕过。",
+        "file": "src/gateway/node-invoke-system-run-approval.ts",
+        "line": 209
+      },
+      {
+        "code": "  const execArgv = resolveSystemRunExecArgv({",
+        "desc": "resolveSystemRunExecArgv 作为调用栈最末端的参数组装步骤，接收来自 phase 对象的 plannedAllowlistArgv、argv、security、policy 等字段构建最终进程启动向量。在调用栈上游的审批匹配已通过后，若 cwd 所指符号链接已被重绑定，此处的参数解析将在攻击者控制的文件系统上下文中完成，从而使经审批的命令在非预期位置执行，完整利用链在此闭环。",
+        "file": "src/node-host/invoke-system-run.ts",
+        "line": 659
+      }
+    ],
+    "verify": 1,
+    "vuln_category_l1": "业务逻辑",
+    "vuln_category_l2": "BL-RACE-LOGIC(业务层竞争条件)",
+    "vuln_ids": [
+      "CVE-2026-27545",
+      "GHSA-F7WW-2725-QVW2"
+    ],
+    "vuln_title": "openclaw TOCTOU 符号链接竞态条件绕过审批控制 (CVE-2026-27545) - invoke-system-run.ts"
+  },
+  {
+    "commit": "083eac9cd0be4a8934fac7010f9248c7888c6da4",
+    "critical_operation": {
+      "code": "        validator = _find_fastapi_validator(path)",
+      "desc": "_find_fastapi_validator 以当前请求路径为参数，在已注册的 FastAPI 路由校验器映射中查找匹配项。由于该函数实现仅覆盖 /gateway/ 前缀路径，对 /ajax-api/3.0/jobs/* 路径返回 None，随后中间件不执行任何凭据校验直接放行请求。此调用是整条漏洞链路的核心失效点：validator 为 None 意味着认证逻辑被静默跳过，未认证请求得以无障碍抵达 submit_job 处理函数。",
+      "file": "mlflow/server/auth/__init__.py",
+      "line": 2958
+    },
+    "entry_id": "entry-00413",
+    "entry_point": {
+      "code": "@job_api_router.post(\"/\", response_model=Job)",
+      "desc": "job_api_router.post 装饰器将 job 提交处理函数注册为 FastAPI 路由，绑定于 job_api_router 并最终挂载至 /ajax-api/3.0/jobs/。该路由归属 FastAPI 原生路由层，请求到达时不经过 Flask 的 _before_request 认证钩子，进入漏洞链路的起始位置：所有对该端点的 POST 请求将经由 fastapi_permission_middleware 处理，而该中间件对 job 路径存在认证覆盖缺口。",
+      "file": "mlflow/server/job_api.py",
+      "line": 68
+    },
+    "origin": "GitHub Advisory Database (reviewed)",
+    "project": "mlflow",
+    "repo_url": "https://github.com/mlflow/mlflow",
+    "report_id": "GHSA-7QHF-V65M-G5F3",
+    "source_link": "https://github.com/advisories/GHSA-7qhf-v65m-g5f3",
+    "trace": [
+      {
+        "code": "    fastapi_app.include_router(job_api_router)",
+        "desc": "fastapi_app.include_router 将 job_api_router 注册为 FastAPI 应用的原生路由，使 /ajax-api/3.0/jobs/* 系列端点直接暴露于 ASGI 调用链。由于路由挂载在 FastAPI 层而非 Flask WSGIMiddleware 后端，Flask 侧的认证钩子对其不可见，请求随后流向 fastapi_permission_middleware，漏洞利用路径由此建立，这是整条调用链从 caller 端向 callee 端传递请求的起始跳。",
+        "file": "mlflow/server/fastapi_app.py",
+        "line": 89
+      },
+      {
+        "code": "    async def fastapi_permission_middleware(request, call_next):",
+        "desc": "fastapi_permission_middleware 是 FastAPI 侧专用的认证中间件，每一个经过 include_router 注册路由的 FastAPI 请求都先流入此函数。作为从路由注册节点下游接收请求的第一个处理环节，它负责对非白名单路径实施鉴权，随后调用 _find_fastapi_validator 查找对应路径的校验器，正是在这一步，job 路径的认证覆盖缺口得以触发，函数充当漏洞链路中应当拦截却实际放行请求的中间层节点。",
+        "file": "mlflow/server/auth/__init__.py",
+        "line": 2950
+      },
+      {
+        "code": "        if validator is None:",
+        "desc": "if validator is None 在 fastapi_permission_middleware 内部对 _find_fastapi_validator 的返回值做空值判断。对于 /ajax-api/3.0/jobs/* 路径该条件必然成立，中间件随即将请求直接转交 call_next，不执行任何身份验证逻辑。在调用栈下游，请求无障碍从 caller 侧的中间件层流入 callee 侧的 submit_job 处理函数，完成认证绕过的最后一道判断环节。",
+        "file": "mlflow/server/auth/__init__.py",
+        "line": 2959
+      },
+      {
+        "code": "def submit_job(payload: SubmitJobPayload) -> Job:",
+        "desc": "submit_job 是 POST /ajax-api/3.0/jobs/ 路由绑定的实际处理函数，从上游中间件 call_next 调用链接收已被静默放行的请求。由于 fastapi_permission_middleware 未对 job 路径执行任何认证，该函数在完全缺乏凭据校验的状态下被调用。随后它解析 payload 中的 job_name 并向下游传递执行意图，为动态函数加载与特权任务提交做准备，是漏洞链路中认证缺口向实际危害转化的起点。",
+        "file": "mlflow/server/job_api.py",
+        "line": 69
+      },
+      {
+        "code": "def _load_function(fullname: str) -> Callable[..., Any]:",
+        "desc": "_load_function 接收来自 submit_job 传入的函数全限定名，通过 importlib 动态导入并返回对应的可调用对象。在从 submit_job caller 流向 huey 任务提交 callee 的中间段，该函数将 payload 中的字符串参数转化为服务器进程内部真实可执行的 Python 函数，是特权操作链路中连接请求参数与代码执行能力的关键桥接步骤。随后加载结果将被传递至任务队列完成异步执行。",
+        "file": "mlflow/server/jobs/utils.py",
+        "line": 553
+      },
+      {
+        "code": "    huey_instance.submit_task(",
+        "desc": "huey_instance.submit_task 将已动态加载的目标函数连同 payload 参数提交至 Huey 异步任务队列，以 MLflow 服务进程权限执行。作为调用栈最终节点，此步骤从 _load_function callee 接收可执行对象，将来自未认证请求的参数转化为服务器端的实际计算，可访问后端存储凭据与外部服务密钥。这是漏洞链路的危害实现节点，认证绕过的最终后果在此落地，构成未授权远程代码执行的完整闭环。",
+        "file": "mlflow/server/jobs/__init__.py",
+        "line": 221
+      }
+    ],
+    "verify": 1,
+    "vuln_category_l1": "业务逻辑",
+    "vuln_category_l2": "BL-AUTHZ-MISSING(授权缺失)",
+    "vuln_ids": [
+      "CVE-2026-0545",
+      "GHSA-7QHF-V65M-G5F3"
+    ],
+    "vuln_title": "MLflow FastAPI Jobs端点完全绕过认证鉴权（CWE-306） - __init__.py"
+  },
+  {
+    "commit": "c861862aededc7294cea5634d77e6926444ca101",
+    "critical_operation": {
+      "code": "    def _build_url(",
+      "desc": "_build_url 方法将 path_params 字典中的每个值以字符串替换方式直接写入路径模板占位符，替换过程不执行任何 URL 编码；之后调用 urljoin 拼接 base_url，该函数会对路径中的 ../ 序列做规范化折叠，使含路径穿越字符的参数值得以越过预定 API 前缀，将请求导向后端任意端点，是整条漏洞链路的最终危险操作节点。",
+      "file": "src/fastmcp/utilities/openapi/director.py",
+      "line": 194
+    },
+    "entry_id": "entry-00391",
+    "entry_point": {
+      "code": "    def build(",
+      "desc": "build 方法是 RequestDirector 的公开请求构造接口，负责接收来自 MCP 工具调度层的 flat_args 扁平参数字典与 base_url 字符串，协调参数展平和 URL 组装各子步骤后返回 httpx.Request 对象；该方法是外部路径参数值首次进入内部处理流程的节点，其后所有子步骤均未对这些值执行任何编码转换。",
+      "file": "src/fastmcp/utilities/openapi/director.py",
+      "line": 23
+    },
+    "origin": "GitHub Advisory Database (reviewed)",
+    "project": "fastmcp",
+    "repo_url": "https://github.com/PrefectHQ/fastmcp",
+    "report_id": "GHSA-VV7Q-7JX5-F767",
+    "source_link": "https://github.com/advisories/GHSA-vv7q-7jx5-f767",
+    "trace": [
+      {
+        "code": "    def build(\n        self,\n        route: HTTPRoute,\n        flat_args: dict[str, Any],\n        base_url: str = \"http://localhost\",\n    ) -> httpx.Request:",
+        "desc": "build 方法签名确立了从 MCP 工具调度层流向 RequestDirector 处理链路的首个调用边界：route 传入路由元信息，flat_args 以原始扁平字典形式携带全部外部参数，base_url 指定目标服务根地址；三个参数由调用方在此处交付，RequestDirector 从这一节点开始接管输入，后续所有处理均以此次接收为起点。",
+        "file": "src/fastmcp/utilities/openapi/director.py",
+        "line": "23-28"
+      },
+      {
+        "code": "        logger.debug(\n            f\"Building request for {route.method} {route.path} with args: {flat_args}\"\n        )\n\n        # Step 1: Un-flatten arguments into path, query, body, etc. using parameter map",
+        "desc": "随后在 build 方法体内部，调试日志记录完 route 路径信息后，Step 1 注释标记了控制流从初始化移交至参数展平逻辑的分界点；这是 build 作为 caller 向 _unflatten_arguments 发起调用前的准备段，flat_args 以完整原始形态即将被传入展平函数，路径参数值在此阶段仍未经任何过滤或编码。",
+        "file": "src/fastmcp/utilities/openapi/director.py",
+        "line": "40-44"
+      },
+      {
+        "code": "                if location == \"path\":\n                    path_params[openapi_name] = value",
+        "desc": "在调用栈下游 _unflatten_arguments 内部，当参数映射中 location 字段判定为 path 时，代码将原始用户提供值不加任何编码地写入 path_params 字典；该节点是从 _unflatten_arguments 流向 _build_url 的关键中转点，未编码的原始值在此被收集进将被直接用于 URL 模板替换的字典结构。",
+        "file": "src/fastmcp/utilities/openapi/director.py",
+        "line": "114-115"
+      },
+      {
+        "code": "    def _build_url(\n        self, path_template: str, path_params: dict[str, Any], base_url: str\n    ) -> str:\n        \"\"\"\n        Build URL by substituting path parameters in the template.\n\n        Args:\n            path_template: OpenAPI path template (e.g., \"/users/{id}\")\n            path_params: Path parameter values\n            base_url: Base URL to prepend",
+        "desc": "_build_url 方法定义起始段接收 path_template、path_params 与 base_url，随即对 path_params 中每个值通过字符串替换直接嵌入模板占位符，不经任何编码步骤，最后经 urljoin 完成路径规范化与 base_url 拼合；含 ../ 的原始值至此触发越界寻址，是调用链自 _unflatten_arguments 流入此处后漏洞得以最终实现的操作段。",
+        "file": "src/fastmcp/utilities/openapi/director.py",
+        "line": "194-203"
+      }
+    ],
+    "verify": 0,
+    "vuln_category_l1": "SSRF",
+    "vuln_category_l2": "路径穿越辅助 SSRF",
+    "vuln_ids": [
+      "CVE-2026-32871",
+      "GHSA-VV7Q-7JX5-F767"
+    ],
+    "vuln_title": "fastmcp OpenAPIProvider 路径参数未编码导致 SSRF + 路径穿越 (CVE-2026-32871) - director.py"
+  },
+  {
+    "commit": "7325791599409de52534429897481918717a9e85",
+    "critical_operation": {
+      "code": "func (s *Server) GenerateHandler(c *gin.Context) {",
+      "desc": "GenerateHandler 是绑定到 POST /api/generate 路由的核心处理函数，接收 gin.Context 后立即开始计时并对请求体执行 ShouldBindJSON 解析，直接进入推理流程。函数入口处不存在任何身份验证或会话校验逻辑，路由层透传过来的未认证请求可直接到达此处并触发 GPU 推理资源消耗。在漏洞链路中，GenerateHandler 是攻击面的终点：一旦 r.POST 注册的路由被命中，此函数无条件执行推理操作，最终导致计算资源被任意滥用。",
+      "file": "server/routes.go",
+      "line": 176
+    },
+    "entry_id": "entry-00078",
+    "entry_point": {
+      "code": "r.POST(\"/api/generate\", s.GenerateHandler)",
+      "desc": "r.POST 将路径 /api/generate 与 GenerateHandler 绑定，完成路由注册并将推理接口暴露在公共 HTTP 层。注册时路由器挂载的全局中间件仅为跨域处理与 allowedHostsMiddleware 的 Host 头校验，未插入任何服务端身份验证拦截器。这一配置缺口是漏洞链路的起点：外部 HTTP 请求不携带任何凭据即可直接命中此路由，随后由 GenerateHandler 无条件执行推理逻辑，构成关键功能缺少认证的根本原因。",
+      "file": "server/routes.go",
+      "line": 1524
+    },
+    "origin": "GitHub Advisory Database (reviewed)",
+    "project": "ollama",
+    "repo_url": "https://github.com/ollama/ollama",
+    "report_id": "GHSA-F6MR-38G8-39RG",
+    "source_link": "https://github.com/advisories/GHSA-f6mr-38g8-39rg",
+    "trace": [
+      {
+        "code": "r.POST(\"/api/generate\", s.GenerateHandler)",
+        "desc": "作为漏洞调用链的首段，r.POST 在路由表中建立从 POST /api/generate 到 GenerateHandler 的静态映射，扮演 caller 到 callee 的分发桥梁。路由注册时框架仅在链上嵌入了跨域与 Host 头两项粗粒度前置过滤器，缺少认证中间件。随后当任意客户端发起请求时，gin 路由器依据此映射将执行权直接移交给 GenerateHandler，跳过了本应拦截未授权请求的鉴权节点，使漏洞链路得以贯通。",
+        "file": "server/routes.go",
+        "line": 1524
+      },
+      {
+        "code": "func (s *Server) GenerateHandler(c *gin.Context) {",
+        "desc": "随后，在调用栈下游，GenerateHandler 接收来自 gin 路由分发的 HTTP 请求，成为链路的终端 callee。函数开头调用 ShouldBindJSON 直接解析请求体，既未检查 Authorization 头的合法性，也未调用任何令牌验证接口。至此，从路由注册到推理执行的完整漏洞调用链闭合：路由器将未认证请求透传至此，GenerateHandler 无条件消费并调度模型推理，暴露出 GPU 计算资源与模型权限被任意访问的风险。",
+        "file": "server/routes.go",
+        "line": 176
+      }
+    ],
+    "verify": 1,
+    "vuln_category_l1": "业务逻辑",
+    "vuln_category_l2": "BL-AUTHZ-MISSING(授权缺失)",
+    "vuln_ids": [
+      "CVE-2025-63389",
+      "GHSA-F6MR-38G8-39RG"
+    ],
+    "vuln_title": "Ollama 多个 API 端点缺少服务端认证导致未授权模型管理操作 (CVE-2025-63389) - routes.go"
+  },
+  {
+    "commit": "4b1b8ba376db92ba2974b70c9faee05444157dd9",
+    "critical_operation": {
+      "code": "        const userObj = queryRunner.manager.create(User, data)",
+      "desc": "queryRunner.manager.create(User, data) 将上游透传而来的含污点数据对象直接映射到 User ORM 实体，TypeORM 会将 data 中所有匹配实体字段的属性（包括 id、createdBy、status 等本应由服务端独立管理的字段）写入数据库行，这是整条污点传播链的落库终点，批量赋值漏洞在此最终触发。",
+      "file": "packages/server/src/enterprise/services/user.service.ts",
+      "line": 101
+    },
+    "entry_id": "entry-00465",
+    "entry_point": {
+      "code": "            const data = await accountService.register(req.body)",
+      "desc": "AccountController 的 register 方法将 HTTP 请求体 req.body 未经字段白名单校验直接传入 accountService.register()，外部传入的任意 JSON 属性在此处完整流入服务层，是整条批量赋值漏洞链路的污点注入起点。",
+      "file": "packages/server/src/enterprise/controllers/account.controller.ts",
+      "line": 10
+    },
+    "origin": "GitHub Advisory Database (reviewed)",
+    "project": "FlowiseAI/Flowise",
+    "repo_url": "https://github.com/FlowiseAI/Flowise",
+    "report_id": "GHSA-48M6-CH88-55MJ",
+    "source_link": "https://github.com/advisories/GHSA-48m6-ch88-55mj",
+    "trace": [
+      {
+        "code": "router.use('/account', accountRouter)",
+        "desc": "主路由模块将 /account 路由组挂载到全局路由器，该挂载点未配置任何认证中间件，外部 HTTP 请求可以不经身份验证直接到达后续路由处理器。这一步确立了注册端点对外的可达路径，是漏洞链路的外部访问入口。",
+        "file": "packages/server/src/routes/index.ts",
+        "line": 136
+      },
+      {
+        "code": "router.post('/register', accountController.register)",
+        "desc": "账号路由模块将 POST /register 路径绑定至 accountController.register 处理函数，路由声明中未插入任何权限校验或字段过滤中间件。随后外部请求将携带完整请求体流向控制器层，这是调用链从路由层进入控制器层的衔接节点。",
+        "file": "packages/server/src/enterprise/routes/account.route.ts",
+        "line": 9
+      },
+      {
+        "code": "            const data = await accountService.register(req.body)",
+        "desc": "在控制器层，register 方法取得未经净化的 req.body 并通过 await 调用将其整体传入 accountService.register()。此处是从 HTTP 输入层流向业务服务层的关键跨越点，req.body 中的所有原始属性在这一步被完整转发，污点数据在此开始向下游服务传播。",
+        "file": "packages/server/src/enterprise/controllers/account.controller.ts",
+        "line": 10
+      },
+      {
+        "code": "    public async register(data: AccountDTO) {",
+        "desc": "AccountService.register 以 AccountDTO 类型接收来自控制器的请求数据，但运行时不对多余属性执行剥离，客户端注入的字段随参数 data 原样进入服务层。随后该方法将调用内部注册流程继续处理，是污点数据从控制器层流入核心业务服务层的函数入口节点。",
+        "file": "packages/server/src/enterprise/services/account.service.ts",
+        "line": 280
+      },
+      {
+        "code": "            data = await this.createRegisterAccount(data, queryRunner)",
+        "desc": "在调用栈下游，saveRegisterAccount 流程调用 createRegisterAccount 并将 data 对象连同数据库事务运行器一起传入，此时 data 仍携带来自客户端的服务端托管字段。createRegisterAccount 在内部进行部分字段赋值但不会覆写全部可注入属性，污点随 data 继续向更深层的用户创建逻辑传递。",
+        "file": "packages/server/src/enterprise/services/account.service.ts",
+        "line": 250
+      },
+      {
+        "code": "                data.user = await this.userService.createNewUser(data.user, queryRunner)",
+        "desc": "createRegisterAccount 从 data.user 中取出用户子对象，将其作为 Partial<User> 传入 userService.createNewUser()，再将返回值赋回 data.user。这是调用链从账号服务层跨越到用户服务层的关键节点，data.user 中可能包含的 createdBy、id 等外部注入属性随此调用流入用户持久化逻辑，距落库终点仅剩一步。",
+        "file": "packages/server/src/enterprise/services/account.service.ts",
+        "line": 130
+      },
+      {
+        "code": "    public async createNewUser(data: Partial<User>, queryRunner: QueryRunner) {",
+        "desc": "UserService.createNewUser 以宽松的 Partial<User> 类型接收来自上游 accountService 的用户数据对象，该参数类型不排除任何 User 实体属性，包括服务端应自主管理的托管字段。在调用栈下游，该方法将对 data 进行 ORM 实体映射，是污点数据进入用户持久化服务的最后一段传递入口。",
+        "file": "packages/server/src/enterprise/services/user.service.ts",
+        "line": 82
+      },
+      {
+        "code": "        const userObj = queryRunner.manager.create(User, data)",
+        "desc": "在调用链的终端，queryRunner.manager.create(User, data) 将含污点的 data 对象中所有属性直接映射到 User ORM 实体实例，TypeORM 不会过滤未在上游显式清除的服务端托管字段，最终通过 queryRunner 完成落库。此步骤与 critical_operation 锚点同位，是漏洞链路中批量赋值的实际触发点。",
+        "file": "packages/server/src/enterprise/services/user.service.ts",
+        "line": 101
+      }
+    ],
+    "verify": 1,
+    "vuln_category_l1": "业务逻辑",
+    "vuln_category_l2": "BL-MASS-ASSIGNMENT(参数/属性污染)",
+    "vuln_ids": [
+      "GHSA-48M6-CH88-55MJ"
+    ],
+    "vuln_title": "Flowise 注册端点 Mass Assignment 导致跨租户越权与权限提升（GHSA-48m6-ch88-55mj） - user.service.ts"
+  },
+  {
+    "commit": "8a5d4d5746f55a2fbb1566508bccfa729a304b60",
+    "critical_operation": {
+      "code": "\treturn safeHtml;",
+      "desc": "return safeHtml 是 htmlContent 计算属性的出口，将经 xss 净化处理后的 HTML 字符串从计算属性层（caller）移交给 Vue 模板层的 v-html 指令（callee）；尽管变量名为 safeHtml，此时字符串已携带因无引号 src 属性产生的注入片段，v-html 将其写入 DOM 后攻击者代码得以在浏览器中执行。",
+      "file": "packages/frontend/@n8n/design-system/src/components/N8nMarkdown/Markdown.vue",
+      "line": 163
+    },
+    "entry_id": "entry-00110",
+    "entry_point": {
+      "code": "\tlet contentToRender = props.content;",
+      "desc": "htmlContent 计算属性从 props.content 获取外部输入并赋给 contentToRender，是整条污点链路的起始节点；攻击者可控的 Sticky Note 内容自此未经过滤流入 md.render 下游渲染逻辑。",
+      "file": "packages/frontend/@n8n/design-system/src/components/N8nMarkdown/Markdown.vue",
+      "line": 109
+    },
+    "origin": "GitHub Advisory Database (reviewed)",
+    "project": "n8n",
+    "repo_url": "https://github.com/n8n-io/n8n",
+    "report_id": "GHSA-QPQ4-PW7F-PP8W",
+    "source_link": "https://github.com/advisories/GHSA-qpq4-pw7f-pp8w",
+    "trace": [
+      {
+        "code": "\tlet contentToRender = props.content;",
+        "desc": "trace 链路起始端（与 entry_point 坐标重合）：htmlContent 计算属性（caller）在此将 props.content 赋给 contentToRender，外部污点数据进入计算属性处理流，后续以参数形式传入 md.render（callee），标志污点传播的逻辑起点。",
+        "file": "packages/frontend/@n8n/design-system/src/components/N8nMarkdown/Markdown.vue",
+        "line": 109
+      },
+      {
+        "code": "\tconst html = md.render(contentToRender);",
+        "desc": "随后，htmlContent 计算属性（caller）将 contentToRender 传入 md.render（callee），触发 markdown-it 完整解析管线；若输入携带 YouTube 语法标记，此调用触发 youtube.ts 中注册的自定义 parser 函数，污点数据流入插件层下游处理逻辑。",
+        "file": "packages/frontend/@n8n/design-system/src/components/N8nMarkdown/Markdown.vue",
+        "line": 113
+      },
+      {
+        "code": "\t\tconst match = YOUTUBE_TAG_REGEX.exec(src.slice(pos));",
+        "desc": "在调用栈下游，markdown-it（caller）进入 youtube.ts 的 parser 函数（callee）；YOUTUBE_TAG_REGEX 对源文本执行匹配，正则允许视频 ID 后跟任意字符串，携带注入 payload 的完整输入被捕获进入 match，污点从原始字符串转为正则匹配结果。",
+        "file": "packages/frontend/@n8n/design-system/src/components/N8nMarkdown/youtube.ts",
+        "line": 32
+      },
+      {
+        "code": "\t\t\ttoken.meta = { videoId: match[1] };",
+        "desc": "仍在 parser 函数内，match[1]（含攻击者注入字符串，可包含空格与事件处理器片段）未经清洗直接写入 token.meta.videoId；污点从正则匹配结果转为结构化 token 元数据，待 renderer.rules.youtube_embed（callee）调用时被插入 HTML 属性字符串。",
+        "file": "packages/frontend/@n8n/design-system/src/components/N8nMarkdown/youtube.ts",
+        "line": 37
+      },
+      {
+        "code": "\t\t\t`src=\"${youtubeUrl}${videoId}\"`,",
+        "desc": "在 renderer.rules.youtube_embed（由 markdown-it 作为 caller 调用）中，token.meta.videoId 被直接内插到模板字符串，构造含注入内容的 iframe src 属性；该 HTML 片段返回给 md.render，随后进入 Markdown.vue 的 xss 净化回调，为无引号属性注入埋下隐患。",
+        "file": "packages/frontend/@n8n/design-system/src/components/N8nMarkdown/youtube.ts",
+        "line": 55
+      },
+      {
+        "code": "\t\t\t\t\tif (YOUTUBE_EMBED_SRC_REGEX.test(value)) {",
+        "desc": "控制流返回 Markdown.vue 的 onTagAttr 净化回调（caller），YOUTUBE_EMBED_SRC_REGEX 对 iframe src 属性值执行合法性校验；该正则允许查询字符串后缀，携带注入 payload 的 src 值顺利通过检测，分支进入 friendlyAttrValue（callee）调用路径，注入内容未被拦截。",
+        "file": "packages/frontend/@n8n/design-system/src/components/N8nMarkdown/Markdown.vue",
+        "line": 134
+      },
+      {
+        "code": "\t\t\t\t\t\treturn `src=${friendlyAttrValue(value)}`;",
+        "desc": "onTagAttr 回调（caller）调用 friendlyAttrValue（callee）处理 src 属性值，是链路中 XSS 触发的核心节点；该函数仅做基本实体转义而不添加引号，返回无引号 src=VALUE；浏览器将值中的空格视为属性分隔符，注入的 onload 等片段成为独立 HTML 属性被执行。",
+        "file": "packages/frontend/@n8n/design-system/src/components/N8nMarkdown/Markdown.vue",
+        "line": 135
+      },
+      {
+        "code": "\treturn safeHtml;",
+        "desc": "trace 链路终止端（与 critical_operation 坐标重合）：htmlContent 计算属性（caller）将携带无引号属性注入的 safeHtml 返回给 Vue 模板层，v-html 指令（callee）将其写入 DOM；浏览器解析时把注入片段识别为独立属性，攻击者植入的事件处理器随即执行。",
+        "file": "packages/frontend/@n8n/design-system/src/components/N8nMarkdown/Markdown.vue",
+        "line": 163
+      }
+    ],
+    "verify": 1,
+    "vuln_category_l1": "XSS",
+    "vuln_category_l2": "Stored XSS",
+    "vuln_ids": [
+      "CVE-2026-25054",
+      "GHSA-QPQ4-PW7F-PP8W"
+    ],
+    "vuln_title": "n8n Markdown.vue Stored XSS via unquoted HTML attribute injection - Markdown.vue"
+  },
+  {
+    "commit": "a07237779bd5391a4683a754ed95249d57a49b2c",
+    "critical_operation": {
+      "code": "listKeys: (id: string) => db.select(...).from(agentApiKeys).where(eq(agentApiKeys.agentId, id))  // 直接用攻击者传入的 id 查询任意租户密钥，无 companyId 过滤",
+      "file": "server/src/services/agents.ts",
+      "line": 595
+    },
+    "entry_id": "entry-00483",
+    "entry_point": {
+      "code": "router.get(\"/agents/:id/keys\", async (req, res) => {  // 入口：外部可达 GET 路由，无公司归属校验",
+      "file": "server/src/routes/agents.ts",
+      "line": 2012
+    },
+    "origin": "GitHub Advisory Database (reviewed)",
+    "project": "paperclipai/paperclip",
+    "repo_url": "https://github.com/paperclipai/paperclip",
+    "report_id": "GHSA-3XX2-MQJM-HG9X",
+    "source_link": "https://github.com/advisories/GHSA-3xx2-mqjm-hg9x",
+    "trace": [
+      {
+        "code": "assertBoard(req);  // 仅校验 actor 类型为 board，不校验所属公司",
+        "file": "server/src/routes/agents.ts",
+        "line": 2013
+      },
+      {
+        "code": "const id = req.params.id as string;  // 路径参数直接使用，可传入任意租户的 agent UUID",
+        "file": "server/src/routes/agents.ts",
+        "line": 2014
+      },
+      {
+        "code": "// 此处应有 assertCompanyAccess(req, agent.companyId) — 缺失，未验证调用方是否属于该 agent 所在公司",
+        "file": "server/src/routes/agents.ts",
+        "line": 2013
+      },
+      {
+        "code": "listKeys: (id: string) => db.select(...).from(agentApiKeys).where(eq(agentApiKeys.agentId, id))  // 触发点：无租户边界，返回受害租户密钥列表",
+        "file": "server/src/services/agents.ts",
+        "line": 595
+      }
+    ],
+    "verify": 1,
+    "vuln_category_l1": "业务逻辑",
+    "vuln_category_l2": "BL-AUTHZ-BROKEN(授权逻辑错误)",
+    "vuln_ids": [
+      "GHSA-3XX2-MQJM-HG9X"
+    ],
+    "vuln_title": "@paperclipai/server IDOR 允许跨租户 Agent API Key 越权操作（创建/枚举/吊销） - agents.ts"
+  },
+  {
+    "commit": "f0c1294173a55f26e0b972c39c0c16917f5ca9e7",
+    "critical_operation": {
+      "code": "            const response = await vm.run(`module.exports = async function() {${code}}()`, __dirname)",
+      "desc": "vm.run executes the user-supplied code string inside the NodeVM sandbox, wrapping it in an immediately-invoked async function. Because the sandbox was configured with http, https, and net in its builtin list without SSRF-filtering wrappers, code that runs here can call those modules directly to reach arbitrary internal hosts, bypassing the deny list that only intercepts axios and node-fetch.",
+      "file": "packages/components/src/utils.ts",
+      "line": 1685
+    },
+    "entry_id": "entry-00468",
+    "entry_point": {
+      "code": "export const executeJavaScriptCode = async (",
+      "desc": "executeJavaScriptCode is the exported async function that accepts the user-supplied JavaScript string as its code parameter. It marks the entry point of the SSRF-vulnerable execution path: from this boundary, the untrusted code travels through NodeVM sandbox configuration where the missing network-module restrictions allow it to eventually execute with full HTTP and TCP access.",
+      "file": "packages/components/src/utils.ts",
+      "line": 1494
+    },
+    "origin": "GitHub Advisory Database (reviewed)",
+    "project": "Flowise",
+    "repo_url": "https://github.com/FlowiseAI/Flowise",
+    "report_id": "GHSA-XHMJ-RG95-44HV",
+    "source_link": "https://github.com/advisories/GHSA-xhmj-rg95-44hv",
+    "trace": [
+      {
+        "code": "export const executeJavaScriptCode = async (",
+        "desc": "executeJavaScriptCode receives the raw code string passed from the Custom Function handler, marking the taint entry in the trace. No sanitization is applied to the code parameter here; the function proceeds to configure a NodeVM sandbox, and the built-in module policy assembled in that sandbox will determine whether network calls from within it are intercepted or pass through freely.",
+        "file": "packages/components/src/utils.ts",
+        "line": 1494
+      },
+      {
+        "code": "        const defaultNodeVMOptions: any = {",
+        "desc": "Subsequently, defaultNodeVMOptions is constructed, placing builtinDeps in the builtin field and secureWrappers in the mock field. This is the structural root of the vulnerability: secureWrappers applies SSRF-filtered proxies for axios and node-fetch, but the three native network modules in builtinDeps enter the sandbox without any equivalent filtering.",
+        "file": "packages/components/src/utils.ts",
+        "line": 1663
+      },
+      {
+        "code": "        const vm = new NodeVM(finalNodeVMOptions)",
+        "desc": "NodeVM is then instantiated with finalNodeVMOptions, locking in the network module policy defined in the previous step. From this point, the vm instance is configured to expose http, https, and net to any code it runs; the misconfiguration becomes irrevocable until vm.run is called and the user-supplied code gains unrestricted outbound network access.",
+        "file": "packages/components/src/utils.ts",
+        "line": 1682
+      },
+      {
+        "code": "            const response = await vm.run(`module.exports = async function() {${code}}()`, __dirname)",
+        "desc": "Finally, vm.run wraps the user-supplied code in an immediately-invoked async function and executes it inside the sandbox configured in preceding steps. This is the terminal step of the exploit chain: because the sandbox grants access to http, https, and net without SSRF interception, the injected code can call those modules to reach internal hosts and services, completing the protection bypass.",
+        "file": "packages/components/src/utils.ts",
+        "line": 1685
+      }
+    ],
+    "verify": 1,
+    "vuln_category_l1": "SSRF",
+    "vuln_category_l2": "沙箱安全控制绕过",
+    "vuln_ids": [
+      "GHSA-XHMJ-RG95-44HV"
+    ],
+    "vuln_title": "Flowise Custom Function SSRF Protection Bypass via Node.js Built-in Modules - utils.ts"
+  },
+  {
+    "commit": "5e1bfb2ce2b73a27d04e03c5049910753f09aa3f",
+    "critical_operation": {
+      "code": "  enqueueSystemEvent(`Slack interaction: ${JSON.stringify(eventPayload)}`, {",
+      "desc": "enqueueSystemEvent 将 eventPayload 序列化为 JSON 并以 System 角色投入活动会话队列，contextKey 由 contextPrefix、callbackId、viewId、userId 拼接而成。由于调用点上游缺少对提交者的授权核查，外部构造的 payload 可借此路径进入 LLM 推理上下文。",
+      "file": "src/slack/monitor/events/interactions.ts",
+      "line": 485
+    },
+    "entry_id": "entry-00254",
+    "entry_point": {
+      "code": "  registerModalLifecycleHandler({",
+      "desc": "registerModalLifecycleHandler 在此将 view_submission 类型的模态回调注册至 Bolt 应用路由，以 OPENCLAW_ACTION_PREFIX 为前缀的正则式作为匹配条件。注册时未附加任何发送方身份校验逻辑，使得能够构造合法 callback_id 的工作区成员均可触发后续事件注入链路。",
+      "file": "src/slack/monitor/events/interactions.ts",
+      "line": 675
+    },
+    "origin": "GitHub Advisory Database (reviewed)",
+    "project": "openclaw",
+    "repo_url": "https://github.com/openclaw/openclaw",
+    "report_id": "GHSA-X2FF-J5C2-GGPR",
+    "source_link": "https://github.com/advisories/GHSA-x2ff-j5c2-ggpr",
+    "trace": [
+      {
+        "code": "  registerModalLifecycleHandler({\n    register: (matcher, handler) => ctx.app.view(matcher, handler),\n    matcher: modalMatcher,\n    ctx,\n    interactionType: \"view_submission\",\n    contextPrefix: \"slack:interaction:view\",\n  });",
+        "desc": "此调用块将 view_submission 处理器绑定至 ctx.app.view()，matcher 限定为以 OPENCLAW_ACTION_PREFIX 起始的正则式，interactionType 固定为 view_submission，contextPrefix 为 slack:interaction:view。随后任何符合前缀的 modal 提交均会触发 emitSlackModalLifecycleEvent，进入授权缺失的下游链路。",
+        "file": "src/slack/monitor/events/interactions.ts",
+        "line": "675-681"
+      },
+      {
+        "code": "function emitSlackModalLifecycleEvent(params: {\n  ctx: SlackMonitorContext;\n  body: SlackModalBody;\n  interactionType: SlackModalInteractionKind;\n  contextPrefix: \"slack:interaction:view\" | \"slack:interaction:view-closed\";\n}): void {\n  const { callbackId, userId, viewId, sessionRouting, payload } = resolveSlackModalEventBase({\n    ctx: params.ctx,\n    body: params.body,\n  });",
+        "desc": "emitSlackModalLifecycleEvent 接收 SlackModalBody 及上下文参数，随后调用 resolveSlackModalEventBase 从 body 中解构出 callbackId、userId、viewId、sessionRouting 及 payload。sessionRouting 来源于 private_metadata 的解析结果，在调用栈下游将直接决定系统事件投递的目标会话，此处同样未对 userId 做合法性验证。",
+        "file": "src/slack/monitor/events/interactions.ts",
+        "line": "452-461"
+      },
+      {
+        "code": "export function parseSlackModalPrivateMetadata(raw: unknown): SlackModalPrivateMetadata {",
+        "desc": "parseSlackModalPrivateMetadata 将 modal 的 private_metadata 字符串反序列化为 SlackModalPrivateMetadata 对象，由此进入 sessionKey、channelId、channelType 三字段的提取逻辑。该类型定义中缺少用于绑定原始发起者的 expectedUserId 字段，致使 resolveSlackModalEventBase 无法在解析阶段核查提交者与 modal 创建者的一致性。",
+        "file": "src/slack/modal-metadata.ts",
+        "line": 13
+      },
+      {
+        "code": "  enqueueSystemEvent(`Slack interaction: ${JSON.stringify(eventPayload)}`, {",
+        "desc": "在调用栈下游，enqueueSystemEvent 以模板字符串形式拼接 eventPayload 的 JSON 序列化结果，投入与 sessionRouting.sessionKey 绑定的会话队列。至此，经由 view_submission 回调传入的 payload 完成了从 Slack 交互层到 System 事件队列的全程注入，发送方身份始终未受校验。",
+        "file": "src/slack/monitor/events/interactions.ts",
+        "line": 485
+      }
+    ],
+    "verify": 1,
+    "vuln_category_l1": "业务逻辑",
+    "vuln_category_l2": "BL-AUTHZ-BROKEN(授权逻辑错误)",
+    "vuln_ids": [
+      "CVE-2026-32005",
+      "GHSA-X2FF-J5C2-GGPR"
+    ],
+    "vuln_title": "openclaw Slack 回调授权绕过漏洞 (CVE-2026-32005) - interactions.ts"
+  },
+  {
+    "commit": "55b6913c03f0dba37cc207975f0c0d0786e0f3c7",
+    "critical_operation": {
+      "code": "export async function checkDenyList(url: string): Promise<void> {",
+      "desc": "checkDenyList 函数声明处接收来自 secureFetch 传入的目标 URL，是系统中唯一负责拒绝列表校验的防护函数。由于 HTTP_DENY_LIST 环境变量在默认部署下未配置，函数入口处立即提前返回，对私有地址段、回环地址及云元数据端点均不执行过滤，是整条 SSRF 利用链成立的根因所在。",
+      "file": "packages/components/src/httpSecurity.ts",
+      "line": 38
+    },
+    "entry_id": "entry-00278",
+    "entry_point": {
+      "code": "router.post(",
+      "desc": "router.post( 在路由层将 POST 预测接口的 / 与 /:id 路径绑定至 prediction 处理中间件。该路由被服务端白名单放行，无需 API Key 鉴权，任意外部请求可直接进入 chatflow 调度链路，是整条 SSRF 利用路径的无鉴权网络入口，使后续对内网地址的请求构造成为可能。",
+      "file": "packages/server/src/routes/predictions/index.ts",
+      "line": 10
+    },
+    "origin": "GitHub Advisory Database (reviewed)",
+    "project": "Flowise",
+    "repo_url": "https://github.com/FlowiseAI/Flowise",
+    "report_id": "GHSA-FVCW-9W9R-PXC7",
+    "source_link": "https://github.com/advisories/GHSA-fvcw-9w9r-pxc7",
+    "trace": [
+      {
+        "code": "router.post(",
+        "desc": "router.post( 构成调用链的起点，外部 POST 请求经无鉴权路由进入服务器处理管道。随后执行控制权从 Express 框架流向 chatflow 内部调度层，攻击者在请求体中注入的目标 URL 随参数进入后续链路，开始向 HTTP 请求执行层传递。",
+        "file": "packages/server/src/routes/predictions/index.ts",
+        "line": 10
+      },
+      {
+        "code": "        let result = await endingNodeInstance.run(endingNodeData, finalQuestion, runParams)",
+        "desc": "在 buildChatflow 调度层，endingNodeInstance.run 将执行控制权从流程编排器移交给末端节点（本利用路径中为 RequestsGet 工具节点）。run 调用携带节点配置数据与用户输入，包含可控的目标 URL，随后将参数传入节点执行层，向下游 HTTP 请求构造阶段传递控制权。",
+        "file": "packages/server/src/utils/buildChatflow.ts",
+        "line": 778
+      },
+      {
+        "code": "        const inputUrl = this.url",
+        "desc": "在 RequestsGet 节点的 run 方法内，inputUrl = this.url 从节点实例属性中读取目标 URL，该值来源于用户可控的 chatflow 配置或输入注入。这是服务端 HTTP 请求目标被攻击者控制的关键赋值点，后续 finalUrl 由此构造并最终传入 secureFetch。",
+        "file": "packages/components/nodes/tools/RequestsGet/core.ts",
+        "line": 96
+      },
+      {
+        "code": "            const res = await secureFetch(finalUrl, {",
+        "desc": "随后 secureFetch(finalUrl, ...) 将构造完成的目标 URL 从 RequestsGet 业务逻辑层传入 httpSecurity 安全封装层。该调用名义上借助 secureFetch 内部防护链拦截内网地址，但实际防护依赖 checkDenyList，而后者在默认配置下已提前返回，请求将被无限制地转发至目标地址。",
+        "file": "packages/components/nodes/tools/RequestsGet/core.ts",
+        "line": 170
+      },
+      {
+        "code": "    await checkDenyList(currentUrl)",
+        "desc": "在 secureFetch 函数体内，await checkDenyList(currentUrl) 以待发送的 URL 为参数进入拒绝列表过滤函数，构成从安全封装层到 URL 过滤防护函数的唯一跨越点。这是整条链路本应拦截内网地址的最后关卡；由于 HTTP_DENY_LIST 环境变量未配置，callee 在入口处直接返回，防护失效。",
+        "file": "packages/components/src/httpSecurity.ts",
+        "line": 175
+      },
+      {
+        "code": "export async function checkDenyList(url: string): Promise<void> {",
+        "desc": "checkDenyList 函数在此声明并接收 secureFetch 传入的目标 URL 参数，是调用链的终止点。HTTP_DENY_LIST 环境变量在默认部署中未设置，函数入口逻辑提前返回，对私有地址段、回环地址及云元数据端点均不执行过滤，与调用链起点的无鉴权路由共同构成完整的 SSRF 利用闭环。",
+        "file": "packages/components/src/httpSecurity.ts",
+        "line": 38
+      }
+    ],
+    "verify": 1,
+    "vuln_category_l1": "SSRF",
+    "vuln_category_l2": "服务端请求伪造",
+    "vuln_ids": [
+      "CVE-2026-31829",
+      "GHSA-FVCW-9W9R-PXC7"
+    ],
+    "vuln_title": "Flowise HTTP Node 默认无 SSRF 防护 (CVE-2026-31829) - httpSecurity.ts"
+  },
+  {
+    "commit": "9942de8011d4b5a141ac507c974c061c0cdad59a",
+    "critical_operation": {
+      "code": "tempDiv.innerHTML = htmlContent;",
+      "desc": "tempDiv.innerHTML = htmlContent 将 marked.parse() 输出的 HTML 字符串直接赋值给 DOM 节点，使浏览器对其内容进行完整解析；此赋值前缺少净化处理，当 htmlContent 携带可执行脚本时，浏览器在此完成脚本注入，是整条链路的最终利用点。",
+      "file": "src/lib/components/common/RichTextInput.svelte",
+      "line": 348
+    },
+    "entry_id": "entry-00057",
+    "entry_point": {
+      "code": "insertTextHandler(data.content);",
+      "desc": "insertTextHandler 以 data.content 为实参被调用，将补全列表中用户选中的提示词 content 字段注入插入处理流程；data.content 直接源自后端持久化的提示词记录，在此处未经任何过滤便向下游传递，构成整条漏洞利用链的触发起点。",
+      "file": "src/lib/components/chat/MessageInput/CommandSuggestionList.svelte",
+      "line": 97
+    },
+    "origin": "GitHub Advisory Database (reviewed)",
+    "project": "open-webui",
+    "repo_url": "https://github.com/open-webui/open-webui",
+    "report_id": "GHSA-W7XJ-8FX7-WFCH",
+    "source_link": "https://github.com/advisories/GHSA-w7xj-8fx7-wfch",
+    "trace": [
+      {
+        "code": "insertTextHandler(data.content);",
+        "desc": "insertTextHandler(data.content) 作为漏洞传播链的起始节点，在用户选中补全项后立即被触发；data.content 携带从 store 中取出的原始提示词内容，未经校验即向调用栈下游转发，开启后续富文本渲染流程。",
+        "file": "src/lib/components/chat/MessageInput/CommandSuggestionList.svelte",
+        "line": 97
+      },
+      {
+        "code": "@router.post(\"/create\", response_model=Optional[PromptModel])",
+        "desc": "@router.post(\"/create\") 注册提示词创建接口，授权用户可通过此端点向数据库写入任意 content 字段；恶意构造的 HTML 字符串经此接口被持久化存储，成为前端后续加载与渲染时 XSS 的载荷来源，是漏洞链路中载荷写入的持久化节点。",
+        "file": "backend/open_webui/routers/prompts.py",
+        "line": 47
+      },
+      {
+        "code": "prompts.set(await getPrompts(localStorage.token));",
+        "desc": "getPrompts 向后端请求全量提示词列表，返回结果随即经 prompts.set 写入 Svelte store；由前一步持久化的恶意 content 在此步骤被拉取至前端内存，使恶意条目在补全列表中变为可被用户选中的状态。",
+        "file": "src/lib/components/chat/MessageInput/CommandSuggestionList.svelte",
+        "line": 30
+      },
+      {
+        "code": "onSelect={(e) => {",
+        "desc": "onSelect 回调在用户从补全列表中点选提示词条目时被激活；该处理函数接收选中项并将其数据向 insertTextHandler 方向传递，将界面操作转化为内容插入调用，是交互层与插入逻辑之间的衔接节点。",
+        "file": "src/lib/components/chat/MessageInput/CommandSuggestionList.svelte",
+        "line": 93
+      },
+      {
+        "code": "const replaceCommandWithText = (text) => {",
+        "desc": "replaceCommandWithText 定义了将斜杠命令占位符替换为提示词正文的处理逻辑，接收由 onSelect 向下传递的 text 参数；随后该函数将内容路由至 RichTextInput 的 insertTextHandler，使原始字符串在未经净化的情况下继续向渲染层流动。",
+        "file": "src/lib/components/chat/MessageInput.svelte",
+        "line": 324
+      },
+      {
+        "code": "insertPromptAsRichText={$settings?.insertPromptAsRichText ?? false}",
+        "desc": "insertPromptAsRichText 属性将 $settings.insertPromptAsRichText 配置值以 prop 形式向 RichTextInput 组件注入；该布尔标志直接控制下游是否进入 innerHTML 赋值分支，当用户启用此选项时，在调用栈下游的 HTML 解析路径随即被激活。",
+        "file": "src/lib/components/chat/MessageInput.svelte",
+        "line": 1207
+      },
+      {
+        "code": "if (insertPromptAsRichText) {",
+        "desc": "if (insertPromptAsRichText) 依据由前一步传入的 prop 值决定执行路径；条件为真时进入富文本插入分支，后续代码将对 htmlContent 执行 innerHTML 赋值，该判断是安全路径与危险路径的唯一分叉点，直接决定漏洞利用路径是否开启。",
+        "file": "src/lib/components/common/RichTextInput.svelte",
+        "line": 338
+      },
+      {
+        "code": "const tempDiv = document.createElement('div');\n\t\t\ttempDiv.innerHTML = htmlContent;",
+        "desc": "document.createElement('div') 创建临时节点，随后 tempDiv.innerHTML 直接接收 htmlContent 字符串并触发浏览器 HTML 解析；该赋值前未调用任何净化函数，含有脚本标签的内容在此被执行，完成由持久化写入、前端加载、用户触发逐步推进的存储型 XSS 链路终点。",
+        "file": "src/lib/components/common/RichTextInput.svelte",
+        "line": "347-348"
+      }
+    ],
+    "verify": 1,
+    "vuln_category_l1": "XSS",
+    "vuln_category_l2": "Stored XSS",
+    "vuln_ids": [
+      "CVE-2025-64495",
+      "GHSA-W7XJ-8FX7-WFCH"
+    ],
+    "vuln_title": "Open WebUI Stored DOM XSS via Prompt Insertion Rich Text Feature"
+  },
+  {
+    "commit": "3af9095245be3aaad6bc16622f379f79c6c6068f",
+    "critical_operation": {
+      "code": "\t\t\t\t\t\tallowedFilesMimeTypes: ${JSON.stringify(sanitizedAllowedFilesMimeTypes)},",
+      "desc": "templates.ts 的模板字符串中，JSON.stringify(sanitizedAllowedFilesMimeTypes) 将经过 toString() 的值直接序列化后嵌入 script type=module 块内的 JS 对象字面量；由于 JSON.stringify 不转义 </script> 序列，含有此类序列的字符串可突破脚本上下文边界，在页面中注入任意脚本，是漏洞链路中最终触发 XSS 的关键步骤。",
+      "file": "packages/@n8n/nodes-langchain/nodes/trigger/ChatTrigger/templates.ts",
+      "line": 158
+    },
+    "entry_id": "entry-00189",
+    "entry_point": {
+      "code": "\t\t\t\t\tallowedFilesMimeTypes: options.allowedFilesMimeTypes,",
+      "desc": "allowedFilesMimeTypes 字段从工作流节点选项对象 options 中读取用户可控字符串，不加任何校验或净化地传入 createPage() 调用的参数对象，是不可信值进入页面渲染管线的原始注入点，也是整个存储型 XSS 漏洞链路的起点。",
+      "file": "packages/@n8n/nodes-langchain/nodes/trigger/ChatTrigger/ChatTrigger.node.ts",
+      "line": 819
+    },
+    "origin": "GitHub Advisory Database (reviewed)",
+    "project": "n8n",
+    "repo_url": "https://github.com/n8n-io/n8n",
+    "report_id": "GHSA-2P9H-RQJW-GM92",
+    "source_link": "https://github.com/advisories/GHSA-2p9h-rqjw-gm92",
+    "trace": [
+      {
+        "code": "\t\t\t\t\tallowedFilesMimeTypes: options.allowedFilesMimeTypes,",
+        "desc": "trace 链路首步：options.allowedFilesMimeTypes 字段将 Chat Trigger 节点配置中由工作流创建者写入的 MIME 类型字符串，作为具名字段打包进传入 createPage() 的参数对象；此处是用户可控值离开配置层、进入页面生成逻辑的第一个节点，为后续净化不足埋下隐患。",
+        "file": "packages/@n8n/nodes-langchain/nodes/trigger/ChatTrigger/ChatTrigger.node.ts",
+        "line": 819
+      },
+      {
+        "code": "\t\t\t\tconst page = createPage({",
+        "desc": "随后 createPage() 在 ChatTrigger.node.ts 中被调用，整个包含 allowedFilesMimeTypes 的配置对象以参数形式从 caller 流向 templates.ts 中的 callee；这一调用是用户可控值跨越模块边界、进入 HTML/JS 模板渲染函数的关键跳转，决定了后续净化逻辑将由 templates.ts 独立承担。",
+        "file": "packages/@n8n/nodes-langchain/nodes/trigger/ChatTrigger/ChatTrigger.node.ts",
+        "line": 807
+      },
+      {
+        "code": "\tconst sanitizedAllowedFilesMimeTypes = allowedFilesMimeTypes?.toString() ?? '';",
+        "desc": "在调用栈下游的 templates.ts 中，sanitizedAllowedFilesMimeTypes 对上游传入的 allowedFilesMimeTypes 仅执行 .toString()，以可选链防空后赋值；toString() 不过滤 HTML 特殊字符或 </script> 序列，净化效果形同虚设，使后续模板嵌入步骤直接面对含恶意 payload 的字符串。",
+        "file": "packages/@n8n/nodes-langchain/nodes/trigger/ChatTrigger/templates.ts",
+        "line": 80
+      },
+      {
+        "code": "\t\t\t\t\t\tallowedFilesMimeTypes: ${JSON.stringify(sanitizedAllowedFilesMimeTypes)},",
+        "desc": "链路终点：JSON.stringify(sanitizedAllowedFilesMimeTypes) 在模板字符串内将仅经过 toString() 处理的值嵌入 script type=module 块中，与 critical_operation 锚点完全重合；JSON.stringify 不转义 </script> 序列，含有该标签的字符串可终结当前脚本块并在 HTML 文档流中插入后续节点，完成存储型 XSS 的触发。",
+        "file": "packages/@n8n/nodes-langchain/nodes/trigger/ChatTrigger/templates.ts",
+        "line": 158
+      }
+    ],
+    "verify": 1,
+    "vuln_category_l1": "XSS",
+    "vuln_category_l2": "存储型XSS",
+    "vuln_ids": [
+      "CVE-2026-27578",
+      "GHSA-2P9H-RQJW-GM92"
+    ],
+    "vuln_title": "n8n 工作流节点存储型 XSS (CVE-2026-27578) - templates.ts"
+  },
+  {
+    "commit": "a5d1233b969f66219cf183ec43349089169f1f88",
+    "critical_operation": {
+      "code": "\t\tchromedp.Navigate(targetURL),",
+      "desc": "chromedp.Navigate(targetURL) 在 fetchWithChromedp 内向无头 Chrome 实例下达导航指令，targetURL 仍为原始主机名字符串，触发 Chrome 进程发起独立的第二次 DNS 解析。opts 构建阶段未注入 DNS 固定参数，Chrome 的解析结果不受 validateParams 阶段已校验 IP 的任何约束，两次解析之间的 DNS 切换可令 Chrome 连接到内网地址，是整条漏洞链路中 SSRF 完成的最终执行点。",
+      "file": "internal/agent/tools/web_fetch.go",
+      "line": 413
+    },
+    "entry_id": "entry-00276",
+    "entry_point": {
+      "code": "func (t *WebFetchTool) Execute(ctx context.Context, args json.RawMessage) (*types.ToolResult, error) {",
+      "desc": "WebFetchTool.Execute 是 web_fetch 工具的顶层公开入口，接收外部 JSON 参数后依次触发参数解析、SSRF 安全校验与内容抓取三个阶段。两阶段流程共用原始主机名字符串而非已固定 IP，validateParams 的校验结果不向下传播，使整条调用链在时间窗口内存在 DNS 重绑定风险，是漏洞链路的结构性起点。",
+      "file": "internal/agent/tools/web_fetch.go",
+      "line": 89
+    },
+    "origin": "GitHub Advisory Database (reviewed)",
+    "project": "WeKnora",
+    "repo_url": "https://github.com/Tencent/WeKnora",
+    "report_id": "GHSA-H6GW-8F77-MMMP",
+    "source_link": "https://github.com/advisories/GHSA-h6gw-8f77-mmmp",
+    "trace": [
+      {
+        "code": "func (t *WebFetchTool) Execute(ctx context.Context, args json.RawMessage) (*types.ToolResult, error) {",
+        "desc": "Execute 函数在此作为整条调用链的顶层 caller，接受 JSON 参数输入并初始化执行环境，是从 Agent 框架流向 web_fetch 内部逻辑的第一步跳转。从这里开始，原始 URL 字符串被纳入处理管道，校验阶段与执行阶段均以此处的参数为数据来源；漏洞的根因在于该字符串在全程未被替换为已验证的 IP 地址，两阶段的隔离由此成为可能。",
+        "file": "internal/agent/tools/web_fetch.go",
+        "line": 89
+      },
+      {
+        "code": "\t\tparams := webFetchParams{",
+        "desc": "随后在 Execute 内部，webFetchParams 结构体在此被初始化，将外部输入的目标 URL 封装进 params.URL 字段，是从顶层 caller 流向参数构造阶段的内部步骤。params 对象随后将被同时传入 validateParams 进行校验和 executeFetch 进行实际抓取，两个阶段共用同一 params.URL 原始主机名字段，是 TOCTOU-DNS 数据路径的起点。",
+        "file": "internal/agent/tools/web_fetch.go",
+        "line": 119
+      },
+      {
+        "code": "\t\t\tif err := t.validateParams(p); err != nil {",
+        "desc": "Execute 在此将 params 传入 validateParams，是从 Execute caller 流向安全校验 callee 的关键跳转节点。validateParams 内部调用 utils.IsSSRFSafeURL 完成第一次 DNS 解析与私有 IP 校验；随后执行流返回 Execute 后立即推进到 executeFetch，校验阶段解析得到的 IP 不被上传，原始主机名字符串独自进入执行阶段，TOCTOU 时间窗口由此打开。",
+        "file": "internal/agent/tools/web_fetch.go",
+        "line": 127
+      },
+      {
+        "code": "\tif safe, reason := utils.IsSSRFSafeURL(p.URL); !safe {",
+        "desc": "validateParams 在此调用 utils.IsSSRFSafeURL(p.URL)，是从参数校验 caller 流向 SSRF 安全检查 callee 的跳转。IsSSRFSafeURL 对 p.URL 发起第一次 DNS 解析并判断所得 IP 是否为私有地址，通过则返回 safe=true；然而解析所得 IP 仅用于本次布尔判断，不被捕获传回，p.URL 中的主机名随后原封不动地流向执行阶段，IP 固定机制的缺失在此处最为直接。",
+        "file": "internal/agent/tools/web_fetch.go",
+        "line": 250
+      },
+      {
+        "code": "\tips, err := net.LookupIP(hostname)",
+        "desc": "在调用栈下游，net.LookupIP(hostname) 在 IsSSRFSafeURL 内部执行，是从安全检查 caller 到系统 DNS 解析器 callee 的底层跳转，完成整条漏洞链路中的第一次 DNS 解析。解析结果 ips 被用于私有 IP 判断后即被丢弃，既未固定到 params，也未替换传入执行阶段的主机名；此时 hostname 解析为合法公网 IP，但该结果在链路下游完全失效，是 TOCTOU-DNS 断裂点的核心位置。",
+        "file": "internal/utils/security.go",
+        "line": 356
+      },
+      {
+        "code": "\t\t\toutput, data, err := t.executeFetch(ctx, p)",
+        "desc": "校验通过后，Execute 在此调用 executeFetch，是从安全校验阶段 caller 流向实际抓取执行阶段 callee 的分水岭。params（含未经 IP 固定的原始 params.URL）被完整传入 executeFetch，第一次 DNS 解析的结果在此步骤中已完全缺席；从这一步起，执行路径与校验路径彻底脱钩，DNS 重绑定的利用时间窗口正式激活。",
+        "file": "internal/agent/tools/web_fetch.go",
+        "line": 140
+      },
+      {
+        "code": "\tfinalURL := t.normalizeGitHubURL(params.URL)",
+        "desc": "executeFetch 在此调用 normalizeGitHubURL(params.URL) 对 URL 执行路径规范化，将结果赋值给 finalURL，是从 executeFetch caller 到 URL 规范化 callee 的内部步骤。此处仅做格式转换，不涉及 DNS 解析或 IP 固定；随后 finalURL 仍携带原始主机名字符串，被传入 fetchHTMLContent，沿执行链向无头浏览器方向继续推进。",
+        "file": "internal/agent/tools/web_fetch.go",
+        "line": 264
+      },
+      {
+        "code": "\thtmlContent, method, err := t.fetchHTMLContent(ctx, finalURL)",
+        "desc": "在调用栈下游，fetchHTMLContent 被 executeFetch 以 finalURL 调用，是从执行层 caller 流向 HTML 获取 callee 的衔接节点。fetchHTMLContent 内部根据渲染需求选择抓取策略，并在需要 JavaScript 渲染时委托 fetchWithChromedp 处理；此时 finalURL 中的主机名仍未经 IP 固定，即将被传入 Chrome 触发独立解析，漏洞链路进入临界阶段。",
+        "file": "internal/agent/tools/web_fetch.go",
+        "line": 266
+      },
+      {
+        "code": "\thtml, err := t.fetchWithChromedp(ctx, targetURL)",
+        "desc": "随后，fetchWithChromedp 被 fetchHTMLContent 以 targetURL 调用，是从 HTML 获取 caller 流向 Chrome 驱动 callee 的最终函数跳转。targetURL 此时仍为携带原始主机名的字符串；进入 fetchWithChromedp 后 Chrome 实例将被启动并对 targetURL 发起独立 DNS 解析，DNS 重绑定攻击链从准备阶段切换至执行阶段，第二次解析即将触发。",
+        "file": "internal/agent/tools/web_fetch.go",
+        "line": 365
+      },
+      {
+        "code": "\topts := append(",
+        "desc": "opts := append 在 fetchWithChromedp 内部组装无头 Chrome 的启动参数列表，是从参数配置 caller 到 chromedp 执行 callee 之间的准备阶段。此处是注入 --host-resolver-rules 以将主机名锁定到已校验 IP 的唯一合理位置；opts 中缺少该 DNS 固定指令，导致 Chrome 进程可自由发起独立 DNS 解析，固定机制的缺失在此步骤最终确立，为随后 chromedp.Navigate 触发第二次解析铺路。",
+        "file": "internal/agent/tools/web_fetch.go",
+        "line": 389
+      },
+      {
+        "code": "\t\tchromedp.Navigate(targetURL),",
+        "desc": "chromedp.Navigate(targetURL) 作为 trace 链路的终点，在 fetchWithChromedp 内指示无头 Chrome 执行导航任务，是从 opts 配置完成的 caller 到 chromedp 任务执行 callee 的最终调用。Chrome 在此独立完成第二次 DNS 解析，由于 opts 缺少 DNS 固定规则，解析结果可切换到内网地址；至此 DNS 重绑定攻击链完全闭合，SSRF 访问内网目标得以实现。",
+        "file": "internal/agent/tools/web_fetch.go",
+        "line": 413
+      }
+    ],
+    "verify": 1,
+    "vuln_category_l1": "SSRF",
+    "vuln_category_l2": "DNS重绑定（DNS Rebinding）",
+    "vuln_ids": [
+      "CVE-2026-30858",
+      "GHSA-H6GW-8F77-MMMP"
+    ],
+    "vuln_title": "WeKnora web_fetch DNS Rebinding SSRF via TOCTOU (CVE-2026-30858)"
+  },
+  {
+    "commit": "c861862aededc7294cea5634d77e6926444ca101",
+    "critical_operation": {
+      "code": "                parts = resource_uri.split(\"/\")",
+      "desc": "resource_uri.split 以斜杠字符分割字符串并逆向提取路径参数值，是路径穿越在运行时的关键触发点。由于上游 create_resource 及 OpenAPIResource 构造器均未对 uri 进行编码，此处提取出的含 ../ 路径段会直接替换进 API URL 模板，使后续 HTTP 请求突破预期前缀边界。",
+      "file": "src/fastmcp/server/providers/openapi/components.py",
+      "line": 294
+    },
+    "entry_id": "entry-00395",
+    "entry_point": {
+      "code": "    async def create_resource(",
+      "desc": "OpenAPIResourceTemplate 的工厂方法 create_resource 接收外部传入的 uri 参数，在漏洞链路中充当污点值首次进入系统的注入点。此处对 uri 不施加任何 URL 编码或路径合法性校验，含有 ../ 序列的值得以原样向下流动，奠定后续路径穿越的基础。",
+      "file": "src/fastmcp/server/providers/openapi/components.py",
+      "line": 402
+    },
+    "origin": "GitHub Advisory Database (reviewed)",
+    "project": "fastmcp",
+    "repo_url": "https://github.com/PrefectHQ/fastmcp",
+    "report_id": "GHSA-VV7Q-7JX5-F767",
+    "source_link": "https://github.com/advisories/GHSA-vv7q-7jx5-f767",
+    "trace": [
+      {
+        "code": "    async def create_resource(",
+        "desc": "调用链起点，对应从外部调用方流向 create_resource 的入口段，与 entry_point 所指位置相同。外部传入的 uri 参数在此首次出现于调用栈，缺乏编码校验使污点值自入口即固化，随后沿调用链向下游各步骤传播。",
+        "file": "src/fastmcp/server/providers/openapi/components.py",
+        "line": 402
+      },
+      {
+        "code": "        return OpenAPIResource(",
+        "desc": "随后从 create_resource 流向 OpenAPIResource 构造器的传递段：return OpenAPIResource 将未经编码的 uri 作为初始化参数传入，使污点值跨越函数边界，由临时局部变量转变为持久化的实例属性 self.uri。此步骤衔接 entry_point 所描述的注入阶段，为 read 方法中的后续消费做好准备。",
+        "file": "src/fastmcp/server/providers/openapi/components.py",
+        "line": 411
+      },
+      {
+        "code": "            resource_uri = str(self.uri)",
+        "desc": "在调用栈下游的 read 方法中，从实例状态流向字符串操作的激活段：resource_uri = str(self.uri) 将构造阶段持久化的 self.uri 转换为字符串，污点值由此重新进入活跃的数据流，为随后的按斜杠切分操作直接提供原始输入。",
+        "file": "src/fastmcp/server/providers/openapi/components.py",
+        "line": 290
+      },
+      {
+        "code": "                parts = resource_uri.split(\"/\")",
+        "desc": "经由 create_resource 注入、OpenAPIResource 构造器持久化、read 方法中 str 转换激活，最终流向按斜杠切分操作的终点段。resource_uri 在此被分割后提取出含 ../ 的路径段，替换进 API 模板引发路径穿越，与 critical_operation 所描述触发逻辑一致，漏洞链路至此完成闭环。",
+        "file": "src/fastmcp/server/providers/openapi/components.py",
+        "line": 294
+      }
+    ],
+    "verify": 1,
+    "vuln_category_l1": "SSRF",
+    "vuln_category_l2": "路径穿越辅助 SSRF",
+    "vuln_ids": [
+      "CVE-2026-32871",
+      "GHSA-VV7Q-7JX5-F767"
+    ],
+    "vuln_title": "fastmcp OpenAPIProvider 路径参数未编码导致 SSRF + 路径穿越 (CVE-2026-32871) - components.py"
+  },
+  {
+    "commit": "3a93a7bb1e47070a010cc190d005daa2ada8f0e5",
+    "critical_operation": {
+      "code": "const result = await pw.evaluateViaPlaywright(evalRequest);",
+      "desc": "pw.evaluateViaPlaywright(evalRequest) 接收含 fn 字段的请求对象，通过 Playwright 在目标浏览器 Tab 中执行任意 JavaScript 并将结果返回给调用方。这是整条利用链的最终触发点：缺失认证中间件使任何本地进程或 SSRF 来源均可传入任意 fn 字符串并获得在浏览器上下文中的执行权。",
+      "file": "src/browser/routes/agent.act.ts",
+      "line": 304
+    },
+    "entry_id": "entry-00188",
+    "entry_point": {
+      "code": "export function registerBrowserAgentActRoutes(",
+      "desc": "registerBrowserAgentActRoutes 向 Express 应用注册 POST /act 路由，将浏览器 agent 动作（含 evaluate 子命令）暴露为 HTTP 端点。该函数声明是漏洞面的入口定义——browser-control 服务启动时若 auth bootstrap 失败，此处挂载的所有路由将在无认证中间件的状态下对任何能访问回环地址的调用方开放。",
+      "file": "src/browser/routes/agent.act.ts",
+      "line": 21
+    },
+    "origin": "GitHub Advisory Database (reviewed)",
+    "project": "OpenClaw",
+    "repo_url": "https://github.com/openclaw/openclaw",
+    "report_id": "GHSA-VPJ2-69HF-RPPW",
+    "source_link": "https://github.com/advisories/GHSA-vpj2-69hf-rppw",
+    "trace": [
+      {
+        "code": "export function registerBrowserAgentActRoutes(",
+        "desc": "registerBrowserAgentActRoutes 是调用链的起始节点，接收已创建的 Express 实例并在其上注册 POST /act 处理器。该函数自身不含鉴权逻辑，依赖上游在 app 上预先挂载认证中间件；当上游因 fail-open 未注册中间件时，从本函数起的所有下游路由均以裸露状态接收请求，污点流从此处开始向 evaluate 分支传播。",
+        "file": "src/browser/routes/agent.act.ts",
+        "line": 21
+      },
+      {
+        "code": "case \"evaluate\": {",
+        "desc": "随后 POST /act 处理器内部的 switch 语句将 kind=evaluate 的请求分发至此分支。代码先验证 evaluateEnabled 标志是否开启、校验 fn 字段是否非空，再将 fn、ref、cdpUrl、targetId 等字段组装为 evalRequest 对象，污点数据自此向下流向 pw.evaluateViaPlaywright 调用点。",
+        "file": "src/browser/routes/agent.act.ts",
+        "line": 277
+      },
+      {
+        "code": "const result = await pw.evaluateViaPlaywright(evalRequest);",
+        "desc": "在 evaluate 分支的末尾，pw.evaluateViaPlaywright(evalRequest) 将 evalRequest.fn 携带的 JavaScript 字符串递交给 Playwright 执行并返回结果。该调用是认证绕过后果的物化之处——由于上游 fail-open 启动未注册任何鉴权中间件，未经身份验证的调用方传入的脚本字符串在此获得浏览器上下文的执行能力。",
+        "file": "src/browser/routes/agent.act.ts",
+        "line": 304
+      }
+    ],
+    "verify": 1,
+    "vuln_category_l1": "业务逻辑",
+    "vuln_category_l2": "BL-INSECURE-DEFAULT(不安全默认配置)",
+    "vuln_ids": [
+      "CVE-2026-32041",
+      "GHSA-VPJ2-69HF-RPPW"
+    ],
+    "vuln_title": "OpenClaw 浏览器控制接口认证绕过 (CVE-2026-32041) - agent.act.ts"
+  },
+  {
+    "commit": "8ab4492e8c0b743455e51fc111441d8d5010a6ad",
+    "critical_operation": {
+      "code": "export const PrototypeSanitizer: ASTAfterHook = (ast, dataNode) => {",
+      "desc": "PrototypeSanitizer 以 ASTAfterHook 接口实现，是表达式沙箱在编译阶段对抽象语法树执行后处理遍历的核心钩子函数，负责拦截危险属性访问节点（如对 .constructor 的引用）以阻止原型链操控。然而该函数缺少对 WithStatement 节点的访问处理器，导致 with 语句可将函数对象的 .constructor 悄然注入词法作用域，从而绕过现有防御。在漏洞链路中，PrototypeSanitizer 是沙箱逃逸的核心缺失点：整条链路的防御完整性依赖于此函数对所有危险 AST 节点类型的覆盖，而该遗漏使沙箱约束实质性失效。",
+      "file": "packages/workflow/src/expression-sandboxing.ts",
+      "line": 244
+    },
+    "entry_id": "entry-00099",
+    "entry_point": {
+      "code": "\t@Post('/:workflowId/run')",
+      "desc": "@Post('/:workflowId/run') 是 WorkflowsController 中工作流执行路由的装饰器，将对应控制器方法注册为可被低权限认证用户通过网络直接触达的 HTTP POST 端点。请求体携带的工作流节点参数（包含用户自定义的表达式字符串）由此处进入系统，并随调用链向下传递至表达式解析与沙箱求值子系统。在漏洞链路中，该端点是用户可控表达式从外部网络进入内部执行管道的最外层入口，决定了沙箱绕过攻击具备网络可达性。",
+      "file": "packages/cli/src/workflows/workflows.controller.ts",
+      "line": 539
+    },
+    "origin": "GitHub Advisory Database (reviewed)",
+    "project": "n8n",
+    "repo_url": "https://github.com/n8n-io/n8n",
+    "report_id": "GHSA-5XRP-6693-JJX9",
+    "source_link": "https://github.com/advisories/GHSA-5xrp-6693-jjx9",
+    "trace": [
+      {
+        "code": "\t@Post('/:workflowId/run')",
+        "desc": "@Post('/:workflowId/run') 路由装饰器标志着调用栈中从 HTTP 请求层流向工作流执行管道的起始节点，即 caller 侧的入口。此步骤中，用户在节点参数里嵌入的表达式字符串以请求体的形式到达控制器方法，随后作为待处理参数向 callee 层——即表达式解析逻辑——继续传递。在漏洞链路中，trace 自此处发端，用户可控的恶意表达式正是从这一节点开始逐级流入求值沙箱。",
+        "file": "packages/cli/src/workflows/workflows.controller.ts",
+        "line": 539
+      },
+      {
+        "code": "\t\tif (!isExpression(parameterValue)) {\n\t\t\t// Is no expression so return value\n\t\t\treturn parameterValue;\n\t\t}\n\n\t\t// Is an expression\n\n\t\t// Remove the equal sign\n\n\t\tparameterValue = parameterValue.substr(1);",
+        "desc": "expression.ts 第 384–393 行通过 isExpression 检查确认 parameterValue 以等号开头后，调用 substr(1) 剥离前缀符号，将剩余字符串作为纯表达式内容向 callee 传递，完成从 caller 控制器入口到 tournamentEvaluator 求值器的中间转接。此步骤仅验证字符串格式标记，不对表达式内容做任何安全审查。在漏洞链路中，含有 with 语句或保留变量重声明的恶意字符串经此预处理后，随后被送入沙箱编译流程，是攻击载荷穿越预处理门控的关键转接点。",
+        "file": "packages/workflow/src/expression.ts",
+        "line": "384-393"
+      },
+      {
+        "code": "const tournamentEvaluator = new Tournament(errorHandler, undefined, undefined, {\n\tbefore: [ThisSanitizer],\n\tafter: [PrototypeSanitizer, DollarSignValidator],\n});",
+        "desc": "expression-evaluator-proxy.ts 第 9–12 行构造了 tournamentEvaluator 实例，将 ThisSanitizer 注册为 AST 前置钩子，将 PrototypeSanitizer 与 DollarSignValidator 注册为后置钩子，确立了表达式求值管道的防御架构。在调用栈下游，所有运行时表达式求值均经由此代理实例执行。在漏洞链路中，PrototypeSanitizer 在此处被绑定入钩子列表，其缺少 WithStatement 处理器的缺陷随同整个钩子配置一起传递至每次表达式编译，使后续每次求值都在存在缺陷的防御结构下运行。",
+        "file": "packages/workflow/src/expression-evaluator-proxy.ts",
+        "line": "9-12"
+      },
+      {
+        "code": "export const PrototypeSanitizer: ASTAfterHook = (ast, dataNode) => {",
+        "desc": "PrototypeSanitizer 函数体定义于 expression-sandboxing.ts 第 244 行，作为 ASTAfterHook 在 tournamentEvaluator 每次编译表达式后被调用，接收来自上层传递的 ast 与 dataNode 参数，对 AST 节点执行属性访问合法性遍历。在调用栈下游的终点，此函数承担着清理危险节点的最终职责；然而由于缺少 visitWithStatement 处理器，with 语句节点在遍历时被跳过而不做任何处置。在漏洞链路中，这是防御失效的终止点：沙箱核心约束在此因缺位的节点类型处理而失效，最终为任意代码执行打开通道。",
+        "file": "packages/workflow/src/expression-sandboxing.ts",
+        "line": 244
+      }
+    ],
+    "verify": 0,
+    "vuln_category_l1": "Code Injection",
+    "vuln_category_l2": "Eval Injection (CWE-95)",
+    "vuln_ids": [
+      "CVE-2026-1470",
+      "GHSA-5XRP-6693-JJX9"
+    ],
+    "vuln_title": "n8n Workflow Expression Sandbox Escape leading to RCE (CVE-2026-1470) - expression-sandboxing.ts"
+  },
+  {
+    "commit": "44270c533b09e8d7e87fbeecc0b1c69a6ee98452",
+    "critical_operation": {
+      "code": "export function shouldEnforceGatewayAuthForPluginPath(",
+      "desc": "shouldEnforceGatewayAuthForPluginPath 函数被导出，作为网关插件路由的鉴权强制执行判定入口。该函数对请求路径进行有界次数的 URI 解码与规范化，将结果与受保护前缀集合做匹配，决定是否需要强制鉴权。在漏洞链路中，此函数是路径规范化深度不足缺陷的直接承载点：当编码深度超出解码上限时，函数可能返回无需鉴权的错误结论，使未经认证的请求得以通过网关进入插件路由层。",
+      "file": "src/gateway/server/plugins-http.ts",
+      "line": 35
+    },
+    "entry_id": "entry-00225",
+    "entry_point": {
+      "code": "      if (handlePluginRequest) {",
+      "desc": "该条件分支位于网关 HTTP 请求处理器中，对 handlePluginRequest 做非空检测，若为真值则将请求导入插件处理流程。条件成立后，紧随其后的鉴权块将决定请求能否免凭证通过。在漏洞链路中，此处是深度多重编码路径进入插件子系统的关键入口：当上游路径规范化深度不足时，鉴权判断被绕过，执行流将无阻地抵达插件路由匹配逻辑。",
+      "file": "src/gateway/server-http.ts",
+      "line": 513
+    },
+    "origin": "GitHub Advisory Database (reviewed)",
+    "project": "openclaw",
+    "repo_url": "https://github.com/openclaw/openclaw",
+    "report_id": "GHSA-V865-P3GQ-HW6M",
+    "source_link": "https://github.com/advisories/GHSA-v865-p3gq-hw6m",
+    "trace": [
+      {
+        "code": "      if (handlePluginRequest) {",
+        "desc": "此步骤覆盖从通用 HTTP 请求分发器（caller）流向插件路由入口（callee handlePluginRequest 块）的调用段。handlePluginRequest 的条件检测决定是否将当前请求交付插件子系统，多重编码路径在此处首次进入受影响的执行路径；随后，鉴权强制执行判定函数将在下游调用栈中被调用，路径规范化深度缺陷将在那里决定鉴权是否被绕过。",
+        "file": "src/gateway/server-http.ts",
+        "line": 513
+      },
+      {
+        "code": "export function shouldEnforceGatewayAuthForPluginPath(",
+        "desc": "此步骤覆盖从 server-http.ts 的插件鉴权调度逻辑（caller）流向 shouldEnforceGatewayAuthForPluginPath 函数体（callee）的调用段。该函数导出定义是鉴权强制执行逻辑的入口，内部对路径进行有界次数的规范化解码；在调用栈上游已进入插件处理块的请求，在此处接受最终的受保护前缀匹配判定，路径解码深度不足将导致判定误为无需鉴权，漏洞链路的核心绕过由此完成。",
+        "file": "src/gateway/server/plugins-http.ts",
+        "line": 35
+      }
+    ],
+    "verify": 1,
+    "vuln_category_l1": "认证绕过",
+    "vuln_category_l2": "编码路径绕过（Alternate Path / Channel）",
+    "vuln_ids": [
+      "CVE-2026-32004",
+      "GHSA-V865-P3GQ-HW6M"
+    ],
+    "vuln_title": "openclaw Authentication Bypass via Deeply Encoded Alternate Path (Multi-encoded slash variants) - plugins-http.ts"
+  },
+  {
+    "commit": "7325791599409de52534429897481918717a9e85",
+    "critical_operation": {
+      "code": "\tc.JSON(http.StatusOK, api.ListResponse{Models: models})",
+      "desc": "ListHandler 执行至此行时，将已查询到的本地模型列表封装为 api.ListResponse，以 HTTP 200 状态码写入响应体，模型名称、大小与量化级别等元数据随之离开服务器。c.JSON 是漏洞链路中敏感数据外泄的最终操作，标志着信息在网络层面的完成输出。",
+      "file": "server/routes.go",
+      "line": 1266
+    },
+    "entry_id": "entry-00076",
+    "entry_point": {
+      "code": "\tr.GET(\"/api/tags\", s.ListHandler)",
+      "desc": "GenerateRoutes 函数在此处将 GET /api/tags 路由绑定至 ListHandler，所属 gin 路由器的中间件链仅含 CORS 与 allowedHostsMiddleware，完全缺少认证检查。该绑定使 /api/tags 端点在无任何鉴权保护的状态下对外暴露，是整条未认证模型枚举漏洞链路的外部入口。",
+      "file": "server/routes.go",
+      "line": 1506
+    },
+    "origin": "GitHub Advisory Database (reviewed)",
+    "project": "ollama",
+    "repo_url": "https://github.com/ollama/ollama",
+    "report_id": "GHSA-F6MR-38G8-39RG",
+    "source_link": "https://github.com/advisories/GHSA-f6mr-38g8-39rg",
+    "trace": [
+      {
+        "code": "\tr.GET(\"/api/tags\", s.ListHandler)",
+        "desc": "GenerateRoutes 在此行将 /api/tags 注册为 gin 路由器上的 GET 端点，并指定 ListHandler 为处理函数，构成从外部 HTTP 请求到 callee 的调用入口。路由器中间件链缺乏认证拦截，任意请求均可沿此路径无阻流入下游 ListHandler，奠定了无鉴权调用的链路前提。",
+        "file": "server/routes.go",
+        "line": 1506
+      },
+      {
+        "code": "func (s *Server) ListHandler(c *gin.Context) {",
+        "desc": "随后，路由分发将控制流从 r.GET 注册的处理入口转移至此函数体，ListHandler 作为 callee 开始执行。函数签名接收 gin.Context 但全程不调用任何鉴权逻辑，直接进行模型数据查询与响应构造，使漏洞路径在调用栈中层无阻延续至数据输出。",
+        "file": "server/routes.go",
+        "line": 1217
+      },
+      {
+        "code": "\tc.JSON(http.StatusOK, api.ListResponse{Models: models})",
+        "desc": "在调用栈下游，c.JSON 将 ListHandler 已组装的模型列表序列化为 JSON 并以 HTTP 200 写回，完成从路由注册入口到数据输出的完整链路闭合。作为 trace 的末端节点，此行是信息在当前请求周期内离开系统的确切时刻，与入口处的无鉴权绑定共同界定了整条漏洞路径的边界。",
+        "file": "server/routes.go",
+        "line": 1266
+      }
+    ],
+    "verify": 1,
+    "vuln_category_l1": "业务逻辑",
+    "vuln_category_l2": "BL-AUTHZ-MISSING(授权缺失)",
+    "vuln_ids": [
+      "CVE-2025-63389",
+      "GHSA-F6MR-38G8-39RG"
+    ],
+    "vuln_title": "Ollama 多个 API 端点缺少服务端认证导致未授权模型管理操作 (CVE-2025-63389) - routes.go"
+  },
+  {
+    "commit": "8eac9394170e2218a55fab774c310ff9bcaad19f",
+    "critical_operation": {
+      "code": "  const result = await opts.runCommand(execArgv, phase.cwd, phase.env, phase.timeoutMs);",
+      "desc": "opts.runCommand 以 resolveSystemRunExecArgv 构造的 execArgv 为参数启动进程，execArgv 包含完整的 wrapper argv 结构，与审批阶段展示给运营人员的 shell payload 文本在内容与形式上均不对应。整条不一致链路在此汇合：审批侧已基于偏移的展示内容作出决策，执行侧却以 wrapper 完整形式驱动进程，展示与执行之间的差异在进程启动时最终落地。",
+      "file": "src/node-host/invoke-system-run.ts",
+      "line": 503
+    },
+    "entry_id": "entry-00295",
+    "entry_point": {
+      "code": "async function parseSystemRunPhase(",
+      "desc": "parseSystemRunPhase 是 node-host 处理 system.run 阶段解析的入口函数，接收调用方通过 opts.params 传入的 command 与 rawCommand 两个字段，随即将其转发至 resolveSystemRunCommand 进行 wrapper 识别与 payload 提取。此函数是展示-执行不一致链路的起点，外部命令意图在此进入处理流水线，其后路径将导致展示侧与执行侧取用不同的命令表示。",
+      "file": "src/node-host/invoke-system-run.ts",
+      "line": 184
+    },
+    "origin": "GitHub Advisory Database (reviewed)",
+    "project": "openclaw",
+    "repo_url": "https://github.com/openclaw/openclaw",
+    "report_id": "GHSA-RW39-5899-8MXP",
+    "source_link": "https://github.com/advisories/GHSA-rw39-5899-8mxp",
+    "trace": [
+      {
+        "code": "async function parseSystemRunPhase(",
+        "desc": "parseSystemRunPhase 作为链路追踪起点，将从 opts.params 接收的 command 与 rawCommand 字段传入 resolveSystemRunCommand；这是 wrapper 识别流程的触发时刻，从此处起调用链同时分化出展示侧与执行侧两条平行通路，二者将在进程启动前始终携带不同的命令表示。",
+        "file": "src/node-host/invoke-system-run.ts",
+        "line": 184
+      },
+      {
+        "code": "  const payload = extractShellWrapperPayload(argv, wrapper);",
+        "desc": "从 parseSystemRunPhase 向下游进入 wrapper 解析分支，extractShellWrapperPayload 以完整的 argv 数组与 wrapper 描述符为入参，将外层 shell wrapper 拆解并提取内层 payload 字符串赋值给 payload。随后展示侧将以此 payload 文本作为命令内容的候选来源，而完整 argv 单独保留供执行层使用，两条通路在此完成初始提取与分化。",
+        "file": "src/infra/exec-wrapper-resolution.ts",
+        "line": 650
+      },
+      {
+        "code": "  return { isWrapper: true, command: rawCommand ?? payload };",
+        "desc": "随后，wrapper 解析函数返回 { isWrapper: true, command: rawCommand ?? payload }，command 字段在 rawCommand 缺失时取上一步提取的 payload 文本。此返回值是 payload 文本向调用链外传播的第一个出口，payload 以 command 字段的形式进入 resolveSystemRunCommand 的上层逻辑，完整 wrapper 结构则经由独立字段继续传递。",
+        "file": "src/infra/exec-wrapper-resolution.ts",
+        "line": 655
+      },
+      {
+        "code": "  const inferred =",
+        "desc": "在调用栈下游的 resolveSystemRunCommand 中，inferred 由 shellCommand.trim() 赋值，shellCommand 正是上游从 wrapper 提取的 payload 文本；当 mustBindDisplayToFullArgv 为假时此路径被激活。inferred 成为命令展示文本的候选值，代表内层 shell 内容而非完整 wrapper 形式，随后流向 cmdText 的赋值逻辑。",
+        "file": "src/infra/system-run-command.ts",
+        "line": 115
+      },
+      {
+        "code": "    cmdText: raw ?? inferred,",
+        "desc": "随后，resolveSystemRunCommand 将 cmdText 赋值为 raw ?? inferred：在 raw 缺失时，cmdText 取上一步确立的 inferred 值（即 shell payload 文本）。cmdText 是命令展示文本的规范化字段，此处赋值将展示内容与执行参数的语义差异固化至返回结构，该值随后流向 buildSystemRunApprovalPlan 以进入审批计划的构建阶段。",
+        "file": "src/infra/system-run-command.ts",
+        "line": 143
+      },
+      {
+        "code": "  const rawCommand = hardening.argvChanged",
+        "desc": "流程进入 buildSystemRunApprovalPlan 后，rawCommand 的赋值依赖 hardening.argvChanged 的布尔值：argvChanged 为假时，rawCommand 取 command.cmdText.trim()（即上游 shell payload 文本），而非 formatExecCommand(hardening.argv) 所代表的完整 wrapper 形式。此条件分支是展示侧偏差向审批计划传播的关键节点，决定了 plan 中携带的命令字符串。",
+        "file": "src/node-host/invoke-system-run-plan.ts",
+        "line": 653
+      },
+      {
+        "code": "      rawCommand,",
+        "desc": "随后，buildSystemRunApprovalPlan 将上一步确定的 rawCommand 写入审批计划对象，plan.rawCommand 字段至此持有 shell payload 文本。该计划对象随调用链向下传递至 resolveSystemRunApprovalRequestContext，plan.rawCommand 将在审批上下文构建阶段被读取，成为运营人员所见命令文本的直接来源。",
+        "file": "src/node-host/invoke-system-run-plan.ts",
+        "line": 668
+      },
+      {
+        "code": "    commandText: plan ? (plan.rawCommand ?? formatExecCommand(plan.argv)) : fallbackCommand,",
+        "desc": "在 resolveSystemRunApprovalRequestContext 中，commandText 优先取 plan.rawCommand：由于该字段持有 shell payload 文本，构造出的审批上下文以此为 commandText。在调用栈下游，运营人员将基于该 commandText 做出批准决策，而 formatExecCommand(plan.argv) 所代表的完整 wrapper 形式从未出现于展示内容。",
+        "file": "src/infra/system-run-approval-context.ts",
+        "line": 69
+      },
+      {
+        "code": "      const effectiveCommandText = approvalContext.commandText;",
+        "desc": "在审批请求处理逻辑中，effectiveCommandText 直接取自 approvalContext.commandText，其值即上游传入的 shell payload 文本。effectiveCommandText 代表运营人员在审批通知中将看到的命令展示内容，随后流向通知发送环节；与此同时，执行侧的 execArgv 在链路的另一分支独立构造，二者互不干涉。",
+        "file": "src/gateway/server-methods/exec-approval.ts",
+        "line": 77
+      },
+      {
+        "code": "        command: effectiveCommandText,",
+        "desc": "随后，exec-approval 模块将 effectiveCommandText 填入对外发出的审批通知请求体的 command 字段，运营人员收到的审批请求所呈现的命令内容至此确定为 shell payload 文本。批准决策将基于此字段产生，但该授权不会约束执行侧的 execArgv，两者之间的语义差距在审批完成后依然存在。",
+        "file": "src/gateway/server-methods/exec-approval.ts",
+        "line": 124
+      },
+      {
+        "code": "  const execArgv = resolveSystemRunExecArgv({",
+        "desc": "调用链回到 executeSystemRunPhase 后，resolveSystemRunExecArgv 被调用以构造 execArgv，以 phase.plannedAllowlistArgv 等字段为输入，生成包含完整 wrapper 结构的 argv 数组。execArgv 的构造路径独立于审批上下文的展示文本，形成执行侧的独立分支；其结果将在紧接着的调用中传入 opts.runCommand，成为最终执行的命令形式。",
+        "file": "src/node-host/invoke-system-run.ts",
+        "line": 493
+      },
+      {
+        "code": "  const result = await opts.runCommand(execArgv, phase.cwd, phase.env, phase.timeoutMs);",
+        "desc": "作为追踪链路的终点，opts.runCommand 接收上一步构造的 execArgv 并向操作系统发起进程调用，完整的 wrapper argv 在此传入执行层。整条调用链在此收束：自 parseSystemRunPhase 起点流经 payload 提取、展示文本固化、审批通知，至此进程以运营人员从未审阅过的完整 wrapper 形式启动，展示与执行的差异在进程创建瞬间完全落地。",
+        "file": "src/node-host/invoke-system-run.ts",
+        "line": 503
+      }
+    ],
+    "verify": 1,
+    "vuln_category_l1": "业务逻辑",
+    "vuln_category_l2": "BL-WORKFLOW-VIOLATION(业务流程/状态机违规)",
+    "vuln_ids": [
+      "CVE-2026-32971",
+      "GHSA-RW39-5899-8MXP"
+    ],
+    "vuln_title": "openclaw approval display/execution mismatch allows arbitrary command execution"
+  },
+  {
+    "commit": "732f2a3d3ddba59fb6e51bf2534fd33792a2cde3",
+    "critical_operation": {
+      "code": "\t\tconst quotedField = `${quoteIdentifier('dataTable', dbType)}.${quoteIdentifier(field, dbType)}`;\n\t\tquery.orderBy(quotedField, direction);",
+      "desc": "applySortingByField 方法内，quoteIdentifier 将攻击者控制的列名拼接为 dataTable 与 field 均加双引号的标识符，随后调用 query.orderBy 构造 ORDER BY 子句。quoteIdentifier 仅在字段两端添加双引号而未转义内部双引号字符，攻击者可借此逃逸引号边界并追加任意 SQL 片段，在 PostgreSQL 下达成多语句执行，是本漏洞最终产生危害的核心执行点。",
+      "file": "packages/cli/src/modules/data-table/data-table-rows.repository.ts",
+      "line": "692-693"
+    },
+    "entry_id": "entry-00358",
+    "entry_point": {
+      "code": "\t\tconst column = this.getNodeParameter('orderByColumn', index, '') as string;",
+      "desc": "Data Table Get 节点的 execute 函数调用 getNodeParameter 读取工作流配置中的 orderByColumn 字段，将其直接转型为 string 赋给局部变量 column。该字段支持 Expression 动态赋值，使经认证的攻击者得以将任意字符串注入为排序列名，是本次 ORDER BY 注入漏洞的污点来源。",
+      "file": "packages/nodes-base/nodes/DataTable/actions/row/get.operation.ts",
+      "line": 114
+    },
+    "origin": "GitHub Advisory Database (reviewed)",
+    "project": "n8n",
+    "repo_url": "https://github.com/n8n-io/n8n",
+    "report_id": "GHSA-98C2-4CR3-4JC3",
+    "source_link": "https://github.com/advisories/GHSA-98c2-4cr3-4jc3",
+    "trace": [
+      {
+        "code": "\t\tconst column = this.getNodeParameter('orderByColumn', index, '') as string;",
+        "desc": "漏洞链路的起始节点：execute 函数通过 getNodeParameter 从节点配置中读取 orderByColumn，在无任何合法性校验的情况下将其赋给 column 变量，此刻攻击者控制的恶意字符串进入执行流，后续步骤将逐层将其向调用栈深处传递直至拼入 SQL。",
+        "file": "packages/nodes-base/nodes/DataTable/actions/row/get.operation.ts",
+        "line": 114
+      },
+      {
+        "code": "\t\t\tsortBy = [column, direction];",
+        "desc": "紧接上一步，execute 函数将未验证的 column 与排序方向 direction 打包为数组 sortBy，完成从单独参数到结构化排序描述符的转换。污点此时从独立字符串转移进组合数据结构，并将随 sortBy 继续向下层调用链传播。",
+        "file": "packages/nodes-base/nodes/DataTable/actions/row/get.operation.ts",
+        "line": 117
+      },
+      {
+        "code": "\treturn await executeSelectMany(this, index, dataTableProxy, false, undefined, sortBy);",
+        "desc": "随后，execute 函数将含有污点列名的 sortBy 数组作为参数调用 executeSelectMany，完成从节点执行层到通用查询辅助层的第一次跨模块传递。污点至此离开节点定义文件，进入与数据库操作更近的公共函数，是注入字符串首次脱离业务逻辑层的关键一跳。",
+        "file": "packages/nodes-base/nodes/DataTable/actions/row/get.operation.ts",
+        "line": 121
+      },
+      {
+        "code": "\t\tconst { data, count } = await dataTableProxy.getManyRowsAndCount({\n\t\t\tskip,\n\t\t\ttake: limit ? Math.min(take, limit - result.length) : take,\n\t\t\tfilter,\n\t\t\tsortBy,\n\t\t});",
+        "desc": "在 executeSelectMany 内，sortBy 被嵌入请求选项对象后转发给 dataTableProxy.getManyRowsAndCount，完成从通用查询辅助层到代理服务层的传递。该调用将分页参数、过滤条件与排序描述符统一封装，污点列名随 sortBy 字段进入代理层，继续向存储层流动。",
+        "file": "packages/nodes-base/nodes/DataTable/common/selectMany.ts",
+        "line": "205-210"
+      },
+      {
+        "code": "\t\t\t\treturn await dataTableService.getManyRowsAndCount(dataTableId, projectId, options);",
+        "desc": "DataTableProxy 收到含 sortBy 的 options 后，直接透传给 dataTableService.getManyRowsAndCount，完成从代理服务层到业务服务层的转发。此处代理层未对 options 中的排序列名做任何校验或白名单过滤，污点无阻流入服务层。",
+        "file": "packages/cli/src/modules/data-table/data-table-proxy.service.ts",
+        "line": 146
+      },
+      {
+        "code": "\t\t\tconst result = await this.dataTableRowsRepository.getManyAndCount(\n\t\t\t\tdataTableId,\n\t\t\t\ttransformedDto,\n\t\t\t\tcolumns,\n\t\t\t\tem,",
+        "desc": "业务服务层的 getManyRowsAndCount 方法将含有污点排序参数的 transformedDto 连同 dataTableId、columns 等一起交给 dataTableRowsRepository.getManyAndCount，完成从服务层到仓储层的传递。至此排序参数进入数据访问层，即将被直接用于构造查询对象。",
+        "file": "packages/cli/src/modules/data-table/data-table.service.ts",
+        "line": "236-240"
+      },
+      {
+        "code": "\t\tconst [field, order] = dto.sortBy;\n\t\tthis.applySortingByField(query, field, order);",
+        "desc": "仓储层的 getManyAndCount 方法从 dto.sortBy 中解构出列名 field 与排序方向 order，随即将其传入私有方法 applySortingByField，完成从公共查询方法到排序构建器的内部调用。这是污点列名最后一次以明文字符串形式被传递的节点，紧接着将发生危险的 SQL 标识符拼接。",
+        "file": "packages/cli/src/modules/data-table/data-table-rows.repository.ts",
+        "line": "686-687"
+      },
+      {
+        "code": "\tprivate applySortingByField(query: QueryBuilder, field: string, direction: 'DESC' | 'ASC'): void {\n\t\tconst dbType = this.dataSource.options.type;\n\t\tconst quotedField = `${quoteIdentifier('dataTable', dbType)}.${quoteIdentifier(field, dbType)}`;\n\t\tquery.orderBy(quotedField, direction);",
+        "desc": "最终，applySortingByField 接收来自 getManyAndCount 的 field 参数，调用 quoteIdentifier 将其包裹为带双引号的标识符后拼接到 ORDER BY 子句并执行。因 quoteIdentifier 不转义内部双引号，攻击者注入的引号可逃逸标识符边界，在 PostgreSQL 下拼接多余 SQL 语句，完成整条注入链的最终触发。",
+        "file": "packages/cli/src/modules/data-table/data-table-rows.repository.ts",
+        "line": "690-693"
+      }
+    ],
+    "verify": 1,
+    "vuln_category_l1": "注入攻击",
+    "vuln_category_l2": "SQL注入",
+    "vuln_ids": [
+      "CVE-2026-33713",
+      "GHSA-98C2-4CR3-4JC3"
+    ],
+    "vuln_title": "n8n Data Table Get 节点 orderByColumn 参数 SQL 注入 (CVE-2026-33713 / GHSA-98c2-4cr3-4jc3)"
+  },
+  {
+    "commit": "3af9095245be3aaad6bc16622f379f79c6c6068f",
+    "critical_operation": {
+      "code": "export function sanitizeCustomCss(css: string | undefined): string | undefined {",
+      "desc": "sanitizeCustomCss 函数声明紧随 prepareFormFields 函数体结束符之后，负责对 CSS 字符串执行不允许任何标签或属性的严格纯文本净化。在漏洞链路中，此处是文件级净化策略的架构分界：html 字段经宽松白名单（含富媒体标签与 src 属性）处理后的 sink 赋值已在上方完成，此函数定义标志着从宽松 html 净化域过渡到严格 CSS 净化域，是两种截然不同净化策略的终态对比节点。",
+      "file": "packages/nodes-base/nodes/Form/utils/utils.ts",
+      "line": 141
+    },
+    "entry_id": "entry-00191",
+    "entry_point": {
+      "code": "\t\tif (field.fieldType === 'hiddenField') {",
+      "desc": "prepareFormFields 的 map 回调依字段类型分叉处理，此行判断当前字段是否为 hiddenField 并将其导入简单标签赋值逻辑。在漏洞路由链中，与此分支并列的 html 类型分支在上游已完成宽松白名单净化并将结果写入 field.html；该条件节点在结构上紧邻 html 危险处理路径，两条路径共处同一 map 回调，体现了同一函数内不同字段类型所受净化约束的显著差异。",
+      "file": "packages/nodes-base/nodes/Form/utils/utils.ts",
+      "line": 133
+    },
+    "origin": "GitHub Advisory Database (reviewed)",
+    "project": "n8n",
+    "repo_url": "https://github.com/n8n-io/n8n",
+    "report_id": "GHSA-2P9H-RQJW-GM92",
+    "source_link": "https://github.com/advisories/GHSA-2p9h-rqjw-gm92",
+    "trace": [
+      {
+        "code": "\t\tif (field.fieldType === 'hiddenField') {",
+        "desc": "trace 链路从此处发起：prepareFormFields 的 map 回调在 caller（字段数组迭代层）将控制流交付给字段类型路由层，进入 hiddenField 条件判断。紧邻上游的 html 分支已完成宽松 sanitizeHtml 调用及 field.html 写入；此步骤在调用链中标记字段类型分发的入口节点，随后将流向 hiddenField 标签赋值操作，再经统一的 return field 出口回到迭代调用方。",
+        "file": "packages/nodes-base/nodes/Form/utils/utils.ts",
+        "line": 133
+      },
+      {
+        "code": "\t\t}",
+        "desc": "随后，hiddenField 条件处理块在此闭合，将从 fieldLabel 赋值路径归并至 return field 语句；从 caller 流向 callee 的视角看，此步骤是 hiddenField 处理单元的内部出口边界。html 字段的宽松 sanitizeHtml 调用与 field.html 赋值已在上游 130 行完成；该闭合符在 map 回调内将两类字段的处理路径在代码结构上显式分隔，标志着字段类型路由阶段的局部终结。",
+        "file": "packages/nodes-base/nodes/Form/utils/utils.ts",
+        "line": 135
+      },
+      {
+        "code": "};",
+        "desc": "在调用栈下游，prepareFormFields 箭头函数整体在此闭合，将 map 处理后的字段数组返回给调用方，完成函数执行上下文的退出。在漏洞路径上，html 字段经宽松白名单过滤写入 field.html 的核心 sink 操作全部在函数体内完成；此步骤是从函数内部流向模块作用域的过渡边界，随后控制流进入 sanitizeCustomCss 等独立函数的声明区域，标志着字段预处理阶段的终结。",
+        "file": "packages/nodes-base/nodes/Form/utils/utils.ts",
+        "line": 139
+      },
+      {
+        "code": "export function sanitizeCustomCss(css: string | undefined): string | undefined {",
+        "desc": "在调用栈下游，sanitizeCustomCss 函数定义在此出现，是 prepareFormFields 闭合后模块级执行流的直接衔接点；从 caller 流向 callee 的视角看，此处是从字段预处理净化域流向 CSS 净化域的架构跨越节点。函数体内采用空 allowedTags 与空 allowedAttributes 的严格配置，与 html 字段所经历的宽松富媒体白名单形成终态对比，trace 链路在此完成净化策略差异维度的闭环。",
+        "file": "packages/nodes-base/nodes/Form/utils/utils.ts",
+        "line": 141
+      }
+    ],
+    "verify": 1,
+    "vuln_category_l1": "XSS",
+    "vuln_category_l2": "存储型XSS",
+    "vuln_ids": [
+      "CVE-2026-27578",
+      "GHSA-2P9H-RQJW-GM92"
+    ],
+    "vuln_title": "n8n 工作流节点存储型 XSS (CVE-2026-27578) - utils.ts"
+  },
+  {
+    "commit": "37a138c554c32abc25347388e68882f787e879f9",
+    "critical_operation": {
+      "code": "path: normalizePathSeparators(decoded.toLowerCase()) || \"/\",",
+      "desc": "canonicalizePathForSecurity writes the path field using a single decodeURIComponent decode plus normalizePathSeparators, omitting dot-segment resolution. Traversal sequences like ..%2f survive as literal dot-dot, making the returned path fail the prefix match against /api/channels. This omission is the normalization defect that causes the auth guard to classify crafted paths as unprotected.",
+      "file": "src/gateway/security-path.ts",
+      "line": 37
+    },
+    "entry_id": "entry-00220",
+    "entry_point": {
+      "code": "const pluginAuthOk = await enforcePluginRouteGatewayAuth({",
+      "desc": "The gateway's HTTP handler invokes enforcePluginRouteGatewayAuth to decide whether the incoming plugin-route request carries valid gateway credentials. This call is the sole authorization checkpoint protecting routes under the /api/channels prefix. If the downstream auth logic concludes the path is unprotected, the request proceeds without any credential validation.",
+      "file": "src/gateway/server-http.ts",
+      "line": 534
+    },
+    "origin": "GitHub Advisory Database (reviewed)",
+    "project": "openclaw",
+    "repo_url": "https://github.com/openclaw/openclaw",
+    "report_id": "GHSA-MWXV-35WR-4VVJ",
+    "source_link": "https://github.com/advisories/GHSA-mwxv-35wr-4vvj",
+    "trace": [
+      {
+        "code": "const pluginAuthOk = await enforcePluginRouteGatewayAuth({",
+        "desc": "Control enters enforcePluginRouteGatewayAuth here; the function receives requestPath plus auth configuration and will call isPathProtectedByPrefixes to check whether gateway credentials are required. In the attack path, requestPath contains an encoded dot-segment traversal that will deceive the path canonicalization downstream and allow the guard to return a false negative.",
+        "file": "src/gateway/server-http.ts",
+        "line": 534
+      },
+      {
+        "code": "const canonical = canonicalizePathForSecurity(pathname);",
+        "desc": "Within isPathProtectedByPrefixes, canonicalizePathForSecurity is called to normalize the pathname for prefix comparison. This is the pivot point of the vulnerability: the returned canonical.path lacks dot-segment resolution, so the subsequent prefixMatch call fails to recognize the traversal path as matching a protected prefix, and the function falls through to return false.",
+        "file": "src/gateway/security-path.ts",
+        "line": 44
+      },
+      {
+        "code": "path: normalizePathSeparators(decoded.toLowerCase()) || \"/\",",
+        "desc": "normalizePathSeparators is applied here to the once-decoded pathname, writing the result into the path field without resolving dot-segments. This value is the final canonical representation used by isPathProtectedByPrefixes for prefix matching. When the input carries a traversal sequence, dot-dot components survive here and make the prefix match return false, so the caller skips authentication.",
+        "file": "src/gateway/security-path.ts",
+        "line": 37
+      }
+    ],
+    "verify": 1,
+    "vuln_category_l1": "认证绕过",
+    "vuln_category_l2": "路径规范化不一致导致的认证绕过",
+    "vuln_ids": [
+      "CVE-2026-32036",
+      "GHSA-MWXV-35WR-4VVJ"
+    ],
+    "vuln_title": "OpenClaw Authentication Bypass via Path Traversal in Gateway Plugin - security-path.ts"
+  },
+  {
+    "commit": "e135b2943362da036a6942d931b9de76094874af",
+    "critical_operation": {
+      "code": "        const containers = await NimContainerManager.listRunningContainers()",
+      "desc": "NimContainerManager.listRunningContainers() 是 controller 内的核心异步调用，通过底层 Docker 接口查询宿主机上所有正在运行的容器，并将结果赋值给 containers 变量经 HTTP 响应返回。这一调用是漏洞链路的终结执行节点：前序白名单配置和 next() 跳转已确保请求未经身份核验便到达此处，任意调用方均可借此获取宿主机容器清单，造成基础设施信息泄露。",
+      "file": "packages/server/src/controllers/nvidia-nim/index.ts",
+      "line": 121
+    },
+    "entry_id": "entry-00265",
+    "entry_point": {
+      "code": "router.get('/list-running-containers', nimController.listRunningContainers)",
+      "desc": "router.get 在路由模块初始化时将 HTTP GET 请求绑定到 nimController.listRunningContainers 处理函数，完成路径 /list-running-containers 的分发注册。由于上游中间件对该路由所属前缀路径的认证已被绕过，此处注册的处理函数在收到请求时不会经过任何身份校验，是整条漏洞链路的对外暴露入口。",
+      "file": "packages/server/src/routes/nvidia-nim/index.ts",
+      "line": 9
+    },
+    "origin": "GitHub Advisory Database (reviewed)",
+    "project": "FlowiseAI/Flowise",
+    "repo_url": "https://github.com/FlowiseAI/Flowise",
+    "report_id": "GHSA-5F53-522J-J454",
+    "source_link": "https://github.com/advisories/GHSA-5f53-522j-j454",
+    "trace": [
+      {
+        "code": "    '/api/v1/nvidia-nim',",
+        "desc": "'/api/v1/nvidia-nim' 字符串字面量被写入 WHITELIST_URLS 数组，作为认证中间件的豁免前缀配置项。这是整条链路的根因配置点：以该前缀开头的全部子路径（包括 /api/v1/nvidia-nim/list-running-containers）均会在后续中间件的前缀匹配中命中白名单，触发绕过认证的逻辑分支，为下游调用栈中所有 NIM 端点的无鉴权执行奠定基础。",
+        "file": "packages/server/src/utils/constants.ts",
+        "line": 26
+      },
+      {
+        "code": "                    const isWhitelisted = whitelistURLs.some((url) => req.path.startsWith(url))",
+        "desc": "isWhitelisted 变量由 whitelistURLs.some((url) => req.path.startsWith(url)) 赋值，中间件在此对入站请求路径执行前缀匹配。在调用栈上游，'/api/v1/nvidia-nim' 已作为豁免项写入白名单数组，因此针对该前缀下子路径的请求（包括 /list-running-containers）使 isWhitelisted 求值为 true，将执行流导入无认证分支，是白名单配置与认证绕过之间的关键判断节点。",
+        "file": "packages/server/src/index.ts",
+        "line": 221
+      },
+      {
+        "code": "                        next()",
+        "desc": "next() 在 isWhitelisted 为 true 时被调用，将请求控制权直接移交给下一个中间件或路由处理器，跳过全部 JWT 校验与 API Key 验证逻辑。在调用栈下游，请求将无任何身份凭证验证地到达 listRunningContainers controller；这一调用是漏洞链路中认证逻辑被实际绕过的执行点，将未经认证的请求推送进入业务处理流程。",
+        "file": "packages/server/src/index.ts",
+        "line": 223
+      },
+      {
+        "code": "const listRunningContainers = async (req: Request, res: Response, next: NextFunction) => {",
+        "desc": "listRunningContainers 异步函数作为 Express 路由 handler 被调用，接收 req、res、next 参数并直接进入容器查询逻辑，函数体内不含 JWT 解码、角色校验或任何权限断言，不对调用方身份执行二次核验。在调用栈下游，执行流将直接触达 NimContainerManager.listRunningContainers()；此处是链路的 controller 入口节点，证明认证缺口从路由层延续至业务逻辑层的完整性。",
+        "file": "packages/server/src/controllers/nvidia-nim/index.ts",
+        "line": 119
+      },
+      {
+        "code": "        const containers = await NimContainerManager.listRunningContainers()",
+        "desc": "NimContainerManager.listRunningContainers() 在调用栈末端被触发，查询宿主机 Docker 运行时中所有活跃容器的状态数据并赋值给 containers，随后响应对象携带该清单返回请求方，完成信息泄露的全过程。作为链路的最终节点，此调用的执行意味着从 constants.ts 中的白名单配置到实际危害的完整路径已贯通，是容器枚举操作的直接触发点。",
+        "file": "packages/server/src/controllers/nvidia-nim/index.ts",
+        "line": 121
+      }
+    ],
+    "verify": 1,
+    "vuln_category_l1": "业务逻辑",
+    "vuln_category_l2": "BL-AUTHZ-MISSING(授权缺失)",
+    "vuln_ids": [
+      "CVE-2026-30824",
+      "GHSA-5F53-522J-J454"
+    ],
+    "vuln_title": "Flowise Missing Authentication on NVIDIA NIM Endpoints - index.ts"
+  },
+  {
+    "commit": "fc40ba8e7eb1345afdb1c8d274219cd702b73354",
+    "critical_operation": {
+      "code": "        const normalized = from?.replace(/\\D/g, \"\") || \"\";",
+      "desc": "from?.replace 与逻辑或的组合在 from 为 undefined 时将主叫号码规范化为空字符串 normalized，白名单绕过在此处实际发生：normalized 为空时，endsWith 检查对白名单中任意条目恒成立，shouldAcceptInbound 因此无条件放行入站呼叫。缺失的非空前置检查是漏洞根因，这一步骤是整条链路中访问控制实质失效的核心锚点。",
+      "file": "extensions/voice-call/src/manager.ts",
+      "line": 477
+    },
+    "entry_id": "entry-00143",
+    "entry_point": {
+      "code": "      from: params.get(\"From\") || undefined,",
+      "desc": "normalizeEvent 函数从入站 Twilio 请求体中读取 From 参数作为主叫号码；当 From 字段缺失时，|| undefined 表达式将空值静默转为 undefined，而非拒绝该呼叫。NormalizedEvent 的 from 字段由此持有 undefined，成为未受校验的污点注入起点，奠定了后续白名单绕过链路的初始条件。",
+      "file": "extensions/voice-call/src/providers/twilio.ts",
+      "line": 239
+    },
+    "origin": "GitHub Advisory Database (reviewed)",
+    "project": "openclaw",
+    "repo_url": "https://github.com/openclaw/openclaw",
+    "report_id": "GHSA-4RJ2-GPMH-QQ5X",
+    "source_link": "https://github.com/advisories/GHSA-4rj2-gpmh-qq5x",
+    "trace": [
+      {
+        "code": "      from: params.get(\"From\") || undefined,",
+        "desc": "params.get 方法在主叫方未提供 From 头时返回 null，|| undefined 将其转为 undefined 并封装进 NormalizedEvent.from，污点在此产生并随事件对象向下游传递。from 字段持有的 undefined 值是整条白名单绕过链路的逻辑起点，这一步骤在攻击路径中扮演污点注入的开端节点角色。",
+        "file": "extensions/voice-call/src/providers/twilio.ts",
+        "line": 239
+      },
+      {
+        "code": "    const verification = this.provider.verifyWebhook(ctx);",
+        "desc": "verifyWebhook 对 Twilio 请求执行 HMAC 签名校验，确认请求来自 Twilio 平台，但校验范围仅限于签名合法性，不涵盖 From 字段的存在性或有效性。随后，携带 undefined from 的 NormalizedEvent 在通过签名验证后被视为合法请求继续流转；这一步骤是污点路径上的漏检节点，平台层验证的通过并不等同于主叫号码的有效性确认。",
+        "file": "extensions/voice-call/src/webhook.ts",
+        "line": 240
+      },
+      {
+        "code": "        this.manager.processEvent(event);",
+        "desc": "processEvent 将携带 undefined from 字段的 NormalizedEvent 跨模块传递给 CallManager，完成污点从 webhook 处理层向业务逻辑层的边界穿越。在调用栈下游，事件对象被原样交付，整个传递过程中没有任何环节对 from 执行非空校验；这一步骤是污点传播路径的模块间跳转节点，使漏洞从入口层蔓延至权限判断逻辑。",
+        "file": "extensions/voice-call/src/webhook.ts",
+        "line": 254
+      },
+      {
+        "code": "        const normalized = from?.replace(/\\D/g, \"\") || \"\";",
+        "desc": "跨模块传递后，from?.replace 以可选链方式处理 from 字段：当 from 为 undefined 时整个替换表达式求值为 undefined，紧跟的逻辑或操作符将其最终固化为空字符串并赋给 normalized。此步骤是污点物化的直接触发点——上游注入的 undefined 在此转变为触发认证绕过的具体值，使后续白名单比较逻辑失效。",
+        "file": "extensions/voice-call/src/manager.ts",
+        "line": 477
+      }
+    ],
+    "verify": 1,
+    "vuln_category_l1": "业务逻辑",
+    "vuln_category_l2": "BL-AUTH-BYPASS(身份认证绕过)",
+    "vuln_ids": [
+      "CVE-2026-28446",
+      "GHSA-4RJ2-GPMH-QQ5X"
+    ],
+    "vuln_title": "openclaw voice-call extension inbound allowlist authentication bypass (CVE-2026-28446) - manager.ts"
+  },
+  {
+    "commit": "c861862aededc7294cea5634d77e6926444ca101",
+    "critical_operation": {
+      "code": "                        path = path.replace(f\"{{{param_name}}}\", str(param_value))",
+      "desc": "path.replace() 此处以 str(param_value) 将参数值原样嵌入路径模板，未调用 urllib.parse.quote() 施加百分号编码。这是漏洞链路的核心执行位置：含 ../ 序列的恶意值以原始字符串写入路径，在后续 urljoin() 的路径规范化作用下被解析为目录穿越指令，使实际请求的后端端点脱离 OpenAPI 规范所定义的范围。",
+      "file": "src/fastmcp/server/providers/openapi/components.py",
+      "line": 308
+    },
+    "entry_id": "entry-00392",
+    "entry_point": {
+      "code": "    async def read(self) -> ResourceResult:",
+      "desc": "read() 是 OpenAPIResource 的公开异步入口，负责将 MCP 层传入的资源 URI 解析并转化为对后端服务的 HTTP 请求。在漏洞链路中，此方法是外部可控参数进入 URL 路径替换流程的起点，方法体对入参值既无编码预处理也无白名单约束，使后续的路径穿越成为可能。",
+      "file": "src/fastmcp/server/providers/openapi/components.py",
+      "line": 286
+    },
+    "origin": "GitHub Advisory Database (reviewed)",
+    "project": "fastmcp",
+    "repo_url": "https://github.com/PrefectHQ/fastmcp",
+    "report_id": "GHSA-VV7Q-7JX5-F767",
+    "source_link": "https://github.com/advisories/GHSA-vv7q-7jx5-f767",
+    "trace": [
+      {
+        "code": "    async def read(self) -> ResourceResult:",
+        "desc": "read() 作为调用链的第一个节点，标志着从 MCP 协议层 caller 流向 OpenAPIResource 内部 URL 构造逻辑 callee 的起点。此步骤接收外部资源 URI 后未对参数值施加任何净化，控制流随即进入路径模板检测与参数提取分支，与 entry_point 描述的角色完全对应，共同构成漏洞链路的初始暴露面。",
+        "file": "src/fastmcp/server/providers/openapi/components.py",
+        "line": 286
+      },
+      {
+        "code": "                if len(parts) > 1:\n                    path_params = {}\n                    param_matches = re.findall(r\"\\{([^}]+)\\}\", path)\n                    if param_matches:\n                        param_matches.sort(reverse=True)\n                        expected_param_count = len(parts) - 1\n                        for i, param_name in enumerate(param_matches):\n                            if i < expected_param_count:\n                                param_value = parts[-1 - i]\n                                path_params[param_name] = param_value",
+        "desc": "随后，L296-305 在方法内部通过 re.findall 提取路径占位符名称，并从资源 URI 末尾依次切分出对应的原始字符串值写入 path_params 字典，构成从入口 caller 流向参数替换 callee 的中间传递段。param_matches.sort(reverse=True) 仅调整替换顺序，不对参数值做任何过滤；path_params 此时已持有攻击者可控的原始输入，即将进入下一步替换操作。",
+        "file": "src/fastmcp/server/providers/openapi/components.py",
+        "line": "296-305"
+      },
+      {
+        "code": "                    for param_name, param_value in path_params.items():\n                        path = path.replace(f\"{{{param_name}}}\", str(param_value))",
+        "desc": "在调用栈下游，L307-308 以 for 循环遍历 path_params，对每个 param_name/param_value 对调用 path.replace() 完成模板填充，是从参数提取段衔接至最终 URL 生成的末段，与 critical_operation 所指单行替换完全重叠。循环内对 param_value 只做 str() 转换而无编码保护，攻击者注入的路径穿越序列被原样写入路径字符串，至此漏洞链路完成闭合。",
+        "file": "src/fastmcp/server/providers/openapi/components.py",
+        "line": "307-308"
+      }
+    ],
+    "verify": 1,
+    "vuln_category_l1": "SSRF",
+    "vuln_category_l2": "路径穿越辅助 SSRF",
+    "vuln_ids": [
+      "CVE-2026-32871",
+      "GHSA-VV7Q-7JX5-F767"
+    ],
+    "vuln_title": "fastmcp OpenAPIProvider 路径参数未编码导致 SSRF + 路径穿越 (CVE-2026-32871) - components.py"
+  },
+  {
+    "commit": "60670e1e40d304a4c46687a20ecaaf239e729632",
+    "critical_operation": {
+      "code": "\t\t\tres.send(bodyToSend);",
+      "desc": "此处是整条利用链的终端输出：经沙盒包裹后的 HTML 响应体以 bodyToSend 的形式通过 res.send 写入 HTTP 响应流，发往发起请求的浏览器客户端。由于上游 sandboxHtmlResponse 生成的 iframe 携带了允许用户手势触发顶层窗口导航的 sandbox 令牌，浏览器渲染此响应后即为沙盒内脚本提供了逃逸条件。服务端在此步骤不附加任何 CSP 头，漏洞在此完成最终暴露。",
+      "file": "packages/cli/src/webhooks/webhook-request-handler.ts",
+      "line": 150
+    },
+    "entry_id": "entry-00084",
+    "entry_point": {
+      "code": "\t\t\t\tif (hasHtmlContentType || !headers['content-type']) {",
+      "desc": "RespondToWebhook 节点对外发 HTML 类型响应时，在此处检查响应头中 content-type 是否指向 HTML 或完全缺失。条件成立后，代码进入专用的 HTML 沙盒处理分支，将原始响应体交给 sandboxHtmlResponse 进行 iframe 封装。这是整条漏洞利用链的起点判断：攻击者控制的 HTML 内容一旦通过此门控，便会被包裹进一个带有过宽 sandbox 属性的 iframe 中，为后续沙盒逃逸埋下隐患。",
+      "file": "packages/nodes-base/nodes/RespondToWebhook/RespondToWebhook.node.ts",
+      "line": 485
+    },
+    "origin": "GitHub Advisory Database (reviewed)",
+    "project": "n8n",
+    "repo_url": "https://github.com/n8n-io/n8n",
+    "report_id": "GHSA-58JC-RCG5-95F3",
+    "source_link": "https://github.com/advisories/GHSA-58jc-rcg5-95f3",
+    "trace": [
+      {
+        "code": "\t\t\t\tif (hasHtmlContentType || !headers['content-type']) {",
+        "desc": "调用链起点，RespondToWebhook 节点执行阶段在此判断当前响应的 content-type 是否为 HTML 类型或缺省。此分支条件是从节点主执行逻辑（caller）流向 HTML 沙盒封装路径（callee）的第一道门：条件为真时，下一行立即调用 sandboxHtmlResponse，攻击者控制的 HTML 内容从此刻起进入 iframe 构造流程，触发沙盒属性过宽问题的前提在此成立。",
+        "file": "packages/nodes-base/nodes/RespondToWebhook/RespondToWebhook.node.ts",
+        "line": 485
+      },
+      {
+        "code": "\t\t\t\t\tresponseBody = sandboxHtmlResponse(rawBody);",
+        "desc": "紧接前一步的条件判断，节点将原始响应体 rawBody 直接传入 sandboxHtmlResponse，并将返回值赋给 responseBody。此调用标志着控制流从 RespondToWebhook 节点（caller）跨模块流入 html-sandbox.ts 中的封装函数（callee）：攻击者控制的 HTML 内容在此进入 iframe 构建阶段，随后将被嵌入带有过宽 sandbox 属性集的 srcdoc iframe 中。",
+        "file": "packages/nodes-base/nodes/RespondToWebhook/RespondToWebhook.node.ts",
+        "line": 486
+      },
+      {
+        "code": "\tconst escapedHtml = text.replaceAll('&', '&amp;').replaceAll('\"', '&quot;');",
+        "desc": "随后在 sandboxHtmlResponse 内部，对输入文本进行局部字符转义：将 & 替换为 HTML 实体，将双引号替换为 &quot;，以防止内容破坏外层 srcdoc 属性的引号边界。此转义步骤仅保护属性语法完整性，不能阻止 iframe 内脚本执行；真正的防御缺口在于 sandbox 属性令牌集合的配置，而非此处的字符替换。转义后的内容将被嵌入 srcdoc，进入 iframe 元素构造的下一步。",
+        "file": "packages/core/src/html-sandbox.ts",
+        "line": 47
+      },
+      {
+        "code": "\t\t\tstyle=\"position:fixed; top:0; left:0; width:100vw; height:100vh; border:none; overflow:auto;\"",
+        "desc": "在调用栈内部 sandboxHtmlResponse 构造 iframe 元素时，此行写入全屏覆盖样式：iframe 被固定定位并撑满整个视口，视觉上与普通页面无从区分。样式本身不直接引入安全漏洞，但全屏布局紧邻 sandbox 属性定义，二者共同使攻击者能够构造用户无法察觉的欺骗性界面，诱导用户产生触发顶层窗口导航所需的手势交互，从而激活沙盒逃逸条件。",
+        "file": "packages/core/src/html-sandbox.ts",
+        "line": 50
+      },
+      {
+        "code": "\t\t\tresponse = {",
+        "desc": "sandboxHtmlResponse 返回封装后的 iframe 字符串后，控制流回到 RespondToWebhook 节点，此处以对象字面量形式组装最终 response，将沙盒化的响应体、HTTP 状态码及响应头纳入其中。此步骤标志着从 html-sandbox.ts（callee）返回节点主逻辑（caller），漏洞载荷完成构建并进入传递阶段：组装好的 response 将在下一步被移交给运行时的发送机制。",
+        "file": "packages/nodes-base/nodes/RespondToWebhook/RespondToWebhook.node.ts",
+        "line": 576
+      },
+      {
+        "code": "\t\t\t\tthis.sendResponse(response);",
+        "desc": "response 对象组装完毕后，节点调用 this.sendResponse 将其向上传递给 n8n 运行时的 webhook 基础设施。此调用是从节点执行层（caller）跨层流向请求处理器层（callee）的边界：携带过宽 sandbox 属性的 iframe 响应内容至此离开节点作用域，进入 webhook-request-handler.ts 的控制流，后续处理器将最终决定该响应如何写入 HTTP 流并发往客户端。",
+        "file": "packages/nodes-base/nodes/RespondToWebhook/RespondToWebhook.node.ts",
+        "line": 583
+      },
+      {
+        "code": "\t\t\tif (isWebhookResponse(response)) {",
+        "desc": "请求处理器收到响应对象后，首先检查其是否满足 isWebhookResponse 的结构谓词。此条件判断将处理器主逻辑（caller）的控制流导向专用 webhook 响应发送路径（callee），与上游节点层的 sendResponse 调用形成衔接。分支成立时，程序随即执行对 sendWebhookResponse 的异步调用，携带 iframe 载荷的响应对象继续沿调用链向下游流动。",
+        "file": "packages/cli/src/webhooks/webhook-request-handler.ts",
+        "line": 69
+      },
+      {
+        "code": "\t\t\t\tawait this.sendWebhookResponse(res, response);",
+        "desc": "随后处理器以 await 异步调用 sendWebhookResponse，将 Express res 对象与结构化 webhook 响应一并传入。此调用是从请求处理主逻辑（caller）流向专职发送方法（callee）的入口；沙盒化的响应体在此进入最后一段 HTTP 写入前的处理逻辑，包含内容类型检测和可能的二次沙盒化决策，是漏洞载荷从传递阶段进入最终发送阶段的关键跨步。",
+        "file": "packages/cli/src/webhooks/webhook-request-handler.ts",
+        "line": 70
+      },
+      {
+        "code": "\t\tif (isWebhookStaticResponse(webhookResponse)) {",
+        "desc": "在调用栈下游 sendWebhookResponse 内部，isWebhookStaticResponse 谓词检查当前 webhookResponse 是否为静态响应类型。分支成立后，控制流进入处理静态响应体的代码段，其中包括内容类型检测、沙盒化决策及最终的 res.send 调用。此步骤将执行路径从通用分发逻辑收窄至漏洞核心代码段，为后续 needsSandbox 计算和 sandboxHtmlResponse 调用提供执行前提。",
+        "file": "packages/cli/src/webhooks/webhook-request-handler.ts",
+        "line": 112
+      },
+      {
+        "code": "\t\t\tconst needsSandbox = !contentType || isHtmlRenderedContentType(contentType);",
+        "desc": "在调用栈最底层的静态响应处理段，代码检测 contentType 是否为空或指向需要渲染的 HTML 类型，并将布尔结果写入 needsSandbox。此判断与 RespondToWebhook 节点侧的 HTML 类型检测相互呼应，构成漏洞链路上的第二个沙盒决策点；当 needsSandbox 为真时，下一行将再次调用 sandboxHtmlResponse，生成携带过宽 sandbox 属性的 iframe 并作为 bodyToSend 发往客户端。",
+        "file": "packages/cli/src/webhooks/webhook-request-handler.ts",
+        "line": 148
+      },
+      {
+        "code": "\t\t\tconst bodyToSend = needsSandbox ? sandboxHtmlResponse(body) : body;",
+        "desc": "基于上一步 needsSandbox 的计算结果，三元表达式决定最终的 bodyToSend：若需要沙盒则调用 sandboxHtmlResponse(body) 生成 iframe 包裹，否则直接传递原始 body。此处是 sendWebhookResponse（caller）再次进入 sandboxHtmlResponse（callee）的入口；该函数在此生成的 iframe 所携带的 sandbox 属性权限集过宽，是漏洞在发送阶段完成最终构造的关键节点，随后一行立即将其写入响应流。",
+        "file": "packages/cli/src/webhooks/webhook-request-handler.ts",
+        "line": 149
+      },
+      {
+        "code": "\t\t\tres.send(bodyToSend);",
+        "desc": "最终，res.send 将 bodyToSend 写入 HTTP 响应流并发往客户端，完成整条调用链的末端输出，与 critical_operation 锚点位置重合。携带过宽 sandbox 权限的 iframe 内容在此刻离开服务端控制范围；浏览器渲染该 iframe 后，沙盒内脚本借助用户手势触发顶层窗口导航，实现对顶层上下文的脚本注入。服务端在此步骤未设置任何 CSP 头，无二次防线拦截。",
+        "file": "packages/cli/src/webhooks/webhook-request-handler.ts",
+        "line": 150
+      }
+    ],
+    "verify": 1,
+    "vuln_category_l1": "XSS",
+    "vuln_category_l2": "Stored XSS",
+    "vuln_ids": [
+      "CVE-2025-61914",
+      "GHSA-58JC-RCG5-95F3"
+    ],
+    "vuln_title": "n8n Stored XSS in 'Respond to Webhook' Node via iframe Sandbox Bypass - webhook-request-handler.ts"
+  },
+  {
+    "commit": "008cd8d08369ad188625fb5efaa6fa3707c1548e",
+    "critical_operation": {
+      "code": "\tbefore: [],",
+      "desc": "before: [] 将 Tournament 实例的前置 AST 钩子数组置为空，使表达式送入引擎前不经历任何转换处理。若此数组包含 FunctionThisSanitizer 等钩子，function(){} 的 this 上下文将被重绑定到受控对象；钩子数组为空导致 this 绑定替换步骤完全缺失，是沙盒逃逸漏洞的直接根因，也是整条链路中配置性缺陷的核心所在。",
+      "file": "packages/workflow/src/expression-evaluator-proxy.ts",
+      "line": 10
+    },
+    "entry_id": "entry-00082",
+    "entry_point": {
+      "code": "import { evaluateExpression, setErrorHandler } from './expression-evaluator-proxy';",
+      "desc": "expression.ts 顶部通过模块导入将 evaluateExpression 与 setErrorHandler 引入 Expression 类的命名空间，使该类的全部表达式求值逻辑均委托给 expression-evaluator-proxy 模块。在漏洞链路中，此导入建立了用户可控表达式从上层业务代码流入 Tournament 求值引擎的模块边界，是整条调用链的起始跨模块依赖点。",
+      "file": "packages/workflow/src/expression.ts",
+      "line": 6
+    },
+    "origin": "GitHub Advisory Database (reviewed)",
+    "project": "n8n",
+    "repo_url": "https://github.com/n8n-io/n8n",
+    "report_id": "GHSA-V98V-FF95-F3CP",
+    "source_link": "https://github.com/advisories/GHSA-v98v-ff95-f3cp",
+    "trace": [
+      {
+        "code": "import { evaluateExpression, setErrorHandler } from './expression-evaluator-proxy';",
+        "desc": "导入语句是调用链的起始节点，它将 evaluateExpression 符号从 expression-evaluator-proxy 模块引入 expression.ts 的作用域。从 caller 视角看，Expression 类中所有对表达式求值的请求均须经此边界流向代理模块，在漏洞链路中这一跨模块引用将上层工作流执行逻辑与含有配置缺陷的 Tournament 实例绑定在一起。",
+        "file": "packages/workflow/src/expression.ts",
+        "line": 6
+      },
+      {
+        "code": "\t\t}",
+        "desc": "此闭合括号位于 Expression 类内部某一条件分支结构的末尾，是控制流完成局部判断后向调用栈下游延续的切换点。随后执行路径在 Expression 类内部继续向前推进，从辅助性的类型处理逻辑过渡到负责驱动表达式求值的核心方法；在漏洞链路中，此节点充当从上游辅助逻辑向 resolveSimpleParameterValue 调用路径收敛的中间过渡。",
+        "file": "packages/workflow/src/expression.ts",
+        "line": 205
+      },
+      {
+        "code": "\tresolveSimpleParameterValue(",
+        "desc": "resolveSimpleParameterValue 是 Expression 类在运行时解析工作流节点参数的核心入口，负责识别以 = 开头的表达式字符串并触发求值流程。在调用栈下游，该方法将用户提供的原始表达式传入 evaluateExpression，是漏洞链路中攻击者注入的恶意表达式从工作流参数层首次进入代理求值层的关键跃迁点。",
+        "file": "packages/workflow/src/expression.ts",
+        "line": 235
+      },
+      {
+        "code": "export const evaluateExpression: Evaluator = (expr, data) => {",
+        "desc": "evaluateExpression 是 expression-evaluator-proxy 模块暴露给调用方的代理求值函数，接收来自 resolveSimpleParameterValue 传入的表达式字符串与运行时数据。随后该函数不附加任何安全校验，将调用直接转发给内部 evaluator 句柄；在漏洞链路中，这一函数是 caller 到 Tournament 引擎的透传层，其执行结果完全受引擎初始化时的钩子配置左右。",
+        "file": "packages/workflow/src/expression-evaluator-proxy.ts",
+        "line": 19
+      },
+      {
+        "code": "const evaluator: Evaluator = tournamentEvaluator.execute.bind(tournamentEvaluator);",
+        "desc": "const evaluator 在模块加载阶段通过 bind 将 tournamentEvaluator.execute 固定绑定到 Tournament 实例，生成供后续所有求值请求复用的执行句柄。在调用栈下游，evaluateExpression 的每次运行时调用均经由此句柄进入引擎；由于被绑定的 Tournament 实例携带 before: [] 配置，通过此句柄发起的全部求值均继承了缺失前置 AST 转换的漏洞状态。",
+        "file": "packages/workflow/src/expression-evaluator-proxy.ts",
+        "line": 13
+      },
+      {
+        "code": "const tournamentEvaluator = new Tournament(errorHandler, undefined, undefined, {",
+        "desc": "new Tournament(errorHandler, undefined, undefined, {...}) 在模块加载期间静态构造求值引擎实例，并将第四个参数中的钩子配置对象一次性写入实例状态。这是漏洞链路的静态初始化节点：before 字段的值在此时被固定，并随后通过 bind 封装为执行句柄，对该模块生命周期内的全部表达式求值持续生效。",
+        "file": "packages/workflow/src/expression-evaluator-proxy.ts",
+        "line": 9
+      },
+      {
+        "code": "\tbefore: [],",
+        "desc": "before: [] 作为 Tournament 构造函数第四个参数配置对象中的前置钩子数组，是调用链末端的漏洞根节点。在调用栈下游，Tournament 引擎对每条表达式求值前都会遍历此数组以执行 AST 预处理；数组为空导致 function(){} 中 this 的上下文重绑定步骤从未发生，this 在运行时保持指向 Node.js 全局对象，为通过 this 访问系统级接口打开了路径。",
+        "file": "packages/workflow/src/expression-evaluator-proxy.ts",
+        "line": 10
+      }
+    ],
+    "verify": 1,
+    "vuln_category_l1": "代码注入",
+    "vuln_category_l2": "表达式注入（Expression Injection）",
+    "vuln_ids": [
+      "CVE-2025-68613",
+      "GHSA-V98V-FF95-F3CP"
+    ],
+    "vuln_title": "n8n Expression Injection leading to Remote Code Execution via Unbound function() this Context - expression-evaluator-proxy.ts"
+  }
+]

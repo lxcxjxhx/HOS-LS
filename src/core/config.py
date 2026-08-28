@@ -137,7 +137,7 @@ class AIConfig(BaseModel):
     @field_validator("provider")
     @classmethod
     def validate_provider(cls, v: str) -> str:
-        allowed = ["anthropic", "openai", "deepseek", "aliyun", "local"]
+        allowed = ["anthropic", "openai", "deepseek", "aliyun", "deepinfra", "local"]
         if v not in allowed:
             raise ValueError(f"provider must be one of {allowed}")
         return v

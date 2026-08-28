@@ -1,0 +1,6 @@
+[submodule "bench/datasets/SecureVibeBench"]
+	path = bench/datasets/SecureVibeBench
+	url = https://github.com/chen-junkai/SecureVibeBench.git
+[submodule "bench/datasets/VulnGym"]
+	path = bench/datasets/VulnGym
+	url = https://github.com/Tencent/VulnGym.git

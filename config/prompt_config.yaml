@@ -1,5 +1,5 @@
 prompt:
-  version: v1
+  version: v2
   language: zh
   templates_dir: prompts/templates
 
@@ -22,6 +22,18 @@ agents:
   adversarial_validation:
     template: adversarial_validation.jinja2
     max_context_length: 6000
+  semgrep_analysis:
+    template: semgrep_analysis.jinja2
+    max_context_length: 4000
+  diff_analysis:
+    template: diff_analysis.jinja2
+    max_context_length: 4000
+  contract_violation:
+    template: contract_violation.jinja2
+    max_context_length: 4000
+  counterfactual:
+    template: counterfactual.jinja2
+    max_context_length: 4000
   final_decision:
     template: final_decision.jinja2
     max_context_length: 4000

@@ -1,0 +1,32 @@
+## 差分分析：AI 代码变更风险路径检测
+
+### 变更概要
+- 变更文件数：{{ changed_files|length }}
+- 分析文件：{{ file_path }}
+
+### 检测到的风险路径
+
+{% if risk_paths %}
+| 文件 | 行号 | 变更类型 | Sink | 可达 Source | 已消毒 | 置信度 |
+|------|------|----------|------|-------------|--------|--------|
+{% for rp in risk_paths %}
+| {{ rp.file.split('/')[-1] }} | {{ rp.line }} | {{ rp.change_type }} | {{ rp.sink_keyword }} | {{ rp.source_keyword or 'N/A' }} | {{ '✅' if rp.has_sanitizer else '❌' }} | {{ rp.confidence }} |
+{% endfor %}
+{% else %}
+**未检测到新的风险路径。**
+{% endif %}
+
+### 判断依据
+- **新增行 (ADDED)**: AI 新增了包含安全敏感操作的代码
+- **删除行 (REMOVED)**: AI 移除了安全防护措施
+- **未消毒 = 风险**: sink 操作没有对应的消毒函数/参数化查询
+
+### 输出格式
+请输出 JSON 格式：
+```json
+{
+  "risk_paths": [...],
+  "summary": "差分分析总结",
+  "signal_tracking": { "signals_new": 0, "signals_confirmed": 0 }
+}
+```

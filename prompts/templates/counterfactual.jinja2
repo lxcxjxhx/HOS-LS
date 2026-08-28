@@ -1,0 +1,48 @@
+## 反事实验证报告
+
+### 实验概要
+- 总实验数：{{ total_experiments }}
+- 通过：{{ pass_count }} ({{ pass_rate * 100 }}%)
+- 失败：{{ fail_count }}
+
+{% if experiments %}
+### 各实验详情
+
+{% for exp in experiments %}
+#### 实验 {{ loop.index }}: {{ exp.experiment_id }}
+- **漏洞类型**: {{ exp.vulnerability_type }}
+- **修改操作**: {{ exp.modification_description }}
+- **预期结果**: {{ exp.expected_result }}
+- **实际结果**: {{ exp.actual_result }}
+- **结论**: {{ '✅ 通过' if exp.verified else '❌ 失败' }}
+
+**原始代码:**
+```python
+{{ exp.original_snippet }}
+```
+
+**反事实代码:**
+```python
+{{ exp.counterfactual_snippet }}
+```
+
+{% endfor %}
+{% endif %}
+
+### 综合判断
+{% if pass_rate >= 0.8 %}
+- ✅ **高可信度**: 反事实验证通过率达 {{ pass_rate * 100 }}%，漏洞验证结果可靠
+{% elif pass_rate >= 0.5 %}
+- ⚠️ **中等可信度**: 反事实验证通过率 {{ pass_rate * 100 }}%，部分修复方案不完整
+{% else %}
+- ❌ **低可信度**: 反事实验证通过率仅 {{ pass_rate * 100 }}%，需要进一步分析
+{% endif %}
+
+### 输出格式
+```json
+{
+  "counterfactual_report": [...],
+  "summary": "反事实验证总结",
+  "pass_rate": {{ pass_rate }}
+}
+```

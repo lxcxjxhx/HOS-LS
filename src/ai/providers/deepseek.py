@@ -12,6 +12,7 @@ from openai import APIStatusError as OpenAIAPIStatusError
 from openai import AsyncOpenAI
 
 from src.ai.client import AIClient
+from src.ai.key_manager import get_api_key, mask_key
 from src.ai.models import AIProvider, AIRequest, AIResponse
 from src.core.config import Config
 from src.utils.logger import get_logger
@@ -68,21 +69,13 @@ class DeepSeekClient(AIClient):
         if self._initialized:
             return
 
-        # 优先使用配置中的 API 密钥
-        api_key = self.config.ai.api_key
-
-        # 其次尝试从环境变量获取（与正式模式一致）
-        if not api_key:
-            api_key = os.getenv("HOS_LS_AI_API_KEY")
-
-        # 最后尝试 DEEPSEEK_API_KEY 作为兼容
-        if not api_key:
-            api_key = os.getenv("DEEPSEEK_API_KEY")
+        # 使用 key_manager 获取 API 密钥（支持 .env 和多层 fallback）
+        api_key = get_api_key("deepseek", self.config.ai.api_key if self.config else None)
 
         if not api_key:
             raise ValueError("DeepSeek API 密钥未设置")
 
-        base_url = self.config.ai.base_url or self.DEFAULT_BASE_URL
+        base_url = self.config.ai.base_url if self.config else self.DEFAULT_BASE_URL
 
         # 使用 OpenAI SDK 创建客户端
         # max_retries=0：内部重试会吞掉超时（每次尝试都可能吃满超时），
