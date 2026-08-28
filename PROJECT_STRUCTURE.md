@@ -312,13 +312,13 @@ Layer 6: 入口
 
 | 优先级 | 文件 | 当前行数 | 建议方式 |
 |--------|------|---------|----------|
-| P0 | `src/core/scanner.py` | 2565 | 提取 scan() 方法到 scanner_run.py |
-| P1 | `src/ai/pure_ai/multi_agent_pipeline.py` | 3816 | 提取 Agent 0-6 运行器到 agents/ 子目录 |
-| P2 | `src/ai/pure_ai_analyzer.py` | 3290 | 提取 analyze_batch/resume/incremental |
-| P3 | `src/cli/main.py` | 2327 | ✅ 已完成 (命令拆分到 commands/) |
-| P4 | `src/ai/pure_ai/schema_validator.py` | 1442 | ✅ 已完成 |
-| P5 | `src/analyzers/dependency_chain_analyzer.py` | 1397 | ✅ 已完成 |
-| P6 | `src/analyzers/exploit_generator.py` | 1136 | ✅ 已完成 (提取 types/templates/scorer) |
+| P0 | `src/ai/pure_ai/multi_agent_pipeline.py` | 3610 | 提取 Agent 0-6 运行器到 agents/ 子目录 |
+| P1 | `src/ai/pure_ai_analyzer.py` | 3309 | 提取 ResultConverter 工具方法 |
+| P2 | `src/analyzers/tiered_analysis_pipeline.py` | 1533 | 提取 FastScreener/AIAssistedAnalyzer/DeepVerifier |
+| P3 | `src/ai/pure_ai/context_builder.py` | 1744 | 提取 SIR/Java/Python 上下文模块 |
+| P4 | `src/reporting/generator.py` | 1406 | 提取统计函数 + 分离生成器 |
+| P5 | `src/analyzers/risk_quantifier.py` | 1360 | 检查是否能拆分子模块 |
+| P6 | `src/analyzers/finding_verifier.py` | 1285 | 检查拆分点 |
 | P7 | `src/utils/priority_engine.py` | 784 | ✅ 已完成 |
 | P8 | `src/ai/pure_ai/context_builder.py` | 1524 | 提取 SIR / 数据流模块 |
 | P9 | `src/analyzers/tiered_analysis_pipeline.py` | 1328 | 提取正则模式库 |

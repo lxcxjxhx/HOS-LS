@@ -1,6 +1,8 @@
 """安全扫描器模块
 
-提供核心的安全扫描功能，集成文件发现、代码分析和 AI 分析。
+提供核心的安全扫描功能，集成文件发现、代码分析和 AI
+from src.core.scan_runner import scan, scan_sync, pre_scan_cost_check, discover_files, get_location
+ 分析。
 """
 
 import asyncio
