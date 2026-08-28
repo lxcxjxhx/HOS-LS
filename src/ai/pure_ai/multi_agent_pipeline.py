@@ -41,7 +41,7 @@ from src.ai.pure_ai.validation import (
 from src.utils.logger import get_logger
 
 logger = get_logger(__name__)
-from src.ai.pure_ai.pipeline_constants import (
+from src.ai.pure_ai.pipeline_constants import (SemanticConsistencyError,
     CONFIDENCE_THRESHOLDS,
     HIGH_SEVERITY_RISK_TYPES,
     REJECTED_PLACEHOLDERS,
