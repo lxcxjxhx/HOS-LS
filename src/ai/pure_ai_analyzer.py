@@ -18,6 +18,7 @@ from src.ai.pure_ai.line_number_validator import LineNumberValidator
 from src.core.config import Config
 from src.nvd.nvd_query_adapter import NVDQueryAdapter
 from src.utils.logger import get_logger
+from src.ai.pure_ai.result_converter import ResultConverter
 
 logger = get_logger(__name__)
 
