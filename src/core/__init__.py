@@ -12,6 +12,8 @@ __all__ = [
     "ConfigManager",
     "ScanEngine",
     "SecurityScanner",
+    "RemoteSecurityScanner",
+    "create_scanner",
     "ModuleRegistry",
     "DependencyInjector",
     "RAGGraphIntegrator",
@@ -25,6 +27,14 @@ def __getattr__(name):
         from src.core.scanner import SecurityScanner
 
         return SecurityScanner
+    if name == "RemoteSecurityScanner":
+        from src.core.remote_scanner import RemoteSecurityScanner
+
+        return RemoteSecurityScanner
+    if name == "create_scanner":
+        from src.core.remote_scanner import create_scanner
+
+        return create_scanner
     if name in ("RAGGraphIntegrator", "get_rag_graph_integrator"):
         from src.ai.pure_ai.rag.graph_integrator import RAGGraphIntegrator, get_rag_graph_integrator
 
