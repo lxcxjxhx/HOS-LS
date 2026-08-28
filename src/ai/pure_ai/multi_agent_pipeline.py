@@ -58,6 +58,9 @@ console = Console()
 
 
 
+from src.ai.pure_ai.agent_0 import run_agent_0 as _run_agent_0_impl
+from src.ai.pure_ai.agent_1 import run_agent_1 as _run_agent_1_impl
+from src.ai.pure_ai.agent_2 import run_agent_2 as _run_agent_2_impl
 from src.ai.pure_ai.agents_4_5_6 import (
     run_agent_4 as _run_agent_4_impl,
     run_agent_5 as _run_agent_5_impl,
@@ -920,56 +923,8 @@ class MultiAgentPipeline:
     async def _run_agent_0(
         self, file_path: str, context: Dict[str, Any], detected_language: str = "Unknown"
     ) -> Tuple[Dict[str, Any], Dict[str, int]]:
-        """运行Agent 0：上下文构建
-
-        Args:
-            file_path: 文件路径
-            context: 上下文信息
-            detected_language: 检测到的语言
-
-        Returns:
-            (上下文分析结果, token使用信息)
-        """
-        logger.debug(f" 运行Agent 0 (上下文构建) on: {file_path}")
-        self.debug_logs.append(f"[DEBUG] 运行Agent 0 (上下文构建) on: {file_path}")
-        # [OPT-COMPACT] 代码压缩：函数骨架摘要（签名+文档首行）注入 function_calls 通道
-        skeleton_summary = ""
-        if getattr(self, "compaction_enabled", False):
-            try:
-                structure = context.get("file_structure") or {}
-                funcs = structure.get("functions") or []
-                lines = []
-                for f in funcs[:30]:
-                    args = ",".join(str(a) for a in (f.get("args") or [])[:6])
-                    doc = str(f.get("docstring") or "").strip().splitlines()
-                    doc1 = doc[0][:60] if doc else ""
-                    lines.append(f"{f.get('name')}({args})  # L{f.get('line')} {doc1}")
-                if lines:
-                    skeleton_summary = "\n".join(["# [函数骨架摘要]"] + lines)
-            except Exception as e:
-                logger.debug(f"[OPT-COMPACT] 骨架构建失败: {e}")
-        function_calls_text = PromptEngine.format_function_calls(
-            context.get("function_calls", [])
-        )
-        if skeleton_summary:
-            function_calls_text = skeleton_summary + "\n" + function_calls_text
-        prompt = self.prompt_engine.render_agent_prompt(
-            "context_builder",
-            file_path=file_path,
-            file_content=context["file_content"],
-            related_files=PromptEngine.format_related_files(context.get("related_files", [])),
-            imports=PromptEngine.format_imports(context.get("imports", [])),
-            function_calls=function_calls_text,
-            detected_language=detected_language,
-        )
-
-        response, token_usage = await self._generate_with_retry(
-            prompt, "Agent 0", temperature=self.temperature
-        )
-        result = self._parse_json_response(response, schema_name="context_analysis")
-        logger.debug(f" Agent 0 完成，令牌使用: {token_usage['total_tokens']}")
-        self.debug_logs.append(f"[DEBUG] Agent 0 完成，令牌使用: {token_usage['total_tokens']}")
-        return result, token_usage
+        """运行Agent 0（委托给 agent_0.run_agent_0）"""
+        return await _run_agent_0_impl(self, file_path, context, detected_language)
 
     async def _run_agent_1(
         self,
@@ -978,35 +933,8 @@ class MultiAgentPipeline:
         context_analysis: Dict[str, Any],
         detected_language: str = "Unknown",
     ) -> Tuple[Dict[str, Any], Dict[str, int]]:
-        """运行Agent 1：代码理解
-
-        Args:
-            file_path: 文件路径
-            context: 上下文信息
-            context_analysis: 上下文分析结果
-            detected_language: 检测到的语言
-
-        Returns:
-            (代码理解结果, token使用信息)
-        """
-        logger.debug(f" 运行Agent 1 (代码理解) on: {file_path}")
-        self.debug_logs.append(f"[DEBUG] 运行Agent 1 (代码理解) on: {file_path}")
-        context_info = json.dumps(context_analysis, ensure_ascii=False)
-        prompt = self.prompt_engine.render_agent_prompt(
-            "code_understanding",
-            file_path=file_path,
-            file_content=context["file_content"],
-            context_info=context_info,
-            detected_language=detected_language,
-        )
-
-        response, token_usage = await self._generate_with_retry(
-            prompt, "Agent 1", temperature=self.temperature
-        )
-        result = self._parse_json_response(response, schema_name="code_understanding")
-        logger.debug(f" Agent 1 完成，令牌使用: {token_usage['total_tokens']}")
-        self.debug_logs.append(f"[DEBUG] Agent 1 完成，令牌使用: {token_usage['total_tokens']}")
-        return result, token_usage
+        """运行Agent 1（委托给 agent_1.run_agent_1）"""
+        return await _run_agent_1_impl(self, file_path, context, context_analysis, detected_language)
 
     def _slim_structured_data(self, code_understanding: Dict[str, Any]) -> str:
         """将 Agent-1 的结构化输出精简为关键字段（减少 Agent-2 的输入 token）。
@@ -1049,35 +977,8 @@ class MultiAgentPipeline:
     async def _run_agent_2(
         self, file_path: str, code_understanding: Dict[str, Any], detected_language: str = "Unknown"
     ) -> Tuple[Dict[str, Any], Dict[str, int]]:
-        """运行Agent 2：风险枚举
-
-        Args:
-            file_path: 文件路径
-            code_understanding: 代码理解结果
-            detected_language: 检测到的语言
-
-        Returns:
-            (风险枚举结果, token使用信息)
-        """
-        logger.debug(f" 运行Agent 2 (风险枚举) on: {file_path}")
-        self.debug_logs.append(f"[DEBUG] 运行Agent 2 (风险枚举) on: {file_path}")
-        structured_data = self._slim_structured_data(code_understanding)
-        known_file_paths = self._file_registry.get_known_file_paths()
-        prompt = self.prompt_engine.render_agent_prompt(
-            "risk_enumeration",
-            file_path=file_path,
-            structured_data=structured_data,
-            detected_language=detected_language,
-            known_file_paths=known_file_paths,
-        )
-
-        response, token_usage = await self._generate_with_retry(
-            prompt, "Agent 2", temperature=self.temperature
-        )
-        result = self._parse_json_response(response, schema_name="risk_enumeration")
-        logger.debug(f" Agent 2 完成，令牌使用: {token_usage['total_tokens']}")
-        self.debug_logs.append(f"[DEBUG] Agent 2 完成，令牌使用: {token_usage['total_tokens']}")
-        return result, token_usage
+        """运行Agent 2（委托给 agent_2.run_agent_2）"""
+        return await _run_agent_2_impl(self, file_path, code_understanding, detected_language)
 
     def _format_context_mappings_for_agent(self, context: Dict[str, Any]) -> str:
         """格式化上下文映射信息以供 Agent 使用
