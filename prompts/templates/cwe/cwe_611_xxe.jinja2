@@ -1,0 +1,107 @@
+{# CWE-611: XML外部实体注入（XML External Entity, XXE）检测指导模板
+   对标 ZeroFalse 论文的 CWE 专用 Prompt 实现
+   本模板作为 partial 被主模板 include
+#}
+
+[CWE-611 XXE检测指导]
+
+**漏洞定义**：
+XML外部实体注入是指XML解析器在处理XML输入时未正确禁用外部实体引用，
+攻击者可以通过构造恶意XML文档读取服务器文件、发起SSRF攻击、
+或造成拒绝服务（Billion Laughs攻击）。
+
+**Sink函数（危险函数）**：
+{% if detected_language == "java" %}
+- DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(input) — DOM解析
+- SAXParserFactory.newInstance().newSAXParser().parse(input, handler) — SAX解析
+- XMLInputFactory.newInstance().createXMLStreamReader(input) — StAX解析
+- TransformerFactory.newInstance().newTransformer(source) — XSLT转换
+- SAXReader.read(input) — dom4j解析
+- XMLReader.parse(input) — SAX解析器
+- Unmarshaller.unmarshal(xml) — JAXB反序列化
+- SchemaFactory.newSchema(source) — Schema解析
+{% elif detected_language == "python" %}
+- xml.etree.ElementTree.parse(xml) — 默认可能不安全
+- xml.etree.ElementTree.fromstring(xml) — 字符串解析
+- lxml.etree.parse(xml) — lxml解析（默认允许DTD）
+- lxml.etree.fromstring(xml) — lxml字符串解析
+- defusedxml（安全替代，但如未使用则为漏洞）
+- xml.dom.minidom.parse(xml) — minidom解析
+- xml.sax.parse(xml) — SAX解析
+{% elif detected_language == "javascript" %}
+- libxmljs.parseXml(xml) — libxmljs解析
+- xmldom.DOMParser().parseFromString(xml) — xmldom解析
+- xml2js（默认不处理实体但配置可能不安全）
+- fast-xml-parser（配置不当时）
+{% endif %}
+
+**Source函数（用户输入入口）**：
+{% if detected_language == "java" %}
+- HTTP请求体（application/xml, application/soap+xml）
+- SOAP请求（WebService输入）
+- 文件上传（XML文件）
+- SAML/OAuth响应（XML格式）
+- SVG文件上传（SVG是XML格式）
+- XLSX/DOCX文件（Office Open XML格式）
+- REST API的XML请求体
+{% elif detected_language == "python" %}
+- HTTP请求体（request.data 当Content-Type为XML时）
+- 文件上传（XML文件）
+- SOAP请求
+- SAML响应
+{% elif detected_language == "javascript" %}
+- HTTP请求体（XML格式）
+- 文件上传
+- WebSocket消息（XML格式）
+{% endif %}
+
+**Sanitization模式（充分防御判定）**：
+{% if detected_language == "java" %}
+- 禁用DTD：
+  factory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true) → 充分防御
+- 禁用外部实体：
+  factory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true)
+  factory.setProperty(XMLConstants.ACCESS_EXTERNAL_DTD, "")
+  factory.setProperty(XMLConstants.ACCESS_EXTERNAL_SCHEMA, "") → 充分防御
+- 使用defusedxml库（Python）→ 充分防御
+{% elif detected_language == "python" %}
+- 使用 defusedxml.ElementTree 替代 xml.etree.ElementTree → 充分防御
+- lxml解析时设置 resolve_entities=False, no_network=True → 充分防御
+- 禁用DTD：forbid_dtd=True → 充分防御
+{% elif detected_language == "javascript" %}
+- 使用安全的XML解析配置 → 充分防御
+- 禁用外部实体处理 → 充分防御
+{% endif %}
+
+**不充分防御（仍视为漏洞）**：
+- 仅禁用外部通用实体但允许参数实体 → 不充分
+- 仅过滤 SYSTEM 关键字 → 不充分（编码绕过）
+- 仅允许特定URL scheme → 不充分（DNS重绑定等绕过）
+
+**XXE攻击载荷检测**：
+- 文件读取：<!ENTITY xxe SYSTEM "file:///etc/passwd">
+- SSRF：<!ENTITY xxe SYSTEM "http://internal-server/">
+- 拒绝服务（Billion Laughs）：嵌套实体指数级扩展
+- 盲XXE：通过外部DTD参数化实体外带数据
+
+**证据要求**：
+1. 必须识别出XML解析器的使用
+2. 必须确认解析器未禁用外部实体/DTD
+3. 必须确认输入数据来源于不可信源
+4. code_snippet必须包含XML解析配置和调用代码
+5. 标注是否缺少安全配置（如缺少setFeature调用）
+
+**CVSS评分指导**：
+- 可读取服务器敏感文件（/etc/passwd等）：AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N → 7.5 (HIGH)
+- 可发起SSRF访问内网：AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:L/A:N → 8.2 (HIGH)
+- 仅拒绝服务：AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:L → 5.3 (MEDIUM)
+- 需要认证：AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:N → 6.5 (MEDIUM)
+
+{% if file_content %}
+[CWE-611 针对性检测]
+在以下文件内容中重点检测XXE模式：
+- XML解析器的初始化和配置
+- 是否缺少禁用DTD/外部实体的安全配置
+- XML输入来源是否为不可信数据
+- SOAP/SAML/SVG等XML格式的处理逻辑
+{% endif %}

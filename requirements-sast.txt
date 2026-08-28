@@ -1,0 +1,12 @@
+# HOS-LS SAST 工具链依赖（独立环境 envs/sast-venv）
+# 安装：envs/install.ps1（或 python -m venv envs/sast-venv && envs\sast-venv\Scripts\pip install -r requirements-sast.txt）
+
+# S1 快扫层：semgrep（社区规则库最全）
+# 注意 Windows 沙箱：semgrep OCaml 内核启动时打开系统证书库，受限环境会 X509 崩溃，
+# 需完整权限运行（与 curl schannel SEC_E_NO_CREDENTIALS 同源；Python/certifi 不受影响）
+semgrep>=1.159.0
+
+# S1 兜底快层：bandit（纯 Python，无证书库依赖，受限环境可跑）
+bandit>=1.7.9
+
+# 可选：gitleaks 密钥扫描（Go 二进制，非 pip，见 install.ps1）
