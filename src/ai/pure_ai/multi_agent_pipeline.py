@@ -660,7 +660,9 @@ class MultiAgentPipeline:
                 progress.advance(main_task)
 
                 start_time = time.time()
-                final_decision, token_usage = await self._run_agent_6(
+                from src.ai.pure_ai.agent_6 import run_agent_6 as _agent_6_impl
+                final_decision, token_usage = await _agent_6_impl(
+                    self,
                     file_path,
                     context,
                     adversarial_validation,
@@ -1934,7 +1936,9 @@ class MultiAgentPipeline:
                         self._agent_timings["early_exit"] = True
 
                         start_time = time.time()
-                        final_decision, token_usage = await self._run_agent_6(
+                        from src.ai.pure_ai.agent_6 import run_agent_6 as _agent_6_impl
+                        final_decision, token_usage = await _agent_6_impl(
+                            self,
                             file_path,
                             context,
                             adversarial_validation,
@@ -2118,7 +2122,9 @@ class MultiAgentPipeline:
                     progress.advance(main_task)
 
                 start_time = time.time()
-                final_decision, token_usage = await self._run_agent_6(
+                from src.ai.pure_ai.agent_6 import run_agent_6 as _agent_6_impl
+                final_decision, token_usage = await _agent_6_impl(
+                    self,
                     file_path,
                     context,
                     adversarial_validation or {},

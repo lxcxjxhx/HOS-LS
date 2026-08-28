@@ -33,12 +33,6 @@ class PureAIAnalyzer:
 
     实现纯AI深度语义解析功能，使用 Multi-Agent Pipeline 进行分析。
     """
-            config=self.config,
-            ai_model=getattr(self, "ai_model", None),
-            client=getattr(self, "client", None),
-            nvd_adapter=getattr(self, "nvd_adapter", None),
-            debug_logs=self.debug_logs if hasattr(self, "debug_logs") else [],
-        )
     def __init__(self, config: Config):
         """初始化纯AI分析器
 
@@ -75,7 +69,13 @@ class PureAIAnalyzer:
             if not api_key:
                 api_key = os.getenv("HOS_LS_AI_API_KEY")
             if not api_key:
+                # 根据当前 provider 查找特定环境变量
+                provider_upper = self.ai_provider.upper() if self.ai_provider else ""
+                api_key = os.getenv(f"HOS_LS_{provider_upper}_API_KEY")
+            if not api_key:
                 api_key = os.getenv("DEEPSEEK_API_KEY")
+            if not api_key:
+                api_key = os.getenv("DEEPINFRA_API_KEY")
 
             if not api_key:
                 logger.warning("WARNING: API 密钥未设置，纯AI分析器可能无法正常工作")
@@ -107,6 +107,8 @@ class PureAIAnalyzer:
                 "anthropic": AIProvider.ANTHROPIC,
                 "openai": AIProvider.OPENAI,
                 "deepseek": AIProvider.DEEPSEEK,
+                "deepinfra": AIProvider.DEEPINFRA,
+                "aliyun": AIProvider.ALIYUN,
                 "local": AIProvider.LOCAL,
             }
             provider = provider_map.get(self.ai_provider, AIProvider.DEEPSEEK)
