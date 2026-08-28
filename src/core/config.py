@@ -551,6 +551,7 @@ class Config(BaseSettings):
     quiet: bool = Field(default=False, description="静默模式")
     config_path: Optional[str] = Field(default=None, description="配置文件路径")
     test_mode: bool = Field(default=False, description="测试模式")
+    test_file_count: int = Field(default=10, ge=1, description="测试模式最多扫描的文件数")
     pure_ai: bool = Field(default=False, description="纯AI深度语义解析模式")
     scan_mode: str = Field(default="auto", description="扫描模式")
 
@@ -617,6 +618,12 @@ class ConfigManager:
         if self._config is None:
             self._config = Config()
         return self._config
+
+    @classmethod
+    def load(cls, path: Optional[Union[str, Path]] = None) -> Config:
+        """兼容旧调用约定，加载指定配置或按默认优先级自动加载。"""
+        manager = cls()
+        return manager.load_from_file(path) if path else manager.auto_load()
 
     def load_from_file(self, path: Union[str, Path]) -> Config:
         """从文件加载配置

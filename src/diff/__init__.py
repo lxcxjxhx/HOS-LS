@@ -1,6 +1,5 @@
-"""差分证据分析模块
+"""Differential evidence analysis for AI-generated code changes.
 
-AI 代码变更的差分漏洞验证引擎。
-输入: R_before, task, Δ_AI, R_after
-输出: 可归因、可证伪的漏洞证据链。
+The package models the transition ``R_before -> delta_AI -> R_after`` and
+supports reachability and counterfactual validation of introduced weaknesses.
 """
