@@ -60,6 +60,8 @@ class PureAIAnalyzer:
         self.nvd_adapter = NVDQueryAdapter()
         self.reject_unverified_findings: bool = getattr(config, "reject_unverified_findings", True)
 
+        self.converter = ResultConverter(self)
+
     async def _initialize(self):
         """异步初始化"""
         try:
