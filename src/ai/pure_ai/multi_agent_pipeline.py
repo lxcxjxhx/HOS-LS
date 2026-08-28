@@ -2329,30 +2329,29 @@ class MultiAgentPipeline:
                         vulnerability_verification = {"vulnerabilities": []}
                     self._agent_timings["agent_3"] = time.time() - start_t
 
-                    # Agent-4: 攻击链分析 (依赖 Agent-3 结果)
-                    if not skip_agent_4_5:
-                        start_t = time.time()
-                        try:
-                            attack_result, token_usage = await self._run_agent_4(
-                                file_path,
-                                vulnerability_verification or {},
-                                detected_language,
-                                context,
+                    # Agent-4: 攻击链分析 (依赖 Agent-3 结果，确定性)
+                    start_t = time.time()
+                    try:
+                        attack_result, token_usage = await self._run_agent_4(
+                            file_path,
+                            vulnerability_verification or {},
+                            detected_language,
+                            context,
+                        )
+                        total_token_usage["prompt_tokens"] += token_usage.get("prompt_tokens", 0)
+                        total_token_usage["completion_tokens"] += token_usage.get("completion_tokens", 0)
+                        total_token_usage["total_tokens"] += token_usage.get("total_tokens", 0)
+                        if isinstance(attack_result, dict):
+                            attack_chain_analysis = attack_result
+                            self._track_attack_chain_signals(attack_chain_analysis)
+                        else:
+                            logger.warning(
+                                f"Agent-4 returned non-dict result type: {type(attack_result).__name__}, treating as empty"
                             )
-                            total_token_usage["prompt_tokens"] += token_usage.get("prompt_tokens", 0)
-                            total_token_usage["completion_tokens"] += token_usage.get("completion_tokens", 0)
-                            total_token_usage["total_tokens"] += token_usage.get("total_tokens", 0)
-                            if isinstance(attack_result, dict):
-                                attack_chain_analysis = attack_result
-                                self._track_attack_chain_signals(attack_chain_analysis)
-                            else:
-                                logger.warning(
-                                    f"Agent-4 returned non-dict result type: {type(attack_result).__name__}, treating as empty"
-                                )
-                                attack_chain_analysis = {"attack_chains": []}
-                        except Exception as e:
-                            logger.error(f"Agent-4 执行失败: {e}")
                             attack_chain_analysis = {"attack_chains": []}
+                    except Exception as e:
+                        logger.error(f"Agent-4 执行失败: {e}")
+                        attack_chain_analysis = {"attack_chains": []}
                     self._agent_timings["agent_4"] = time.time() - start_t
 
                     # Agent-5: 对抗验证 (依赖 Agent-4 结果)
