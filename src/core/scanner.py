@@ -626,6 +626,15 @@ class SecurityScanner:
         """
         from datetime import datetime
 
+        # Direct API callers must receive the same fail-fast behavior as the CLI.
+        if self.config.pure_ai:
+            from src.ai.pure_ai.configuration import (
+                PureAIInitializationError,
+                require_pure_ai_api_key,
+            )
+
+            require_pure_ai_api_key(self.config)
+
         # 开始时间
         start_time = time.time()
         start_datetime = datetime.now()
@@ -657,30 +666,20 @@ class SecurityScanner:
         if not self.config.quiet:
             self._pre_scan_cost_check(str(target))
 
-        # 纯AI模式下确保分析器已初始化
-        if self.config.pure_ai and self.pure_ai_analyzer:
+        # 纯AI模式下确保分析器已初始化；任何失败都必须中止，不能返回空 AI 结果。
+        if self.config.pure_ai:
+            if self.pure_ai_analyzer is None:
+                raise PureAIInitializationError("Pure-AI analyzer was not created")
             if not self.pure_ai_analyzer.initialized:
                 console.print("[cyan]Initializing pure AI analyzer...[/cyan]")
                 try:
                     await asyncio.wait_for(self.pure_ai_analyzer._initialize(), timeout=60.0)
-                    if not self.pure_ai_analyzer.initialized:
-                        console.print(
-                            "[red]X Pure AI analyzer initialization failed, scan will skip AI analysis[/red]"
-                        )
-                        console.print(
-                            "[yellow]! Please check API key configuration and network connection[/yellow]"
-                        )
-                except asyncio.TimeoutError:
-                    console.print("[red]X Pure AI analyzer initialization timeout[/red]")
-                    console.print(
-                        "[yellow]! Please check network connection or increase timeout[/yellow]"
-                    )
-                except Exception as e:
-                    console.print(f"[red]X Pure AI analyzer initialization error: {e}[/red]")
-                    if self.config.debug:
-                        import traceback
-
-                        traceback.print_exc()
+                except asyncio.TimeoutError as exc:
+                    raise PureAIInitializationError(
+                        "Pure-AI analyzer initialization timed out after 60 seconds"
+                    ) from exc
+            if not self.pure_ai_analyzer.initialized:
+                raise PureAIInitializationError("Pure-AI analyzer initialization did not complete")
 
         # 发现文件
         with console.status("[bold blue]... Discovering files...[/bold blue]", spinner="dots"):
