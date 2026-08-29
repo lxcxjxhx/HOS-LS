@@ -4,12 +4,16 @@
 包含纯AI模式和正常模式的文件分析逻辑。
 """
 
+import asyncio
+import os
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 from rich.console import Console
 
+from src.ai.cost_estimator import get_cost_estimator
 from src.ai.models import AnalysisContext, SecurityAnalysisResult, VulnerabilityFinding
+from src.ai.token_tracker import get_token_tracker
 from src.core.config import Config
 from src.core.engine import Finding, Location, Severity
 from src.core.file_filter import RiskLevel, SecurityFileFilter
