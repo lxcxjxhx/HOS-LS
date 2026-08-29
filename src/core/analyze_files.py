@@ -672,7 +672,17 @@ async def analyze_files(scanner, files):
                                             code_snippet="",
                                             fix_suggestion="",
                                             references=[],
-                                            metadata={"source": "codeql", "cwe": h.get("cwe", "")},
+                                            # CodeQL 命中已通过 InputTracer 可控性/污点门：这是
+                                            # 符号执行证据，而非待 AI 判断的启发式候选。显式保留
+                                            # CONFIRMED 状态，确保报告与 benchmark 不会漏计该类
+                                            # 已验证发现，同时使下游可按证据来源审计。
+                                            status="CONFIRMED",
+                                            metadata={
+                                                "source": "codeql",
+                                                "cwe": h.get("cwe", ""),
+                                                "verification": "codeql_taint_path",
+                                                "verified": True,
+                                            },
                                         ))
                                     sast_filtered_paths.add(hpath)
                                 console.print(
