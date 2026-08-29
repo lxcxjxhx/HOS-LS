@@ -8,6 +8,10 @@ from typing import Any, Dict, Optional
 
 import click
 
+from src.ai.pure_ai.configuration import (
+    PureAIConfigurationError,
+    require_pure_ai_api_key,
+)
 from src.cli.main import cli, console
 from src.core.config import Config, ConfigManager
 
@@ -73,6 +77,12 @@ def scan(
             "sandbox": sandbox,
         },
     )
+
+    if config.pure_ai:
+        try:
+            require_pure_ai_api_key(config)
+        except PureAIConfigurationError as exc:
+            raise click.UsageError(str(exc), ctx) from exc
 
     ctx.ensure_object(dict)
     ctx.obj["config"] = config
