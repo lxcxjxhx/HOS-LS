@@ -287,6 +287,7 @@ class MultiAgentPipeline:
             self.request_timeout = config.get("request_timeout", 180)
             self.ast_evidence_enabled = config.get("ast_evidence_enabled", False)
             self.cwe_guidance_enabled = config.get("cwe_guidance_enabled", False)
+            self.consistency_voting_enabled = config.get("consistency_voting_enabled", False)
             self.deterministic_promote_enabled = config.get("deterministic_promote_enabled", False)
         else:
             self.max_retries = getattr(config, "max_retries", 3)
@@ -314,6 +315,11 @@ class MultiAgentPipeline:
             )
             self.cwe_guidance_enabled = (
                 getattr(config, "ai", {}).get("cwe_guidance_enabled", False)
+                if hasattr(config, "ai")
+                else False
+            )
+            self.consistency_voting_enabled = (
+                getattr(config, "ai", {}).get("consistency_voting_enabled", False)
                 if hasattr(config, "ai")
                 else False
             )
@@ -1329,12 +1335,6 @@ class MultiAgentPipeline:
             )
             result["signal_tracking"] = signal_tracking
         return result
-
-        def _synthesize_attack_chains(self, vulnerability_verification, file_path=""):
-
-
-            """确定性合成攻击链（委托给 agents_4_5_6）"""
-
 
         def _synthesize_attack_chains(self, vulnerability_verification, file_path=""):
             """确定性合成攻击链（委托给 agent_4）"""

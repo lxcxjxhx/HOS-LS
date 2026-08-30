@@ -93,6 +93,10 @@ class AIConfig(BaseModel):
         default=False,
         description="是否向 Agent-3 注入 CWE 专项检测指引（M7；每模板约 1K token，默认关闭）",
     )
+    consistency_voting_enabled: bool = Field(
+        default=False,
+        description="是否对 Agent-3 使用多次采样的一致性投票；开启会增加模型调用成本。",
+    )
     deterministic_promote_enabled: bool = Field(
         default=False,
         description="[OPT-P1/P3] 确定性升级：高危 finding 若 Agent-3 验证 CONFIRMED，覆盖 Agent-6 的 WEAK/REFINED 保守裁决升级为 CONFIRMED（验证优先于拒绝，可消融）",
@@ -551,7 +555,6 @@ class Config(BaseSettings):
     quiet: bool = Field(default=False, description="静默模式")
     config_path: Optional[str] = Field(default=None, description="配置文件路径")
     test_mode: bool = Field(default=False, description="测试模式")
-    test_file_count: int = Field(default=10, ge=1, description="测试模式最多扫描的文件数")
     pure_ai: bool = Field(default=False, description="纯AI深度语义解析模式")
     scan_mode: str = Field(default="auto", description="扫描模式")
 
@@ -621,7 +624,7 @@ class ConfigManager:
 
     @classmethod
     def load(cls, path: Optional[Union[str, Path]] = None) -> Config:
-        """兼容旧调用约定，加载指定配置或按默认优先级自动加载。"""
+        """兼容旧调用约定，加载显式路径或按默认优先级自动加载配置。"""
         manager = cls()
         return manager.load_from_file(path) if path else manager.auto_load()
 

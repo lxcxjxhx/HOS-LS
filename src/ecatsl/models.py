@@ -153,6 +153,7 @@ class CandidateRecord(Artifact):
     validation_policy_version: Optional[str] = None
     update_cause: str = Field(min_length=1)
     changed_data: Tuple[Attribute, ...] = ()
+    missing_audit_elements: Tuple[str, ...] = ()
 
 
 class NonConfirmatoryArtifact(Artifact):
@@ -229,6 +230,25 @@ class PathEvidence(Artifact):
     sink: PathLocation
     sanitizer_status: SanitizerStatus
     static_evidence_identity: str = Field(min_length=1)
+
+
+class StaticAdapterRun(Artifact):
+    """Persisted identity and inputs for one configured static-adapter execution."""
+
+    adapter_id: str = Field(min_length=1)
+    adapter_version: str = Field(min_length=1)
+    run_identity: str = Field(min_length=1)
+    candidate_record_ids: Tuple[str, ...] = Field(min_length=1)
+    specification_ids: Tuple[str, ...] = Field(min_length=1)
+    validation_result_id: str = Field(min_length=1)
+    input_artifact_ids: Tuple[str, ...] = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def inputs_cover_bound_lineage(self) -> "StaticAdapterRun":
+        required = set(self.candidate_record_ids + self.specification_ids)
+        if not required.issubset(self.input_artifact_ids):
+            raise ValueError("adapter run inputs must include every candidate and specification")
+        return self
 
 
 class FindingClassification(Artifact):

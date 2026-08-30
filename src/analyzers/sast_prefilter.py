@@ -67,19 +67,39 @@ class SastPrefilter:
 
     @staticmethod
     def _envs_bin(name: str) -> Optional[str]:
-        """在项目 envs 布局下定位工具二进制（codeql / semgrep / bandit）。"""
+        """在项目 envs 布局下定位工具二进制（codeql / semgrep / bandit）。
+
+        探测顺序：
+          1. PATH 中直接可用（shutil.which）
+          2. 项目 envs/ 目录下的 Windows Scripts/*.exe 路径
+          3. 项目 envs/ 目录下的 Linux/macOS bin/* 路径
+        未找到时 emit warning，调用方可据此决策是否降级。
+        """
         cand = shutil.which(name)
         if cand:
             return cand
         here = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
         probes = {
-            "codeql": [os.path.join(here, "envs", "codeql", "codeql.exe")],
-            "semgrep": [os.path.join(here, "envs", "sast-venv", "Scripts", "semgrep.exe")],
-            "bandit": [os.path.join(here, "envs", "sast-venv", "Scripts", "bandit.exe")],
+            "codeql": [
+                os.path.join(here, "envs", "codeql", "codeql.exe"),   # Windows
+                os.path.join(here, "envs", "codeql", "codeql"),        # Linux / macOS
+            ],
+            "semgrep": [
+                os.path.join(here, "envs", "sast-venv", "Scripts", "semgrep.exe"),  # Windows
+                os.path.join(here, "envs", "sast-venv", "bin", "semgrep"),           # Linux / macOS
+            ],
+            "bandit": [
+                os.path.join(here, "envs", "sast-venv", "Scripts", "bandit.exe"),   # Windows
+                os.path.join(here, "envs", "sast-venv", "bin", "bandit"),            # Linux / macOS
+            ],
         }
         for p in probes.get(name, []):
             if os.path.exists(p):
                 return p
+        logger.warning(
+            f"[SastPrefilter] 工具 '{name}' 未找到（PATH 与 envs/ 均不可用），"
+            f"cascade 模式中该后端将被跳过。请运行安装脚本或将工具加入 PATH。"
+        )
         return None
 
     @staticmethod

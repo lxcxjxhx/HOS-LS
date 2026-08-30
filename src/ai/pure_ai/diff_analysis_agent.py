@@ -87,6 +87,8 @@ class DiffParser:
         files: List[ChangedFile] = []
         current_file: Optional[ChangedFile] = None
         current_hunk: Optional[DiffHunk] = None
+        old_line_no = 0
+        new_line_no = 0
 
         for line in diff_text.split("\n"):
             # 文件头: --- a/xxx  +++ b/xxx
@@ -111,22 +113,27 @@ class DiffParser:
                     new_start=int(hunk_match.group(3)),
                     new_count=int(hunk_match.group(4) or 1),
                 )
+                old_line_no = current_hunk.old_start
+                new_line_no = current_hunk.new_start
                 continue
 
             if current_hunk is None:
                 continue
 
-            # 内容行
+            # 内容行。删除行只推进旧文件游标；新增行只推进新文件游标；
+            # 上下文行同时推进两者。这样能正确处理交织的增删行。
             if line.startswith("+") and not line.startswith("+++"):
-                current_hunk.added_lines.append(
-                    (current_hunk.new_start + len(current_hunk.added_lines) + len(current_hunk.removed_lines), line[1:])
-                )
+                current_hunk.added_lines.append((new_line_no, line[1:]))
+                new_line_no += 1
             elif line.startswith("-") and not line.startswith("---"):
-                current_hunk.removed_lines.append(
-                    (current_hunk.old_start + len(current_hunk.removed_lines), line[1:])
-                )
+                current_hunk.removed_lines.append((old_line_no, line[1:]))
+                old_line_no += 1
+            elif line.startswith("\\ No newline at end of file"):
+                continue
             else:
                 current_hunk.context_lines.append(line)
+                old_line_no += 1
+                new_line_no += 1
 
         if current_file and current_hunk:
             current_file.hunks.append(current_hunk)

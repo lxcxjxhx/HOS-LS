@@ -4,16 +4,12 @@
 包含纯AI模式和正常模式的文件分析逻辑。
 """
 
-import asyncio
-import os
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 from rich.console import Console
 
-from src.ai.cost_estimator import get_cost_estimator
 from src.ai.models import AnalysisContext, SecurityAnalysisResult, VulnerabilityFinding
-from src.ai.token_tracker import get_token_tracker
 from src.core.config import Config
 from src.core.engine import Finding, Location, Severity
 from src.core.file_filter import RiskLevel, SecurityFileFilter
@@ -1092,10 +1088,30 @@ async def analyze_files(scanner, files):
                             f"→ [{severity_color}]Found {finding.rule_name}[/{severity_color}]"
                         )
 
-            # 规则分析不依赖 legacy AI 结果。
+            # AI 分析（如果启用 --ai 参数，对所有文件进行分析）
+            ai_findings = []
+            if scanner.ai_analyzer and scanner.config.ai.enabled and analysis_config["ai"]:
+                ai_findings = await scanner._ai_analyze(file_info)
+                findings.extend(ai_findings)
+
+                # 实时显示发现的问题
+                if ai_findings:
+                    for finding in ai_findings:
+                        severity_color = (
+                            "red"
+                            if finding.severity in ["critical", "high"]
+                            else "yellow"
+                            if finding.severity == "medium"
+                            else "blue"
+                        )
+                        console.print(
+                            f"→ [{severity_color}]Found {finding.rule_name}[/{severity_color}]"
+                        )
+
+            # 规则分析（结合AI分析结果）
             rule_findings = []
             if analysis_config["rule"]:
-                rule_findings = scanner._rule_analyze(file_info, [])
+                rule_findings = scanner._rule_analyze(file_info, ai_findings)
                 findings.extend(rule_findings)
 
                 # 实时显示发现的问题
@@ -1112,10 +1128,13 @@ async def analyze_files(scanner, files):
                             f"→ [{severity_color}]Found {finding.rule_name}[/{severity_color}]"
                         )
 
-            # 网络搜索分析（仅基于静态依赖证据）。
+            # 网络搜索分析（结合AI分析结果）
             web_findings = []
             if analysis_config["web"] and scanner.web_searcher:
                 web_findings = await scanner._web_search_analyze(file_info, library_findings)
+                # 利用AI分析结果过滤网络搜索结果
+                if ai_findings:
+                    web_findings = scanner._filter_web_findings_by_ai(web_findings, ai_findings)
                 findings.extend(web_findings)
 
                 # 实时显示发现的问题
@@ -1139,6 +1158,7 @@ async def analyze_files(scanner, files):
                     + len(semantic_findings)
                     + len(library_findings)
                     + len(web_findings)
+                    + len(ai_findings)
                 )
                 console.print(f"[dim][DEBUG] 文件分析完成，发现 {total_findings} 个问题[/dim]")
 

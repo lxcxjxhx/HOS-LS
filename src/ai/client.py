@@ -288,7 +288,22 @@ class AIModelManager:
         token_tracker = get_token_tracker()
 
         if not token_tracker:
-            raise RuntimeError("Token tracker not available")
+            # token_tracker 未初始化时降级：直接调用 provider，跳过缓存与计费统计
+            logger.warning("Token tracker unavailable, falling back to direct provider call (no cache/tracking)")
+            if provider is None:
+                for fallback_provider in self._fallback_chain:
+                    client = self.get_client(fallback_provider)
+                    if client and client.is_available():
+                        try:
+                            return await client.generate_with_retry(request)
+                        except Exception as e:
+                            logger.warning(f"Provider {fallback_provider} failed (no-tracker fallback): {e}")
+                            continue
+            else:
+                client = self.get_client(provider)
+                if client and client.is_available():
+                    return await client.generate_with_retry(request)
+            raise RuntimeError("All AI providers failed (no-tracker fallback)")
 
         # 检查缓存（内容寻址：模型+提示词+采样参数）
         cached_response = token_tracker.check_cache(
@@ -459,12 +474,21 @@ class AIModelManager:
         logger.info(f"Set fallback chain: {chain}")
 
 
-# 全局实例
+# 全局实例与并发锁（防止高并发下重复初始化）
 _manager: Optional[AIModelManager] = None
+_manager_lock: Optional[asyncio.Lock] = None
+
+
+def _get_manager_lock() -> asyncio.Lock:
+    """懒初始化 asyncio.Lock（必须在事件循环内创建）。"""
+    global _manager_lock
+    if _manager_lock is None:
+        _manager_lock = asyncio.Lock()
+    return _manager_lock
 
 
 async def get_model_manager(config: Optional[Config] = None) -> AIModelManager:
-    """获取模型管理器实例
+    """获取模型管理器实例（线程安全）
 
     Args:
         config: 配置对象
@@ -473,7 +497,8 @@ async def get_model_manager(config: Optional[Config] = None) -> AIModelManager:
         模型管理器实例
     """
     global _manager
-    if _manager is None:
-        _manager = AIModelManager()
-        await _manager.initialize(config)
+    async with _get_manager_lock():
+        if _manager is None:
+            _manager = AIModelManager()
+            await _manager.initialize(config)
     return _manager

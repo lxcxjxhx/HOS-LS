@@ -1,12 +1,11 @@
 """纯AI分析器模块
 
-实现纯AI深度语义解析功能，默认使用 deeps
-from src.ai.pure_ai.batch_engine import analyze_batch, resume, incremental_scan
-eek-v4-pro。
+实现纯AI深度语义解析功能，默认使用 deepseek-v4-pro。
 """
 
 import asyncio
 import json
+import os
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -14,11 +13,6 @@ from rich.console import Console
 
 from src.ai.models import VulnerabilityFinding
 from src.ai.pure_ai.analysis_cache import CacheManager
-from src.ai.pure_ai.configuration import (
-    PureAIConfigurationError,
-    PureAIInitializationError,
-    require_pure_ai_api_key,
-)
 from src.ai.pure_ai.multi_agent_pipeline import MultiAgentPipeline
 from src.ai.pure_ai.line_number_validator import LineNumberValidator
 from src.core.config import Config
@@ -63,10 +57,27 @@ class PureAIAnalyzer:
                 logger.debug(f" 开始初始化纯AI分析器，使用提供商: {self.ai_provider}")
                 logger.debug(f" 使用模型: {self.ai_model}")
 
-            # Explicit Pure-AI scans must never continue without a provider key.
-            api_key = require_pure_ai_api_key(self.config)
-            if self.config.debug:
-                logger.debug(f" API 密钥已设置 (长度: {len(api_key)})")
+            # 检查API密钥
+            api_key = getattr(self.config, "pure_ai_api_key", None)
+            if not api_key:
+                api_key = self.config.ai.api_key
+            if not api_key:
+                api_key = os.getenv("HOS_LS_AI_API_KEY")
+            if not api_key:
+                # 根据当前 provider 查找特定环境变量
+                provider_upper = self.ai_provider.upper() if self.ai_provider else ""
+                api_key = os.getenv(f"HOS_LS_{provider_upper}_API_KEY")
+            if not api_key:
+                api_key = os.getenv("DEEPSEEK_API_KEY")
+            if not api_key:
+                api_key = os.getenv("DEEPINFRA_API_KEY")
+
+            if not api_key:
+                logger.warning("WARNING: API 密钥未设置，纯AI分析器可能无法正常工作")
+                logger.debug("请设置环境变量 HOS_LS_AI_API_KEY 或 DEEPSEEK_API_KEY")
+            else:
+                if self.config.debug:
+                    logger.debug(f" API 密钥已设置 (长度: {len(api_key)})")
 
             # 为纯AI模式创建临时配置
             from src.ai.client import AIModelManager
@@ -119,17 +130,13 @@ class PureAIAnalyzer:
                     logger.debug(" 验证API访问...")
                 try:
                     is_available, error_msg = await self.client.validate_api_access()
-                    if not is_available:
-                        raise PureAIInitializationError(
-                            f"Pure-AI provider '{self.ai_provider}' is unavailable: {error_msg}"
-                        )
-                    logger.info("API访问验证成功")
-                except PureAIInitializationError:
-                    raise
-                except Exception as exc:
-                    raise PureAIInitializationError(
-                        f"Pure-AI provider '{self.ai_provider}' validation failed: {exc}"
-                    ) from exc
+                    if is_available:
+                        logger.info("API访问验证成功")
+                    else:
+                        logger.error(f" API访问验证失败: {error_msg}")
+                        logger.warning("[!] 纯AI分析器将以降级模式运行")
+                except Exception as e:
+                    logger.warning(f"[!] API访问验证异常: {e}")
 
                 # 创建pipeline配置，包含模型信息
                 pipeline_config = {
@@ -142,6 +149,9 @@ class PureAIAnalyzer:
                     ),
                     "cwe_guidance_enabled": getattr(
                         self.config.ai, "cwe_guidance_enabled", False
+                    ),
+                    "consistency_voting_enabled": getattr(
+                        self.config.ai, "consistency_voting_enabled", False
                     ),
                     "deterministic_promote_enabled": getattr(
                         self.config.ai, "deterministic_promote_enabled", False
@@ -156,17 +166,11 @@ class PureAIAnalyzer:
                     f"纯AI分析器初始化成功 (提供商: {self.ai_provider}, 模型: {self.ai_model})"
                 )
             else:
-                raise PureAIInitializationError(
-                    f"Pure-AI provider '{self.ai_provider}' did not create an AI client"
-                )
-        except (PureAIConfigurationError, PureAIInitializationError):
+                logger.error(" 纯AI分析器初始化失败：无法获取AI客户端")
+                logger.debug("请检查API密钥配置和网络连接")
+        except Exception as e:
+            logger.exception(f"纯AI分析器初始化失败: {type(e).__name__}: {e}")
             self.initialized = False
-            raise
-        except Exception as exc:
-            self.initialized = False
-            raise PureAIInitializationError(
-                f"Pure-AI provider '{self.ai_provider}' initialization failed: {exc}"
-            ) from exc
 
     async def analyze(self, file_path: str, file_content: str) -> List[VulnerabilityFinding]:
         """分析文件
