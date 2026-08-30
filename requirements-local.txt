@@ -1,0 +1,12 @@
+# Optional local embedding and model-training stack.
+# Install only when local embeddings, local inference, or fine-tuning are required:
+#   uv pip install -r requirements-local.txt
+#
+# On Windows, install a PyTorch build appropriate for your Python/CUDA version
+# before this file if the resolver cannot select one automatically.
+-r requirements.txt
+sentence-transformers>=2.2.0
+torch>=2.0.0
+transformers>=4.30.0
+# Unsloth's supported local-training environment is not Windows.
+unsloth>=2024.0.0; platform_system != "Windows"

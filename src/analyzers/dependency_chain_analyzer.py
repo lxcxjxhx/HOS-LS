@@ -33,40 +33,6 @@ from src.analyzers.dependency_cve_checker import (
 
 logger = get_logger(__name__)
 
-# 常见高价值包名，用于检测名称抢注（typosquatting）。
-_WELL_KNOWN_PACKAGES: Dict[str, List[str]] = {
-    "PyPI": [
-        "requests", "flask", "django", "numpy", "pandas", "scipy",
-        "boto3", "urllib3", "setuptools", "pip", "wheel", "six",
-        "python-dateutil", "pyyaml", "cryptography", "paramiko",
-        "sqlalchemy", "celery", "redis", "pytest", "matplotlib",
-    ],
-    "npm": [
-        "react", "express", "lodash", "axios", "moment", "chalk",
-        "webpack", "babel", "typescript", "eslint", "prettier",
-        "next", "vue", "angular", "jquery", "bootstrap", "commander",
-        "debug", "uuid", "dotenv", "cors", "mongoose", "socket.io",
-    ],
-    "Maven": [
-        "spring-boot", "spring-core", "spring-web", "jackson-databind",
-        "log4j", "slf4j", "commons-io", "commons-lang3", "guava",
-        "junit", "mockito", "hibernate-core", "lombok", "fastjson",
-    ],
-}
-
-# Known unmaintained or deprecated packages.
-_DEPRECATED_PACKAGES: Dict[str, Set[str]] = {
-    "PyPI": {
-        "django-appconf", "django-contrib-comments", "easy-thumbnails",
-        "flask-scripts", "nose", "optparse", "pbr",
-    },
-    "npm": {
-        "request", "left-pad", "coffee-script", "gulp-util",
-        "babel-polyfill", "uuid-v4", "node-uuid",
-    },
-    "Maven": set(),
-}
-
 # =============================================================================
 # 依赖清单解析器
 # =============================================================================

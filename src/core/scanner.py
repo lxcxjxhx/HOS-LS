@@ -14,6 +14,7 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 
 from rich.console import Console
 
+from src.ai.models import AnalysisContext, SecurityAnalysisResult, VulnerabilityFinding
 from src.core.config import Config
 from src.core.engine import ScanEngine, ScanMode, ScanResult
 from src.core.scan_state import ScanState
@@ -100,10 +101,21 @@ class SecurityScanner:
             config: 扫描配置
         """
         try:
+            from src.ai.analyzer import AIAnalyzer
+        except ImportError:
+            AIAnalyzer = None
+        try:
             from src.ai.local_semantic_analyzer import get_local_analyzer
         except ImportError:
 
             def get_local_analyzer(*args, **kwargs):
+                return None
+
+        try:
+            from src.ai.priority_evaluator import get_ai_priority_evaluator
+        except ImportError:
+
+            def get_ai_priority_evaluator(*args, **kwargs):
                 return None
 
         from src.analyzers.ast_analyzer import ASTAnalyzer
@@ -119,8 +131,10 @@ class SecurityScanner:
         self.file_prioritizer = FilePrioritizer()  # 文件优先级评估器
         self.ast_analyzer = ASTAnalyzer()
         self.cst_analyzer = CSTAnalyzer()
+        self.ai_analyzer: Optional[Any] = None
         self.local_analyzer = get_local_analyzer()  # 本地语义分析器
         self.library_matcher = get_library_matcher()  # 库匹配器
+        self.priority_evaluator: Optional[Any] = None
         self.web_searcher: Optional[Any] = None
 
         # 扫描缓存管理初始化
@@ -140,6 +154,7 @@ class SecurityScanner:
 
         # 纯AI模式下跳过初始化可能导致模型加载的组件
         if not config.pure_ai:
+            self.priority_evaluator = get_ai_priority_evaluator()  # 优先级评估器
             self.web_searcher = get_web_searcher()  # 网络搜索器
 
         # 初始化规则注册表（仅用于知识库检索，不加载硬编码规则）
@@ -155,6 +170,18 @@ class SecurityScanner:
         except Exception as e:
             if self.config.debug:
                 console.print(f"[dim][DEBUG] AST 分析器初始化失败: {e}[/dim]")
+
+        if config.ai.enabled and not config.pure_ai:
+            try:
+                from src.attack.chain_analyzer import get_ai_attack_chain_builder
+
+                self.ai_analyzer = AIAnalyzer(config)
+                self.attack_chain_builder = get_ai_attack_chain_builder()
+                if self.config.debug:
+                    console.print("[dim][DEBUG] AI 分析器初始化成功[/dim]")
+            except Exception as e:
+                if self.config.debug:
+                    console.print(f"[dim][DEBUG] AI 分析器初始化失败: {e}[/dim]")
 
         # 初始化纯AI分析器
         self.pure_ai_analyzer = None
@@ -205,6 +232,8 @@ class SecurityScanner:
         if config.debug:
             console.print("[dim][DEBUG] 安全扫描器初始化完成，规则注册表已就绪（仅用于知识库检索）[/dim]")
             console.print("[dim][DEBUG] 本地语义分析器已启用[/dim]")
+            if config.ai.enabled:
+                console.print("[dim][DEBUG] 攻击链路分析器已启用[/dim]")
 
         self.is_vuln_lab_mode = config.scan_mode == ScanMode.VULN_LAB.value
         if self.is_vuln_lab_mode:
@@ -626,15 +655,6 @@ class SecurityScanner:
         """
         from datetime import datetime
 
-        # Direct API callers must receive the same fail-fast behavior as the CLI.
-        if self.config.pure_ai:
-            from src.ai.pure_ai.configuration import (
-                PureAIInitializationError,
-                require_pure_ai_api_key,
-            )
-
-            require_pure_ai_api_key(self.config)
-
         # 开始时间
         start_time = time.time()
         start_datetime = datetime.now()
@@ -666,20 +686,30 @@ class SecurityScanner:
         if not self.config.quiet:
             self._pre_scan_cost_check(str(target))
 
-        # 纯AI模式下确保分析器已初始化；任何失败都必须中止，不能返回空 AI 结果。
-        if self.config.pure_ai:
-            if self.pure_ai_analyzer is None:
-                raise PureAIInitializationError("Pure-AI analyzer was not created")
+        # 纯AI模式下确保分析器已初始化
+        if self.config.pure_ai and self.pure_ai_analyzer:
             if not self.pure_ai_analyzer.initialized:
                 console.print("[cyan]Initializing pure AI analyzer...[/cyan]")
                 try:
                     await asyncio.wait_for(self.pure_ai_analyzer._initialize(), timeout=60.0)
-                except asyncio.TimeoutError as exc:
-                    raise PureAIInitializationError(
-                        "Pure-AI analyzer initialization timed out after 60 seconds"
-                    ) from exc
-            if not self.pure_ai_analyzer.initialized:
-                raise PureAIInitializationError("Pure-AI analyzer initialization did not complete")
+                    if not self.pure_ai_analyzer.initialized:
+                        console.print(
+                            "[red]X Pure AI analyzer initialization failed, scan will skip AI analysis[/red]"
+                        )
+                        console.print(
+                            "[yellow]! Please check API key configuration and network connection[/yellow]"
+                        )
+                except asyncio.TimeoutError:
+                    console.print("[red]X Pure AI analyzer initialization timeout[/red]")
+                    console.print(
+                        "[yellow]! Please check network connection or increase timeout[/yellow]"
+                    )
+                except Exception as e:
+                    console.print(f"[red]X Pure AI analyzer initialization error: {e}[/red]")
+                    if self.config.debug:
+                        import traceback
+
+                        traceback.print_exc()
 
         # 发现文件
         with console.status("[bold blue]... Discovering files...[/bold blue]", spinner="dots"):
@@ -1000,6 +1030,83 @@ class SecurityScanner:
                 result.add_finding(finding)
                 self._trigger_preload_for_finding(finding)
 
+            # 执行攻击链路分析（如果启用了AI且不是纯AI模式）
+            if (
+                self.config.ai.enabled
+                and not self.config.pure_ai
+                and getattr(self, "attack_chain_builder", None) is not None
+                and result.findings
+            ):
+                if self.config.debug:
+                    console.print("[dim][DEBUG] 开始执行攻击链路分析[/dim]")
+
+                try:
+                    # 转换ScanResult为SecurityAnalysisResult
+                    ai_findings = []
+                    for finding in result.findings:
+                        # 创建VulnerabilityFinding对象
+                        # 处理 severity 可能是字符串或枚举对象的情况
+                        if hasattr(finding.severity, "name"):
+                            severity_value = finding.severity.name.lower()
+                        else:
+                            severity_value = str(finding.severity).lower()
+                        vuln_finding = VulnerabilityFinding(
+                            rule_id=finding.rule_id,
+                            rule_name=finding.rule_name,
+                            description=finding.description,
+                            severity=severity_value,
+                            confidence=finding.confidence,
+                            location={
+                                "file": finding.location.file,
+                                "line": finding.location.line,
+                                "column": finding.location.column,
+                            },
+                            code_snippet=finding.code_snippet,
+                            fix_suggestion=finding.fix_suggestion,
+                            explanation=finding.message,
+                            references=finding.references,
+                            exploit_scenario="",
+                        )
+                        ai_findings.append(vuln_finding)
+
+                    # 创建SecurityAnalysisResult
+                    security_result = SecurityAnalysisResult(
+                        findings=ai_findings,
+                        risk_score=0.0,
+                        summary=f"Found {len(ai_findings)} potential issues",
+                        recommendations=[],
+                        metadata={},
+                    )
+
+                    # 执行攻击链路分析
+                    attack_chain_result = await self.attack_chain_builder.build_attack_chains(
+                        security_result
+                    )
+
+                    # 生成可视化数据
+                    visualization_data = self.attack_chain_builder.get_visualization_data(
+                        attack_chain_result
+                    )
+
+                    # 将攻击链路分析结果添加到ScanResult中
+                    result.metadata["attack_chain"] = {
+                        "summary": attack_chain_result.summary,
+                        "risk_score": attack_chain_result.risk_score,
+                        "paths": attack_chain_result.paths,
+                        "visualization": visualization_data,
+                    }
+
+                    if self.config.debug:
+                        console.print(
+                            f"[dim][DEBUG] 攻击链路分析完成，识别出 {len(attack_chain_result.paths)} 条攻击路径[/dim]"
+                        )
+                        console.print(
+                            f"[dim][DEBUG] 总体风险评分: {attack_chain_result.risk_score:.2f}[/dim]"
+                        )
+                except Exception as e:
+                    if self.config.debug:
+                        console.print(f"[dim][DEBUG] 攻击链路分析失败: {e}[/dim]")
+
             # 执行本地攻击链分析（纯AI模式下跳过）
             if result.findings and not self.config.pure_ai:
                 if self.config.debug:
@@ -1061,6 +1168,170 @@ class SecurityScanner:
                 except Exception as e:
                     if self.config.debug:
                         console.print(f"[dim][DEBUG] 本地攻击链分析失败: {e}[/dim]")
+
+            # 执行漏洞优先级评估（如果启用了AI且不是纯AI模式）
+            if self.config.ai.enabled and self.priority_evaluator is not None and result.findings:
+                if self.config.debug:
+                    console.print("[dim][DEBUG] 开始执行漏洞优先级评估[/dim]")
+
+                try:
+                    # 转换ScanResult为SecurityAnalysisResult
+                    ai_findings = []
+                    for finding in result.findings:
+                        # 创建VulnerabilityFinding对象
+                        # 处理 severity 可能是字符串或枚举对象的情况
+                        if hasattr(finding.severity, "name"):
+                            severity_value = finding.severity.name.lower()
+                        else:
+                            severity_value = str(finding.severity).lower()
+                        vuln_finding = VulnerabilityFinding(
+                            rule_id=finding.rule_id,
+                            rule_name=finding.rule_name,
+                            description=finding.description,
+                            severity=severity_value,
+                            confidence=finding.confidence,
+                            location={
+                                "file": finding.location.file,
+                                "line": finding.location.line,
+                                "column": finding.location.column,
+                            },
+                            code_snippet=finding.code_snippet,
+                            fix_suggestion=finding.fix_suggestion,
+                            explanation=finding.message,
+                            references=finding.references,
+                            exploit_scenario="",
+                        )
+                        ai_findings.append(vuln_finding)
+
+                    # 创建SecurityAnalysisResult
+                    security_result = SecurityAnalysisResult(
+                        findings=ai_findings,
+                        risk_score=0.0,
+                        summary=f"Found {len(ai_findings)} potential issues",
+                        recommendations=[],
+                        metadata={},
+                    )
+
+                    # 执行优先级评估
+                    priority_result = await self.priority_evaluator.prioritize_findings(
+                        security_result,
+                        AnalysisContext(
+                            file_path=str(target), code_content="", language="python"  # 默认语言
+                        ),
+                    )
+
+                    # 将优先级评估结果添加到ScanResult中
+                    result.metadata["priority_analysis"] = {
+                        "summary": priority_result.summary,
+                        "priority_distribution": priority_result.metadata.get(
+                            "priority_distribution", {}
+                        ),
+                        "prioritized_findings": [
+                            finding.rule_name for finding in priority_result.prioritized_findings
+                        ],
+                    }
+
+                    if self.config.debug:
+                        console.print("[dim][DEBUG] 优先级评估完成[/dim]")
+                        console.print(f"[dim][DEBUG] {priority_result.summary}[/dim]")
+                except Exception as e:
+                    if self.config.debug:
+                        console.print(f"[dim][DEBUG] 优先级评估失败: {e}[/dim]")
+
+            # 集成 LangGraph 深度分析（如果启用了 AI 且发现了漏洞，纯AI模式下跳过）
+            if self.config.ai.enabled and not self.config.pure_ai and result.findings:
+                try:
+                    print("🔍 开始执行 LangGraph 深度分析")
+                    print("🚀 启动多Agent安全分析流程")
+
+                    # 导入 LangGraph 流程
+                    from src.core.langgraph_flow import run_scan
+
+                    # 执行 LangGraph 扫描
+                    langgraph_result = await run_scan(str(target), self.config)
+
+                    if langgraph_result and langgraph_result.findings:
+                        print(
+                            f"[green]OK[/green] LangGraph deep analysis found {len(langgraph_result.findings)} issues"
+                        )
+
+                        # 检查是否已经有 LangGraph 深度分析的结果
+                        has_langgraph_finding = any(
+                            finding.rule_id == "LANGGRAPH-ANALYSIS" for finding in result.findings
+                        )
+
+                        # 如果没有，将 LangGraph 分析结果添加到最终结果中
+                        if not has_langgraph_finding:
+                            for finding in langgraph_result.findings:
+                                result.add_finding(finding)
+
+                            # 添加 LangGraph 分析元数据
+                            if hasattr(langgraph_result, "metadata"):
+                                result.metadata["langgraph_analysis"] = langgraph_result.metadata
+                        else:
+                            print(
+                                "[yellow]! LangGraph analysis result already exists, skipping duplicate[/yellow]"
+                            )
+
+                    print("[green]OK[/green] LangGraph deep analysis completed")
+                    print(
+                        "[cyan]INFO[/cyan] CREWAI multi-expert analysis integrated into scan results"
+                    )
+
+                except Exception as e:
+                    print(f"[red]X[/red] LangGraph deep analysis failed: {e}")
+
+            # 集成自学习机制
+            if self.config.ai.enabled and not self.config.pure_ai:
+                try:
+                    try:
+                        from src.storage.rag_knowledge_base import get_rag_knowledge_base
+                    except ImportError:
+                        from src.ai.pure_ai.rag.knowledge_base import get_rag_knowledge_base
+                    try:
+                        from src.learning.self_learning import Knowledge  # noqa: F401
+                        from src.learning.self_learning import KnowledgeType  # noqa: F401
+                    except ImportError:
+                        pass
+
+                    # 获取 RAG 知识库实例
+                    rag_kb = get_rag_knowledge_base()
+
+                    # 转换扫描结果为 RAG 知识库所需格式
+                    learning_results = []
+                    for finding in result.findings:
+                        # 过滤掉 LangGraph 深度分析的结果，避免重复判断
+                        if finding.rule_id == "LANGGRAPH-ANALYSIS":
+                            continue
+
+                        # 创建知识内容
+                        content = f"{finding.rule_name}: {finding.description}\n\n严重级别: {finding.severity}\n置信度: {finding.confidence}\n\n修复建议: {finding.fix_suggestion}"
+
+                        learning_results.append(
+                            {
+                                "content": content,
+                                "knowledge_type": "ai_learning",
+                                "source": "auto_learning",
+                                "confidence": finding.confidence,
+                                "tags": [finding.severity, finding.rule_name],
+                                "metadata": {
+                                    "rule_id": finding.rule_id,
+                                    "file_path": finding.location.file,
+                                    "line": finding.location.line,
+                                    "code_snippet": finding.code_snippet,
+                                },
+                            }
+                        )
+
+                    # 自动记录学习结果到 RAG 知识库
+                    rag_kb.auto_record_learning(learning_results)
+
+                    if self.config.debug:
+                        console.print("[dim][DEBUG] 自学习完成，已更新 RAG 知识库[/dim]")
+
+                except Exception as e:
+                    if self.config.debug:
+                        console.print(f"[dim][DEBUG] 自学习集成失败: {e}[/dim]")
 
         # 计算扫描耗时
         end_time = time.time()
@@ -1392,21 +1663,25 @@ class SecurityScanner:
         )
 
     def _semantic_analyze(self, file_info: FileInfo) -> List:
-        """执行可选本地语义分析。
+        """本地语义分析文件 (委托给 scanner_analyze.semantic_analyze)
 
-        当前发行包未包含 ``local_semantic_analyzer``，因此保持受控降级，
-        由 AST/CST、规则分析和 Pure-AI 流水线继续提供覆盖。
+        Args:
+            file_info: 文件信息
+
+        Returns:
+            发现的安全问题列表
         """
-        if self.local_analyzer is None:
-            if self.config.debug:
-                console.print("[dim][DEBUG] 本地语义分析组件不可用，已跳过[/dim]")
+        try:
+            from src.core.scanner_analyze import semantic_analyze as _semantic_analyze
+        except (ImportError, SyntaxError) as exc:
+            logger.warning("Local semantic analysis is unavailable: %s", exc)
             return []
 
-        try:
-            return self.local_analyzer.analyze(file_info)
-        except Exception as exc:
-            logger.warning("Local semantic analysis failed for %s: %s", file_info.path, exc)
-            return []
+        return _semantic_analyze(
+            file_info=file_info,
+            local_analyzer=self.local_analyzer,
+            config_debug=self.config.debug,
+        )
 
     def _library_analyze(self, file_info: FileInfo) -> List:
         """库匹配分析文件
@@ -1966,6 +2241,57 @@ class SecurityScanner:
 
         # 去重
         return list(set(potential_vulnerabilities))
+
+    async def _ai_analyze(self, file_info: FileInfo) -> List:
+        """AI 分析文件
+
+        Args:
+            file_info: 文件信息
+
+        Returns:
+            发现的安全问题列表
+        """
+        findings = []
+
+        try:
+            if self.config.debug:
+                console.print(f"[dim][DEBUG] 开始执行完整 AI 分析: {file_info.path}[/dim]")
+
+            # 读取文件内容
+            with open(file_info.path, "r", encoding="utf-8") as f:
+                code_content = f.read()
+
+            # 创建分析上下文
+            context = AnalysisContext(
+                file_path=str(file_info.path),
+                code_content=code_content,
+                language=file_info.language.value,
+                analysis_level=AnalysisLevel.FILE,
+            )
+
+            if self.config.debug:
+                console.print("[dim][DEBUG] 调用 AI 分析器...[/dim]")
+
+            # 执行 AI 分析
+            assert self.ai_analyzer is not None
+            ai_result = await self.ai_analyzer.analyze(context)
+
+            if self.config.debug:
+                console.print(f"[dim][DEBUG] AI 分析完成，发现 {len(ai_result.findings)} 个问题[/dim]")
+
+            # 转换 AI 结果为标准格式
+            for finding in ai_result.findings:
+                converted = convert_to_finding(finding)
+                if converted:
+                    findings.append(converted)
+                    if self.config.debug:
+                        console.print(f"[dim][DEBUG] AI 发现: {converted.rule_name}[/dim]")
+
+        except Exception as e:
+            if self.config.debug:
+                console.print(f"[dim][DEBUG] AI 分析失败: {e}[/dim]")
+
+        return findings
 
     def _prioritize_findings(self, findings: List, files: List[FileInfo]) -> List:
         """评估漏洞优先级

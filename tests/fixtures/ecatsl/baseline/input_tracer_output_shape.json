@@ -1,0 +1,29 @@
+{
+  "top_level_keys": [
+    "attack_prerequisites",
+    "confidence",
+    "controllability_level",
+    "is_direct_user_input",
+    "is_exploitable",
+    "is_indirect",
+    "is_internal",
+    "source_type",
+    "summary",
+    "trace_path"
+  ],
+  "trace_node_keys": [
+    "line_number",
+    "location",
+    "metadata",
+    "node_type",
+    "source_type",
+    "value_name"
+  ],
+  "representative_values": {
+    "controllability_level": "fully_controlled",
+    "is_direct_user_input": true,
+    "is_exploitable": true,
+    "source_type": "direct_user_input"
+  },
+  "path_evidence": false
+}

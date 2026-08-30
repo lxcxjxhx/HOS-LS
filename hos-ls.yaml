@@ -17,7 +17,12 @@ ai:
     enabled: true
     model: deepseek-v4-flash
   enabled: true
-  max_tokens: 4096
+  max_tokens: 8192
+  # 纯 AI 流水线的准确率/成本开关（由 AIConfig 和 PureAIAnalyzer 消费）
+  consistency_voting_enabled: true
+  deterministic_promote_enabled: true
+  cpg_context_enabled: true
+  cwe_guidance_enabled: true
   model: deepseek-ai/DeepSeek-V4-Flash
   modules:
     nvd:
@@ -28,13 +33,19 @@ ai:
       enabled: true
       model: deepseek-ai/DeepSeek-V4-Flash
       provider: openai
+      # ── 准确率优化门 ──────────────────────────────────────
+      deterministic_promote_enabled: true   # Agent-3 CONFIRMED 覆盖 Agent-6 保守拒绝
+      consistency_voting_enabled: true      # Agent-3 三次自一致性投票
+      cpg_context_enabled: true             # CPG 跨文件被调函数上下文注入
+      ast_evidence_enabled: false           # M4 AST 污点预验证（可选消融）
+      cwe_guidance_enabled: true            # CWE 专项指引注入
     rag:
       embedding_model: Qwen/Qwen3-Embedding-0.6B
       enabled: true
       provider: deepseek
       rerank_model: BAAI/bge-reranker-large
   provider: openai
-  temperature: 0.1
+  temperature: 0.0
   tiered_architecture:
     enabled: false
     first_tier:

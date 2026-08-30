@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Weakness_Catalog Name="ECATSL baseline" Version="1">
+  <Weaknesses>
+    <Weakness ID="89" Name="Improper Neutralization of Special Elements used in an SQL Command" Abstraction="Base" Status="Stable">
+      <Description>User-controlled input is used to construct an SQL command.</Description>
+    </Weakness>
+  </Weaknesses>
+</Weakness_Catalog>

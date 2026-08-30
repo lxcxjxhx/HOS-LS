@@ -23,6 +23,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterator, Optional
 
+from src.ecatsl.schema import install_ecatsl_schema
+
 
 IGNORED_CWE_IDS = {"NVD-CWE-noinfo", "NVD-CWE-Other", ""}
 CVSS_METRIC_ORDER = ("cvssMetricV40", "cvssMetricV31", "cvssMetricV30", "cvssMetricV2")
@@ -95,59 +97,12 @@ class CatalogImporter:
                 record_count INTEGER NOT NULL,
                 PRIMARY KEY (source_kind, source_path, sha256)
             );
-            CREATE TABLE IF NOT EXISTS catalog_import_version (
-                import_id TEXT PRIMARY KEY, source_kind TEXT NOT NULL,
-                source_origin TEXT NOT NULL, source_identifier TEXT NOT NULL,
-                source_revision TEXT, retrieved_at TEXT NOT NULL,
-                retrieved_content_hash TEXT NOT NULL, license_metadata TEXT,
-                import_tool_version TEXT NOT NULL, predecessor_id TEXT
-            );
-            CREATE TABLE IF NOT EXISTS source_record (
-                record_id TEXT PRIMARY KEY, import_id TEXT NOT NULL,
-                record_type TEXT NOT NULL, source_identifier TEXT NOT NULL,
-                source_content_hash TEXT NOT NULL, integrity_status TEXT NOT NULL,
-                provenance_json TEXT NOT NULL
-            );
-            CREATE TABLE IF NOT EXISTS normalized_catalog_record (
-                normalized_id TEXT PRIMARY KEY, record_type TEXT NOT NULL,
-                canonical_identifier TEXT NOT NULL, normalized_content_hash TEXT NOT NULL,
-                normalization_profile_version TEXT NOT NULL, canonical_id TEXT,
-                provenance_json TEXT NOT NULL,
-                UNIQUE(record_type, canonical_identifier)
-            );
-            CREATE TABLE IF NOT EXISTS catalog_duplicate (
-                duplicate_id TEXT PRIMARY KEY, canonical_id TEXT NOT NULL,
-                source_record_id TEXT NOT NULL, reason TEXT NOT NULL,
-                decision_provenance_json TEXT NOT NULL
-            );
-            CREATE TABLE IF NOT EXISTS ingestion_run (
-                run_id TEXT PRIMARY KEY, import_id TEXT NOT NULL, profile_version TEXT NOT NULL,
-                import_tool_version TEXT NOT NULL, prior_run_id TEXT, started_at TEXT NOT NULL,
-                completed_at TEXT NOT NULL, content_hash TEXT NOT NULL
-            );
-            CREATE TABLE IF NOT EXISTS ingestion_quality_report (
-                report_id TEXT PRIMARY KEY, run_id TEXT NOT NULL, counts_json TEXT NOT NULL,
-                integrity_json TEXT NOT NULL, coverage_json TEXT NOT NULL,
-                exclusions_json TEXT NOT NULL, content_hash TEXT NOT NULL
-            );
-            CREATE TABLE IF NOT EXISTS taint_template (
-                template_id TEXT PRIMARY KEY, cwe_id TEXT NOT NULL, role TEXT NOT NULL,
-                api_shape TEXT NOT NULL, parameter_shape TEXT NOT NULL,
-                applicability_json TEXT NOT NULL, semantic_features_json TEXT NOT NULL,
-                template_version TEXT NOT NULL, provenance_json TEXT NOT NULL
-            );
-            CREATE TABLE IF NOT EXISTS template_retrieval (
-                retrieval_id TEXT PRIMARY KEY, cwe_id TEXT NOT NULL,
-                query_identity TEXT NOT NULL, ranking_profile_version TEXT NOT NULL,
-                result_template_ids_json TEXT NOT NULL, scores_json TEXT NOT NULL,
-                provenance_json TEXT NOT NULL
-            );
             CREATE INDEX IF NOT EXISTS idx_cve_cwe_cwe_id ON cve_cwe(cwe_id);
             CREATE INDEX IF NOT EXISTS idx_cvss_severity ON cvss(severity);
-            CREATE INDEX IF NOT EXISTS idx_taint_template_cwe ON taint_template(cwe_id);
             """
         )
         self.connection.commit()
+        install_ecatsl_schema(self.connection)
 
     @staticmethod
     def _sha256(path: Path) -> str:
@@ -329,101 +284,6 @@ class CatalogImporter:
                 "INSERT INTO cve_cwe (cve_id, cwe_id, is_primary) VALUES (?, ?, ?)",
                 (cve_id, cwe_id, int(index == 0)),
             )
-
-    @staticmethod
-    def normalize_record(record: dict[str, Any], profile_version: str) -> tuple[str, str]:
-        """Return deterministic normalized JSON and identity for a profile."""
-        normalized = json.dumps(record, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
-        identity = hashlib.sha256(
-            (profile_version + "\0" + normalized).encode("utf-8")
-        ).hexdigest()
-        return normalized, identity
-
-    def ingest_ecatsl_records(
-        self,
-        *,
-        source_kind: str,
-        source_identifier: str,
-        records: list[dict[str, Any]],
-        profile_version: str = "1",
-        import_tool_version: str = "1",
-        source_origin: str = "local",
-        source_revision: Optional[str] = None,
-        license_metadata: Optional[str] = None,
-    ) -> dict[str, Any]:
-        """Incrementally normalize compatible records in the existing SQLite store."""
-        retrieved_at = datetime.now(timezone.utc).isoformat()
-        source_payload = json.dumps(records, sort_keys=True, separators=(",", ":"))
-        source_hash = hashlib.sha256(source_payload.encode()).hexdigest()
-        import_id = hashlib.sha256(
-            f"{source_kind}\0{source_identifier}\0{source_hash}\0{import_tool_version}".encode()
-        ).hexdigest()
-        prior = self.connection.execute(
-            "SELECT run_id FROM ingestion_run WHERE import_id=? AND profile_version=? "
-            "AND import_tool_version=? ORDER BY completed_at DESC LIMIT 1",
-            (import_id, profile_version, import_tool_version),
-        ).fetchone()
-        created = duplicates = excluded = missing = 0
-        with self.connection:
-            self.connection.execute(
-                "INSERT OR IGNORE INTO catalog_import_version VALUES(?,?,?,?,?,?,?,?,?,NULL)",
-                (import_id, source_kind, source_origin, source_identifier, source_revision,
-                 retrieved_at, source_hash, license_metadata, import_tool_version),
-            )
-            for index, record in enumerate(records):
-                canonical = str(record.get("canonical_identifier", ""))
-                record_type = str(record.get("record_type", ""))
-                if not canonical or not record_type:
-                    missing += 1; excluded += 1; continue
-                normalized, normalized_hash = self.normalize_record(record, profile_version)
-                source_record_id = hashlib.sha256(
-                    f"{import_id}\0{index}\0{normalized_hash}".encode()
-                ).hexdigest()
-                self.connection.execute(
-                    "INSERT OR IGNORE INTO source_record VALUES(?,?,?,?,?,?,?)",
-                    (source_record_id, import_id, record_type, canonical, normalized_hash,
-                     "VERIFIED", json.dumps({"origin": source_origin})),
-                )
-                existing = self.connection.execute(
-                    "SELECT normalized_id FROM normalized_catalog_record WHERE "
-                    "record_type=? AND (canonical_identifier=? OR normalized_content_hash=?)",
-                    (record_type, canonical, normalized_hash),
-                ).fetchone()
-                if existing:
-                    duplicates += 1
-                    duplicate_id = hashlib.sha256(
-                        f"{existing[0]}\0{source_record_id}".encode()
-                    ).hexdigest()
-                    self.connection.execute(
-                        "INSERT OR IGNORE INTO catalog_duplicate VALUES(?,?,?,?,?)",
-                        (duplicate_id, existing[0], source_record_id, "canonical-or-content-match", "{}"),
-                    )
-                else:
-                    created += 1
-                    self.connection.execute(
-                        "INSERT INTO normalized_catalog_record VALUES(?,?,?,?,?,?,?)",
-                        (normalized_hash, record_type, canonical, normalized_hash,
-                         profile_version, normalized_hash, normalized),
-                    )
-            counts = {"retrieved": len(records), "imported": len(records)-excluded,
-                      "normalized": len(records)-excluded, "canonical": created,
-                      "new_canonical_record_count": created, "duplicate": duplicates,
-                      "missing_required_field": missing, "excluded": excluded}
-            run_hash = hashlib.sha256(json.dumps(counts, sort_keys=True).encode()).hexdigest()
-            run_id = hashlib.sha256(f"{import_id}\0{profile_version}\0{run_hash}".encode()).hexdigest()
-            self.connection.execute(
-                "INSERT OR REPLACE INTO ingestion_run VALUES(?,?,?,?,?,?,?,?)",
-                (run_id, import_id, profile_version, import_tool_version,
-                 prior[0] if prior else None, retrieved_at, retrieved_at, run_hash),
-            )
-            self.connection.execute(
-                "INSERT OR REPLACE INTO ingestion_quality_report VALUES(?,?,?,?,?,?,?)",
-                (run_id+":quality", run_id, json.dumps(counts),
-                 json.dumps({"VERIFIED": len(records)-excluded}),
-                 json.dumps({"source_kind": source_kind}),
-                 json.dumps({"missing_required_fields": excluded}), run_hash),
-            )
-        return {"run_id": run_id, "import_id": import_id, "counts": counts}
 
     def _record_import(self, source_kind: str, path: Path, record_count: int) -> None:
         self.connection.execute(

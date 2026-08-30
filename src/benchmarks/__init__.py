@@ -1,4 +1,5 @@
-"""Benchmark helpers for vulnerability-detection evaluation.
+"""评测基准适配器
 
-Supported benchmark families include VulnGym, SecureVibeBench, and A.S.E.
+- VulnGym: 仓库级漏洞检测基准
+- SecureVibeBench / A.S.E: AI 生成代码安全基准
 """

@@ -1,0 +1,6 @@
+# Project-local package index configuration for uv.
+# All uv dependency operations in this workspace use the Aliyun PyPI mirror by default.
+[[index]]
+name = "aliyun"
+url = "https://mirrors.aliyun.com/pypi/simple/"
+default = true

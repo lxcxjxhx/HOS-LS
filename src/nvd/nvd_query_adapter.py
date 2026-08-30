@@ -558,44 +558,6 @@ class NVDQueryAdapter:
 
         return stats
 
-    def retrieve_taint_templates(
-        self,
-        cwe_id: str,
-        *,
-        language: str = "python",
-        semantic_terms: Optional[List[str]] = None,
-        ranking_profile_version: str = "1",
-    ) -> List[Dict[str, Any]]:
-        """Return deterministic, provenance-bearing hypothesis templates only."""
-        if cwe_id not in {"CWE-89", "CWE-78", "CWE-918"} or not self._ensure_connected():
-            return []
-        assert self._conn is not None
-        terms = {term.lower() for term in (semantic_terms or [])}
-        try:
-            rows = self._conn.execute(
-                "SELECT * FROM taint_template WHERE cwe_id=?", (cwe_id,)
-            ).fetchall()
-        except sqlite3.DatabaseError:
-            return []
-        results = []
-        for row in rows:
-            applicability = __import__("json").loads(row["applicability_json"])
-            if applicability.get("language", "").lower() != language.lower():
-                continue
-            features = __import__("json").loads(row["semantic_features_json"])
-            relevance = sum(1 for feature in features if str(feature).lower() in terms)
-            applicability_score = 1.0
-            catalog_score = 1.0 if row["provenance_json"] else 0.0
-            score = relevance * 3.0 + applicability_score * 2.0 + catalog_score
-            results.append({"template_id": row["template_id"], "cwe_id": cwe_id,
-                            "role": row["role"], "api_shape": row["api_shape"],
-                            "applicability": applicability, "score": score,
-                            "ranking_profile_version": ranking_profile_version,
-                            "catalog_provenance": row["provenance_json"],
-                            "confirmatory": False})
-        results.sort(key=lambda item: (-item["score"], item["template_id"]))
-        return results
-
     def clear_cache(self) -> None:
         """清空查询缓存"""
         if self._cache:

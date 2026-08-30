@@ -101,8 +101,6 @@ def scan_one(args):
                     "scan",
                     target,
                     "--pure-ai",
-                    "--format",
-                    "json",
                     "--output",
                     out,
                 ],
