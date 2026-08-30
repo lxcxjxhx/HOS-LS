@@ -1,9 +1,0 @@
-{
-  "pbtResults": {
-    "6.3 Write dataset, evaluation, optimization, and reporting property tests in `tests/unit/ecatsl/test_dataset_properties.py` and `tests/unit/ecatsl/test_evaluation_properties.py`": {
-      "status": "passed",
-      "lastRunTimestamp": 1788052356796
-    }
-  },
-  "executionHistory": {}
-}
