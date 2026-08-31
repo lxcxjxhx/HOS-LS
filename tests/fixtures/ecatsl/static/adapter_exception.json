@@ -1,0 +1,6 @@
+{
+  "note": "adapter raised before producing output",
+  "error_type": "RuntimeError",
+  "error": "delegated tracer crashed",
+  "produced_output": false
+}

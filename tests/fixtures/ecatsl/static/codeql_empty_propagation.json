@@ -1,0 +1,16 @@
+{
+  "available": true,
+  "hits": [
+    {
+      "rule": "py/sql-injection",
+      "cwe": "CWE-89",
+      "severity": "error",
+      "message": "SQL injection",
+      "code_flow": [
+        {"location": "app.py:12", "kind": "source"},
+        {"location": "app.py:18", "kind": "sink"}
+      ]
+    }
+  ],
+  "note": "code flow with no intermediate propagation"
+}

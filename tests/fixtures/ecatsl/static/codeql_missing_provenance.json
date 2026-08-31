@@ -1,0 +1,17 @@
+{
+  "available": true,
+  "hits": [
+    {
+      "rule": "py/path-injection",
+      "cwe": "CWE-22",
+      "severity": "warning",
+      "message": "path injection",
+      "code_flow": [
+        {"location": "app.py:5", "kind": "source"},
+        {"location": "app.py:7", "kind": "sink"}
+      ],
+      "source_provenance": null
+    }
+  ],
+  "note": "CodeQL flow without source provenance"
+}

@@ -1,0 +1,30 @@
+{
+  "trace_path": [
+    {
+      "node_type": "user_input",
+      "location": "app.py:12",
+      "line_number": 12,
+      "source_type": "direct_user_input",
+      "value_name": "request.args.get('q')"
+    },
+    {
+      "node_type": "data_flow",
+      "location": "app.py:15",
+      "line_number": 15,
+      "source_type": "internal",
+      "value_name": "query"
+    },
+    {
+      "node_type": "sink",
+      "location": "app.py:18",
+      "line_number": 18,
+      "source_type": "unknown",
+      "value_name": "cursor.execute(query)"
+    }
+  ],
+  "is_exploitable": true,
+  "confidence": 0.95,
+  "source_type": "direct_user_input",
+  "controllability_level": "fully_controlled",
+  "summary": "complete source-to-sink trace"
+}
