@@ -392,3 +392,155 @@ class InputTracerAdapter:
 # Keep module importable and delegating-only: actual InputTracer/SastPrefilter
 # delegation lives in the concrete adapters (tasks 4.2/4.3) so this contract file
 # never imports scanners or tracing implementations.
+
+
+class CodeQLSastAdapter:
+    """Normalize SastPrefilter CodeQL/SARIF outputs through the static-adapter contract.
+
+    Task 4.3: Delegate to ``src/analyzers/sast_prefilter.py`` and consume real
+    SARIF/CodeQL-oriented fixture shapes; never add a query runner or scanner.
+    Ordered code-flow locations and sanitizer evidence are normalized into
+    ``PathEvidence`` only when the producer/version is explicitly supported;
+    plain SARIF hits, inferred endpoints, unsupported tool output, or missing
+    source provenance stay unconfirmed. Rule/query identity, run identity,
+    raw-output hash, locations, adapter version, and compatibility failure
+    reason are preserved on the retained ``ValidationResult``.
+    """
+
+    adapter_id = "codeql-sast"
+    adapter_version = "1"
+    producer_id = "codeql"
+    producer_version = "2"
+
+    def __init__(
+        self,
+        prefilter: Any,
+        *,
+        supported_producers: Sequence[Tuple[str, str]] = (),
+    ) -> None:
+        if prefilter is None:
+            raise ValueError("CodeQLSastAdapter requires a delegated SastPrefilter instance")
+        self.prefilter = prefilter
+        self._supported_producers = frozenset(
+            supported_producers or ((self.producer_id, self.producer_version),)
+        )
+
+    def supports(self, applicability: Any, semantics: Sequence[str]) -> bool:
+        """Python-first CodeQL flow adapter for declared sink semantics."""
+        language = getattr(applicability, "language", None)
+        if language is None or str(language).lower() != "python":
+            return False
+        return bool(semantics)
+
+    def _producer_supported(self) -> bool:
+        return (self.producer_id, self.producer_version) in self._supported_producers
+
+    def _flow_from_hit(
+        self, hit: Any
+    ) -> Tuple[Optional[PathLocation], Tuple[PathLocation, ...], Optional[PathLocation]]:
+        """Extract ordered source/propagation/sink from a hit's code-flow shape."""
+        if not isinstance(hit, dict):
+            return None, (), None
+        code_flow = hit.get("code_flow") or hit.get("thread_flow") or []
+        if not isinstance(code_flow, (list, tuple)):
+            return None, (), None
+        locations = [
+            PathLocation(location=str(node.get("location", "")).strip())
+            for node in code_flow
+            if isinstance(node, dict) and str(node.get("location", "")).strip()
+        ]
+        if len(locations) < 2:
+            return None, (), None
+        return locations[0], tuple(locations[1:-1]) or (locations[0],), locations[-1]
+
+    def normalize(self, raw: Any, *, provenance: Provenance) -> NormalizationResult:
+        """Normalize one ``SastPrefilter`` CodeQL result.
+
+        Complete ordered code-flow locations produce ``PathEvidence`` only when
+        the producer/version is explicitly supported. Plain SARIF hits, inferred
+        endpoints, unsupported output, and missing provenance stay unconfirmed
+        and retain a non-confirmatory ``ValidationResult``.
+        """
+        outcome = NormalizationOutcome.UNSUPPORTED_OUTPUT
+        reason = ""
+        path_evidence = None
+        raw_identity = _raw_output_identity(raw)
+
+        if not self._producer_supported():
+            reason = f"producer {self.producer_id}@{self.producer_version} is not explicitly supported"
+        elif not isinstance(raw, dict):
+            reason = "SastPrefilter result is not a mapping"
+        elif not raw.get("available"):
+            outcome = NormalizationOutcome.UNSUPPORTED_OUTPUT
+            reason = str(raw.get("note") or "CodeQL capability is unavailable")
+        else:
+            hits = raw.get("hits") or []
+            if not isinstance(hits, (list, tuple)):
+                reason = "SastPrefilter hits is not a sequence"
+            elif not hits:
+                outcome = NormalizationOutcome.NO_PATH
+                reason = "no CodeQL hits (no static path evidence)"
+            else:
+                source, propagation, sink = self._flow_from_hit(hits[0])
+                if source is None or sink is None:
+                    outcome = NormalizationOutcome.INCOMPLETE_PATH
+                    reason = "CodeQL hit carries no ordered code-flow source/sink (plain SARIF hit)"
+                elif not propagation:
+                    outcome = NormalizationOutcome.INCOMPLETE_PATH
+                    reason = "CodeQL hit carries no intermediate code-flow propagation nodes"
+                else:
+                    try:
+                        path_evidence = build_path_evidence(
+                            adapter_id=self.adapter_id,
+                            adapter_version=self.adapter_version,
+                            provenance=provenance,
+                            source=source,
+                            source_provenance=provenance,
+                            propagation_steps=propagation,
+                            sink=sink,
+                            sanitizer_status=SanitizerStatus.ABSENT,
+                            static_evidence_identity=raw_identity,
+                        )
+                        outcome = NormalizationOutcome.COMPLETE_PATH
+                        reason = "complete ordered CodeQL code flow with source and sink"
+                    except ValueError as error:
+                        outcome = NormalizationOutcome.INCOMPLETE_PATH
+                        reason = str(error)
+
+        kind = (
+            "NO_PATH"
+            if outcome in (NormalizationOutcome.NO_PATH, NormalizationOutcome.INCOMPLETE_PATH)
+            else outcome.value
+        )
+        observed_locations = (
+            tuple(
+                str(node.get("location", "")).strip()
+                for node in (raw.get("hits") or [])
+                if isinstance(node, dict) and str(node.get("location", "")).strip()
+            )
+            if isinstance(raw, dict)
+            else ()
+        )
+        validation = ValidationResult(
+            version=self.adapter_version,
+            created_at=datetime.now(timezone.utc),
+            provenance=provenance,
+            kind=kind,
+            outcome=outcome.value,
+            adapter_id=self.adapter_id,
+            adapter_version=self.adapter_version,
+            observed_data=(
+                Attribute(name="producer_id", value=self.producer_id),
+                Attribute(name="producer_version", value=self.producer_version),
+                Attribute(name="raw_output_identity", value=raw_identity),
+                Attribute(name="reason", value=reason),
+            ),
+        )
+        return NormalizationResult(
+            outcome=outcome,
+            validation=validation,
+            path_evidence=path_evidence,
+            reason=reason,
+            raw_output_identity=raw_identity,
+            observed_location_identities=observed_locations,
+        )
