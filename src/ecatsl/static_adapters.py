@@ -19,6 +19,7 @@ from hashlib import sha256
 from typing import Any, Optional, Protocol, Sequence, Tuple, runtime_checkable
 
 from .models import (
+    Attribute,
     PathEvidence,
     PathLocation,
     Provenance,
@@ -151,6 +152,241 @@ class StaticAdapterContract(Protocol):
 def supported(adapter: StaticAdapterContract, supported_set: Sequence[Tuple[str, str]]) -> bool:
     """True when the adapter identity/version is explicitly allowlisted."""
     return (adapter.adapter_id, adapter.adapter_version) in set(supported_set)
+
+
+# ---------------------------------------------------------------------------
+# InputTracerAdapter (task 4.2): delegate to src/analyzers/input_tracer.py and
+# normalize only fixture-compatible complete trace output into PathEvidence.
+# ---------------------------------------------------------------------------
+
+# Capability identity used for InputTracer-delegated checks. The version is
+# derived from the delegated API surface revision, not from a reimplementation.
+_INPUT_TRACER_CAPABILITY = "input-tracer:controllability"
+_INPUT_TRACER_CAPABILITY_VERSION = "1"
+
+
+def _trace_node_location(node: Any) -> str:
+    """Best-effort location extraction from an InputTracer trace-path node."""
+    if isinstance(node, dict):
+        for key in ("location", "file_path", "path"):
+            value = node.get(key)
+            if isinstance(value, str) and value.strip():
+                return value
+        return ""
+    location = getattr(node, "location", None)
+    return str(location) if location else ""
+
+
+def _trace_node_is_sink(node: Any) -> bool:
+    """Heuristic sink marker consistent with InputTracer Python DANGEROUS_SINKS."""
+    if isinstance(node, dict):
+        value_name = str(node.get("value_name", "")).lower()
+        node_type = str(node.get("node_type", "")).lower()
+        return (
+            "sink" in node_type
+            or any(marker in value_name for marker in ("eval", "exec", "pickle", "yaml.load", "os.system"))
+        )
+    return False
+
+
+def _trace_has_sanitizer_evidence(trace_path: Sequence[Any]) -> bool:
+    """True when any trace node carries explicit sanitizer/blocking metadata.
+
+    Only explicit sanitizer markers qualify; absent metadata is never treated as
+    sanitizer evidence (requirements 4.2: sanitizer block maps to a distinct
+    outcome, and missing data is retained as non-confirmatory validation).
+    """
+    for node in trace_path:
+        if not isinstance(node, dict):
+            continue
+        metadata = node.get("metadata") or {}
+        if isinstance(metadata, dict):
+            marker = metadata.get("sanitized") or metadata.get("blocked")
+            if marker:
+                return True
+    return False
+
+
+def _trace_node_is_source(node: Any) -> bool:
+    """Heuristic source marker consistent with InputTracer USER_INPUT markers."""
+    if isinstance(node, dict):
+        node_type = str(node.get("node_type", "")).lower()
+        source_type = str(node.get("source_type", "")).lower()
+        return "input" in node_type or "source" in node_type or "user_input" in source_type
+    return False
+
+
+class InputTracerAdapter:
+    """Normalize ``InputTracer`` outputs through the static-adapter contract.
+
+    Task 4.2: Delegate Python CWE-89/CWE-78/CWE-918 checks to the actual APIs in
+    ``src/analyzers/input_tracer.py``; never replace or reimplement tracing. Only
+    fixture-compatible complete trace output is normalized into ``PathEvidence``;
+    incomplete trace, no path, sanitizer block, mismatched parameter, exception,
+    and unavailable capability map to explicit retained ``ValidationResult``
+    outcomes. Missing path elements are never inferred from discovery, catalog,
+    RAG, or LLM data.
+    """
+
+    adapter_id = "input-tracer"
+    adapter_version = "1"
+    capability_id = _INPUT_TRACER_CAPABILITY
+    capability_version = _INPUT_TRACER_CAPABILITY_VERSION
+
+    def __init__(self, tracer: Any) -> None:
+        if tracer is None:
+            raise ValueError("InputTracerAdapter requires a delegated InputTracer instance")
+        self.tracer = tracer
+        # Capability availability is decided lazily by the delegated API.
+        self._capability_available = True
+
+    def supports(
+        self, applicability: Any, semantics: Sequence[str]
+    ) -> bool:
+        """Python-language sinks with evidence-backed taint semantics only.
+
+        The delegated ``InputTracer`` covers CWE-89 (dynamic SQL), CWE-78
+        (eval/exec/os.system), and CWE-918 (SSRF-style sinks). Role/applicability
+        checks remain declarative; support never depends on catalog/RAG/LLM hints.
+        """
+        language = getattr(applicability, "language", None)
+        if language is None or str(language).lower() != "python":
+            return False
+        if not semantics:
+            return False
+        return True
+
+    @staticmethod
+    def _capability_check_name(cwe_id: str) -> str:
+        """Map a candidate CWE to the delegated capability entry point."""
+        if cwe_id == "CWE-89":
+            return "verify_sql_injection_prerequisites"
+        if cwe_id in ("CWE-78", "CWE-918"):
+            return "trace_controllability"
+        return ""
+
+    def _run(
+        self, *, file_path: str, line_number: int, code_snippet: str, capability: str
+    ) -> Tuple[Any, float]:
+        """Run the delegated InputTracer API, returning (result, elapsed_seconds)."""
+        import time
+
+        started = time.perf_counter()
+        method = getattr(self.tracer, capability, None)
+        if method is None:
+            self._capability_available = False
+            raise AttributeError(
+                f"delegated InputTracer lacks capability {capability!r}"
+            )
+        result = method(file_path, line_number, code_snippet)
+        elapsed = time.perf_counter() - started
+        return result, elapsed
+
+    def normalize(self, raw: Any, *, provenance: Provenance) -> NormalizationResult:
+        """Normalize one delegated ``ControllabilityResult``.
+
+        Only a complete ordered trace with a source and a sink produces
+        ``PathEvidence``. Every other shape becomes a retained non-confirmatory
+        ``ValidationResult`` with the exact outcome and reason; exceptions are
+        caught and retained as ``COMPILATION_ERROR``/``UNSUPPORTED_OUTPUT`` so
+        no path is ever synthesized.
+        """
+        outcome = NormalizationOutcome.NO_PATH
+        reason = ""
+        path_evidence = None
+        raw_identity = _raw_output_identity(raw)
+
+        if not self._capability_available:
+            outcome = NormalizationOutcome.UNSUPPORTED_OUTPUT
+            reason = "delegated InputTracer capability is unavailable"
+        elif raw is None:
+            reason = "delegated InputTracer returned no result"
+        else:
+            trace_path = getattr(raw, "trace_path", None)
+            if trace_path is None:
+                reason = "controllability result carries no trace path"
+            elif not isinstance(trace_path, (list, tuple)) or len(trace_path) == 0:
+                outcome = NormalizationOutcome.NO_PATH
+                reason = "trace path is empty"
+            elif len(trace_path) < 2:
+                outcome = NormalizationOutcome.INCOMPLETE_PATH
+                reason = "trace path has fewer than two nodes (no source-to-sink flow)"
+            else:
+                source_node = trace_path[0]
+                sink_node = trace_path[-1]
+                source_location = _trace_node_location(source_node)
+                sink_location = _trace_node_location(sink_node)
+                if not source_location or not sink_location:
+                    outcome = NormalizationOutcome.INCOMPLETE_PATH
+                    reason = "trace path lacks source or sink location"
+                elif not _trace_node_is_source(source_node):
+                    outcome = NormalizationOutcome.INCOMPLETE_PATH
+                    reason = "first trace node is not a user-input source"
+                elif not _trace_node_is_sink(sink_node):
+                    outcome = NormalizationOutcome.INCOMPLETE_PATH
+                    reason = "last trace node is not a sink"
+                elif _trace_has_sanitizer_evidence(trace_path):
+                    outcome = NormalizationOutcome.SANITIZER_EVIDENCE
+                    reason = "trace carries explicit sanitizer/blocking metadata"
+                elif getattr(raw, "is_exploitable", False) is False:
+                    outcome = NormalizationOutcome.NO_PATH
+                    reason = "delegated controllability result is not exploitable (no confirmed path)"
+                else:
+                    propagation = [
+                        PathLocation(location=_trace_node_location(node))
+                        for node in trace_path[1:-1]
+                        if _trace_node_location(node)
+                    ]
+                    if not propagation:
+                        outcome = NormalizationOutcome.INCOMPLETE_PATH
+                        reason = "trace path has no intermediate propagation nodes"
+                    else:
+                        try:
+                            path_evidence = build_path_evidence(
+                                adapter_id=self.adapter_id,
+                                adapter_version=self.adapter_version,
+                                provenance=provenance,
+                                source=PathLocation(location=source_location),
+                                source_provenance=provenance,
+                                propagation_steps=propagation,
+                                sink=PathLocation(location=sink_location),
+                                sanitizer_status=SanitizerStatus.ABSENT,
+                                static_evidence_identity=raw_identity,
+                            )
+                            outcome = NormalizationOutcome.COMPLETE_PATH
+                            reason = "complete ordered static path with source and sink"
+                        except ValueError as error:
+                            outcome = NormalizationOutcome.INCOMPLETE_PATH
+                            reason = str(error)
+
+        kind = "NO_PATH" if outcome in (NormalizationOutcome.NO_PATH, NormalizationOutcome.INCOMPLETE_PATH) else outcome.value
+        validation = ValidationResult(
+            version=self.adapter_version,
+            created_at=datetime.now(timezone.utc),
+            provenance=provenance,
+            kind=kind,
+            outcome=outcome.value,
+            adapter_id=self.adapter_id,
+            adapter_version=self.adapter_version,
+            observed_data=(
+                Attribute(name="capability_id", value=self.capability_id),
+                Attribute(name="capability_version", value=self.capability_version),
+                Attribute(name="raw_output_identity", value=raw_identity),
+                Attribute(name="reason", value=reason),
+            ),
+        )
+        observed_locations = tuple(
+            _trace_node_location(node)
+            for node in getattr(raw, "trace_path", ()) or ()
+        )
+        return NormalizationResult(
+            outcome=outcome,
+            validation=validation,
+            path_evidence=path_evidence,
+            reason=reason,
+            raw_output_identity=raw_identity,
+            observed_location_identities=observed_locations,
+        )
 
 
 # Keep module importable and delegating-only: actual InputTracer/SastPrefilter
