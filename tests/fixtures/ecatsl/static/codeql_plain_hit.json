@@ -1,0 +1,12 @@
+{
+  "available": true,
+  "hits": [
+    {
+      "rule": "py/sql-injection",
+      "cwe": "CWE-89",
+      "severity": "error",
+      "message": "SQL injection"
+    }
+  ],
+  "note": "plain SARIF hit without code flow"
+}

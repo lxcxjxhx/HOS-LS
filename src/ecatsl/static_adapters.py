@@ -449,9 +449,36 @@ class CodeQLSastAdapter:
             for node in code_flow
             if isinstance(node, dict) and str(node.get("location", "")).strip()
         ]
-        if len(locations) < 2:
+        if len(locations) < 3:
+            # A code flow needs at least source + intermediate propagation + sink;
+            # a two-node source->sink flow has no ordered propagation evidence.
             return None, (), None
-        return locations[0], tuple(locations[1:-1]) or (locations[0],), locations[-1]
+        return locations[0], tuple(locations[1:-1]), locations[-1]
+
+    @staticmethod
+    def _hit_has_blocking_sanitizer(hit: Any) -> bool:
+        """True when a CodeQL hit carries explicit blocking/failed sanitizer evidence.
+
+        Only explicit sanitizer markers qualify; absent metadata is never treated
+        as sanitizer evidence (requirements 4.3: sanitizer block/failure maps to
+        a distinct non-confirmatory outcome, and missing data stays unconfirmed).
+        """
+        if not isinstance(hit, dict):
+            return False
+        sanitizer = hit.get("sanitizer")
+        if isinstance(sanitizer, dict):
+            status = str(sanitizer.get("status", "")).lower()
+            if status in ("blocking", "failed", "sanitized", "blocked"):
+                return True
+        for node in hit.get("code_flow") or hit.get("thread_flow") or []:
+            if not isinstance(node, dict):
+                continue
+            metadata = node.get("metadata") or {}
+            if isinstance(metadata, dict):
+                marker = metadata.get("sanitized") or metadata.get("blocked")
+                if marker:
+                    return True
+        return False
 
     def normalize(self, raw: Any, *, provenance: Provenance) -> NormalizationResult:
         """Normalize one ``SastPrefilter`` CodeQL result.
@@ -488,6 +515,9 @@ class CodeQLSastAdapter:
                 elif not propagation:
                     outcome = NormalizationOutcome.INCOMPLETE_PATH
                     reason = "CodeQL hit carries no intermediate code-flow propagation nodes"
+                elif self._hit_has_blocking_sanitizer(hits[0]):
+                    outcome = NormalizationOutcome.SANITIZER_EVIDENCE
+                    reason = "CodeQL hit carries explicit blocking/failed sanitizer evidence"
                 else:
                     try:
                         path_evidence = build_path_evidence(

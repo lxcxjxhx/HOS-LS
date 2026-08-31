@@ -1,0 +1,16 @@
+{
+  "trace_path": [
+    {
+      "node_type": "user_input",
+      "location": "app.py:12",
+      "line_number": 12,
+      "source_type": "direct_user_input",
+      "value_name": "request.args.get('q')"
+    }
+  ],
+  "is_exploitable": false,
+  "confidence": 0.0,
+  "source_type": "direct_user_input",
+  "controllability_level": "not_controlled",
+  "summary": "trace stops at source; no sink reached"
+}

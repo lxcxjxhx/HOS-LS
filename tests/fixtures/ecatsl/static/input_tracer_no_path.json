@@ -1,0 +1,1 @@
+{"content": "{\n  \"trace_path\": [],\n  \"is_exploitable\": false,\n  \"confidence\": 0.0,\n  \"source_type\": \"unknown\",\n  \"controllability_level\": \"not_controlled\",\n  \"summary\": \"no trace path found\"\n}", "path": "C:/1AAA-PROJECT/HOS/HOS-LS/tests/fixtures/ecatsl/static/input_tracer_no_path.json"}
