@@ -616,6 +616,35 @@ class LLMResolutionAttempt(Artifact):
     failure_data: Optional[str] = None
 
 
+class PipelineStage(Artifact):
+    """One deterministic stage in the assembled ECATSL pipeline.
+
+    ``stage_identity`` is the deterministic consolidation key: two stages with
+    the same identity, inputs, purpose, and outputs are duplicates. The first
+    occurrence is canonical; equal later occurrences are retained with
+    ``duplicate_of_artifact_id`` pointing at the canonical stage. When
+    consolidation persistence fails, both stages are retained and
+    ``consolidation_failure_artifact_id`` links the audit-failure record.
+    """
+
+    stage_identity: str = Field(min_length=1)
+    input_artifact_ids: Tuple[str, ...]
+    transformation_purpose: str = Field(min_length=1)
+    output_artifact_ids: Tuple[str, ...]
+    duplicate_of_artifact_id: Optional[str] = None
+    consolidation_failure_artifact_id: Optional[str] = None
+
+    @model_validator(mode="after")
+    def consolidation_binding_is_consistent(self) -> "PipelineStage":
+        if self.duplicate_of_artifact_id is None and self.consolidation_failure_artifact_id is not None:
+            raise ValueError("a consolidation failure requires a duplicate binding")
+        if self.duplicate_of_artifact_id is not None and self.consolidation_failure_artifact_id is None:
+            raise ValueError("a duplicate stage must record its consolidation outcome")
+        if self.duplicate_of_artifact_id == self.artifact_id:
+            raise ValueError("a stage cannot duplicate itself")
+        return self
+
+
 class BenchmarkSample(ImmutableModel):
     sample_id: str = Field(min_length=1)
     classification: str = Field(min_length=1)
