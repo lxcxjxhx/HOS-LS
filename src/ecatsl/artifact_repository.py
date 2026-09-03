@@ -43,6 +43,7 @@ from .models import (
     NormalizedCatalogRecord,
     OptimizationExperiment,
     PathEvidence,
+    PipelineStage,
     ReuseInventory,
     SanitizerStatus,
     StaticAdapterRun,
@@ -236,6 +237,7 @@ _REGISTERED_MODELS: Tuple[Type[Artifact], ...] = (
     NormalizedCatalogRecord,
     OptimizationExperiment,
     PathEvidence,
+    PipelineStage,
     PolicyDecisionRecord,
     ReuseInventory,
     ScopeDefinition,
@@ -276,6 +278,7 @@ _SPECIALIZED_TYPES = (
     Evidence,
     FindingClassification,
     PathEvidence,
+    PipelineStage,
     PolicyDecisionRecord,
     ReuseInventory,
     ScopeDefinition,
@@ -1817,6 +1820,120 @@ class ArtifactRepository:
             )
             self._remember_idempotency(operation, idempotency_key, fingerprint, (inventory,))
         return inventory
+
+    def find_canonical_pipeline_stage(
+        self, stage_identity: str
+    ) -> Optional[PipelineStage]:
+        """Return the canonical (non-duplicate) stage for an identity, if any."""
+
+        row = self.connection.execute(
+            """
+            SELECT artifact_id FROM ecatsl_pipeline_stage
+            WHERE stage_identity = ? AND duplicate_of_artifact_id IS NULL
+            """,
+            (stage_identity,),
+        ).fetchone()
+        if row is None:
+            return None
+        return self._load_in_transaction(str(row[0]), PipelineStage)
+
+    def persist_pipeline_stage(
+        self,
+        stage: PipelineStage,
+        *,
+        idempotency_key: Optional[str] = None,
+    ) -> PipelineStage:
+        """Persist a canonical or consolidated-duplicate pipeline stage.
+
+        A canonical stage is the first occurrence of a ``stage_identity`` and is
+        stored with a NULL duplicate binding. A duplicate stage records a
+        deterministic consolidation decision: it references the matching
+        canonical stage and an ``AuditFailureRecord`` whose operation is
+        ``pipeline_stage_consolidation`` and whose related artifact is the
+        canonical stage (enforced by schema trigger). Retrying the same stage is
+        idempotent; reusing an identity with different data is rejected.
+        """
+
+        operation = "persist_pipeline_stage"
+        fingerprint = _request_hash(stage)
+        with self._atomic(operation, idempotency_key, fingerprint):
+            replay = self._lookup_idempotency(
+                operation, idempotency_key, fingerprint, (stage.artifact_id,)
+            )
+            if replay is not None:
+                return self._expect(replay[0], PipelineStage)
+            if stage.duplicate_of_artifact_id is None:
+                existing = self.find_canonical_pipeline_stage(stage.stage_identity)
+                if existing is not None and existing.artifact_id != stage.artifact_id:
+                    raise ImmutableArtifactError(
+                        "canonical pipeline stage already exists for identity "
+                        f"{stage.stage_identity}"
+                    )
+                self._insert_artifact(stage)
+                self.connection.execute(
+                    """
+                    INSERT INTO ecatsl_pipeline_stage
+                        (artifact_id, stage_identity, input_artifact_ids_json,
+                         transformation_purpose, output_artifact_ids_json,
+                         duplicate_of_artifact_id, consolidation_failure_artifact_id)
+                    VALUES (?, ?, ?, ?, ?, NULL, NULL)
+                    """,
+                    (
+                        stage.artifact_id,
+                        stage.stage_identity,
+                        _canonical_json(list(stage.input_artifact_ids)),
+                        stage.transformation_purpose,
+                        _canonical_json(list(stage.output_artifact_ids)),
+                    ),
+                )
+            else:
+                self._call_test_hook(
+                    "pipeline_stage.consolidation_decision",
+                    self._active_invocation_id or "",
+                )
+                canonical = self._load_in_transaction(
+                    stage.duplicate_of_artifact_id, PipelineStage
+                )
+                if (
+                    canonical.duplicate_of_artifact_id is not None
+                    or canonical.stage_identity != stage.stage_identity
+                ):
+                    raise ImmutableArtifactError(
+                        "duplicate pipeline stage must reference a matching "
+                        "canonical stage"
+                    )
+                failure = self._load_in_transaction(
+                    stage.consolidation_failure_artifact_id, AuditFailureRecord
+                )
+                if (
+                    failure.operation != "pipeline_stage_consolidation"
+                    or failure.related_artifact_id != stage.duplicate_of_artifact_id
+                ):
+                    raise ImmutableArtifactError(
+                        "duplicate pipeline stage requires a consolidation "
+                        "audit record"
+                    )
+                self._insert_artifact(stage)
+                self.connection.execute(
+                    """
+                    INSERT INTO ecatsl_pipeline_stage
+                        (artifact_id, stage_identity, input_artifact_ids_json,
+                         transformation_purpose, output_artifact_ids_json,
+                         duplicate_of_artifact_id, consolidation_failure_artifact_id)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        stage.artifact_id,
+                        stage.stage_identity,
+                        _canonical_json(list(stage.input_artifact_ids)),
+                        stage.transformation_purpose,
+                        _canonical_json(list(stage.output_artifact_ids)),
+                        stage.duplicate_of_artifact_id,
+                        stage.consolidation_failure_artifact_id,
+                    ),
+                )
+            self._remember_idempotency(operation, idempotency_key, fingerprint, (stage,))
+        return stage
 
     def record_failure(
         self,
