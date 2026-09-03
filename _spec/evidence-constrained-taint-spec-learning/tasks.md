@@ -117,12 +117,14 @@ Implementation remains Python-only for CWE-89, CWE-78, and CWE-918. Extend and r
     - Cover actual InputTracer return shapes and supported/unsupported SARIF/CodeQL code-flow shapes, including complete path, plain hit, missing provenance, empty propagation, sanitizer block/failure, malformed output, and adapter exception.
     - Assert adapters delegate to `InputTracer`/`SastPrefilter`, retain raw identity and failures, and never upgrade catalog/discovery/LLM hints into path elements.
     - _Requirements: 2.7–2.8, 3.2–3.6, 4.1–4.5, 7.2, 11.12–11.13_
-  - [ ]* 4.7 Write the Property 5 test in `tests/unit/ecatsl/properties/test_property_05_static_path_confirmation.py`
+  - [x]* 4.7 Write the Property 5 test in `tests/unit/ecatsl/properties/test_property_05_static_path_confirmation.py`
     - **Property 5: Complete supported static paths are necessary and sufficient for confirmation.** Generate support sets, path completeness, producer support, source provenance, and sanitizer states; assert confirmation exactly at the static proof boundary.
     - **Validates: Requirements 4.1–4.3, 4.5, 4.8, 11.12**
-  - [ ]* 4.8 Write the Property 6 test in `tests/unit/ecatsl/properties/test_property_06_finding_lineage.py`
+    - Execution: Added `tests/unit/ecatsl/properties/test_property_05_static_path_confirmation.py` with three tests. Generated sweeps over path presence, propagation presence, and sanitizer state (ABSENT/FAILED/BLOCKING) assert `FindingConfirmationService.classify` confirms exactly when the path is complete and supported with sanitizer ABSENT or FAILED, and stays unconfirmed for every missing/incompatible combination; hint-only (no path) never confirms; and model construction rejects unsupported producers, empty source provenance, and empty propagation, proving missing path elements cannot be synthesized. Property suite: 10 passed (100 examples each).
+  - [x]* 4.8 Write the Property 6 test in `tests/unit/ecatsl/properties/test_property_06_finding_lineage.py`
     - **Property 6: Finding decisions retain available lineage without rollback.** Generate available lineage and metadata-write failures and assert unchanged classification plus exact missing-element flags.
     - **Validates: Requirements 4.6, 4.7**
+    - Execution: Added `tests/unit/ecatsl/properties/test_property_06_finding_lineage.py` with three tests. Generated lineage-availability sweeps assert pure classification depends only on the static path; persisted complete lineage (candidate→specification→validation→adapter run→path) is retained with zero failures; and injected `OptionalMetadataPersistenceError` via `ArtifactRepository.for_testing` preserves the CONFIRMED classification while enumerating exact `missing_metadata` flags with one failure record per missing element. Property suite: 10 passed (100 examples each).
 
 - [ ] 5. Wire the ECATSL service with tooling order and failure isolation
   - [ ] 5.1 Implement the tooling-first resolver in `src/ecatsl/tooling_resolver.py`
