@@ -360,7 +360,7 @@ class ECATSLService:
                 audit_failures,
                 lambda signature=signature: self.resolver.resolve(signature),
             )
-            if bundle is not None:
+            if bundle:
                 records.extend(bundle.records)
         return tuple(records)
 
