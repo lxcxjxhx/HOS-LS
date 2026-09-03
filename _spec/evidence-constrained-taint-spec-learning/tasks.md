@@ -127,11 +127,12 @@ Implementation remains Python-only for CWE-89, CWE-78, and CWE-918. Extend and r
     - Execution: Added `tests/unit/ecatsl/properties/test_property_06_finding_lineage.py` with three tests. Generated lineage-availability sweeps assert pure classification depends only on the static path; persisted complete lineage (candidate→specification→validation→adapter run→path) is retained with zero failures; and injected `OptionalMetadataPersistenceError` via `ArtifactRepository.for_testing` preserves the CONFIRMED classification while enumerating exact `missing_metadata` flags with one failure record per missing element. Property suite: 10 passed (100 examples each).
 
 - [ ] 5. Wire the ECATSL service with tooling order and failure isolation
-  - [ ] 5.1 Implement the tooling-first resolver in `src/ecatsl/tooling_resolver.py`
+  - [x] 5.1 Implement the tooling-first resolver in `src/ecatsl/tooling_resolver.py`
     - Adapt existing SAST/CodeQL, InputTracer, PureAI multi-agent, RAG, and local NVD/CWE capabilities behind terminal `RESOLVED`, `UNRESOLVED`, `INAPPLICABLE`, `UNAVAILABLE`, or `FAILED` records with validated identity, timing, cost, and failure telemetry.
     - Suppress LLM fallback after any existing-tool role/applicability resolution, including tooling-record retention failure; permit fallback only after every applicable capability has a terminal unresolved outcome.
     - Persist complete LLM attempt telemetry and keep failed/assertion-only output unaccepted without independent policy-satisfying evidence.
     - _Requirements: 3.8, 5.1–5.7, 7.1–7.3_
+    - Execution: Implemented `ToolingFirstResolver` in `src/ecatsl/tooling_resolver.py` replacing the thin placeholder. It runs capabilities in declared order, converts each to a validated `ToolingResolutionRecord` (terminal-outcome enforcement, latency/cost/failure telemetry), stops early on the first `RESOLVED` capability, suppresses LLM fallback in that case, and permits the LLM only when every applicable capability ended terminal-unresolved (`unknown_api=True`). Capability exceptions are retained as `FAILED` telemetry records rather than fatal; all records and any LLM attempt are persisted through `ArtifactRepository.persist_artifact` when a repository is configured. Added 4 tests in `tests/unit/ecatsl/test_tooling_resolver.py` covering terminal-outcome gating, early-stop suppression, all-terminal-unresolved fallback with persisted telemetry, and exception→FAILED retention. Focused pytest: 4 passed; compileall passed.
   - [ ] 5.2 Implement stage identity, consolidation, and execution isolation in `src/ecatsl/pipeline.py`
     - Deduplicate equal pipeline-stage identities deterministically and record the decision; if consolidation persistence fails, retain and execute both stages with an audit failure.
     - Define required versus optional stage failures, per-stage artifacts, timeout/cancellation boundaries, and continuation rules so catalog, discovery, RAG, LLM, or one adapter failure cannot bypass scope, policy, compilation, or confirmation gates.
@@ -146,12 +147,14 @@ Implementation remains Python-only for CWE-89, CWE-78, and CWE-918. Extend and r
     - Assert stage order and retained artifacts for happy path, out-of-scope request, unsupported adapter, catalog outage, discovery failure, RAG/LLM failure, adapter exception, policy persistence failure, metadata failure, and restart/replay.
     - Verify catalog/discovery/LLM-only support always ends unconfirmed and one complete fake supported static path is the only positive confirmation case.
     - _Requirements: 1.2, 2.7–2.8, 3.7–3.9, 4.1–4.8, 5.1–5.7, 6.3, 7.4–7.5, 11.12–11.13_
-  - [ ]* 5.5 Write the Property 7 test in `tests/unit/ecatsl/properties/test_property_07_tooling_gate.py`
+  - [x]* 5.5 Write the Property 7 test in `tests/unit/ecatsl/properties/test_property_07_tooling_gate.py`
     - **Property 7: Tooling resolution gates LLM fallback.** Generate applicable tool sets, terminal outcomes, and retention failures; assert ordering, suppression, and `Unknown_API` eligibility.
     - **Validates: Requirements 5.1–5.4**
-  - [ ]* 5.6 Write the Property 8 test in `tests/unit/ecatsl/properties/test_property_08_llm_noninterference.py`
+    - Execution: Added `tests/unit/ecatsl/properties/test_property_07_tooling_gate.py` with 4 tests. Generated outcome combinations assert ordered execution up to the first `RESOLVED`, LLM suppression whenever any capability resolves, fallback eligibility only when all capabilities are terminal-unresolved, and `FAILED`/exception outcomes retained as terminal telemetry. Focused pytest: 4 passed; full property suite 33 passed.
+  - [x]* 5.6 Write the Property 8 test in `tests/unit/ecatsl/properties/test_property_08_llm_noninterference.py`
     - **Property 8: LLM output cannot bypass evidence acceptance.** Generate failed/assertion-only results and insufficient independent evidence and assert the candidate remains unaccepted.
     - **Validates: Requirements 5.7**
+    - Execution: Added `tests/unit/ecatsl/properties/test_property_08_llm_noninterference.py` with 3 tests. Generated LLM-outcome × evidence-availability sweeps assert LLM-origin evidence never satisfies the independent-evidence acceptance condition, LLM assertion content/confidence never upgrades acceptance, and failed LLM telemetry never becomes a static path. Focused pytest: 3 passed; full property suite 33 passed.
   - [ ]* 5.7 Write the Property 9 test in `tests/unit/ecatsl/properties/test_property_09_scope_short_circuit.py`
     - **Property 9: Scope gating short-circuits downstream work.** Generate unsupported languages/CWEs and scope revisions and assert no candidate, specification, adapter, or finding artifacts.
     - **Validates: Requirements 6.3, 6.4**
