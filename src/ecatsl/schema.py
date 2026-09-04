@@ -15,7 +15,7 @@ from typing import Callable, Optional, Sequence, Tuple
 from uuid import uuid4
 
 
-SCHEMA_VERSION = 7
+SCHEMA_VERSION = 8
 _SCHEMA_VERSION_TABLE = "ecatsl_schema_version"
 _PROCESS_OWNER_TOKEN = uuid4().hex
 _ACTIVE_ATTEMPTS: set[str] = set()
@@ -758,6 +758,155 @@ _V7_STATEMENTS: Tuple[str, ...] = (
     """,
 )
 
+_V8_TABLES = (
+    "catalog_import_version",
+    "source_record",
+    "normalized_catalog_record",
+    "catalog_duplicate",
+    "ingestion_run",
+    "ingestion_quality_report",
+    "taint_template",
+    "template_retrieval",
+)
+
+# Versioned local vulnerability-knowledge extension (Requirement 11.1-11.8).
+# The pre-ECATSL canonical tables (cve, cwe, cvss, cve_cwe, catalog_import)
+# remain the base catalog storage; this migration only adds append-only
+# metadata and derived-data tables beside them. Rows are written by the
+# CatalogImporter import path; source_record / normalized_catalog_record /
+# catalog_duplicate / ingestion_* consumers arrive with later tasks.
+_V8_STATEMENTS: Tuple[str, ...] = (
+    """
+    CREATE TABLE catalog_import_version (
+        import_id TEXT PRIMARY KEY,
+        source_kind TEXT NOT NULL,
+        source_origin TEXT NOT NULL,
+        source_identifier TEXT NOT NULL,
+        source_revision TEXT,
+        retrieved_at TEXT NOT NULL,
+        retrieved_content_hash TEXT NOT NULL
+            CHECK(length(retrieved_content_hash) = 64
+                  AND retrieved_content_hash NOT GLOB '*[^0-9a-f]*'),
+        license_metadata TEXT,
+        import_tool_version TEXT NOT NULL,
+        predecessor_id TEXT
+            REFERENCES catalog_import_version(import_id) ON DELETE RESTRICT,
+        created_at TEXT NOT NULL,
+        CHECK(predecessor_id IS NULL OR predecessor_id <> import_id)
+    )
+    """,
+    """
+    CREATE INDEX idx_catalog_import_version_source_lineage
+    ON catalog_import_version(source_kind, source_origin, source_identifier, created_at)
+    """,
+    """
+    CREATE TABLE source_record (
+        record_id TEXT PRIMARY KEY,
+        import_id TEXT NOT NULL
+            REFERENCES catalog_import_version(import_id) ON DELETE RESTRICT,
+        record_type TEXT NOT NULL,
+        source_identifier TEXT NOT NULL,
+        source_content_hash TEXT NOT NULL
+            CHECK(length(source_content_hash) = 64
+                  AND source_content_hash NOT GLOB '*[^0-9a-f]*'),
+        raw_reference TEXT,
+        integrity_status TEXT NOT NULL DEFAULT 'UNVERIFIED'
+            CHECK(integrity_status IN ('VERIFIED', 'FAILED', 'UNVERIFIED')),
+        provenance_json TEXT NOT NULL CHECK(json_valid(provenance_json))
+    )
+    """,
+    """
+    CREATE INDEX idx_source_record_import ON source_record(import_id)
+    """,
+    """
+    CREATE TABLE normalized_catalog_record (
+        normalized_id TEXT PRIMARY KEY,
+        record_type TEXT NOT NULL,
+        canonical_identifier TEXT NOT NULL,
+        normalized_content_hash TEXT NOT NULL
+            CHECK(length(normalized_content_hash) = 64
+                  AND normalized_content_hash NOT GLOB '*[^0-9a-f]*'),
+        normalization_profile_version TEXT NOT NULL,
+        canonical_id TEXT
+            REFERENCES normalized_catalog_record(normalized_id) ON DELETE RESTRICT,
+        provenance_json TEXT NOT NULL CHECK(json_valid(provenance_json)),
+        CHECK(canonical_id IS NULL OR canonical_id <> normalized_id)
+    )
+    """,
+    """
+    CREATE TABLE catalog_duplicate (
+        duplicate_id TEXT PRIMARY KEY,
+        canonical_id TEXT NOT NULL
+            REFERENCES normalized_catalog_record(normalized_id) ON DELETE RESTRICT,
+        source_record_id TEXT NOT NULL
+            REFERENCES source_record(record_id) ON DELETE RESTRICT,
+        reason TEXT NOT NULL,
+        decision_provenance_json TEXT NOT NULL CHECK(json_valid(decision_provenance_json))
+    )
+    """,
+    """
+    CREATE TABLE ingestion_run (
+        run_id TEXT PRIMARY KEY,
+        import_id TEXT NOT NULL
+            REFERENCES catalog_import_version(import_id) ON DELETE RESTRICT,
+        profile_version TEXT,
+        import_tool_version TEXT NOT NULL,
+        prior_run_id TEXT
+            REFERENCES ingestion_run(run_id) ON DELETE RESTRICT,
+        started_at TEXT NOT NULL,
+        completed_at TEXT,
+        content_hash TEXT NOT NULL
+            CHECK(length(content_hash) = 64
+                  AND content_hash NOT GLOB '*[^0-9a-f]*'),
+        CHECK(prior_run_id IS NULL OR prior_run_id <> run_id)
+    )
+    """,
+    """
+    CREATE INDEX idx_ingestion_run_import ON ingestion_run(import_id)
+    """,
+    """
+    CREATE TABLE ingestion_quality_report (
+        report_id TEXT PRIMARY KEY,
+        run_id TEXT NOT NULL
+            REFERENCES ingestion_run(run_id) ON DELETE RESTRICT,
+        counts_json TEXT NOT NULL CHECK(json_valid(counts_json)),
+        integrity_json TEXT NOT NULL CHECK(json_valid(integrity_json)),
+        coverage_json TEXT NOT NULL CHECK(json_valid(coverage_json)),
+        exclusions_json TEXT NOT NULL CHECK(json_valid(exclusions_json)),
+        content_hash TEXT NOT NULL
+            CHECK(length(content_hash) = 64
+                  AND content_hash NOT GLOB '*[^0-9a-f]*')
+    )
+    """,
+    """
+    CREATE TABLE taint_template (
+        template_id TEXT PRIMARY KEY,
+        cwe_id TEXT NOT NULL CHECK(cwe_id GLOB 'CWE-[0-9]*'),
+        role TEXT NOT NULL CHECK(role IN ('SOURCE', 'SINK', 'SANITIZER', 'PRECONDITION')),
+        api_shape TEXT NOT NULL DEFAULT '',
+        parameter_shape TEXT NOT NULL DEFAULT '',
+        applicability_json TEXT NOT NULL CHECK(json_valid(applicability_json)),
+        semantic_features_json TEXT NOT NULL CHECK(json_valid(semantic_features_json)),
+        template_version TEXT NOT NULL,
+        provenance_json TEXT NOT NULL CHECK(json_valid(provenance_json))
+    )
+    """,
+    """
+    CREATE INDEX idx_taint_template_cwe_role ON taint_template(cwe_id, role)
+    """,
+    """
+    CREATE TABLE template_retrieval (
+        retrieval_id TEXT PRIMARY KEY,
+        cwe_id TEXT NOT NULL CHECK(cwe_id GLOB 'CWE-[0-9]*'),
+        query_identity TEXT NOT NULL,
+        ranking_profile_version TEXT NOT NULL,
+        result_template_ids_json TEXT NOT NULL CHECK(json_valid(result_template_ids_json)),
+        scores_json TEXT NOT NULL CHECK(json_valid(scores_json)),
+        provenance_json TEXT NOT NULL CHECK(json_valid(provenance_json))
+    )
+    """,
+) + tuple(trigger for table in _V8_TABLES for trigger in _immutable_triggers(table))
+
 MIGRATIONS: Tuple[SchemaMigration, ...] = (
     SchemaMigration(version=1, name="append_only_artifact_foundation", statements=_V1_STATEMENTS),
     SchemaMigration(version=2, name="durable_idempotency_keys", statements=_V2_STATEMENTS),
@@ -773,6 +922,11 @@ MIGRATIONS: Tuple[SchemaMigration, ...] = (
         version=7,
         name="legacy_retry_terminalization",
         statements=_V7_STATEMENTS,
+    ),
+    SchemaMigration(
+        version=8,
+        name="versioned_catalog_import_foundation",
+        statements=_V8_STATEMENTS,
     ),
 )
 

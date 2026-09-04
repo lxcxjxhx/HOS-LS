@@ -55,8 +55,20 @@ def populated_catalog(tmp_path):
 
 def test_public_constructor_and_method_signatures_are_characterized():
     assert _parameter_names(CatalogImporter) == ("database_path", "batch_size")
-    assert _parameter_names(CatalogImporter.import_cwe_xml) == ("self", "source")
-    assert _parameter_names(CatalogImporter.import_nvd) == ("self", "source")
+    assert _parameter_names(CatalogImporter.import_cwe_xml) == (
+        "self",
+        "source",
+        "source_origin",
+        "source_revision",
+        "license_metadata",
+    )
+    assert _parameter_names(CatalogImporter.import_nvd) == (
+        "self",
+        "source",
+        "source_origin",
+        "source_revision",
+        "license_metadata",
+    )
 
     assert _parameter_names(BatchImportManager) == ("base_path",)
     assert _parameter_names(BatchImportManager.init_database) == ("self",)

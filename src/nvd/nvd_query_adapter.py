@@ -4,10 +4,15 @@
 优化版本：支持缓存和内存索引
 """
 
+import json
 import os
+import re
 import sqlite3
+from dataclasses import dataclass, field
+from datetime import datetime, timezone
+from hashlib import sha256
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 from src.utils.logger import get_logger
 
@@ -584,3 +589,433 @@ def get_nvd_adapter(
     if adapter.is_available():
         return adapter
     return None
+
+
+# ---------------------------------------------------------------------------
+# Deterministic semantic template retrieval (Requirement 11.8-11.9).
+#
+# The repository reads versioned Taint_Template rows beside the canonical
+# catalog tables and ranks them with a versioned, deterministic combination of
+# semantic weakness relevance, documented applicability, and available catalog
+# evidence.  Every retrieval is provenance-linked to the append-only
+# template_retrieval table.  Returned templates are non-confirmatory ranking
+# input only: this API never emits a confirmation or controllability decision
+# (Requirement 11.12-11.13).
+# ---------------------------------------------------------------------------
+
+TEMPLATE_RANKING_PROFILE = "template-ranking/v1"
+
+# Versioned component weights used to combine the three ranking signals.
+TEMPLATE_RANKING_WEIGHTS: Dict[str, float] = {
+    "relevance": 0.5,
+    "applicability": 0.3,
+    "catalog_evidence": 0.2,
+}
+
+# Normalization scale for catalog evidence (counted CVE links for the query
+# weakness): a CWE backed by this many catalog records reaches evidence 1.0.
+CATALOG_EVIDENCE_SCALE = 100.0
+
+
+@dataclass(frozen=True)
+class RankedTemplate:
+    """One ranked, provenance-linked Taint_Template row (non-confirmatory)."""
+
+    template_id: str
+    cwe_id: str
+    role: str
+    api_shape: str
+    parameter_shape: Tuple[int, ...]
+    applicability: Dict[str, Any]
+    template_version: str
+    final_score: float
+    relevance: float
+    applicability_score: float
+    catalog_evidence: float
+
+
+@dataclass(frozen=True)
+class TemplateRetrievalResult:
+    """Deterministic retrieval result with full scoring provenance."""
+
+    cwe_id: str
+    query_identity: str
+    ranking_profile_version: str
+    retrieval_id: str
+    ranked: Tuple[RankedTemplate, ...] = field(default_factory=tuple)
+
+    @property
+    def template_ids(self) -> Tuple[str, ...]:
+        return tuple(item.template_id for item in self.ranked)
+
+    @property
+    def scores(self) -> Tuple[float, ...]:
+        return tuple(item.final_score for item in self.ranked)
+
+
+def _tokenize(text: str) -> frozenset[str]:
+    """Deterministic lowercase alphanumeric token set used by relevance."""
+    return frozenset(re.findall(r"[a-z0-9]+", text.lower()))
+
+
+def relevance_score(
+    query_cwe_id: str,
+    template_cwe_id: str,
+    template_features: Tuple[str, ...],
+    query_catalog_terms: frozenset[str],
+) -> float:
+    """Semantic weakness-to-template relevance in [0, 1].
+
+    An exact weakness match scores 1.0.  Otherwise the score is the Jaccard
+    overlap between the query weakness's catalog terms and the template's
+    documented semantic features, which keeps the ranking evidence-driven and
+    deterministic (no LLM or ad-hoc similarity).
+    """
+    if template_cwe_id == query_cwe_id:
+        return 1.0
+    template_terms = _tokenize(" ".join(template_features))
+    if not template_terms or not query_catalog_terms:
+        return 0.0
+    overlap = len(template_terms & query_catalog_terms)
+    return overlap / len(template_terms | query_catalog_terms)
+
+
+def applicability_score(
+    template_applicability: Dict[str, Any],
+    query_applicability: Optional[Dict[str, Any]],
+) -> float:
+    """Documented applicability match in {0.0, 0.5, 1.0}.
+
+    1.0 when every declared template condition is present and equal in the
+    query applicability; 0.5 when a declared condition is unspecified by the
+    query (neutral) or the template declares no conditions; 0.0 on an explicit
+    conflict.
+    """
+    if not template_applicability:
+        return 0.5
+    if not query_applicability:
+        return 0.5
+    conflicts = any(
+        key in query_applicability and query_applicability[key] != value
+        for key, value in template_applicability.items()
+    )
+    if conflicts:
+        return 0.0
+    unspecified = any(
+        key not in query_applicability
+        for key in template_applicability
+    )
+    if unspecified:
+        return 0.5
+    return 1.0
+
+
+def evidence_score(cve_count: int) -> float:
+    """Available catalog evidence in [0, 1] normalized to a documented scale."""
+    return min(1.0, cve_count / CATALOG_EVIDENCE_SCALE)
+
+
+# One scored template before final ordering: (template_id, cwe_id, role,
+# api_shape, parameter_shape, applicability, template_version, final_score,
+# relevance, applicability_score, catalog_evidence).
+ScoredTemplate = Tuple[
+    str, str, str, str, Tuple[int, ...], Dict[str, Any], str, float, float, float, float
+]
+
+
+def rank_templates(templates: Sequence[ScoredTemplate]) -> List[RankedTemplate]:
+    """Rank scored templates by final score desc, then template id (stable)."""
+    ranked = [
+        RankedTemplate(
+            template_id=template_id,
+            cwe_id=cwe_id,
+            role=role,
+            api_shape=api_shape,
+            parameter_shape=parameter_shape,
+            applicability=applicability,
+            template_version=template_version,
+            final_score=final_score,
+            relevance=relevance,
+            applicability_score=applicability_score_value,
+            catalog_evidence=catalog_evidence,
+        )
+        for (
+            template_id,
+            cwe_id,
+            role,
+            api_shape,
+            parameter_shape,
+            applicability,
+            template_version,
+            final_score,
+            relevance,
+            applicability_score_value,
+            catalog_evidence,
+        ) in templates
+    ]
+    ranked.sort(key=lambda item: (-item.final_score, item.template_id))
+    return ranked
+
+
+class TaintTemplateRepository:
+    """Provenance-linked, deterministic semantic template retrieval.
+
+    Only in-scope templates (``scope_cwe_ids`` when provided) are considered.
+    Ranking uses :data:`TEMPLATE_RANKING_PROFILE` with stable tie-breaking and
+    records every query identity, input, template/catalog identity, component
+    score, final score, and retrieval provenance.  Existing CVE/CWE queries and
+    cache behavior of :class:`NVDQueryAdapter` are untouched.
+    """
+
+    def __init__(
+        self,
+        db_path: Optional[str] = None,
+        *,
+        ranking_profile_version: str = TEMPLATE_RANKING_PROFILE,
+        scope_cwe_ids: Optional[Tuple[str, ...]] = None,
+        use_cache: bool = True,
+    ) -> None:
+        self.db_path = db_path
+        self.ranking_profile_version = ranking_profile_version
+        self.scope_cwe_ids = tuple(scope_cwe_ids) if scope_cwe_ids else None
+        self._adapter = NVDQueryAdapter(db_path, use_cache=use_cache)
+        self._retrieval_cache: Dict[str, TemplateRetrievalResult] = {}
+        self._conn: Optional[sqlite3.Connection] = None
+        if self._adapter._conn is not None:
+            self._conn = self._adapter._conn
+
+    def _ensure_available(self) -> bool:
+        if self._conn is None and self.db_path:
+            self._adapter._connect()
+            self._conn = self._adapter._conn
+        return self._conn is not None
+
+    def clear_cache(self) -> None:
+        """Clear the in-process retrieval cache (cache behavior is preserved)."""
+        self._retrieval_cache.clear()
+
+    def close(self) -> None:
+        """Close the underlying adapter connection."""
+        self._adapter._disconnect()
+        self._conn = None
+
+    def __del__(self) -> None:
+        self.close()
+
+    def query_identity(
+        self,
+        cwe_id: str,
+        applicability: Optional[Dict[str, Any]],
+        context: Optional[Dict[str, Any]],
+    ) -> str:
+        """Deterministic identity of one retrieval query (versioned inputs)."""
+        payload = {
+            "cwe_id": cwe_id,
+            "applicability": applicability,
+            "context": context,
+            "ranking_profile_version": self.ranking_profile_version,
+            "scope_cwe_ids": sorted(self.scope_cwe_ids) if self.scope_cwe_ids else None,
+        }
+        return "template-query:" + sha256(
+            json_dumps(payload).encode("utf-8")
+        ).hexdigest()
+
+    def retrieve(
+        self,
+        cwe_id: str,
+        *,
+        applicability: Optional[Dict[str, Any]] = None,
+        context: Optional[Dict[str, Any]] = None,
+    ) -> TemplateRetrievalResult:
+        """Retrieve in-scope templates ranked for the given weakness.
+
+        The result is non-confirmatory ranking input; it exposes no
+        confirmation or controllability surface.
+        """
+        identity = self.query_identity(cwe_id, applicability, context)
+        if identity in self._retrieval_cache:
+            return self._retrieval_cache[identity]
+        if not self._ensure_available():
+            return self._empty_result(cwe_id, identity)
+        assert self._conn is not None
+
+        try:
+            query = (
+                "SELECT template_id, cwe_id, role, api_shape, parameter_shape, "
+                "applicability_json, semantic_features_json, template_version "
+                "FROM taint_template"
+            )
+            params: List[Any] = []
+            if self.scope_cwe_ids:
+                query += " WHERE cwe_id IN (%s)" % ",".join(
+                    "?" for _ in self.scope_cwe_ids
+                )
+                params = list(self.scope_cwe_ids)
+            rows = self._conn.execute(query, params).fetchall()
+        except sqlite3.Error as error:
+            # A legacy catalog without the ECATSL tables simply has no templates.
+            logger.warning(f"模板检索不可用: {error}")
+            return self._empty_result(cwe_id, identity)
+
+        catalog_terms: frozenset[str] = frozenset()
+        cve_count = 0
+        try:
+            cwe_row = self._conn.execute(
+                "SELECT name, description FROM cwe WHERE cwe_id = ?", (cwe_id,)
+            ).fetchone()
+            if cwe_row is not None:
+                catalog_terms = _tokenize(
+                    f"{cwe_row['name'] or ''} {cwe_row['description'] or ''}"
+                )
+            cve_count = self._conn.execute(
+                "SELECT COUNT(DISTINCT cve_cwe.cve_id) FROM cve_cwe "
+                "WHERE cve_cwe.cwe_id = ?",
+                (cwe_id,),
+            ).fetchone()[0] or 0
+        except sqlite3.Error:
+            catalog_terms = frozenset()
+            cve_count = 0
+
+        evidence = evidence_score(int(cve_count))
+        weights = TEMPLATE_RANKING_WEIGHTS
+        scored: List[ScoredTemplate] = []
+        for row in rows:
+            template_id = str(row["template_id"])
+            template_cwe_id = str(row["cwe_id"])
+            role = str(row["role"])
+            api_shape = str(row["api_shape"])
+            parameter_shape = json_loads(row["parameter_shape"])
+            applicability_value = json_loads(row["applicability_json"])
+            template_features = tuple(
+                str(item)
+                for item in json_loads(row["semantic_features_json"])
+                if isinstance(item, (str, int, float))
+            )
+            template_version = str(row["template_version"])
+            if parameter_shape is None or not isinstance(parameter_shape, (list, tuple)):
+                parameter_shape = []
+            relevance = relevance_score(
+                cwe_id, template_cwe_id, template_features, catalog_terms
+            )
+            app_score = applicability_score(applicability_value, applicability)
+            final_score = (
+                weights["relevance"] * relevance
+                + weights["applicability"] * app_score
+                + weights["catalog_evidence"] * evidence
+            )
+            scored.append(
+                (
+                    template_id,
+                    template_cwe_id,
+                    role,
+                    api_shape,
+                    tuple(int(item) for item in parameter_shape),
+                    applicability_value,
+                    template_version,
+                    final_score,
+                    relevance,
+                    app_score,
+                    evidence,
+                )
+            )
+        ranked = tuple(rank_templates(scored))
+        result = TemplateRetrievalResult(
+            cwe_id=cwe_id,
+            query_identity=identity,
+            ranking_profile_version=self.ranking_profile_version,
+            retrieval_id=self._retrieval_id(identity, ranked),
+            ranked=ranked,
+        )
+        self._persist_retrieval(result, applicability, context)
+        self._retrieval_cache[identity] = result
+        return result
+
+    def _retrieval_id(
+        self, query_identity: str, ranked: Tuple[RankedTemplate, ...]
+    ) -> str:
+        signature = "\0".join(
+            f"{item.template_id}:{item.final_score!r}" for item in ranked
+        )
+        return "template-retrieval:" + sha256(
+            (query_identity + "\n" + signature).encode("utf-8")
+        ).hexdigest()
+
+    def _empty_result(
+        self, cwe_id: str, identity: str
+    ) -> TemplateRetrievalResult:
+        return TemplateRetrievalResult(
+            cwe_id=cwe_id,
+            query_identity=identity,
+            ranking_profile_version=self.ranking_profile_version,
+            retrieval_id=self._retrieval_id(identity, ()),
+            ranked=(),
+        )
+
+    def _persist_retrieval(
+        self,
+        result: TemplateRetrievalResult,
+        applicability: Optional[Dict[str, Any]],
+        context: Optional[Dict[str, Any]],
+    ) -> None:
+        """Append the retrieval decision row when the schema is available."""
+        if not self._ensure_available():
+            return
+        assert self._conn is not None
+        try:
+            has_table = self._conn.execute(
+                "SELECT 1 FROM sqlite_master WHERE type = 'table' "
+                "AND name = 'template_retrieval'"
+            ).fetchone()
+            if has_table is None:
+                return
+            self._conn.execute(
+                """
+                INSERT OR IGNORE INTO template_retrieval
+                    (retrieval_id, cwe_id, query_identity,
+                     ranking_profile_version, result_template_ids_json,
+                     scores_json, provenance_json)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    result.retrieval_id,
+                    result.cwe_id,
+                    result.query_identity,
+                    result.ranking_profile_version,
+                    json_dumps(list(result.template_ids)),
+                    json_dumps(list(result.scores)),
+                    json_dumps(
+                        {
+                            "cwe_id": result.cwe_id,
+                            "applicability": applicability,
+                            "context": context,
+                            "ranking_profile_version": result.ranking_profile_version,
+                            "scope_cwe_ids": (
+                                sorted(self.scope_cwe_ids)
+                                if self.scope_cwe_ids
+                                else None
+                            ),
+                            "retrieved_at": datetime.now(timezone.utc).isoformat(),
+                        }
+                    ),
+                ),
+            )
+            self._conn.commit()
+        except sqlite3.Error as error:
+            logger.warning(f"模板检索记录持久化失败: {error}")
+
+
+def json_dumps(value: Any) -> str:
+    """Canonical JSON serialization used by template identities/provenance."""
+    return json.dumps(value, sort_keys=True, separators=(",", ":"))
+
+
+def json_loads(value: Any) -> Any:
+    """Tolerant JSON decode for template shape columns."""
+    if value is None or value == "":
+        return None
+    if not isinstance(value, str):
+        return value
+    try:
+        return json.loads(value)
+    except ValueError:
+        return None

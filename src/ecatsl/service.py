@@ -36,10 +36,12 @@ from .compiler import DeclarativeCompiler
 from .confirmation import FindingConfirmationService
 from .models import (
     AcceptancePolicy,
+    Applicability,
     Attribute,
     CandidateHypothesis,
     CandidateRecord,
     CandidateState,
+    CandidateType,
     ConstrainedDeclarativeSpecification,
     DiscoveryObservation,
     Evidence,
@@ -127,11 +129,17 @@ class StaticAdapterExecutor(Protocol):
     adapter_id: str
     adapter_version: str
 
-    def supports(self, applicability: Any, semantics: Sequence[str]) -> bool: ...
+    def supports(
+        self, applicability: Any, semantics: Sequence[str]
+    ) -> bool: ...
+
     def execute(
         self, specification: ConstrainedDeclarativeSpecification, repository_ref: str
     ) -> Any: ...
-    def normalize(self, raw: Any, *, provenance: Provenance) -> NormalizationResult: ...
+
+    def normalize(
+        self, raw: Any, *, provenance: Provenance
+    ) -> NormalizationResult: ...
 
 
 class DiscoveryAssistance(Protocol):
@@ -140,6 +148,7 @@ class DiscoveryAssistance(Protocol):
     def discover(
         self, root: str, provenance: Provenance
     ) -> Sequence[DiscoveryObservation]: ...
+
     def rank(
         self,
         observations: Sequence[DiscoveryObservation],
@@ -814,3 +823,66 @@ class ECATSLService:
         ):
             limitations.append("no configured static adapter is allowlisted")
         return tuple(limitations)
+
+
+def build_sqlite_template_provider(
+    db_path: str,
+    *,
+    scope_cwe_ids: Tuple[str, ...],
+) -> Callable[[Tuple[str, ...]], Tuple[TaintTemplate, ...]]:
+    """Wire the local SQLite catalog into the service template provider port.
+
+    The provider reuses :class:`src.nvd.nvd_query_adapter.TaintTemplateRepository`
+    (Task 6.3): it retrieves only in-scope templates, preserves the
+    deterministic ranking order, and converts every ranked template into a
+    non-confirmatory ``TaintTemplate`` artifact.  Identical repeated queries
+    are idempotent (no duplicate retrieval provenance rows).  Returned
+    templates are ranking input only; hypotheses built from them can never
+    become proof or bypass the acceptance policy (Requirement 11.12-11.13).
+    """
+    from src.nvd.nvd_query_adapter import TaintTemplateRepository
+
+    repository = TaintTemplateRepository(db_path, scope_cwe_ids=scope_cwe_ids)
+    allowed = tuple(scope_cwe_ids)
+
+    def provider(requested_cwe_ids: Tuple[str, ...]) -> Tuple[TaintTemplate, ...]:
+        now = datetime.now(timezone.utc)
+        templates: list[TaintTemplate] = []
+        for cwe_id in requested_cwe_ids:
+            if cwe_id not in allowed:
+                continue
+            result = repository.retrieve(cwe_id)
+            for ranked in result.ranked:
+                templates.append(_template_artifact(ranked, now))
+        return tuple(templates)
+
+    return provider
+
+
+def _template_artifact(ranked: Any, now: datetime) -> TaintTemplate:
+    """Convert one ranked catalog template row into its artifact form."""
+    applicability = ranked.applicability or {}
+    return TaintTemplate(
+        version="1",
+        created_at=now,
+        provenance=Provenance(
+            origin="local-sqlite-catalog",
+            retrieved_at=now,
+            source_identifier=str(ranked.template_id),
+            source_revision=str(ranked.template_version) or None,
+            content_identity=f"taint-template:{ranked.template_id}",
+        ),
+        cwe_id=ranked.cwe_id,
+        role=CandidateType(str(ranked.role)),
+        api_shape=str(ranked.api_shape),
+        parameter_shape=tuple(ranked.parameter_shape),
+        applicability=Applicability(
+            language=str(applicability.get("language", "python")),
+            frameworks=tuple(
+                str(item)
+                for item in applicability.get("frameworks", ())
+            ),
+            api_signature=str(applicability.get("api_signature") or ranked.api_shape),
+            parameter_positions=tuple(ranked.parameter_shape),
+        ),
+    )
