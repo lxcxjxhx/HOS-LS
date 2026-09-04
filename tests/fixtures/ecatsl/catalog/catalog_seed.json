@@ -1,0 +1,53 @@
+{
+  "description": "Seed catalog records for realistic-scale ECATSL catalog/discovery integration tests (Task 6.6). The scale tests expand this shape programmatically to multi-thousand-record releases; this seed documents the generated record shape and is used for the smoke-level pass.",
+  "vulnerabilities": [
+    {
+      "cve": {
+        "id": "CVE-2025-00001",
+        "published": "2025-01-02T00:00:00.000Z",
+        "lastModified": "2025-01-03T00:00:00.000Z",
+        "descriptions": [
+          {"lang": "en", "value": "Scale seed record 1 for SQL injection detection."}
+        ],
+        "weaknesses": [
+          {"description": [{"lang": "en", "value": "CWE-89"}]}
+        ],
+        "metrics": {
+          "cvssMetricV31": [
+            {
+              "cvssData": {
+                "baseScore": 8.8,
+                "baseSeverity": "HIGH",
+                "vectorString": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "cve": {
+        "id": "CVE-2025-00002",
+        "published": "2025-02-02T00:00:00.000Z",
+        "lastModified": "2025-02-03T00:00:00.000Z",
+        "descriptions": [
+          {"lang": "en", "value": "Scale seed record 2 for command injection detection."}
+        ],
+        "weaknesses": [
+          {"description": [{"lang": "en", "value": "CWE-78"}]}
+        ],
+        "metrics": {
+          "cvssMetricV31": [
+            {
+              "cvssData": {
+                "baseScore": 9.1,
+                "baseSeverity": "CRITICAL",
+                "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ]
+}
