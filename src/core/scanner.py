@@ -6,7 +6,6 @@ from src.core.scan_runner import scan, scan_sync, pre_scan_cost_check, discover_
 """
 
 import asyncio
-import os
 import signal
 import time
 from pathlib import Path
@@ -17,13 +16,11 @@ from rich.console import Console
 from src.ai.models import AnalysisContext, SecurityAnalysisResult, VulnerabilityFinding
 from src.core.config import Config
 from src.core.engine import ScanEngine, ScanMode, ScanResult
-from src.core.scan_state import ScanState
+from src.core.scanner_finding import deduplicate_findings, convert_to_finding
 from src.core.types import AnalysisLevel
 from src.utils.file_discovery import FileDiscoveryEngine, FileInfo
 from src.utils.file_prioritizer import FilePrioritizer
 from src.utils.logger import get_logger
-from src.utils.priority_engine import FilePriorityEngine, PriorityStrategy
-from src.core.scanner_finding import (deduplicate_findings, merge_duplicate_findings, protect_verified_sources, convert_to_finding)
 
 logger = get_logger(__name__)
 
@@ -655,6 +652,18 @@ class SecurityScanner:
         """
         from datetime import datetime
 
+        # Direct API callers must receive the same fail-fast behavior as the CLI.
+        if self.config.pure_ai:
+            from src.ai.pure_ai.configuration import (
+                PureAIConfigurationError,
+                require_pure_ai_api_key,
+            )
+
+            try:
+                require_pure_ai_api_key(self.config)
+            except PureAIConfigurationError as exc:
+                raise PureAIConfigurationError(str(exc)) from exc
+
         # 开始时间
         start_time = time.time()
         start_datetime = datetime.now()
@@ -686,30 +695,22 @@ class SecurityScanner:
         if not self.config.quiet:
             self._pre_scan_cost_check(str(target))
 
-        # 纯AI模式下确保分析器已初始化
-        if self.config.pure_ai and self.pure_ai_analyzer:
+        # 纯AI模式下确保分析器已初始化；任何失败都必须中止，不能返回空 AI 结果。
+        if self.config.pure_ai:
+            from src.ai.pure_ai.configuration import PureAIInitializationError
+
+            if self.pure_ai_analyzer is None:
+                raise PureAIInitializationError("Pure-AI analyzer was not created")
             if not self.pure_ai_analyzer.initialized:
                 console.print("[cyan]Initializing pure AI analyzer...[/cyan]")
                 try:
                     await asyncio.wait_for(self.pure_ai_analyzer._initialize(), timeout=60.0)
-                    if not self.pure_ai_analyzer.initialized:
-                        console.print(
-                            "[red]X Pure AI analyzer initialization failed, scan will skip AI analysis[/red]"
-                        )
-                        console.print(
-                            "[yellow]! Please check API key configuration and network connection[/yellow]"
-                        )
-                except asyncio.TimeoutError:
-                    console.print("[red]X Pure AI analyzer initialization timeout[/red]")
-                    console.print(
-                        "[yellow]! Please check network connection or increase timeout[/yellow]"
-                    )
-                except Exception as e:
-                    console.print(f"[red]X Pure AI analyzer initialization error: {e}[/red]")
-                    if self.config.debug:
-                        import traceback
-
-                        traceback.print_exc()
+                except asyncio.TimeoutError as exc:
+                    raise PureAIInitializationError(
+                        "Pure-AI analyzer initialization timed out after 60 seconds"
+                    ) from exc
+            if not self.pure_ai_analyzer.initialized:
+                raise PureAIInitializationError("Pure-AI analyzer initialization did not complete")
 
         # 发现文件
         with console.status("[bold blue]... Discovering files...[/bold blue]", spinner="dots"):

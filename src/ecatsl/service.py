@@ -363,11 +363,17 @@ class ECATSLService:
         )
         records: list[Any] = []
         for signature in api_signatures:
+            bound_signature = signature
+
+            def _resolve(bound_signature: str = bound_signature) -> Any:
+                assert self.resolver is not None
+                return self.resolver.resolve(bound_signature)
+
             bundle = self._guarded(
                 "tooling_resolution",
                 f"tooling resolution for {signature}",
                 audit_failures,
-                lambda signature=signature: self.resolver.resolve(signature),
+                _resolve,
             )
             if bundle:
                 records.extend(bundle.records)
@@ -523,6 +529,10 @@ class ECATSLService:
                         idempotency_key=f"static-validation:{specification.artifact_id}:{adapter.adapter_id}",
                     )
                     persisted_validation = applied.validation.validation
+                    # The validation policy advanced the candidate head. The
+                    # run binds exactly the lineage its retained validation
+                    # governed: the compiled candidate version bound by the
+                    # specification and the head this apply evaluated.
                     run = StaticAdapterRun(
                         version="1",
                         created_at=now,
@@ -530,10 +540,15 @@ class ECATSLService:
                         adapter_id=adapter.adapter_id,
                         adapter_version=adapter.adapter_version,
                         run_identity=f"{adapter.adapter_id}@{adapter.adapter_version}:{specification.artifact_id}",
-                        candidate_record_ids=(candidate.artifact_id,),
+                        candidate_record_ids=tuple(
+                            dict.fromkeys(
+                                (specification.candidate_record_id, candidate.artifact_id)
+                            )
+                        ),
                         specification_ids=(specification.artifact_id,),
                         validation_result_id=persisted_validation.artifact_id,
                         input_artifact_ids=(
+                            specification.candidate_record_id,
                             candidate.artifact_id,
                             specification.artifact_id,
                             persisted_validation.artifact_id,
@@ -555,6 +570,9 @@ class ECATSLService:
                             path_evidence=normalized.path_evidence,
                         )
                     )
+                    # Every subsequent adapter for this candidate must chain
+                    # from the successor or its compare-and-append is stale.
+                    candidate = applied.candidate
                 except Exception as error:
                     audit_failures.append(
                         self._failure(
@@ -575,7 +593,9 @@ class ECATSLService:
         """Link a retained validation to its candidate and specification.
 
         The static-adapter-run persistence requires the validation to carry
-        every candidate/specification identity it governs.
+        every candidate/specification identity it governs: the compiled
+        candidate version bound by the specification and the current head the
+        validation actually evaluated.
         """
         return ValidationResult(
             version=validation.version,
@@ -588,6 +608,7 @@ class ECATSLService:
             linked_artifact_ids=tuple(
                 dict.fromkeys(
                     (
+                        specification.candidate_record_id,
                         candidate.artifact_id,
                         specification.artifact_id,
                         *validation.linked_artifact_ids,
