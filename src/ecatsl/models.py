@@ -398,6 +398,12 @@ TASK_1_1_REUSE_ABSTRACTIONS = {
         "EvaluationTelemetry",
         "OptimizationExperiment",
         "EvaluationReport",
+        "StratumCost",
+        "CostReport",
+        "ClaimAssessment",
+        "BaselineComparison",
+        "ReleaseTradeOff",
+        "ReleaseConfigurationReport",
     ),
 }
 
@@ -415,7 +421,7 @@ def task_1_1_reuse_inventory(
     *, created_at: datetime, provenance: Provenance
 ) -> ReuseInventory:
     """Build the audited, repository-verified task-1.1 reuse baseline."""
-    decisions = {
+    decisions: dict[str, dict[str, object]] = {
         "artifact schema validation": {
             "required": "validate frozen typed records and serialize them deterministically",
             "candidates": (_reuse_candidate("pydantic.BaseModel", True),),
@@ -575,15 +581,23 @@ def task_1_1_reuse_inventory(
     entries = []
     for capability in TASK_1_1_REUSE_CAPABILITIES:
         decision = decisions[capability]
+        required = decision["required"]
+        assert isinstance(required, str)
+        candidates = decision["candidates"]
+        assert isinstance(candidates, tuple)
+        selected = decision.get("selected")
+        gap = decision.get("gap")
+        responsibility = decision["responsibility"]
+        assert isinstance(responsibility, str)
         entries.append(
             ReuseInventoryEntry(
                 capability=capability,
                 introduced_abstractions=TASK_1_1_REUSE_ABSTRACTIONS[capability],
-                required_interface=decision["required"],
-                evaluated_components=decision["candidates"],
-                selected_component=decision.get("selected"),
-                capability_gap=decision.get("gap"),
-                distinct_responsibility=decision["responsibility"],
+                required_interface=required,
+                evaluated_components=candidates,
+                selected_component=selected if isinstance(selected, str) else None,
+                capability_gap=gap if isinstance(gap, str) else None,
+                distinct_responsibility=responsibility,
             )
         )
     return ReuseInventory(
@@ -658,6 +672,7 @@ class BenchmarkManifest(Artifact):
     samples: Tuple[BenchmarkSample, ...]
     catalog_record_ids: Tuple[str, ...] = ()
     split_assignments: Tuple[Attribute, ...] = ()
+    sample_attributes: Tuple[Attribute, ...] = ()
 
 
 class DataQualityReport(Artifact):
@@ -677,10 +692,60 @@ class OperationalComplexity(ImmutableModel):
 
 
 class EvaluationTelemetry(ImmutableModel):
+    """Zero-inclusive evaluation cost telemetry (Req 8.1, 10.4)."""
+
     latency_seconds: float = Field(ge=0.0)
     llm_tokens: int = Field(ge=0)
     llm_monetary_cost: float = Field(ge=0.0)
     complexity: OperationalComplexity
+    audit_monetary_cost: float = Field(default=0.0, ge=0.0)
+    audit_failures: int = Field(default=0, ge=0)
+    tooling_failures: int = Field(default=0, ge=0)
+    llm_failures: int = Field(default=0, ge=0)
+    rejected_candidates: int = Field(default=0, ge=0)
+
+
+class ConfusionMatrix(ImmutableModel):
+    """Verified confusion-matrix counts against benchmark ground truth."""
+
+    tp: int = Field(ge=0)
+    fp: int = Field(ge=0)
+    fn: int = Field(ge=0)
+    tn: int = Field(ge=0)
+
+
+class EvaluationCounters(ImmutableModel):
+    """Per-stratum failure/rejection counters; absent strata report zeros."""
+
+    tooling_failures: int = Field(ge=0, default=0)
+    llm_failures: int = Field(ge=0, default=0)
+    rejected_candidates: int = Field(ge=0, default=0)
+
+
+class StratumMetrics(ImmutableModel):
+    """One non-empty Evaluation_Stratum with zero-inclusive verified metrics.
+
+    ``definition`` is the deterministic ``name=value`` tuple over the supported
+    dimensions (cwe/language/framework/project/sample_class); only dimensions
+    with a non-empty value participate, so every reported stratum contains at
+    least one benchmark sample (Req 10.2).
+    """
+
+    definition: Tuple[str, ...]
+    sample_count: int = Field(ge=1)
+    sample_ids: Tuple[str, ...]
+    matrix: ConfusionMatrix
+    precision: float = Field(ge=0.0, le=1.0)
+    recall: float = Field(ge=0.0, le=1.0)
+    f1: float = Field(ge=0.0, le=1.0)
+    counters: EvaluationCounters = Field(
+        default_factory=lambda: EvaluationCounters()
+    )
+    telemetry: Optional[EvaluationTelemetry] = None
+
+    @property
+    def key(self) -> str:
+        return "|".join(self.definition)
 
 
 class OptimizationExperiment(Artifact):
@@ -688,7 +753,11 @@ class OptimizationExperiment(Artifact):
     changed_configuration_id: str = Field(min_length=1)
     benchmark_manifest_id: str = Field(min_length=1)
     strata: Tuple[str, ...]
-    measured_differences: Tuple[Attribute, ...]
+    measured_differences: Tuple[Attribute, ...] = ()
+    baseline_metrics: Tuple[Attribute, ...] = ()
+    changed_metrics: Tuple[Attribute, ...] = ()
+    evaluated_sample_hashes: Tuple[str, ...] = ()
+    environment: Optional[Attribute] = None
 
 
 class EvaluationReport(Artifact):
@@ -697,4 +766,143 @@ class EvaluationReport(Artifact):
     verified_metrics: Tuple[Attribute, ...]
     telemetry: EvaluationTelemetry
     reuse_inventory_version: str = Field(min_length=1)
+    strata: Tuple[StratumMetrics, ...] = ()
+    benchmark_manifest_version: Optional[str] = None
+    data_quality_report_version: Optional[str] = None
+    evaluated_sample_hashes: Tuple[str, ...] = ()
+    comparison_baseline: Optional[Attribute] = None
+    environment: Optional[Attribute] = None
     evidence_limitations: Tuple[str, ...] = ()
+
+
+class StratumCost(ImmutableModel):
+    """Zero-inclusive cost/completeness reporting for one stratum (Req 8.7)."""
+
+    definition: Tuple[str, ...]
+    sample_count: int = Field(ge=1)
+    precision: float = Field(ge=0.0, le=1.0)
+    recall: float = Field(ge=0.0, le=1.0)
+    f1: float = Field(ge=0.0, le=1.0)
+    analysis_latency_seconds: float = Field(ge=0.0)
+    audit_cost: float = Field(ge=0.0)
+    llm_tokens: int = Field(ge=0)
+    llm_cost: float = Field(ge=0.0)
+    tooling_failures: int = Field(ge=0)
+    llm_failures: int = Field(ge=0)
+    rejected_candidates: int = Field(ge=0)
+    complexity: OperationalComplexity
+    missing_cost_data: bool = False
+
+    @property
+    def key(self) -> str:
+        return "|".join(self.definition)
+
+
+class CostReport(Artifact):
+    """Evidence-bounded cost and complexity report (Req 7.6, 8.1, 8.7, 10.4)."""
+
+    evaluation_report_id: str = Field(min_length=1)
+    benchmark_manifest_id: str = Field(min_length=1)
+    benchmark_manifest_version: str
+    data_quality_report_version: str
+    reuse_inventory_version: str = Field(min_length=1)
+    strata: Tuple[StratumCost, ...] = ()
+    missing_cost_data: bool = False
+
+
+class ClaimAssessment(ImmutableModel):
+    """One claim dimension of an optimization report (Req 8.4-8.7, 10.5)."""
+
+    metric: str = Field(min_length=1)
+    measured_difference: float
+    direction: str = Field(pattern=r"^(improvement|no_change|regression)$")
+    claim: bool
+    experiment_artifact_id: Optional[str] = None
+    experiment_completed: bool = False
+    missing_evidence: Tuple[str, ...] = ()
+    limitations: Tuple[str, ...] = ()
+
+    @model_validator(mode="after")
+    def evidence_gated_claim(self) -> "ClaimAssessment":
+        if self.claim and self.direction != "improvement":
+            raise ValueError("a claim requires a measured improvement")
+        if self.experiment_completed and self.experiment_artifact_id is None:
+            raise ValueError(
+                "a completed experiment requires its artifact identity"
+            )
+        if self.claim and not self.experiment_completed:
+            raise ValueError("an optimization claim requires a completed experiment")
+        if self.claim and self.experiment_artifact_id is None:
+            raise ValueError("an optimization claim requires a linked experiment")
+        if self.claim and not self.limitations:
+            raise ValueError("an optimization claim requires stated limitations")
+        return self
+
+
+class BaselineComparison(ImmutableModel):
+    """Paired baseline/changed result with identity, differences, claims (Req 8.2-8.6, 10.5-10.6)."""
+
+    comparison_baseline: Attribute
+    benchmark_manifest_id: str = Field(min_length=1)
+    benchmark_manifest_version: str
+    baseline_configuration_id: str = ""
+    changed_configuration_id: str = ""
+    strata: Tuple[str, ...] = ()
+    measured_differences: Tuple[Attribute, ...] = ()
+    claims: Tuple[ClaimAssessment, ...] = ()
+    missing_experiment_link: Tuple[str, ...] = ()
+    evidence_limitations: Tuple[str, ...] = ()
+
+    @model_validator(mode="after")
+    def configuration_identities(self) -> "BaselineComparison":
+        if bool(self.baseline_configuration_id) != bool(
+            self.changed_configuration_id
+        ):
+            raise ValueError(
+                "paired configuration identities require both sides"
+            )
+        if self.claims and any(c.claim for c in self.claims):
+            if not self.baseline_configuration_id:
+                raise ValueError(
+                    "a claim requires paired configuration identities"
+                )
+        return self
+
+    @model_validator(mode="after")
+    def differences_complete(self) -> "BaselineComparison":
+        names = [item.name for item in self.measured_differences]
+        if len(names) != len(set(names)):
+            raise ValueError("measured differences must report each metric exactly once")
+        return self
+
+
+class ReleaseTradeOff(ImmutableModel):
+    """One recorded release-configuration trade-off (Req 8.7)."""
+
+    selected_configuration_id: str = Field(min_length=1)
+    applicable_configuration_id: str = Field(min_length=1)
+    metric: str = Field(min_length=1)
+    selected_value: float
+    applicable_value: float
+    completed_experiment: bool
+    experiment_artifact_id: Optional[str] = None
+    measured_results: Tuple[Attribute, ...] = ()
+    trade_offs: Tuple[str, ...] = ()
+    limitations: Tuple[str, ...] = ()
+    missing_evidence: Tuple[str, ...] = ()
+
+    @model_validator(mode="after")
+    def completed_experiment_evidence(self) -> "ReleaseTradeOff":
+        if self.completed_experiment and self.experiment_artifact_id is None:
+            raise ValueError("a completed experiment requires its artifact identity")
+        return self
+
+
+class ReleaseConfigurationReport(Artifact):
+    """Release-configuration selection linked to completed experiments (Req 8.7)."""
+
+    configuration_id: str = Field(min_length=1)
+    experiments: Tuple[OptimizationExperiment, ...]
+    trade_offs: Tuple[ReleaseTradeOff, ...]
+    benchmark_manifest_id: str = Field(min_length=1)
+    benchmark_manifest_version: str

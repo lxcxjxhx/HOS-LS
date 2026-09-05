@@ -555,6 +555,7 @@ class Config(BaseSettings):
     quiet: bool = Field(default=False, description="静默模式")
     config_path: Optional[str] = Field(default=None, description="配置文件路径")
     test_mode: bool = Field(default=False, description="测试模式")
+    test_file_count: int = Field(default=10, ge=1, description="测试模式最多扫描的文件数")
     pure_ai: bool = Field(default=False, description="纯AI深度语义解析模式")
     scan_mode: str = Field(default="auto", description="扫描模式")
 

@@ -3,14 +3,9 @@
 HOS-LS 的主要扫描入口命令。
 """
 
-from concurrent.futures import ThreadPoolExecutor
-from pathlib import Path
-from typing import Any, Optional
-
 import click
-from rich.console import Console
 
-from src.core.config import Config, ConfigManager
+from src.core.config import ConfigManager
 from src.cli.main import cli, console
 
 
@@ -20,7 +15,6 @@ from src.cli.main import cli, console
 @click.option("--ruleset", "-r", help="规则集")
 @click.option("--diff", is_flag=True, help="扫描 Git 差异")
 @click.option("--workers", "-w", type=int, default=4, help="工作线程数")
-@click.option("--ai", is_flag=True, help="启用 AI 分析")
 @click.option("--pure-ai", is_flag=True, help="启用纯AI深度语义解析模式")
 @click.option("--ai-provider", help="AI 提供商")
 @click.option("--ai-model", help="AI 模型")
@@ -63,7 +57,7 @@ from src.cli.main import cli, console
 @click.option("--serial-baudrate", type=int, default=115200, help="串口波特率")
 @click.option("--serial-port", help="串口端口(如 COM1)")
 @click.pass_context
-def scan(ctx, target, output, ruleset, diff, workers, ai, pure_ai,
+def scan(ctx, target, output, ruleset, diff, workers, pure_ai,
          ai_provider, ai_model, incremental, langgraph, test, resume,
          truncate_output, max_duration, max_files, full_scan, index_status,
          explain, ask, focus, tool_chain, skip_data_update, sandbox,
@@ -78,13 +72,15 @@ def scan(ctx, target, output, ruleset, diff, workers, ai, pure_ai,
     config = ConfigManager.load()
     _apply_scan_args(config, {
         'output': output, 'ruleset': ruleset, 'workers': workers,
-        'pure_ai': pure_ai, 'ai': ai, 'tool_chain': tool_chain,
+        'pure_ai': pure_ai, 'tool_chain': tool_chain,
+        'ai_provider': ai_provider, 'ai_model': ai_model,
         'test': test, 'resume': resume, 'incremental': incremental,
         'full_scan': full_scan, 'langgraph': langgraph,
         'truncate_output': truncate_output, 'all_findings': all_findings,
         'index_status': index_status, 'explain': explain, 'ask': ask,
         'focus': focus, 'skip_data_update': skip_data_update,
         'sandbox': sandbox, 'priority_strategy': priority_strategy,
+        'max_duration': max_duration, 'max_files': max_files,
         'static_only': static_only, 'dynamic_only': dynamic_only,
         'generate_poc': generate_poc, 'run_poc': run_poc,
         'poc_only': poc_only, 'scan_ports': scan_ports,
@@ -93,18 +89,47 @@ def scan(ctx, target, output, ruleset, diff, workers, ai, pure_ai,
 
     ctx.ensure_object(dict)
     ctx.obj['config'] = config
+
+    if config.pure_ai:
+        try:
+            from src.ai.pure_ai.configuration import (
+                PureAIConfigurationError,
+                require_pure_ai_api_key,
+            )
+
+            require_pure_ai_api_key(config)
+        except PureAIConfigurationError as exc:
+            raise click.UsageError(str(exc), ctx) from exc
+
     _run_scan(config, target, output, remote, remote_type)
 
 
 def _apply_scan_args(config, kwargs):
-    """将命令行参数应用到配置对象"""
+    """将命令行参数应用到配置对象
+
+    只写入扫描器实际读取的字段；``scan.ai_enabled`` 之类不存在的字段
+    一律不写，避免 pydantic 校验在扫描启动时崩溃。
+    """
     if kwargs.get('pure_ai'):
         config.pure_ai = True
-        config.scan.ai_enabled = True
-    if kwargs.get('ai'):
-        config.scan.ai_enabled = True
+    if kwargs.get('ai_provider'):
+        config.ai.provider = kwargs['ai_provider']
+        module_config = config.ai.modules.get('pure_ai')
+        if module_config is not None:
+            module_config.provider = kwargs['ai_provider']
+    if kwargs.get('ai_model'):
+        config.ai.model = kwargs['ai_model']
+        module_config = config.ai.modules.get('pure_ai')
+        if module_config is not None:
+            module_config.model = kwargs['ai_model']
     if kwargs.get('tool_chain'):
-        config.scan.tool_chain = kwargs['tool_chain'].split(',')
+        config.tools.tool_chain = [item.strip() for item in kwargs['tool_chain'].split(',')]
+    if kwargs.get('workers') is not None:
+        config.scan.max_workers = kwargs['workers']
+    if kwargs.get('max_duration') is not None:
+        config.max_duration = kwargs['max_duration']
+    if kwargs.get('max_files') is not None:
+        config.max_files = kwargs['max_files']
     if kwargs.get('test'):
         config.test_mode = True
         config.test_file_count = kwargs['test']
@@ -112,14 +137,8 @@ def _apply_scan_args(config, kwargs):
         config.resume = True
     if kwargs.get('incremental'):
         config.scan.incremental = True
-    if kwargs.get('full_scan'):
-        config.scan.full_scan = True
-    if kwargs.get('langgraph'):
-        config.scan.langgraph = True
     if kwargs.get('truncate_output'):
         config.truncate_output = True
-    if kwargs.get('all_findings'):
-        config.scan.all_findings = True
     if kwargs.get('index_status'):
         config.scan.index_status = True
     if kwargs.get('explain'):
@@ -131,7 +150,7 @@ def _apply_scan_args(config, kwargs):
     if kwargs.get('skip_data_update'):
         config.scan.skip_data_update = True
     if kwargs.get('sandbox'):
-        config.sandbox_enabled = True
+        config.sandbox.enabled = True
     if kwargs.get('priority_strategy'):
         config.scan.priority_strategy = kwargs['priority_strategy']
     if kwargs.get('static_only'):
@@ -160,7 +179,7 @@ def _apply_scan_args(config, kwargs):
 def _run_scan(config, target, output, remote, remote_type):
     """运行扫描"""
     from src.core.scanner import SecurityScanner
-    from src.core.remote_scanner import RemoteSecurityScanner, create_scanner
+    from src.core.remote_scanner import create_scanner
 
     if remote:
         scanner = create_scanner(remote_type, config=config)
