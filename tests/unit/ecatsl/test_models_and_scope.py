@@ -309,7 +309,6 @@ def test_scope_revision_is_predecessor_linked_and_retains_failed_versioning():
     assert revised.predecessor_id == scope.artifact_id
     assert revised.version == "2"
     assert revised.versioning_complete is True
-    assert False, "RED: deliberate assertion for task 2.2 red-green drill"
 
     def fail_version(_scope):
         raise RuntimeError("version allocation unavailable")
