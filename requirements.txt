@@ -5,6 +5,9 @@ click>=8.1.0
 rich>=13.0.0
 tqdm>=4.66.0
 pyyaml>=6.0.1
+# TOML 解析回退（Python 3.10 兼容路径；3.11+ 用内置 tomllib）。带内联类型，
+# 缺失会让 mypy 将 tomli.loads 判为 Any 而报 no-any-return。
+tomli>=2.0.0
 python-dotenv>=1.0.0
 
 # AI/LLM dependencies
