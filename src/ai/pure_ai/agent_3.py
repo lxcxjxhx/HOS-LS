@@ -7,13 +7,11 @@
   2. 自一致性投票 - 3 次采样多数裁决，消除单次采样的随机 Lucky Hit
 """
 
-import json
 import time
 from collections import Counter
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
-from src.ai.prompt_engine import PromptEngine
 from src.ai.pure_ai.patch_detector import analyze as patch_detect, format_for_prompt
 from src.ai.pure_ai.pipeline_constants import SIGNAL_QUEUE_TIMEOUT
 from src.utils.logger import get_logger
@@ -279,7 +277,7 @@ async def run_agent_3(
         for run_idx, temp in enumerate(_CONSISTENCY_TEMPS):
             agent_start_time = time.time()
             response, run_token_usage = await self._generate_with_retry(
-                prompt, f"Agent 3 (run {run_idx+1}/{_CONSISTENCY_RUNS})", temperature=temp
+                prompt, f"Agent 3 (run {run_idx + 1}/{_CONSISTENCY_RUNS})", temperature=temp
             )
             for k in total_token_usage:
                 total_token_usage[k] += run_token_usage.get(k, 0)
@@ -290,18 +288,18 @@ async def run_agent_3(
 
             agent_elapsed = time.time() - agent_start_time
             logger.debug(
-                f"[Agent-3] run {run_idx+1} 完成: "
-                f"CONFIRMED={sum(1 for v in run_result.get('vulnerabilities',[]) if v.get('verification_decision')=='CONFIRMED')} "
-                f"REJECTED={sum(1 for v in run_result.get('vulnerabilities',[]) if v.get('verification_decision')=='REJECTED')} "
+                f"[Agent-3] run {run_idx + 1} 完成: "
+                f"CONFIRMED={sum(1 for v in run_result.get('vulnerabilities', []) if v.get('verification_decision') == 'CONFIRMED')} "
+                f"REJECTED={sum(1 for v in run_result.get('vulnerabilities', []) if v.get('verification_decision') == 'REJECTED')} "
                 f"elapsed={agent_elapsed:.1f}s"
             )
 
         result = _majority_vote_result(all_run_results)
         logger.debug(
             f"[Agent-3] 投票结果: "
-            f"CONFIRMED={result['signal_tracking'].get('signals_confirmed',0)} "
-            f"REJECTED={result['signal_tracking'].get('signals_rejected',0)} "
-            f"REFINED={result['signal_tracking'].get('signals_refined',0)}"
+            f"CONFIRMED={result['signal_tracking'].get('signals_confirmed', 0)} "
+            f"REJECTED={result['signal_tracking'].get('signals_rejected', 0)} "
+            f"REFINED={result['signal_tracking'].get('signals_refined', 0)}"
         )
 
     else:
@@ -363,7 +361,6 @@ async def run_agent_3(
         f"[DEBUG] Agent 3 完成，令牌使用: {total_token_usage['total_tokens']}"
     )
     return result, total_token_usage
-
 
 
 async def _legacy_run_agent_3(

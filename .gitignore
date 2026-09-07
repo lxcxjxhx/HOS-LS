@@ -92,3 +92,9 @@ bench/experiments/ai_patches/
 
 # Temp scripts
 _summary.py
+
+# Reasonix runtime telemetry (per-session task events/snapshots, not source)
+.reasonix/
+
+# Hypothesis local test database (regenerated on every pytest run)
+.hypothesis/

@@ -4,7 +4,6 @@
 """
 
 import asyncio
-import os
 from typing import Any, Dict, List, Optional, Tuple, cast
 
 from aiohttp import ClientError as AiohttpClientError
@@ -12,7 +11,7 @@ from openai import APIStatusError as OpenAIAPIStatusError
 from openai import AsyncOpenAI
 
 from src.ai.client import AIClient
-from src.ai.key_manager import get_api_key, mask_key
+from src.ai.key_manager import get_api_key
 from src.ai.models import AIProvider, AIRequest, AIResponse
 from src.core.config import Config
 from src.utils.logger import get_logger

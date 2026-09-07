@@ -15,7 +15,6 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union
 if TYPE_CHECKING:
     import numpy as np
     import torch
-    from numpy import ndarray
     from sentence_transformers import SentenceTransformer
 
 # 全局极致内存优化
@@ -32,9 +31,10 @@ TORCH_AVAILABLE: bool = False
 
 # 全局模型和库引用（运行时通过延迟导入赋值）
 if not TYPE_CHECKING:
-    SentenceTransformer = None  # type: ignore[assignment]
-    np = None  # type: ignore[assignment]
-    torch = None  # type: ignore[assignment]
+    # 运行时占位，类型存根见上方 TYPE_CHECKING 块（延迟导入设计，避免重量级依赖）
+    SentenceTransformer = None  # type: ignore[assignment]  # noqa: F811
+    np = None  # type: ignore[assignment]  # noqa: F811
+    torch = None  # type: ignore[assignment]  # noqa: F811
 
 
 class ModelType(Enum):

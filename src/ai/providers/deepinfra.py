@@ -10,7 +10,6 @@ DeepInfra 的 flex 模式允许使用非标准模型（如自定义/社区模型
 """
 
 import asyncio
-import os
 from typing import Any, Dict, List, Optional, Tuple, cast
 
 from aiohttp import ClientError as AiohttpClientError

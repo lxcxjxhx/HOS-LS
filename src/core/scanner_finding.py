@@ -4,7 +4,7 @@
 从 scanner.py 中提取，供 SecurityScanner 调用。
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any, List, Optional
 
 from src.utils.logger import get_logger
 

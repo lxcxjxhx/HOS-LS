@@ -10,7 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass, replace
 from datetime import datetime, timezone
 from hashlib import sha256
-from typing import Optional, Sequence, Tuple
+from typing import Optional, Sequence
 
 from .artifact_repository import (
     ArtifactRepository,

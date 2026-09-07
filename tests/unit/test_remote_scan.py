@@ -5,7 +5,6 @@
 
 import sys
 from pathlib import Path
-from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 
@@ -22,7 +21,7 @@ class TestRemoteScanConfig:
         from src.integration.remote_scan.config import RemoteScanConfig
 
         config = RemoteScanConfig()
-        assert config.enabled == False
+        assert config.enabled is False
         assert config.connection_timeout == 30
         assert config.read_timeout == 60
         assert config.retry_times == 3
@@ -33,7 +32,7 @@ class TestRemoteScanConfig:
 
         data = {"enabled": True, "connection_timeout": 60}
         config = RemoteScanConfig.from_dict(data)
-        assert config.enabled == True
+        assert config.enabled is True
         assert config.connection_timeout == 60
 
     def test_remote_scan_config_ssh_defaults(self):
@@ -181,7 +180,7 @@ class TestSSHProtocol:
         from src.integration.remote_scan.protocol.ssh_protocol import SSHProtocol
 
         proto = SSHProtocol(host="localhost")
-        assert proto.is_connected() == False
+        assert proto.is_connected() is False
 
     def test_ssh_protocol_default_port(self):
         """测试默认端口"""
@@ -222,7 +221,7 @@ class TestHTTPProtocol:
         from src.integration.remote_scan.protocol.http_protocol import HTTPProtocol
 
         proto = HTTPProtocol(host="example.com")
-        assert proto.is_connected() == False
+        assert proto.is_connected() is False
 
     def test_http_protocol_https(self):
         """测试 HTTPS 协议"""
@@ -256,7 +255,7 @@ class TestSerialProtocol:
         from src.integration.remote_scan.protocol.serial_protocol import SerialProtocol
 
         proto = SerialProtocol()
-        assert proto.is_connected() == False
+        assert proto.is_connected() is False
 
     def test_serial_protocol_default_port(self):
         """测试默认端口"""

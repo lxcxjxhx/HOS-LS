@@ -3,8 +3,6 @@
 提供 AI 提供商共用的异常类。
 """
 
-from typing import Optional
-
 
 class APIError(Exception):
     """API 通用错误"""

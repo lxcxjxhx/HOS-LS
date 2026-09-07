@@ -14,11 +14,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import Callable, Iterable, Optional, Sequence, Tuple
+from typing import Callable, Optional, Sequence, Tuple
 
 from .artifact_repository import ArtifactRepository
 from .models import (
-    Attribute,
     LLMResolutionAttempt,
     Provenance,
     ToolingResolutionRecord,

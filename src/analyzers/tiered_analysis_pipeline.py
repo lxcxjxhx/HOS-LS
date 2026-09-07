@@ -10,18 +10,11 @@
 """
 
 import asyncio
-import json
-import re
 import time
-from collections import Counter
-from dataclasses import dataclass, field
-from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 from src.utils.logger import get_logger
-
-logger = get_logger(__name__)
 
 
 # ============================================================================
@@ -32,6 +25,8 @@ from src.analyzers.fast_screener import FastScreener
 from src.analyzers.ai_assisted_analyzer import AIAssistedAnalyzer
 from src.analyzers.deep_verifier import DeepVerifier
 from src.analyzers.tiered_types import TierDecision, TieredAnalysisResult, TierResult
+
+logger = get_logger(__name__)
 
 
 class TieredAnalysisPipeline:
@@ -121,7 +116,6 @@ class TieredAnalysisPipeline:
         """
         overall_start = time.perf_counter()
         tier_results: List[TierResult] = []
-        final_findings: List[Dict[str, Any]] = []
         total_tokens = 0
 
         try:

@@ -7,7 +7,6 @@
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Tuple
 
-from src.analyzers.finding_verifier import FindingVerification
 from src.analyzers.unified_finding_validator import UnifiedFindingValidator
 from src.utils.logger import get_logger
 

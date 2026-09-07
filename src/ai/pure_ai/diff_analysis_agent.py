@@ -11,10 +11,8 @@ SemgrepAgent 命中 → 硬检出；未命中 → DiffAnalysisAgent 分析 diff 
 
 import difflib
 import logging
-import os
 import re
 from dataclasses import dataclass, field
-from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
@@ -27,8 +25,8 @@ class DiffHunk:
     old_count: int
     new_start: int
     new_count: int
-    added_lines: List[Tuple[int, str]] = field(default_factory=list)   # (new_line_no, content)
-    removed_lines: List[Tuple[int, str]] = field(default_factory=list) # (old_line_no, content)
+    added_lines: List[Tuple[int, str]] = field(default_factory=list)  # (new_line_no, content)
+    removed_lines: List[Tuple[int, str]] = field(default_factory=list)  # (old_line_no, content)
     context_lines: List[str] = field(default_factory=list)
 
 

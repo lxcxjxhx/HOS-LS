@@ -21,3 +21,6 @@ ignore =
     W503,
     E501
 extend-ignore = E203, E704
+# 测试文件常因 pytest.importorskip / conftest sys.path 设置而延后 import，属正常模式
+per-file-ignores =
+    tests/*: E402

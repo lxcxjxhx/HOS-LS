@@ -6,8 +6,7 @@
 import asyncio
 import json
 import re
-import time
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, Optional, Tuple
 
 from rich.console import Console
 

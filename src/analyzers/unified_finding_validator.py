@@ -14,7 +14,7 @@
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
 
-from src.analyzers.finding_verifier import FindingVerification, FindingVerifier
+from src.analyzers.finding_verifier import FindingVerifier
 
 VERIFICATION_MULTIPLIER = {
     "potential_hallucination": 0.5,

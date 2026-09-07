@@ -3,7 +3,7 @@
 基于 libcst 的具体语法树分析器。
 """
 
-from typing import Any, Dict, List, Optional, Sequence, Union
+from typing import Any, Dict, List, Optional, Union
 
 import libcst as cst
 from libcst import CSTNode
@@ -902,7 +902,6 @@ class CSTAnalyzer(BaseAnalyzer):
             节点的代码字符串
         """
         # 使用 libcst 的 Module 来获取代码
-        module = wrapper.module
         # 创建一个简化的代码提取器
         try:
             # 尝试直接获取代码属性

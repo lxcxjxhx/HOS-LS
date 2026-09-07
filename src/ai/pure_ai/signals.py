@@ -3,7 +3,6 @@
 从 MultiAgentPipeline 中提取的信号追踪方法。
 """
 
-from typing import Any, Dict, List, Optional, Tuple
 
 from src.utils.logger import get_logger
 

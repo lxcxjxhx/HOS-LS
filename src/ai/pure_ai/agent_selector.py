@@ -25,7 +25,7 @@ VULN_TYPE_AGENT_MAP = {
         "SemanticAgent",
         "ValidationAgent",
         "AttackAgent",
-        "CounterfactualAgent", # 反事实验证（提升 Pair-Correct）
+        "CounterfactualAgent",  # 反事实验证（提升 Pair-Correct）
     ],
     # XSS：同上
     "XSS": [
@@ -114,7 +114,7 @@ SKIP_COUNTERFACTUAL_VULN_TYPES = {"HARDCODED_SECRET", "CONFIG_SENSITIVE", "XXE"}
 TIME_ESTIMATES = {
     "SemgrepAgent": 2.0,           # 本地运行，几乎无耗时
     "DiffAnalysisAgent": 1.0,      # 本地 diff 分析
-    "ContractViolationAgent": 1.5, # 本地的跨文件分析
+    "ContractViolationAgent": 1.5,  # 本地的跨文件分析
     "CounterfactualAgent": 3.0,    # 可能调 Semgrep CLI
     "ContextBuilder": 2.0,
     "SemanticAgent": 5.0,

@@ -29,8 +29,8 @@ async def run_agent_5(
 
     result = _deterministic_adversarial_check(self, attack_chain_analysis)
 
-    logger.debug(f" Agent 5 完成，确定性裁决（0 token）")
-    self.debug_logs.append(f"[DEBUG] Agent 5 完成，确定性裁决（0 token）")
+    logger.debug(" Agent 5 完成，确定性裁决（0 token）")
+    self.debug_logs.append("[DEBUG] Agent 5 完成，确定性裁决（0 token）")
     return result, {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
 
 

@@ -11,7 +11,6 @@ from src.ecatsl.models import (
     CandidateRecord,
     CandidateState,
     CandidateType,
-    Counterexample,
     Evidence,
     Provenance,
     ValidationPolicy,

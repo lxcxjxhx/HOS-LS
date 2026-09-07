@@ -24,6 +24,7 @@ from typing import Dict, List, Optional
 # 数据结构
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class FixPattern:
     cwe_id: str
@@ -198,9 +199,6 @@ def analyze(file_path: str, file_content: Optional[str] = None) -> PatchDetectio
 
     if not file_content:
         return result
-
-    lines = file_content.splitlines()
-
     for cwe_id, pattern_name, compiled_re in _COMPILED:
         for m in compiled_re.finditer(file_content):
             # 计算行号（1-based）

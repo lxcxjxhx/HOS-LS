@@ -3,14 +3,13 @@
 数据源预加载和管理的命令。
 """
 
-from pathlib import Path
-from typing import Any, Optional
+import asyncio
+from typing import Optional
 
 import click
-from rich.console import Console
 
-from src.cli.main import cli, console
-from src.core.config import Config, ConfigManager
+from src.cli.main import cli
+from src.core.config import ConfigManager
 
 
 @cli.group()

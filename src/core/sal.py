@@ -5,7 +5,7 @@ SAL 将传统的 Data-Flow 分析问题重新定义为：
   并证明 AI 变更是否沿跨文件路径影响了这些操作。
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 from src.utils.logger import get_logger
 
 logger = get_logger(__name__)

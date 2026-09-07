@@ -101,7 +101,7 @@ fn main() {
             if result.returncode == 0:
                 test_results["executable"] = True
                 test_results["output"] = result.stdout.strip()
-                print(f"✓ Execution successful")
+                print("✓ Execution successful")
                 print(f"Output: {result.stdout.strip()}")
                 if result.stderr:
                     print(f"Stderr: {result.stderr.strip()}")

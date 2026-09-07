@@ -2,15 +2,14 @@ import asyncio
 import json
 import re
 import time
-from collections import Counter
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
-from src.analyzers.tiered_types import TierDecision, TieredAnalysisResult, TierResult
+from src.analyzers.ai_assisted_analyzer import AIAssistedAnalyzer
+from src.analyzers.tiered_types import TierDecision, TierResult
 from src.utils.logger import get_logger
 
 logger = get_logger(__name__)
-
 
 
 class DeepVerifier:

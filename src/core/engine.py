@@ -3,7 +3,6 @@
 提供核心的扫描流程管理和执行功能。
 """
 
-import asyncio
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import datetime

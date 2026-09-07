@@ -5,7 +5,7 @@ EntityWrapper 由 MyBatis-Plus 提供，是安全的 SQL 封装。
 """
 
 import re
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 from src.analyzers.verification.interfaces import (
     ValidationResult,

@@ -61,9 +61,9 @@ public class HelloWorld {
         print("\n" + "=" * 60)
         print("Test Summary")
         print("=" * 60)
-        print(f"Transpilation:   FAILED")
-        print(f"Syntax Valid:    N/A")
-        print(f"Executable:      N/A")
+        print("Transpilation:   FAILED")
+        print("Syntax Valid:    N/A")
+        print("Executable:      N/A")
         print(f"Error Message:   {error_message}")
         print("=" * 60)
         print("\nFINAL RESULT: TRANSPILATION FAILED")
@@ -87,7 +87,7 @@ public class HelloWorld {
         print("\n[3] Syntax Validation: PASSED")
     except SyntaxError as e:
         error_message = f"Syntax Error: {e}"
-        print(f"\n[3] Syntax Validation: FAILED")
+        print("\n[3] Syntax Validation: FAILED")
         print(f"    Error: {error_message}")
 
     if is_valid_syntax:
@@ -109,14 +109,14 @@ public class HelloWorld {
                 print("[4] Execution: FAILED")
                 print(f"    Return code: {result.returncode}")
             if execution_output:
-                print(f"\n[5] Execution Output:")
+                print("\n[5] Execution Output:")
                 print(f"    {execution_output.strip()}")
         except subprocess.TimeoutExpired:
             error_message = "Execution timed out"
-            print(f"[4] Execution: TIMEOUT")
+            print("[4] Execution: TIMEOUT")
         except Exception as e:
             error_message = f"Execution Error: {e}"
-            print(f"[4] Execution: ERROR")
+            print("[4] Execution: ERROR")
             print(f"    Error: {error_message}")
         finally:
             if os.path.exists(temp_file):
@@ -127,7 +127,7 @@ public class HelloWorld {
     print("\n" + "=" * 60)
     print("Test Summary")
     print("=" * 60)
-    print(f"Transpilation:   SUCCESS")
+    print("Transpilation:   SUCCESS")
     print(f"Syntax Valid:    {'YES' if is_valid_syntax else 'NO'}")
     print(f"Executable:      {'YES' if is_executable else 'NO'}")
     print(f"Execution Output: {execution_output.strip() if execution_output else 'N/A'}")

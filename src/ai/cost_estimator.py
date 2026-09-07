@@ -26,7 +26,7 @@ Author: HOS-LS Team
 from __future__ import annotations
 
 import os
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Dict, Optional
 
 from src.utils.logger import get_logger

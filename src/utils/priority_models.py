@@ -5,23 +5,9 @@
 
 from dataclasses import dataclass, field
 from enum import Enum
-from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List
 
-from src.utils.logger import get_logger
-
-logger = get_logger(__name__)
-
-"""文件优先级引擎模块
-
-计算文件的扫描优先级，基于业务关键度、代码复杂度、安全敏感度和变更频率等多维度评分。
-"""
-
-from dataclasses import dataclass, field
-from enum import Enum
-from typing import Any, Dict, List, Optional
-
-from .file_discovery import FileInfo, FileType, Language
+from .file_discovery import FileInfo
 
 
 class ExploitabilityLevel(Enum):

@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from enum import Enum
 from hashlib import sha256
 import json
-from typing import Any, Literal, Mapping, Optional, Tuple
+from typing import Any, Literal, Mapping, Optional, Self, Tuple
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -75,8 +75,12 @@ class Artifact(ImmutableModel):
 
     def model_copy(
         self, *, update: Optional[Mapping[str, Any]] = None, deep: bool = False
-    ) -> "Artifact":
-        """Revalidate copies so changed content always receives a matching identity."""
+    ) -> Self:
+        """Revalidate copies so changed content always receives a matching identity.
+
+        Contract: ``type(self).model_validate(...)`` keeps the concrete subclass,
+        so the return type is always the dynamic type of ``self`` (``Self``).
+        """
         data = self.model_dump(
             mode="python", exclude={"artifact_id", "content_hash"}, round_trip=True
         )
@@ -91,7 +95,7 @@ class Artifact(ImmutableModel):
         exclude: Any = None,
         update: Optional[Mapping[str, Any]] = None,
         deep: bool = False,
-    ) -> "Artifact":
+    ) -> Self:
         """Keep Pydantic's legacy copy/update path subject to artifact validation."""
         if include is not None or exclude is not None:
             raise TypeError("partial copies are not supported for content-addressed artifacts")

@@ -9,7 +9,6 @@ calculated from the actual assembled pipeline.
 
 from datetime import datetime, timezone
 
-import pytest
 
 from src.ecatsl.artifact_repository import (
     ArtifactRepository,

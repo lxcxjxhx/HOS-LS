@@ -3,14 +3,10 @@
 从 MultiAgentPipeline 提取的信号追踪和验证方法集合。
 """
 
-from typing import Any, Dict, List, Optional, Tuple
+from pathlib import Path
+from typing import Any, Dict, List, Optional
 
-from src.ai.pure_ai.evidence_chain import EvidenceChain
-from src.ai.pure_ai.pipeline_constants import (
-    CONFIDENCE_THRESHOLDS,
-    HIGH_SEVERITY_RISK_TYPES,
-    REJECTED_PLACEHOLDERS,
-)
+from src.ai.pure_ai.schema import SignalState
 from src.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -144,6 +140,7 @@ def _track_risk_signals(self, risk_enumeration: Any) -> None:
                 f"Added risk signal: {signal_id} (original: {original_signal_id}) with title: {risk_title or 'UNKNOWN'}"
             )
 
+
 def _track_verification_signals(self, vulnerability_verification: Any) -> None:
     """追踪验证信号"""
     if not isinstance(vulnerability_verification, dict):
@@ -267,6 +264,7 @@ def _track_verification_signals(self, vulnerability_verification: Any) -> None:
                 if signal:
                     signal["requires_human_review"] = True
 
+
 def _match_unverified_signals(
     self, unverified_signals: set, vulnerability_verification: Dict[str, Any]
 ) -> int:
@@ -329,6 +327,7 @@ def _match_unverified_signals(
 
     return matched
 
+
 def _track_attack_chain_signals(self, attack_chain_analysis: Any) -> None:
     """追踪攻击链信号"""
     if not isinstance(attack_chain_analysis, dict):
@@ -350,6 +349,7 @@ def _track_attack_chain_signals(self, attack_chain_analysis: Any) -> None:
                 evidence=evidence,
             )
             logger.debug(f" Added attack chain signal: {signal_id}")
+
 
 def _track_adversarial_signals(self, adversarial_validation: Any) -> None:
     """追踪对抗验证信号"""
@@ -393,6 +393,7 @@ def _track_adversarial_signals(self, adversarial_validation: Any) -> None:
                 reason=f"verdict={verdict}, detail={reason}",
             )
             logger.debug(f" Updated adversarial signal: {challenged_id} -> {new_state}")
+
 
 def _check_semantic_consistency(
     self, check_name: str, upstream: Dict[str, Any], downstream: Dict[str, Any]
@@ -448,6 +449,7 @@ def _check_semantic_consistency(
             self._fill_missing_signals_via_refinement(
                 missing_signals, downstream, "attack_chain"
             )
+
 
 def _fill_missing_signals_via_refinement(
     self, missing_signals: set, downstream: Dict[str, Any], signal_type: str
@@ -513,6 +515,7 @@ def _fill_missing_signals_via_refinement(
             adversarial_analysis.append(refined_signal)
             logger.debug(f" 添加待定判定用于未消耗的 {sig_id}")
 
+
 def _get_signal_summary(self) -> Dict[str, Any]:
     """获取信号摘要"""
     signals = self.evidence_chain_tracker.get_all_signals()
@@ -537,6 +540,7 @@ def _get_signal_summary(self) -> Dict[str, Any]:
 
     logger.debug(f" Signal summary: {summary}")
     return summary
+
 
 def _verify_location_exists(self, location: str, context: Dict[str, Any]) -> tuple[bool, str]:
     """验证 location 是否在上下文中存在
@@ -580,6 +584,7 @@ def _verify_location_exists(self, location: str, context: Dict[str, Any]) -> tup
         return False, f"Line number {line_num} out of range (1-{line_count})"
 
     return True, ""
+
 
 def _check_agent3_agent6_consistency(
     self, final_findings: List[Dict[str, Any]], vulnerability_verification: Dict[str, Any]
@@ -670,6 +675,7 @@ def _check_agent3_agent6_consistency(
                 f"添加人工复核发现: signal={sig}, vulnerability={agent3_data.get('vulnerability', '')}"
             )
     return agent6_final_findings
+
 
 def _validate_final_findings(
     self,
@@ -765,6 +771,7 @@ def _validate_final_findings(
 
     return {"final_findings": valid_findings, "summary": summary}
 
+
 def _deterministic_promote(
     self,
     final_decision: Dict[str, Any],
@@ -850,6 +857,7 @@ def _deterministic_promote(
     except Exception as e:
         logger.debug(f"[OPT-P1/P3] 确定性升级失败: {e}")
     return final_decision
+
 
 def _validate_result_consistency(self, result: Dict[str, Any]) -> Dict[str, Any]:
     """验证结果一致性

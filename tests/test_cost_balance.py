@@ -37,7 +37,6 @@ class TestCostEstimator(unittest.TestCase):
 
     def test_estimate_history_calibration(self):
         """有历史统计时用历史均值校准。"""
-        fake_stats = {"avg_total_tokens": 12345}
         with patch.object(
             CostEstimator, "_history_avg_tokens_per_file", return_value=12345.0
         ):
@@ -84,6 +83,7 @@ class TestBalance(unittest.TestCase):
         import asyncio
 
         self.assertFalse(_is_loop_running())
+
         # 异步上下文应判定为运行中
         async def _check():
             self.assertTrue(_is_loop_running())

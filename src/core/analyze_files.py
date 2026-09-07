@@ -4,21 +4,33 @@
 包含纯AI模式和正常模式的文件分析逻辑。
 """
 
+import asyncio
+import os
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Dict
 
 from rich.console import Console
 
-from src.ai.models import AnalysisContext, SecurityAnalysisResult, VulnerabilityFinding
-from src.core.config import Config
-from src.core.engine import Finding, Location, Severity
-from src.core.file_filter import RiskLevel, SecurityFileFilter
 from src.core.scan_state import ScanState
-from src.core.scanner_finding import deduplicate_findings, merge_duplicate_findings, protect_verified_sources, convert_to_finding
-from src.core.types import AnalysisLevel
-from src.utils.file_discovery import FileInfo
+from src.core.scanner_finding import merge_duplicate_findings, protect_verified_sources
 from src.utils.logger import get_logger
 from src.utils.priority_engine import FilePriorityEngine, PriorityStrategy
+
+try:
+    from src.ai.cost_estimator import get_cost_estimator
+except ImportError:
+
+    def get_cost_estimator(*args, **kwargs):
+        return None
+
+
+try:
+    from src.ai.token_tracker import get_token_tracker
+except ImportError:
+
+    def get_token_tracker(*args, **kwargs):  # type: ignore[misc]
+        return None
+
 
 logger = get_logger(__name__)
 console = Console()

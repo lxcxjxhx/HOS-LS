@@ -16,7 +16,6 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Set
 
 from src.ai.prompts import PromptManager, get_prompt_manager
-from src.analyzers.code_slicer import CodeSlice
 from src.core.result_aggregator import AggregatedFinding, ResultAggregator
 from src.core.scan_scheduler import ScanScheduler
 from src.utils.logger import get_logger

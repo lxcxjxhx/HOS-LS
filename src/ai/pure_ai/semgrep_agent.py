@@ -13,9 +13,9 @@ SemgrepAgent 专注于 Semgrep 语义规则的单工具深度应用 + 规则自�
 import json
 import logging
 import os
+import shutil
 import subprocess
-import sys
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -132,7 +132,7 @@ class SemgrepRuleManager:
             # 用 semgrep --config 下载到本地
             cmd = ["semgrep", "--config", config_name, "--dump-ast", "-"]
             try:
-                result = subprocess.run(
+                subprocess.run(
                     cmd, capture_output=True, text=True, timeout=120,
                     encoding="utf-8", errors="replace",
                 )

@@ -3,7 +3,7 @@ from __future__ import annotations
 import ast
 import re
 from dataclasses import dataclass, field
-from typing import Any, Optional, Union, cast
+from typing import Any, Optional, cast
 
 _UNIVERSAL_PARSER_AVAILABLE = False
 UniversalParser: Any = None

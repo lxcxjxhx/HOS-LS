@@ -7,10 +7,8 @@ import json
 import re
 import xml.etree.ElementTree as ET
 from abc import ABC, abstractmethod
-from dataclasses import dataclass, field
-from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, List, Optional, Set
 
 from src.utils.logger import get_logger
 
@@ -24,10 +22,11 @@ from src.analyzers.dependency_models import (
     VersionRange,
     VulnerabilityInfo,
     WarningType,
+    _DEPRECATED_PACKAGES,
+    _WELL_KNOWN_PACKAGES,
 )
 from src.analyzers.dependency_cve_checker import (
     CVECheckerInterface,
-    MockCVEChecker,
     NVDIntegratedCVEChecker,
 )
 
@@ -910,7 +909,6 @@ class _SupplyChainRiskAssessor:
         识别可能的拼写变体或仿冒包名。
         """
         warnings: List[SupplyChainWarning] = []
-        dep_names = {d.name.lower() for d in dependencies}
 
         for dep in dependencies:
             dep_lower = dep.name.lower()

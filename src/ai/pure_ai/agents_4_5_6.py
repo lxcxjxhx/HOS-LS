@@ -3,7 +3,7 @@
 从 MultiAgentPipeline 提取的确定性（不消耗 token）Agent 运行器。
 """
 
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, Optional, Tuple
 
 from src.utils.logger import get_logger
 
@@ -86,6 +86,7 @@ def _synthesize_attack_chains(
 
     return result, {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
 
+
 async def run_agent_4(
     self,
     file_path: str,
@@ -104,8 +105,9 @@ async def run_agent_4(
     result, token_usage = self._synthesize_attack_chains(vulnerability_verification, file_path)
 
     logger.debug(f" Agent 4 完成，合成 {len(result.get('attack_chains', []))} 条攻击链（确定性，0 token）")
-    self.debug_logs.append(f"[DEBUG] Agent 4 完成，确定性合成（0 token）")
+    self.debug_logs.append("[DEBUG] Agent 4 完成，确定性合成（0 token）")
     return result, token_usage
+
 
 def _deterministic_adversarial_check(
     self,
@@ -176,6 +178,7 @@ def _deterministic_adversarial_check(
         "cross_agent_agreement": cross_agent_agreement,
     }
 
+
 async def run_agent_5(
     self,
     file_path: str,
@@ -195,9 +198,10 @@ async def run_agent_5(
 
     result = self._deterministic_adversarial_check(attack_chain_analysis)
 
-    logger.debug(f" Agent 5 完成，确定性裁决（0 token）")
-    self.debug_logs.append(f"[DEBUG] Agent 5 完成，确定性裁决（0 token）")
+    logger.debug(" Agent 5 完成，确定性裁决（0 token）")
+    self.debug_logs.append("[DEBUG] Agent 5 完成，确定性裁决（0 token）")
     return result, {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
+
 
 def _deterministic_final_decision(
     self,
@@ -308,6 +312,7 @@ def _deterministic_final_decision(
         },
     }
 
+
 async def run_agent_6(
     self,
     file_path: str,
@@ -325,7 +330,6 @@ async def run_agent_6(
     result = self._deterministic_final_decision(
         vulnerability_verification, context, adversarial_validation
     )
-    logger.debug(f" Agent 6 完成，确定性聚合（0 token）")
-    self.debug_logs.append(f"[DEBUG] Agent 6 完成，确定性聚合（0 token）")
+    logger.debug(" Agent 6 完成，确定性聚合（0 token）")
+    self.debug_logs.append("[DEBUG] Agent 6 完成，确定性聚合（0 token）")
     return result, {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
-

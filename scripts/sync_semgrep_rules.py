@@ -13,7 +13,6 @@
 """
 
 import argparse
-import json
 import logging
 import os
 import shutil
@@ -87,7 +86,7 @@ def sync_pack(pack_name: str, semgrep_bin: str):
         # 利用 semgrep --config <pack> 运行一次空扫描触发规则下载
         # 规则被缓存到 ~/.semgrep/ 目录
         cmd = [semgrep_bin, "scan", "--config", pack_name, "--json", "-q", "-"]
-        result = subprocess.run(
+        subprocess.run(
             cmd, capture_output=True, text=True, timeout=120,
             input="print('hello')\n", encoding="utf-8", errors="replace",
         )

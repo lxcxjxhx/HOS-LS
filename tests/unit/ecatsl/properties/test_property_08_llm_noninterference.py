@@ -10,7 +10,7 @@ Validates: Requirements 5.7
 """
 
 from datetime import datetime, timezone
-from typing import Optional, Sequence, Tuple
+from typing import Sequence
 
 import pytest
 

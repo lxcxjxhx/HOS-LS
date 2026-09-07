@@ -10,9 +10,10 @@
 """
 
 import logging
+import os
 import re
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 
@@ -312,7 +313,7 @@ class CounterfactualAgent:
                 # 反事实中无命中 — 漏洞被阻断
                 return True, "反事实通过: Semgrep 无命中"
 
-        except (FileNotFoundError, subprocess.TimeoutExpired, json.JSONDecodeError) as e:
+        except (FileNotFoundError, subprocess.TimeoutExpired, json.JSONDecodeError):
             # 无 Semgrep CLI — 用模式匹配降级
             return self._rule_based_verify(exp)
 

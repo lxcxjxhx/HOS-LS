@@ -95,6 +95,10 @@ class CompilationInputValidator:
         candidate: Optional[CandidateRecord] = None,
         evidence: Sequence[Evidence] = (),
     ) -> CompilationValidation:
+        # 编译入参以 ``Mapping`` 契约声明;isinstance 双重保险覆盖
+        # 直接误传非映射对象的调用方(测试/外部适配器)。
+        # mypy: Mapping 契约下 isinstance 恒真,该防御分支对静态检查不可达,
+        # 由 pyproject.toml 白名单按 unreachable 收敛(保留运行时防护)。
         if not isinstance(data, Mapping):
             return self._invalid("INPUT_NOT_MAPPING", "compilation input must be a mapping")
 

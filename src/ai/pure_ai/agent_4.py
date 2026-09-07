@@ -27,7 +27,7 @@ async def run_agent_4(
     result, token_usage = _synthesize_attack_chains(self, vulnerability_verification)
 
     logger.debug(f" Agent 4 完成，合成 {len(result.get('attack_chains', []))} 条攻击链（确定性，0 token）")
-    self.debug_logs.append(f"[DEBUG] Agent 4 完成，确定性合成（0 token）")
+    self.debug_logs.append("[DEBUG] Agent 4 完成，确定性合成（0 token）")
     return result, token_usage
 
 

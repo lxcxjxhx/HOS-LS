@@ -44,7 +44,7 @@ def test_basic_deduplication():
     aggregator.add_finding(finding1)
     result = aggregator.add_finding(finding2)
 
-    assert result == False, "重复发现应该被拒绝"
+    assert result is False, "重复发现应该被拒绝"
     assert len(aggregator.findings) == 1, "应该只有1个发现"
     print("[PASS] test_basic_deduplication")
 
@@ -132,7 +132,7 @@ def test_smart_deduplicate_cross_files_semantic():
     ]
 
     aggregator.add_findings(findings)
-    removed = aggregator.smart_deduplicate()
+    aggregator.smart_deduplicate()
 
     assert len(aggregator.findings) <= 2, f"跨文件语义去重后应该最多2个发现，实际 {len(aggregator.findings)}"
     print("[PASS] test_smart_deduplicate_cross_files_semantic")
@@ -190,7 +190,7 @@ def test_aggregate_with_smart_dedup():
         findings=[convert_to_aggregated_finding(f) for f in findings_data], enable_smart_dedup=True
     )
 
-    assert result.summary["total_findings"] <= 2, f"去重后应该最多2个发现"
+    assert result.summary["total_findings"] <= 2, "去重后应该最多2个发现"
     print("[PASS] test_aggregate_with_smart_dedup")
 
 
