@@ -29,16 +29,19 @@
     - `flake8 src` 0 项；CI blocking 选择器 `E9,F63,F7,F82` 全仓库 0 项。
     - _Requirements: 1.1, 1.2, 1.4_
 
-- [ ] 2. 主题 B：CI 真实验证
-  - [ ] 2.1 改造 `.github/workflows/ci.yml`
+- [x] 2. 主题 B：CI 真实验证
+  - [x] 2.1 改造 `.github/workflows/ci.yml`
+    _Execution (2026-09-07): (a) pytest 步骤按原文改造 — `pytest --collect-only` 降级为附带 informational 项,新增 blocking 步骤真实执行 `pytest tests/unit/ecatsl tests/integration/ecatsl tests/unit/core -q`(本地预演 320 tests / 0 failed / 5 skipped);(b) 新增独立 `full-tests` job(`continue-on-error: true`)跑全量 `pytest tests -q --no-header --timeout=600`(非 blocking,PR 内可见失败报告),装 pytest/pytest-asyncio/pytest-timeout/hypothesis;(c) flake8 三级门禁:E9,F63,F7,F82 全仓库 blocking → `src/ecatsl tests` blocking(0 容忍,不加 extend-ignore,与本地同口径,.flake8 已含 tests/* E402)→ 其余 src informational `|| true` 计数输出(原因注释在 ci.yml 内);(d) mypy 分级按任务原文语义:`mypy src/ecatsl` blocking(19 文件 0 errors)+ `mypy src` informational — 全量 blocking 曾实测 CI 报 14→8→7 项环境漂移错误(平台 API + 第三方浮动版本),逐项根因修复:pyproject 固定 `platform="win32"`(白名单按 Windows 语义建立,Linux CI 报 ctypes.WinDLL/msvcrt.getch + 连带 unused-ignore)、CI 工具 pin `mypy>=1.20,<2`(CI 曾装 mypy 2.3.1,2.x 语义偏离 pyproject `^1.5.0` 白名单基线)、`neo4j-graphrag>=1.0.0,<1.3`(1.13+ GraphRAG 构造器破坏性变更,fresh install 拿 1.19 导致运行时+mypy 双失败,本机 1.19 复现 5 errors)、requirements 声明 `tomli`/`paramiko`/`pyserial`(src 源码无条件 import 但未声明,本机传递安装掩盖);(e) `tests/conftest.py` sys.path 修正:原插入 `repo/src` 而测试用 `from src.ecatsl...` 需要 repo root,本地被 editable 安装掩盖,CI fresh checkout 收集即 ModuleNotFoundError;(f) CI Python 版本 3.11→3.12(与 mypy python_version 口径一致)。最终 run 34146186737 三 job 全绿(lint-and-test 2m50s / full-tests 2m27s / security-scan 30s),full-tests 步骤 conclusion=success、22 SKIPPED 与本地基线一致。
     - pytest 步骤：`pytest --collect-only` → 真实执行 `pytest tests/unit/ecatsl tests/integration/ecatsl tests/unit/core -q`，失败即 blocking。
     - 新增独立 `full-tests` job 跑全量 `pytest tests -q`（非 blocking check，可见失败报告）。
     - flake8/mypy 步骤按 Req 1.5/1.2 分级：`src/ecatsl tests` blocking；`src` 其余 informational 但输出计数；mypy 白名单驱动且 `|| echo` 语义移除。
     - _Requirements: 2.1, 2.2, 2.3, 2.4, 1.5_
-  - [ ] 2.2 红-绿循环验证
+  - [x] 2.2 红-绿循环验证
+    _Execution (2026-09-07): 在真实 PR #64 上完成完整红-绿循环 — (RED) 注入必失败断言 `assert False, "RED: deliberate assertion for task 2.2 red-green drill"` 于 `tests/unit/ecatsl/test_models_and_scope.py::test_scope_revision_is_predecessor_linked_and_retains_failed_versioning`,推送 commit 9a97f873 → run 34146681673 **failure**(`Run focused tests (blocking)` 步骤真实断言失败,blocking 语义生效);(GREEN) `git revert` + `-s` 补签(commit 2dc1ce40,首次 revert 未带 Signed-off-by 触发 DCO Check 红,amend 修复)→ run 34147252002 **success**(lint-and-test / full-tests / security-scan 三 job 全绿)。证明 CI 测试步骤真实执行且失败即红灯。
     - 在真实 PR 上：临时注入一个必失败断言 → CI 红灯；还原 → 绿灯；记录两次 run 链接。
     - _Requirements: 2.5_
-  - [ ] 2.3 CI 分级 lint 门禁固化
+  - [x] 2.3 CI 分级 lint 门禁固化
+    _Execution (2026-09-07): 与 2.1 (c)(d) 同一 ci.yml 改造完成 — `src/ecatsl/`、`tests/` flake8 0 容忍 blocking(主题 A 清零成果锁定进 CI);E9,F63,F7,F82 全仓库 blocking;其余目录 informational + 计数输出,原因注释写入 ci.yml;`mypy src/ecatsl` blocking(0 容忍)、其余 src informational。绿 run 34146186737 验证全部步骤通过。
     - `src/ecatsl/`、`tests/` 目录 flake8 0 容忍 blocking；其余目录 informational + 计数输出的配置写入 ci.yml 并注明原因。
     - _Requirements: 1.5, 2.4_
 
