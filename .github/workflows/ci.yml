@@ -28,7 +28,9 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-          pip install flake8 pytest mypy hypothesis
+          # 工具版本 pin 到白名单验证口径（mypy 1.x；2.x 语义变化会偏离
+          # pyproject 白名单基线），避免浮动 latest 造成口径漂移。
+          pip install "mypy>=1.20.0,<2" "flake8>=7.0,<8" "pytest>=8.0,<10" hypothesis
 
       # --- 分级 lint 门禁（主题 B / Req 1.5, 2.4）---
       # Tier 1 blocking：CI blocking 选择器对全仓库 0 容忍（语法级硬错误）。
@@ -94,7 +96,7 @@ jobs:
 
       - name: Run full test suite (informational)
         run: |
-          pytest tests -q --no-header
+          pytest tests -q --no-header --timeout=600
 
   security-scan:
     runs-on: ubuntu-latest
