@@ -168,6 +168,10 @@ ensure_newline_before_comments = true
 # 检查口径 3.12:与部署解释器(3.13)同代。3.10/3.11 下新版 numpy stub 的
 # `type` 语句(PEP 695,需 3.12+)会使 mypy 直接中止解析,无法产出检查结果。
 python_version = "3.12"
+# 平台口径 win32:白名单按 Windows 语义建立(唯一开发/验证环境)。Linux CI 若
+# 不固定 platform,ctypes.WinDLL/msvcrt.getch 等平台 API 会按 POSIX 语义报
+# attr-defined,并连带产生 unused-ignore —— 14 项口径外漂移(任务 2.1)。
+platform = "win32"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = false
