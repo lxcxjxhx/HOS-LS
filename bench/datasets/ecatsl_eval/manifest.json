@@ -1,0 +1,1714 @@
+{
+  "build_command": "python -c \"from ecatsl.eval_dataset import build_manifest; ...\" (see filter_rules)",
+  "built_at": "2026-09-08T00:00:00+00:00",
+  "duplicate_entry_ids": 0,
+  "entries": [
+    {
+      "cwe_map": null,
+      "filter_evidence": [
+        "file_suffix:backend/open_webui/routers/prompts.py"
+      ],
+      "hash": "669366ed55ff95a9f5b3cc6dc2be102b61bea88658aef581ef3c7d74c99a5f44",
+      "label": "vulnerable",
+      "pair_id": "GHSA-W7XJ-8FX7-WFCH",
+      "project_time_group": "open-webui:9942de8011d4",
+      "repo_url": "https://github.com/open-webui/open-webui",
+      "sample_id": "entry-00057",
+      "source": "vulngym",
+      "vuln_ids": [
+        "CVE-2025-64495",
+        "GHSA-W7XJ-8FX7-WFCH"
+      ],
+      "workdir": ""
+    },
+    {
+      "cwe_map": null,
+      "filter_evidence": [
+        "file_suffix:backend/open_webui/routers/retrieval.py",
+        "file_suffix:backend/open_webui/retrieval/web/utils.py",
+        "file_suffix:backend/open_webui/routers/retrieval.py",
+        "file_suffix:backend/open_webui/routers/retrieval.py",
+        "file_suffix:backend/open_webui/retrieval/utils.py",
+        "file_suffix:backend/open_webui/retrieval/utils.py",
+        "file_suffix:backend/open_webui/retrieval/web/utils.py",
+        "file_suffix:backend/open_webui/retrieval/web/utils.py",
+        "file_suffix:backend/open_webui/retrieval/web/utils.py",
+        "file_suffix:backend/open_webui/retrieval/web/utils.py"
+      ],
+      "hash": "302603a15ac64224b7884980c6d5efa060fbbc023aac4e9bc76d55cae88bfd1c",
+      "label": "vulnerable",
+      "pair_id": "GHSA-C6XV-RCVW-V685",
+      "project_time_group": "open-webui:6cdb13d5cb26",
+      "repo_url": "https://github.com/open-webui/open-webui",
+      "sample_id": "entry-00062",
+      "source": "vulngym",
+      "vuln_ids": [
+        "CVE-2025-65958",
+        "GHSA-C6XV-RCVW-V685"
+      ],
+      "workdir": ""
+    },
+    {
+      "cwe_map": null,
+      "filter_evidence": [
+        "file_suffix:libs/core/langchain_core/prompts/prompt.py",
+        "file_suffix:libs/core/langchain_core/prompts/prompt.py",
+        "file_suffix:libs/core/langchain_core/prompts/prompt.py",
+        "file_suffix:libs/core/langchain_core/prompts/prompt.py",
+        "file_suffix:libs/core/langchain_core/prompts/string.py",
+        "file_suffix:libs/core/langchain_core/prompts/prompt.py",
+        "file_suffix:libs/core/langchain_core/utils/formatting.py",
+        "file_suffix:libs/core/langchain_core/prompts/prompt.py"
+      ],
+      "hash": "30bd00385b23ad1061d31b89186ad53fbad66bffc227cb0707af2a0276269fd0",
+      "label": "vulnerable",
+      "pair_id": "GHSA-6QV9-48XG-FC7F",
+      "project_time_group": "langchain-core:b7d1831f9d35",
+      "repo_url": "https://github.com/langchain-ai/langchain",
+      "sample_id": "entry-00066",
+      "source": "vulngym",
+      "vuln_ids": [
+        "CVE-2025-65106",
+        "GHSA-6QV9-48XG-FC7F"
+      ],
+      "workdir": ""
+    },
+    {
+      "cwe_map": null,
+      "filter_evidence": [
+        "file_suffix:libs/core/langchain_core/prompts/string.py",
+        "file_suffix:libs/core/langchain_core/utils/mustache.py",
+        "file_suffix:libs/core/langchain_core/prompts/string.py",
+        "file_suffix:libs/core/langchain_core/prompts/string.py",
+        "file_suffix:libs/core/langchain_core/utils/mustache.py",
+        "file_suffix:libs/core/langchain_core/utils/mustache.py",
+        "file_suffix:libs/core/langchain_core/utils/mustache.py",
+        "file_suffix:libs/core/langchain_core/utils/mustache.py",
+        "file_suffix:libs/core/langchain_core/utils/mustache.py"
+      ],
+      "hash": "dfeb80e8d5efb514216c36919a0b98e0f4d3d25f677170c28fd101ee57cc07de",
+      "label": "vulnerable",
+      "pair_id": "GHSA-6QV9-48XG-FC7F",
+      "project_time_group": "langchain-core:b7d1831f9d35",
+      "repo_url": "https://github.com/langchain-ai/langchain",
+      "sample_id": "entry-00067",
+      "source": "vulngym",
+      "vuln_ids": [
+        "CVE-2025-65106",
+        "GHSA-6QV9-48XG-FC7F"
+      ],
+      "workdir": ""
+    },
+    {
+      "cwe_map": null,
+      "filter_evidence": [
+        "file_suffix:libs/core/langchain_core/prompts/string.py",
+        "file_suffix:libs/core/langchain_core/prompts/string.py",
+        "file_suffix:libs/core/langchain_core/prompts/string.py",
+        "file_suffix:libs/core/langchain_core/prompts/string.py",
+        "file_suffix:libs/core/langchain_core/prompts/string.py"
+      ],
+      "hash": "7402e9446028dbb15c1dc3f7b30e2a636f6eaa0e61a63b958376d7516fb18048",
+      "label": "vulnerable",
+      "pair_id": "GHSA-6QV9-48XG-FC7F",
+      "project_time_group": "langchain-core:b7d1831f9d35",
+      "repo_url": "https://github.com/langchain-ai/langchain",
+      "sample_id": "entry-00068",
+      "source": "vulngym",
+      "vuln_ids": [
+        "CVE-2025-65106",
+        "GHSA-6QV9-48XG-FC7F"
+      ],
+      "workdir": ""
+    },
+    {
+      "cwe_map": null,
+      "filter_evidence": [
+        "file_suffix:src/backend/base/langflow/api/v1/monitor.py",
+        "file_suffix:src/backend/base/langflow/api/v1/monitor.py",
+        "file_suffix:src/backend/base/langflow/api/v1/monitor.py",
+        "file_suffix:src/backend/base/langflow/api/v1/monitor.py",
+        "file_suffix:src/backend/base/langflow/api/v1/monitor.py",
+        "file_suffix:src/backend/base/langflow/api/v1/monitor.py"
+      ],
+      "hash": "4fad3627a9442b44e1b29e43d4079cbd9ce7543123fa42b23ecfef6a1c5a1aa9",
+      "label": "vulnerable",
+      "pair_id": "GHSA-C5CP-VX83-JHQX",
+      "project_time_group": "langflow:908c141d9721",
+      "repo_url": "https://github.com/langflow-ai/langflow",
+      "sample_id": "entry-00071",
+      "source": "vulngym",
+      "vuln_ids": [
+        "CVE-2026-21445",
+        "GHSA-C5CP-VX83-JHQX"
+      ],
+      "workdir": ""
+    },
+    {
+      "cwe_map": null,
+      "filter_evidence": [
+        "file_suffix:src/backend/base/langflow/api/v1/monitor.py",
+        "file_suffix:src/backend/base/langflow/api/v1/monitor.py",
+        "file_suffix:src/backend/base/langflow/api/v1/monitor.py",
+        "file_suffix:src/backend/base/langflow/api/v1/monitor.py",
+        "file_suffix:src/backend/base/langflow/api/v1/monitor.py"
+      ],
+      "hash": "4a917cf3f00b32404bc88a034343c40b097a2fec491a17977f611f203e02f417",
+      "label": "vulnerable",
+      "pair_id": "GHSA-C5CP-VX83-JHQX",
+      "project_time_group": "langflow:908c141d9721",
+      "repo_url": "https://github.com/langflow-ai/langflow",
+      "sample_id": "entry-00072",
+      "source": "vulngym",
+      "vuln_ids": [
+        "CVE-2026-21445",
+        "GHSA-C5CP-VX83-JHQX"
+      ],
+      "workdir": ""
+    },
+    {
+      "cwe_map": null,
+      "filter_evidence": [
+        "file_suffix:src/backend/base/langflow/api/v1/monitor.py",
+        "file_suffix:src/backend/base/langflow/api/v1/monitor.py",
+        "file_suffix:src/backend/base/langflow/api/v1/monitor.py",
+        "file_suffix:src/backend/base/langflow/api/v1/monitor.py",
+        "file_suffix:src/backend/base/langflow/api/v1/monitor.py",
+        "file_suffix:src/backend/base/langflow/api/v1/monitor.py"
+      ],
+      "hash": "7fdbd68b5ba35fb6e1d7c0763489f7f1bde98e3704516fe0337ffedc2b92b7e1",
+      "label": "vulnerable",
+      "pair_id": "GHSA-C5CP-VX83-JHQX",
+      "project_time_group": "langflow:908c141d9721",
+      "repo_url": "https://github.com/langflow-ai/langflow",
+      "sample_id": "entry-00073",
+      "source": "vulngym",
+      "vuln_ids": [
+        "CVE-2026-21445",
+        "GHSA-C5CP-VX83-JHQX"
+      ],
+      "workdir": ""
+    },
+    {
+      "cwe_map": null,
+      "filter_evidence": [
+        "file_suffix:autogpt_platform/backend/backend/api/features/v1.py",
+        "file_suffix:autogpt_platform/backend/backend/api/features/v1.py",
+        "file_suffix:autogpt_platform/backend/backend/api/features/v1.py",
+        "file_suffix:autogpt_platform/backend/backend/api/features/v1.py",
+        "file_suffix:autogpt_platform/backend/backend/api/features/v1.py"
+      ],
+      "hash": "bc87a9dc6c2ef7a7ec257d0fecbd6fc43a1130a8a5acdb1bea82951cb3085f2e",
+      "label": "vulnerable",
+      "pair_id": "GHSA-R277-3XC5-C79V",
+      "project_time_group": "AutoGPT:f0c25036082a",
+      "repo_url": "https://github.com/Significant-Gravitas/AutoGPT",
+      "sample_id": "entry-00097",
+      "source": "vulngym",
+      "vuln_ids": [
+        "CVE-2026-24780",
+        "GHSA-R277-3XC5-C79V"
+      ],
+      "workdir": ""
+    },
+    {
+      "cwe_map": null,
+      "filter_evidence": [
+        "file_suffix:autogpt_platform/backend/backend/api/external/v1/routes.py",
+        "file_suffix:autogpt_platform/backend/backend/api/external/v1/routes.py",
+        "file_suffix:autogpt_platform/backend/backend/api/external/v1/routes.py",
+        "file_suffix:autogpt_platform/backend/backend/api/external/v1/routes.py"
+      ],
+      "hash": "78369acace931cf3e881ba38fa066cfe58529cd3d694f5a7c1e89453206b9e77",
+      "label": "vulnerable",
+      "pair_id": "GHSA-R277-3XC5-C79V",
+      "project_time_group": "AutoGPT:f0c25036082a",
+      "repo_url": "https://github.com/Significant-Gravitas/AutoGPT",
+      "sample_id": "entry-00098",
+      "source": "vulngym",
+      "vuln_ids": [
+        "CVE-2026-24780",
+        "GHSA-R277-3XC5-C79V"
+      ],
+      "workdir": ""
+    },
+    {
+      "cwe_map": null,
+      "filter_evidence": [
+        "file_suffix:mlflow/pyfunc/__init__.py",
+        "file_suffix:mlflow/utils/file_utils.py",
+        "file_suffix:mlflow/pyfunc/__init__.py",
+        "file_suffix:mlflow/pyfunc/__init__.py",
+        "file_suffix:mlflow/pyfunc/__init__.py",
+        "file_suffix:mlflow/utils/file_utils.py",
+        "file_suffix:mlflow/utils/file_utils.py"
+      ],
+      "hash": "9da7663213b8f453f2531ef40fc435f7f9e64d6fdb776ed39e3e20235aca4766",
+      "label": "vulnerable",
+      "pair_id": "GHSA-4X5P-F36R-MXXR",
+      "project_time_group": "mlflow:ba41980d604d",
+      "repo_url": "https://github.com/mlflow/mlflow",
+      "sample_id": "entry-00101",
+      "source": "vulngym",
+      "vuln_ids": [
+        "CVE-2025-10279",
+        "GHSA-4X5P-F36R-MXXR"
+      ],
+      "workdir": ""
+    },
+    {
+      "cwe_map": null,
+      "filter_evidence": [
+        "file_suffix:mlflow/utils/file_utils.py",
+        "file_suffix:mlflow/utils/file_utils.py",
+        "file_suffix:mlflow/utils/file_utils.py",
+        "file_suffix:mlflow/utils/file_utils.py",
+        "file_suffix:mlflow/utils/file_utils.py"
+      ],
+      "hash": "00ea7ab1a6565408ac6291b47750aed0695f7e7e5a880d7a50e88b84eb06a684",
+      "label": "vulnerable",
+      "pair_id": "GHSA-4X5P-F36R-MXXR",
+      "project_time_group": "mlflow:ba41980d604d",
+      "repo_url": "https://github.com/mlflow/mlflow",
+      "sample_id": "entry-00102",
+      "source": "vulngym",
+      "vuln_ids": [
+        "CVE-2025-10279",
+        "GHSA-4X5P-F36R-MXXR"
+      ],
+      "workdir": ""
+    },
+    {
+      "cwe_map": null,
+      "filter_evidence": [
+        "file_suffix:nemo/collections/multimodal/speech_llm/modules/common/audio_text_generation_utils.py",
+        "file_suffix:nemo/collections/multimodal/speech_llm/modules/common/audio_text_generation_utils.py",
+        "file_suffix:nemo/collections/multimodal/speech_llm/modules/common/audio_text_generation_utils.py",
+        "file_suffix:nemo/collections/multimodal/speech_llm/modules/common/audio_text_generation_utils.py",
+        "file_suffix:nemo/collections/multimodal/speech_llm/modules/common/audio_text_generation_utils.py",
+        "file_suffix:nemo/collections/multimodal/speech_llm/modules/common/audio_text_generation_utils.py"
+      ],
+      "hash": "e36cd2fcca3c40e725edd5e08ffbfc8fcdd2bc57a3156b314679686ef0df3d19",
+      "label": "vulnerable",
+      "pair_id": "GHSA-9379-MWVR-7WXX",
+      "project_time_group": "NVIDIA NeMo:4d313cf5f097",
+      "repo_url": "https://github.com/NVIDIA/NeMo",
+      "sample_id": "entry-00150",
+      "source": "vulngym",
+      "vuln_ids": [],
+      "workdir": ""
+    },
+    {
+      "cwe_map": null,
+      "filter_evidence": [
+        "file_suffix:nemo/collections/multimodal/speech_llm/modules/common/audio_text_generation_utils.py",
+        "file_suffix:nemo/collections/multimodal/speech_llm/modules/common/audio_text_generation_utils.py",
+        "file_suffix:nemo/collections/multimodal/speech_llm/modules/common/audio_text_generation_utils.py",
+        "file_suffix:nemo/collections/multimodal/speech_llm/modules/common/audio_text_generation_utils.py",
+        "file_suffix:nemo/collections/multimodal/speech_llm/modules/common/audio_text_generation_utils.py"
+      ],
+      "hash": "c99d4099b56f5f550a5a8dcf827d3d302e6b1d011fb82042819aa40112f25b8b",
+      "label": "vulnerable",
+      "pair_id": "GHSA-9379-MWVR-7WXX",
+      "project_time_group": "NVIDIA NeMo:4d313cf5f097",
+      "repo_url": "https://github.com/NVIDIA/NeMo",
+      "sample_id": "entry-00151",
+      "source": "vulngym",
+      "vuln_ids": [],
+      "workdir": ""
+    },
+    {
+      "cwe_map": null,
+      "filter_evidence": [
+        "file_suffix:nemo/collections/speechlm/utils/text_generation/audio_text_generation_utils.py",
+        "file_suffix:nemo/collections/speechlm/utils/text_generation/audio_text_generation_utils.py",
+        "file_suffix:nemo/collections/speechlm/utils/text_generation/audio_text_generation_utils.py",
+        "file_suffix:nemo/collections/speechlm/utils/text_generation/audio_text_generation_utils.py",
+        "file_suffix:nemo/collections/speechlm/utils/text_generation/audio_text_generation_utils.py"
+      ],
+      "hash": "c6fef113c18636c0275665bbbaf13cddc93ace1a32b9b0ba20a86a6162d7734f",
+      "label": "vulnerable",
+      "pair_id": "GHSA-9379-MWVR-7WXX",
+      "project_time_group": "NVIDIA NeMo:4d313cf5f097",
+      "repo_url": "https://github.com/NVIDIA/NeMo",
+      "sample_id": "entry-00152",
+      "source": "vulngym",
+      "vuln_ids": [],
+      "workdir": ""
+    },
+    {
+      "cwe_map": null,
+      "filter_evidence": [
+        "file_suffix:nemo/collections/speechlm/utils/text_generation/audio_text_generation_utils.py",
+        "file_suffix:nemo/collections/speechlm/utils/text_generation/audio_text_generation_utils.py",
+        "file_suffix:nemo/collections/speechlm/utils/text_generation/audio_text_generation_utils.py",
+        "file_suffix:nemo/collections/speechlm/utils/text_generation/audio_text_generation_utils.py",
+        "file_suffix:nemo/collections/speechlm/utils/text_generation/audio_text_generation_utils.py"
+      ],
+      "hash": "0ccbdd062f0394353557cec3e2814025b418c3ade2d9845f439ea944dcda33d6",
+      "label": "vulnerable",
+      "pair_id": "GHSA-9379-MWVR-7WXX",
+      "project_time_group": "NVIDIA NeMo:4d313cf5f097",
+      "repo_url": "https://github.com/NVIDIA/NeMo",
+      "sample_id": "entry-00153",
+      "source": "vulngym",
+      "vuln_ids": [],
+      "workdir": ""
+    },
+    {
+      "cwe_map": null,
+      "filter_evidence": [
+        "file_suffix:nemo/export/tensorrt_llm.py",
+        "file_suffix:nemo/export/tensorrt_llm.py",
+        "file_suffix:nemo/export/tensorrt_llm.py",
+        "file_suffix:nemo/export/tensorrt_llm.py",
+        "file_suffix:nemo/export/tensorrt_llm.py"
+      ],
+      "hash": "44b049f84af944a3841260552c44a0512b045940ecc88f66747836725a3829e1",
+      "label": "vulnerable",
+      "pair_id": "GHSA-9379-MWVR-7WXX",
+      "project_time_group": "NVIDIA NeMo:4d313cf5f097",
+      "repo_url": "https://github.com/NVIDIA/NeMo",
+      "sample_id": "entry-00154",
+      "source": "vulngym",
+      "vuln_ids": [],
+      "workdir": ""
+    },
+    {
+      "cwe_map": null,
+      "filter_evidence": [
+        "file_suffix:nemo/export/trt_llm/nemo_ckpt_loader/nemo_file.py",
+        "file_suffix:nemo/export/trt_llm/nemo_ckpt_loader/nemo_file.py",
+        "file_suffix:nemo/export/trt_llm/nemo_ckpt_loader/nemo_file.py",
+        "file_suffix:nemo/export/trt_llm/nemo_ckpt_loader/nemo_file.py",
+        "file_suffix:nemo/export/trt_llm/nemo_ckpt_loader/nemo_file.py"
+      ],
+      "hash": "a4cbd3d15bdf77060a8956c8d6881fa316ea8dab3a5ccbf7cf8876d0206ca451",
+      "label": "vulnerable",
+      "pair_id": "GHSA-9379-MWVR-7WXX",
+      "project_time_group": "NVIDIA NeMo:4d313cf5f097",
+      "repo_url": "https://github.com/NVIDIA/NeMo",
+      "sample_id": "entry-00155",
+      "source": "vulngym",
+      "vuln_ids": [],
+      "workdir": ""
+    },
+    {
+      "cwe_map": null,
+      "filter_evidence": [
+        "file_suffix:nemo/collections/llm/gpt/model/baichuan.py",
+        "file_suffix:nemo/collections/llm/gpt/model/baichuan.py",
+        "file_suffix:nemo/collections/llm/gpt/model/baichuan.py",
+        "file_suffix:nemo/collections/llm/gpt/model/baichuan.py",
+        "file_suffix:nemo/collections/llm/gpt/model/baichuan.py"
+      ],
+      "hash": "75e0edf7e67bfa7341344e7b036d45aade988a28bb9c94c09fb064cbe70c1907",
+      "label": "vulnerable",
+      "pair_id": "GHSA-9379-MWVR-7WXX",
+      "project_time_group": "NVIDIA NeMo:4d313cf5f097",
+      "repo_url": "https://github.com/NVIDIA/NeMo",
+      "sample_id": "entry-00156",
+      "source": "vulngym",
+      "vuln_ids": [],
+      "workdir": ""
+    },
+    {
+      "cwe_map": null,
+      "filter_evidence": [
+        "file_suffix:nemo/collections/llm/gpt/model/deepseek.py",
+        "file_suffix:nemo/collections/llm/gpt/model/deepseek.py",
+        "file_suffix:nemo/collections/llm/gpt/model/deepseek.py",
+        "file_suffix:nemo/collections/llm/gpt/model/deepseek.py",
+        "file_suffix:nemo/collections/llm/gpt/model/deepseek.py"
+      ],
+      "hash": "c1d705fde1791e5946f434e4f080f70215088bcd88729a23fe53f6596a5923e2",
+      "label": "vulnerable",
+      "pair_id": "GHSA-9379-MWVR-7WXX",
+      "project_time_group": "NVIDIA NeMo:4d313cf5f097",
+      "repo_url": "https://github.com/NVIDIA/NeMo",
+      "sample_id": "entry-00157",
+      "source": "vulngym",
+      "vuln_ids": [],
+      "workdir": ""
+    },
+    {
+      "cwe_map": null,
+      "filter_evidence": [
+        "file_suffix:mlflow/server/auth/__init__.py",
+        "file_suffix:mlflow/server/auth/config.py",
+        "file_suffix:mlflow/server/auth/__init__.py",
+        "file_suffix:mlflow/server/auth/__init__.py",
+        "file_suffix:mlflow/server/auth/__init__.py",
+        "file_suffix:mlflow/server/auth/__init__.py",
+        "file_suffix:mlflow/server/auth/sqlalchemy_store.py",
+        "file_suffix:mlflow/server/auth/__init__.py",
+        "file_suffix:mlflow/server/auth/__init__.py"
+      ],
+      "hash": "e1a55d4e7e45cbf7643e0fbe9b8e025c3f48a506b4c58986630bb3d524f972fe",
+      "label": "vulnerable",
+      "pair_id": "GHSA-GQ3W-7JJ3-X7GR",
+      "project_time_group": "mlflow:83b9416cf1cf",
+      "repo_url": "https://github.com/mlflow/mlflow",
+      "sample_id": "entry-00171",
+      "source": "vulngym",
+      "vuln_ids": [
+        "CVE-2026-2635",
+        "GHSA-GQ3W-7JJ3-X7GR"
+      ],
+      "workdir": ""
+    },
+    {
+      "cwe_map": null,
+      "filter_evidence": [
+        "file_suffix:packages/@n8n/task-runner-python/src/constants.py",
+        "file_suffix:packages/@n8n/task-runner-python/src/task_runner.py",
+        "file_suffix:packages/@n8n/task-runner-python/src/task_analyzer.py",
+        "file_suffix:packages/@n8n/task-runner-python/src/constants.py"
+      ],
+      "hash": "775af174f466056d762703763b78c9bb2f1d288118a2caa92b9c47cfa9155a16",
+      "label": "vulnerable",
+      "pair_id": "GHSA-MMGG-M5J7-F83H",
+      "project_time_group": "n8n:3af9095245be",
+      "repo_url": "https://github.com/n8n-io/n8n",
+      "sample_id": "entry-00176",
+      "source": "vulngym",
+      "vuln_ids": [
+        "CVE-2026-27494",
+        "GHSA-MMGG-M5J7-F83H"
+      ],
+      "workdir": ""
+    },
+    {
+      "cwe_map": null,
+      "filter_evidence": [
+        "file_suffix:packages/@n8n/task-runner-python/src/constants.py",
+        "file_suffix:packages/@n8n/task-runner-python/src/constants.py",
+        "file_suffix:packages/@n8n/task-runner-python/src/constants.py",
+        "file_suffix:packages/@n8n/task-runner-python/src/constants.py",
+        "file_suffix:packages/@n8n/task-runner-python/src/constants.py"
+      ],
+      "hash": "2e89634f98cb9b2781ce80a2f7ce56022944a4ae3bef8398c855f14a691775da",
+      "label": "vulnerable",
+      "pair_id": "GHSA-VPCF-GVG4-6QWR",
+      "project_time_group": "n8n:8e81f3e31398",
+      "repo_url": "https://github.com/n8n-io/n8n",
+      "sample_id": "entry-00182",
+      "source": "vulngym",
+      "vuln_ids": [
+        "CVE-2026-27577",
+        "GHSA-VPCF-GVG4-6QWR"
+      ],
+      "workdir": ""
+    },
+    {
+      "cwe_map": null,
+      "filter_evidence": [
+        "file_suffix:src/fastmcp/server/auth/oauth_proxy.py",
+        "file_suffix:src/fastmcp/server/auth/oauth_proxy.py",
+        "file_suffix:src/fastmcp/server/auth/oauth_proxy.py",
+        "file_suffix:src/fastmcp/server/auth/oauth_proxy.py",
+        "file_suffix:src/fastmcp/server/auth/oauth_proxy.py"
+      ],
+      "hash": "fea706a30e259dc355183bac2dd5defcc54ec3b67e6dd9be018d78a59a284fbe",
+      "label": "vulnerable",
+      "pair_id": "GHSA-5H2M-4Q8J-PQPJ",
+      "project_time_group": "fastmcp:6bade1cbd973",
+      "repo_url": "https://github.com/jlowin/fastmcp",
+      "sample_id": "entry-00310",
+      "source": "vulngym",
+      "vuln_ids": [
+        "CVE-2025-69196",
+        "GHSA-5H2M-4Q8J-PQPJ"
+      ],
+      "workdir": ""
+    },
+    {
+      "cwe_map": null,
+      "filter_evidence": [
+        "file_suffix:src/fastmcp/server/auth/oauth_proxy.py",
+        "file_suffix:src/fastmcp/server/auth/oauth_proxy.py",
+        "file_suffix:src/fastmcp/server/auth/auth.py",
+        "file_suffix:src/fastmcp/server/auth/oauth_proxy.py",
+        "file_suffix:src/fastmcp/server/auth/oauth_proxy.py"
+      ],
+      "hash": "ad1623053905432cd27866d9086c63f5796cd752db2f0276dbecabd148813a5e",
+      "label": "vulnerable",
+      "pair_id": "GHSA-5H2M-4Q8J-PQPJ",
+      "project_time_group": "fastmcp:6bade1cbd973",
+      "repo_url": "https://github.com/jlowin/fastmcp",
+      "sample_id": "entry-00311",
+      "source": "vulngym",
+      "vuln_ids": [
+        "CVE-2025-69196",
+        "GHSA-5H2M-4Q8J-PQPJ"
+      ],
+      "workdir": ""
+    },
+    {
+      "cwe_map": null,
+      "filter_evidence": [
+        "file_suffix:airflow-core/src/airflow/api_fastapi/core_api/routes/public/dag_versions.py",
+        "file_suffix:airflow-core/src/airflow/api_fastapi/core_api/routes/public/dag_versions.py",
+        "file_suffix:airflow-core/src/airflow/api_fastapi/core_api/routes/public/dag_versions.py",
+        "file_suffix:airflow-core/src/airflow/api_fastapi/core_api/routes/public/dag_versions.py",
+        "file_suffix:airflow-core/src/airflow/api_fastapi/core_api/security.py",
+        "file_suffix:airflow-core/src/airflow/api_fastapi/core_api/routes/public/dag_versions.py",
+        "file_suffix:airflow-core/src/airflow/api_fastapi/core_api/security.py",
+        "file_suffix:airflow-core/src/airflow/api_fastapi/core_api/routes/public/dag_versions.py"
+      ],
+      "hash": "0e67d3049d41b7a4edddb494ba67ed05b6e441bf3ac857e6b727fbc87089e05e",
+      "label": "vulnerable",
+      "pair_id": "GHSA-4M3H-WP5W-5HQH",
+      "project_time_group": "apache/airflow:19c1a16dc8b4",
+      "repo_url": "https://github.com/apache/airflow",
+      "sample_id": "entry-00313",
+      "source": "vulngym",
+      "vuln_ids": [
+        "CVE-2026-26929",
+        "GHSA-4M3H-WP5W-5HQH"
+      ],
+      "workdir": ""
+    },
+    {
+      "cwe_map": null,
+      "filter_evidence": [
+        "file_suffix:airflow-core/src/airflow/api_fastapi/execution_api/routes/__init__.py",
+        "file_suffix:airflow-core/src/airflow/api_fastapi/execution_api/routes/hitl.py",
+        "file_suffix:airflow-core/src/airflow/api_fastapi/execution_api/routes/__init__.py",
+        "file_suffix:airflow-core/src/airflow/api_fastapi/execution_api/deps.py",
+        "file_suffix:airflow-core/src/airflow/api_fastapi/execution_api/routes/hitl.py",
+        "file_suffix:airflow-core/src/airflow/api_fastapi/execution_api/routes/hitl.py",
+        "file_suffix:airflow-core/src/airflow/api_fastapi/execution_api/routes/hitl.py",
+        "file_suffix:airflow-core/src/airflow/api_fastapi/execution_api/routes/hitl.py"
+      ],
+      "hash": "03a3b1a17c115b227be9a68b1f5fe6017c8a082f3ae0f314ca3c914550f4ea62",
+      "label": "vulnerable",
+      "pair_id": "GHSA-8X34-9Q3V-H7G8",
+      "project_time_group": "apache/airflow:dba47277f309",
+      "repo_url": "https://github.com/apache/airflow",
+      "sample_id": "entry-00314",
+      "source": "vulngym",
+      "vuln_ids": [
+        "CVE-2026-30911",
+        "GHSA-8X34-9Q3V-H7G8"
+      ],
+      "workdir": ""
+    },
+    {
+      "cwe_map": null,
+      "filter_evidence": [
+        "file_suffix:airflow-core/src/airflow/api_fastapi/execution_api/routes/__init__.py",
+        "file_suffix:airflow-core/src/airflow/api_fastapi/execution_api/routes/hitl.py",
+        "file_suffix:airflow-core/src/airflow/api_fastapi/execution_api/routes/__init__.py",
+        "file_suffix:airflow-core/src/airflow/api_fastapi/execution_api/deps.py",
+        "file_suffix:airflow-core/src/airflow/api_fastapi/execution_api/routes/hitl.py",
+        "file_suffix:airflow-core/src/airflow/api_fastapi/execution_api/routes/hitl.py",
+        "file_suffix:airflow-core/src/airflow/api_fastapi/execution_api/routes/hitl.py",
+        "file_suffix:airflow-core/src/airflow/api_fastapi/execution_api/routes/hitl.py"
+      ],
+      "hash": "de1008534019158a55ee2a700d82659a3f689d2f47aad4928ce6de7cd5e9bff5",
+      "label": "vulnerable",
+      "pair_id": "GHSA-8X34-9Q3V-H7G8",
+      "project_time_group": "apache/airflow:dba47277f309",
+      "repo_url": "https://github.com/apache/airflow",
+      "sample_id": "entry-00315",
+      "source": "vulngym",
+      "vuln_ids": [
+        "CVE-2026-30911",
+        "GHSA-8X34-9Q3V-H7G8"
+      ],
+      "workdir": ""
+    },
+    {
+      "cwe_map": null,
+      "filter_evidence": [
+        "file_suffix:airflow-core/src/airflow/api_fastapi/execution_api/routes/hitl.py",
+        "file_suffix:airflow-core/src/airflow/api_fastapi/execution_api/routes/hitl.py",
+        "file_suffix:airflow-core/src/airflow/api_fastapi/execution_api/routes/hitl.py",
+        "file_suffix:airflow-core/src/airflow/api_fastapi/execution_api/routes/__init__.py",
+        "file_suffix:airflow-core/src/airflow/api_fastapi/execution_api/deps.py",
+        "file_suffix:airflow-core/src/airflow/api_fastapi/execution_api/routes/hitl.py",
+        "file_suffix:airflow-core/src/airflow/api_fastapi/execution_api/routes/hitl.py"
+      ],
+      "hash": "bb329a0edd1ab88024d3e855df44d18c19dc68aa48e5325dd564d8b35ff2d0b2",
+      "label": "vulnerable",
+      "pair_id": "GHSA-8X34-9Q3V-H7G8",
+      "project_time_group": "apache/airflow:dba47277f309",
+      "repo_url": "https://github.com/apache/airflow",
+      "sample_id": "entry-00316",
+      "source": "vulngym",
+      "vuln_ids": [
+        "CVE-2026-30911",
+        "GHSA-8X34-9Q3V-H7G8"
+      ],
+      "workdir": ""
+    },
+    {
+      "cwe_map": null,
+      "filter_evidence": [
+        "file_suffix:src/backend/base/langflow/api/v1/api_key.py",
+        "file_suffix:src/backend/base/langflow/services/database/models/api_key/crud.py",
+        "file_suffix:src/backend/base/langflow/api/v1/api_key.py",
+        "file_suffix:src/backend/base/langflow/api/v1/api_key.py",
+        "file_suffix:src/backend/base/langflow/services/database/models/api_key/crud.py"
+      ],
+      "hash": "12004c241ff4d8fcfdb5372ae9b0fd23bab7a49e8b41b95df1bb550f5f9e52c9",
+      "label": "vulnerable",
+      "pair_id": "GHSA-RF6X-R45M-XV3W",
+      "project_time_group": "Langflow:36eea7ee9db1",
+      "repo_url": "https://github.com/langflow-ai/langflow",
+      "sample_id": "entry-00317",
+      "source": "vulngym",
+      "vuln_ids": [
+        "CVE-2026-33053",
+        "GHSA-RF6X-R45M-XV3W"
+      ],
+      "workdir": ""
+    },
+    {
+      "cwe_map": null,
+      "filter_evidence": [
+        "file_suffix:nltk/app/wordnet_app.py",
+        "file_suffix:nltk/app/wordnet_app.py",
+        "file_suffix:nltk/app/wordnet_app.py",
+        "file_suffix:nltk/app/wordnet_app.py",
+        "file_suffix:nltk/app/wordnet_app.py",
+        "file_suffix:nltk/app/wordnet_app.py",
+        "file_suffix:nltk/app/wordnet_app.py",
+        "file_suffix:nltk/app/wordnet_app.py"
+      ],
+      "hash": "feef528a84967de512032a6987e0114c54bd9971e47fbc874dbf6d9b36020bae",
+      "label": "vulnerable",
+      "pair_id": "GHSA-JM6W-M3J8-898G",
+      "project_time_group": "nltk:40d0bc1d484a",
+      "repo_url": "https://github.com/nltk/nltk",
+      "sample_id": "entry-00319",
+      "source": "vulngym",
+      "vuln_ids": [
+        "CVE-2026-33231",
+        "GHSA-JM6W-M3J8-898G"
+      ],
+      "workdir": ""
+    },
+    {
+      "cwe_map": null,
+      "filter_evidence": [
+        "file_suffix:src/backend/base/langflow/api/v2/files.py",
+        "file_suffix:src/backend/base/langflow/services/storage/local.py",
+        "file_suffix:src/backend/base/langflow/api/v2/files.py",
+        "file_suffix:src/backend/base/langflow/api/v2/files.py",
+        "file_suffix:src/backend/base/langflow/api/v2/files.py",
+        "file_suffix:src/backend/base/langflow/services/storage/local.py"
+      ],
+      "hash": "2896c0f2a2ff1b4cb18c8cc2cdbd6425e855741a93fc3cd5ca712a7b567999fc",
+      "label": "vulnerable",
+      "pair_id": "GHSA-G2J9-7RJ2-GM6C",
+      "project_time_group": "langflow:e8bbae8eeb87",
+      "repo_url": "https://github.com/langflow-ai/langflow",
+      "sample_id": "entry-00320",
+      "source": "vulngym",
+      "vuln_ids": [
+        "CVE-2026-33309",
+        "GHSA-G2J9-7RJ2-GM6C"
+      ],
+      "workdir": ""
+    },
+    {
+      "cwe_map": null,
+      "filter_evidence": [
+        "file_suffix:src/backend/base/langflow/api/v2/files.py",
+        "file_suffix:src/backend/base/langflow/services/storage/local.py",
+        "file_suffix:src/backend/base/langflow/api/v2/files.py",
+        "file_suffix:src/backend/base/langflow/api/v2/files.py",
+        "file_suffix:src/backend/base/langflow/services/storage/local.py"
+      ],
+      "hash": "48db752383b42f54eb9e523dab2b634883cde3316ad051e417707655d9082ef1",
+      "label": "vulnerable",
+      "pair_id": "GHSA-G2J9-7RJ2-GM6C",
+      "project_time_group": "langflow:e8bbae8eeb87",
+      "repo_url": "https://github.com/langflow-ai/langflow",
+      "sample_id": "entry-00321",
+      "source": "vulngym",
+      "vuln_ids": [
+        "CVE-2026-33309",
+        "GHSA-G2J9-7RJ2-GM6C"
+      ],
+      "workdir": ""
+    },
+    {
+      "cwe_map": null,
+      "filter_evidence": [
+        "file_suffix:src/backend/base/langflow/api/v1/files.py",
+        "file_suffix:src/backend/base/langflow/api/v1/files.py",
+        "file_suffix:src/backend/base/langflow/api/v1/files.py",
+        "file_suffix:src/backend/base/langflow/api/v1/files.py",
+        "file_suffix:src/backend/base/langflow/api/v1/files.py",
+        "file_suffix:src/backend/base/langflow/api/v1/files.py",
+        "file_suffix:src/backend/base/langflow/api/v1/files.py",
+        "file_suffix:src/backend/base/langflow/api/v1/files.py",
+        "file_suffix:src/backend/base/langflow/api/v1/files.py",
+        "file_suffix:src/backend/base/langflow/api/v1/files.py"
+      ],
+      "hash": "3bcc9ee059802ac5d5e17540af1ce20d811d7081746bbf9b94b864ce3c7928d6",
+      "label": "vulnerable",
+      "pair_id": "GHSA-7GRX-3XCX-2XV5",
+      "project_time_group": "langflow:922a49acac14",
+      "repo_url": "https://github.com/langflow-ai/langflow",
+      "sample_id": "entry-00324",
+      "source": "vulngym",
+      "vuln_ids": [
+        "CVE-2026-33484",
+        "GHSA-7GRX-3XCX-2XV5"
+      ],
+      "workdir": ""
+    },
+    {
+      "cwe_map": null,
+      "filter_evidence": [
+        "file_suffix:src/backend/base/langflow/api/v1/files.py",
+        "file_suffix:src/backend/base/langflow/api/v1/files.py",
+        "file_suffix:src/backend/base/langflow/api/v1/files.py",
+        "file_suffix:src/backend/base/langflow/api/v1/files.py",
+        "file_suffix:src/backend/base/langflow/api/v1/files.py",
+        "file_suffix:src/backend/base/langflow/api/v1/files.py",
+        "file_suffix:src/backend/base/langflow/api/v1/files.py",
+        "file_suffix:src/backend/base/langflow/api/v1/files.py"
+      ],
+      "hash": "422b72746aef8ffd6fc30c8354cebbe07418fc46a7d1094fbc04fa55411cc15d",
+      "label": "vulnerable",
+      "pair_id": "GHSA-PH9W-R52H-28P7",
+      "project_time_group": "langflow-ai/langflow:198fab1dc7d4",
+      "repo_url": "https://github.com/langflow-ai/langflow",
+      "sample_id": "entry-00325",
+      "source": "vulngym",
+      "vuln_ids": [
+        "CVE-2026-33497",
+        "GHSA-PH9W-R52H-28P7"
+      ],
+      "workdir": ""
+    },
+    {
+      "cwe_map": null,
+      "filter_evidence": [
+        "file_suffix:src/backend/base/langflow/api/v1/files.py",
+        "file_suffix:src/backend/base/langflow/api/v1/files.py",
+        "file_suffix:src/backend/base/langflow/api/v1/files.py",
+        "file_suffix:src/backend/base/langflow/api/v1/files.py",
+        "file_suffix:src/backend/base/langflow/api/v1/files.py",
+        "file_suffix:src/backend/base/langflow/api/v1/files.py",
+        "file_suffix:src/backend/base/langflow/api/v1/files.py",
+        "file_suffix:src/backend/base/langflow/api/v1/files.py",
+        "file_suffix:src/backend/base/langflow/api/v1/files.py"
+      ],
+      "hash": "9d6cabce511089f5f97e1eb6d3923b706604e2f395533014a1b3540effbc4994",
+      "label": "vulnerable",
+      "pair_id": "GHSA-PH9W-R52H-28P7",
+      "project_time_group": "langflow-ai/langflow:198fab1dc7d4",
+      "repo_url": "https://github.com/langflow-ai/langflow",
+      "sample_id": "entry-00326",
+      "source": "vulngym",
+      "vuln_ids": [
+        "CVE-2026-33497",
+        "GHSA-PH9W-R52H-28P7"
+      ],
+      "workdir": ""
+    },
+    {
+      "cwe_map": null,
+      "filter_evidence": [
+        "file_suffix:nemo/lightning/io/hf.py",
+        "file_suffix:nemo/lightning/io/hf.py",
+        "file_suffix:nemo/lightning/io/hf.py",
+        "file_suffix:nemo/lightning/io/hf.py",
+        "file_suffix:nemo/lightning/io/hf.py",
+        "file_suffix:nemo/lightning/io/hf.py"
+      ],
+      "hash": "ec81c4b46f7bc361247e27acee47e950a84e2d7627e1c9e04f94e39ba1d524cd",
+      "label": "vulnerable",
+      "pair_id": "GHSA-V7V2-M736-CF3C",
+      "project_time_group": "NVIDIA NeMo Framework:d282d04322a8",
+      "repo_url": "https://github.com/NVIDIA/NeMo",
+      "sample_id": "entry-00335",
+      "source": "vulngym",
+      "vuln_ids": [
+        "CVE-2026-24159",
+        "GHSA-V7V2-M736-CF3C"
+      ],
+      "workdir": ""
+    },
+    {
+      "cwe_map": null,
+      "filter_evidence": [
+        "file_suffix:nemo/collections/common/callbacks/ema.py",
+        "file_suffix:nemo/collections/common/callbacks/ema.py",
+        "file_suffix:nemo/collections/common/callbacks/ema.py",
+        "file_suffix:nemo/collections/common/callbacks/ema.py",
+        "file_suffix:nemo/collections/common/callbacks/ema.py",
+        "file_suffix:nemo/collections/common/callbacks/ema.py",
+        "file_suffix:nemo/collections/common/callbacks/ema.py"
+      ],
+      "hash": "73a5f270c9ddf6551203e289ebec992da7a8f0494f2049a8f9a7dc7fdf881023",
+      "label": "vulnerable",
+      "pair_id": "GHSA-V7V2-M736-CF3C",
+      "project_time_group": "NVIDIA NeMo Framework:d282d04322a8",
+      "repo_url": "https://github.com/NVIDIA/NeMo",
+      "sample_id": "entry-00336",
+      "source": "vulngym",
+      "vuln_ids": [
+        "CVE-2026-24159",
+        "GHSA-V7V2-M736-CF3C"
+      ],
+      "workdir": ""
+    },
+    {
+      "cwe_map": null,
+      "filter_evidence": [
+        "file_suffix:nemo/utils/callbacks/nemo_model_checkpoint.py",
+        "file_suffix:nemo/utils/callbacks/nemo_model_checkpoint.py",
+        "file_suffix:nemo/utils/callbacks/nemo_model_checkpoint.py",
+        "file_suffix:nemo/utils/callbacks/nemo_model_checkpoint.py",
+        "file_suffix:nemo/utils/callbacks/nemo_model_checkpoint.py",
+        "file_suffix:nemo/utils/callbacks/nemo_model_checkpoint.py",
+        "file_suffix:nemo/utils/callbacks/nemo_model_checkpoint.py"
+      ],
+      "hash": "0290b73bb8c717cdd69f0762a90e95e2b6dd57bf0cb2657b81c5e4c5b4bed9b1",
+      "label": "vulnerable",
+      "pair_id": "GHSA-V7V2-M736-CF3C",
+      "project_time_group": "NVIDIA NeMo Framework:d282d04322a8",
+      "repo_url": "https://github.com/NVIDIA/NeMo",
+      "sample_id": "entry-00337",
+      "source": "vulngym",
+      "vuln_ids": [
+        "CVE-2026-24159",
+        "GHSA-V7V2-M736-CF3C"
+      ],
+      "workdir": ""
+    },
+    {
+      "cwe_map": null,
+      "filter_evidence": [
+        "file_suffix:examples/tts/magpietts_inference.py",
+        "file_suffix:nemo/collections/tts/modules/magpietts_inference/utils.py",
+        "file_suffix:examples/tts/magpietts_inference.py",
+        "file_suffix:examples/tts/magpietts_inference.py",
+        "file_suffix:examples/tts/magpietts_inference.py",
+        "file_suffix:examples/tts/magpietts_inference.py",
+        "file_suffix:nemo/collections/tts/modules/magpietts_inference/utils.py",
+        "file_suffix:nemo/collections/tts/modules/magpietts_inference/utils.py"
+      ],
+      "hash": "405ff87045b6672b3024b27a9241ce0111bec9ecaf0b31e4407905061e8e4e7e",
+      "label": "vulnerable",
+      "pair_id": "GHSA-M4JW-WGMF-889X",
+      "project_time_group": "NVIDIA/NeMo:ffee9a91f4b7",
+      "repo_url": "https://github.com/NVIDIA/NeMo",
+      "sample_id": "entry-00338",
+      "source": "vulngym",
+      "vuln_ids": [
+        "CVE-2026-24157",
+        "GHSA-M4JW-WGMF-889X"
+      ],
+      "workdir": ""
+    },
+    {
+      "cwe_map": null,
+      "filter_evidence": [
+        "file_suffix:nemo/collections/multimodal/speech_llm/models/modular_models.py",
+        "file_suffix:nemo/collections/multimodal/speech_llm/models/modular_models.py",
+        "file_suffix:nemo/collections/multimodal/speech_llm/models/modular_models.py",
+        "file_suffix:nemo/collections/multimodal/speech_llm/models/modular_models.py"
+      ],
+      "hash": "0df98debbfe7ae832557f5be239c8e22025e2c9235fc5c99dd2a6f49a9bdec1e",
+      "label": "vulnerable",
+      "pair_id": "GHSA-M4JW-WGMF-889X",
+      "project_time_group": "NVIDIA/NeMo:ffee9a91f4b7",
+      "repo_url": "https://github.com/NVIDIA/NeMo",
+      "sample_id": "entry-00339",
+      "source": "vulngym",
+      "vuln_ids": [
+        "CVE-2026-24157",
+        "GHSA-M4JW-WGMF-889X"
+      ],
+      "workdir": ""
+    },
+    {
+      "cwe_map": null,
+      "filter_evidence": [
+        "file_suffix:nemo/collections/multimodal/speech_llm/models/modular_models.py",
+        "file_suffix:nemo/collections/multimodal/speech_llm/models/modular_models.py",
+        "file_suffix:nemo/collections/multimodal/speech_llm/models/modular_models.py",
+        "file_suffix:nemo/collections/multimodal/speech_llm/models/modular_models.py",
+        "file_suffix:nemo/collections/multimodal/speech_llm/models/modular_models.py"
+      ],
+      "hash": "97dd2552aed84979cfe913f788a667a3815cac3c37fe20157f09fd7f6710f1b9",
+      "label": "vulnerable",
+      "pair_id": "GHSA-M4JW-WGMF-889X",
+      "project_time_group": "NVIDIA/NeMo:ffee9a91f4b7",
+      "repo_url": "https://github.com/NVIDIA/NeMo",
+      "sample_id": "entry-00340",
+      "source": "vulngym",
+      "vuln_ids": [
+        "CVE-2026-24157",
+        "GHSA-M4JW-WGMF-889X"
+      ],
+      "workdir": ""
+    },
+    {
+      "cwe_map": null,
+      "filter_evidence": [
+        "file_suffix:nemo/collections/multimodal/speech_llm/parts/mixins/adapter_mixin.py",
+        "file_suffix:nemo/collections/multimodal/speech_llm/parts/mixins/adapter_mixin.py",
+        "file_suffix:nemo/collections/multimodal/speech_llm/parts/mixins/adapter_mixin.py",
+        "file_suffix:nemo/collections/multimodal/speech_llm/parts/mixins/adapter_mixin.py",
+        "file_suffix:nemo/collections/multimodal/speech_llm/parts/mixins/adapter_mixin.py"
+      ],
+      "hash": "f5bc47a888bb5af126f564b374ac260e0ae3e81fffa5c3a20eb0f3bbfef5c1e1",
+      "label": "vulnerable",
+      "pair_id": "GHSA-M4JW-WGMF-889X",
+      "project_time_group": "NVIDIA/NeMo:ffee9a91f4b7",
+      "repo_url": "https://github.com/NVIDIA/NeMo",
+      "sample_id": "entry-00341",
+      "source": "vulngym",
+      "vuln_ids": [
+        "CVE-2026-24157",
+        "GHSA-M4JW-WGMF-889X"
+      ],
+      "workdir": ""
+    },
+    {
+      "cwe_map": null,
+      "filter_evidence": [
+        "file_suffix:nemo/core/classes/mixins/adapter_mixins.py",
+        "file_suffix:nemo/core/classes/mixins/adapter_mixins.py",
+        "file_suffix:nemo/core/classes/mixins/adapter_mixins.py",
+        "file_suffix:nemo/core/classes/mixins/adapter_mixins.py"
+      ],
+      "hash": "78edf897957fe83d82fd13f56384f29ca96685e7e90f3b95613846d9c8edd438",
+      "label": "vulnerable",
+      "pair_id": "GHSA-M4JW-WGMF-889X",
+      "project_time_group": "NVIDIA/NeMo:ffee9a91f4b7",
+      "repo_url": "https://github.com/NVIDIA/NeMo",
+      "sample_id": "entry-00342",
+      "source": "vulngym",
+      "vuln_ids": [
+        "CVE-2026-24157",
+        "GHSA-M4JW-WGMF-889X"
+      ],
+      "workdir": ""
+    },
+    {
+      "cwe_map": null,
+      "filter_evidence": [
+        "file_suffix:nemo/collections/common/callbacks/ema.py",
+        "file_suffix:nemo/collections/common/callbacks/ema.py",
+        "file_suffix:nemo/collections/common/callbacks/ema.py",
+        "file_suffix:nemo/collections/common/callbacks/ema.py"
+      ],
+      "hash": "f0c80b6db8949fa253b69c64b7b46a61d4df62b664b25ee37833062a0f3b2ea9",
+      "label": "vulnerable",
+      "pair_id": "GHSA-M4JW-WGMF-889X",
+      "project_time_group": "NVIDIA/NeMo:ffee9a91f4b7",
+      "repo_url": "https://github.com/NVIDIA/NeMo",
+      "sample_id": "entry-00343",
+      "source": "vulngym",
+      "vuln_ids": [
+        "CVE-2026-24157",
+        "GHSA-M4JW-WGMF-889X"
+      ],
+      "workdir": ""
+    },
+    {
+      "cwe_map": null,
+      "filter_evidence": [
+        "file_suffix:nemo/utils/callbacks/nemo_model_checkpoint.py",
+        "file_suffix:nemo/utils/callbacks/nemo_model_checkpoint.py",
+        "file_suffix:nemo/utils/callbacks/nemo_model_checkpoint.py",
+        "file_suffix:nemo/utils/callbacks/nemo_model_checkpoint.py",
+        "file_suffix:nemo/utils/callbacks/nemo_model_checkpoint.py"
+      ],
+      "hash": "eb6da6fa70546902243843acbdda76b496a172258494b9684fde577cd850277b",
+      "label": "vulnerable",
+      "pair_id": "GHSA-M4JW-WGMF-889X",
+      "project_time_group": "NVIDIA/NeMo:ffee9a91f4b7",
+      "repo_url": "https://github.com/NVIDIA/NeMo",
+      "sample_id": "entry-00344",
+      "source": "vulngym",
+      "vuln_ids": [
+        "CVE-2026-24157",
+        "GHSA-M4JW-WGMF-889X"
+      ],
+      "workdir": ""
+    },
+    {
+      "cwe_map": null,
+      "filter_evidence": [
+        "file_suffix:nemo/collections/speechlm2/parts/pretrained.py",
+        "file_suffix:nemo/collections/speechlm2/parts/pretrained.py",
+        "file_suffix:nemo/collections/speechlm2/parts/pretrained.py",
+        "file_suffix:nemo/collections/speechlm2/parts/pretrained.py"
+      ],
+      "hash": "0cf90d0b57a31ee7e447aa86e733b25c382f90491ee7f9f90575ebaa9ba581eb",
+      "label": "vulnerable",
+      "pair_id": "GHSA-M4JW-WGMF-889X",
+      "project_time_group": "NVIDIA/NeMo:ffee9a91f4b7",
+      "repo_url": "https://github.com/NVIDIA/NeMo",
+      "sample_id": "entry-00345",
+      "source": "vulngym",
+      "vuln_ids": [
+        "CVE-2026-24157",
+        "GHSA-M4JW-WGMF-889X"
+      ],
+      "workdir": ""
+    },
+    {
+      "cwe_map": null,
+      "filter_evidence": [
+        "file_suffix:nemo/collections/llm/gpt/model/hyena.py",
+        "file_suffix:nemo/collections/llm/gpt/model/hyena.py",
+        "file_suffix:nemo/collections/llm/gpt/model/hyena.py",
+        "file_suffix:nemo/collections/llm/gpt/model/hyena.py"
+      ],
+      "hash": "9c953d84d68f01630964223e3cf75e456dccd02bb012037c972eccf32743cea5",
+      "label": "vulnerable",
+      "pair_id": "GHSA-M4JW-WGMF-889X",
+      "project_time_group": "NVIDIA/NeMo:ffee9a91f4b7",
+      "repo_url": "https://github.com/NVIDIA/NeMo",
+      "sample_id": "entry-00346",
+      "source": "vulngym",
+      "vuln_ids": [
+        "CVE-2026-24157",
+        "GHSA-M4JW-WGMF-889X"
+      ],
+      "workdir": ""
+    },
+    {
+      "cwe_map": null,
+      "filter_evidence": [
+        "file_suffix:nemo/collections/llm/gpt/model/hyena.py",
+        "file_suffix:nemo/collections/llm/gpt/model/hyena.py",
+        "file_suffix:nemo/collections/llm/gpt/model/hyena.py",
+        "file_suffix:nemo/collections/llm/gpt/model/hyena.py"
+      ],
+      "hash": "b174ec8413d26cd5da45bcb921b15d01c11f7b02fe43d230b39c14f618379940",
+      "label": "vulnerable",
+      "pair_id": "GHSA-M4JW-WGMF-889X",
+      "project_time_group": "NVIDIA/NeMo:ffee9a91f4b7",
+      "repo_url": "https://github.com/NVIDIA/NeMo",
+      "sample_id": "entry-00347",
+      "source": "vulngym",
+      "vuln_ids": [
+        "CVE-2026-24157",
+        "GHSA-M4JW-WGMF-889X"
+      ],
+      "workdir": ""
+    },
+    {
+      "cwe_map": null,
+      "filter_evidence": [
+        "file_suffix:nemo/collections/tts/models/magpietts_preference_optimization.py",
+        "file_suffix:nemo/collections/tts/models/magpietts_preference_optimization.py",
+        "file_suffix:nemo/collections/tts/models/magpietts_preference_optimization.py",
+        "file_suffix:nemo/collections/tts/models/magpietts_preference_optimization.py",
+        "file_suffix:nemo/collections/tts/models/magpietts_preference_optimization.py",
+        "file_suffix:nemo/collections/tts/models/magpietts_preference_optimization.py"
+      ],
+      "hash": "99171cd328eca546e3ec71b4c627d4f5606cf14674f5603812db6d0fb1e0a6df",
+      "label": "vulnerable",
+      "pair_id": "GHSA-M4JW-WGMF-889X",
+      "project_time_group": "NVIDIA/NeMo:ffee9a91f4b7",
+      "repo_url": "https://github.com/NVIDIA/NeMo",
+      "sample_id": "entry-00348",
+      "source": "vulngym",
+      "vuln_ids": [
+        "CVE-2026-24157",
+        "GHSA-M4JW-WGMF-889X"
+      ],
+      "workdir": ""
+    },
+    {
+      "cwe_map": null,
+      "filter_evidence": [
+        "file_suffix:src/backend/base/langflow/api/v1/flows.py",
+        "file_suffix:src/backend/base/langflow/api/v1/flows.py",
+        "file_suffix:src/backend/base/langflow/api/v1/flows.py",
+        "file_suffix:src/backend/base/langflow/api/v1/flows.py",
+        "file_suffix:src/backend/base/langflow/api/v1/flows.py",
+        "file_suffix:src/backend/base/langflow/api/v1/flows.py"
+      ],
+      "hash": "f6f5262ccc5a585e50952243b13ee99db112e206b4a7dce408c36d9f1ba7bd73",
+      "label": "vulnerable",
+      "pair_id": "GHSA-8C4J-F57C-35CF",
+      "project_time_group": "langflow:73c1f203b020",
+      "repo_url": "https://github.com/langflow-ai/langflow",
+      "sample_id": "entry-00372",
+      "source": "vulngym",
+      "vuln_ids": [
+        "CVE-2026-34046",
+        "GHSA-8C4J-F57C-35CF"
+      ],
+      "workdir": ""
+    },
+    {
+      "cwe_map": null,
+      "filter_evidence": [
+        "file_suffix:src/backend/base/langflow/api/v1/flows.py",
+        "file_suffix:src/backend/base/langflow/api/v1/flows.py",
+        "file_suffix:src/backend/base/langflow/api/v1/flows.py",
+        "file_suffix:src/backend/base/langflow/api/v1/flows.py",
+        "file_suffix:src/backend/base/langflow/api/v1/flows.py"
+      ],
+      "hash": "092eb54f566f8d8af01da95284ab859158ff4b9dfa1fc6f3b98275d6410a6cc7",
+      "label": "vulnerable",
+      "pair_id": "GHSA-8C4J-F57C-35CF",
+      "project_time_group": "langflow:73c1f203b020",
+      "repo_url": "https://github.com/langflow-ai/langflow",
+      "sample_id": "entry-00373",
+      "source": "vulngym",
+      "vuln_ids": [
+        "CVE-2026-34046",
+        "GHSA-8C4J-F57C-35CF"
+      ],
+      "workdir": ""
+    },
+    {
+      "cwe_map": null,
+      "filter_evidence": [
+        "file_suffix:src/backend/base/langflow/api/v1/flows.py",
+        "file_suffix:src/backend/base/langflow/api/v1/flows.py",
+        "file_suffix:src/backend/base/langflow/api/v1/flows.py",
+        "file_suffix:src/backend/base/langflow/api/v1/flows.py",
+        "file_suffix:src/backend/base/langflow/api/v1/flows.py",
+        "file_suffix:src/backend/base/langflow/api/v1/flows.py"
+      ],
+      "hash": "af76a85560ad7c567a0028a37f2fa732925c2700cf536545b57aee3e04d9d45f",
+      "label": "vulnerable",
+      "pair_id": "GHSA-8C4J-F57C-35CF",
+      "project_time_group": "langflow:73c1f203b020",
+      "repo_url": "https://github.com/langflow-ai/langflow",
+      "sample_id": "entry-00374",
+      "source": "vulngym",
+      "vuln_ids": [
+        "CVE-2026-34046",
+        "GHSA-8C4J-F57C-35CF"
+      ],
+      "workdir": ""
+    },
+    {
+      "cwe_map": null,
+      "filter_evidence": [
+        "file_suffix:backend/open_webui/routers/knowledge.py",
+        "file_suffix:backend/open_webui/routers/retrieval.py",
+        "file_suffix:backend/open_webui/routers/knowledge.py",
+        "file_suffix:backend/open_webui/routers/knowledge.py",
+        "file_suffix:backend/open_webui/routers/knowledge.py",
+        "file_suffix:backend/open_webui/routers/retrieval.py",
+        "file_suffix:backend/open_webui/routers/retrieval.py",
+        "file_suffix:backend/open_webui/routers/retrieval.py",
+        "file_suffix:backend/open_webui/routers/retrieval.py",
+        "file_suffix:backend/open_webui/routers/retrieval.py"
+      ],
+      "hash": "fe4ede5eaec6aad555859f575d1f5133568f021580102b545ade37f701020286",
+      "label": "vulnerable",
+      "pair_id": "GHSA-JJP7-G2JW-WH3J",
+      "project_time_group": "open-webui:1ac3dd4a893e",
+      "repo_url": "https://github.com/open-webui/open-webui",
+      "sample_id": "entry-00376",
+      "source": "vulngym",
+      "vuln_ids": [
+        "CVE-2026-28788",
+        "GHSA-JJP7-G2JW-WH3J"
+      ],
+      "workdir": ""
+    },
+    {
+      "cwe_map": null,
+      "filter_evidence": [
+        "file_suffix:mlflow/pyfunc/backend.py",
+        "file_suffix:mlflow/pyfunc/backend.py",
+        "file_suffix:mlflow/pyfunc/backend.py",
+        "file_suffix:mlflow/pyfunc/backend.py",
+        "file_suffix:mlflow/pyfunc/mlserver.py",
+        "file_suffix:mlflow/pyfunc/backend.py",
+        "file_suffix:mlflow/pyfunc/backend.py"
+      ],
+      "hash": "59603125e25822605c0d0872b5df510857bab6ee20c01d35c97dc07f95efceee",
+      "label": "vulnerable",
+      "pair_id": "GHSA-RVHJ-8CHJ-8V3C",
+      "project_time_group": "MLflow:d1312edfca36",
+      "repo_url": "https://github.com/mlflow/mlflow",
+      "sample_id": "entry-00389",
+      "source": "vulngym",
+      "vuln_ids": [
+        "CVE-2026-0596",
+        "GHSA-RVHJ-8CHJ-8V3C"
+      ],
+      "workdir": ""
+    },
+    {
+      "cwe_map": null,
+      "filter_evidence": [
+        "file_suffix:mlflow/models/cli.py",
+        "file_suffix:mlflow/utils/environment.py",
+        "file_suffix:mlflow/models/cli.py",
+        "file_suffix:mlflow/models/cli.py",
+        "file_suffix:mlflow/pyfunc/mlserver.py",
+        "file_suffix:mlflow/pyfunc/backend.py",
+        "file_suffix:mlflow/pyfunc/backend.py",
+        "file_suffix:mlflow/utils/environment.py"
+      ],
+      "hash": "75131d875b1b733b3c10058d72e99b7ba5097d345ca6809a2c14f18bcb797c0a",
+      "label": "vulnerable",
+      "pair_id": "GHSA-RVHJ-8CHJ-8V3C",
+      "project_time_group": "MLflow:d1312edfca36",
+      "repo_url": "https://github.com/mlflow/mlflow",
+      "sample_id": "entry-00390",
+      "source": "vulngym",
+      "vuln_ids": [
+        "CVE-2026-0596",
+        "GHSA-RVHJ-8CHJ-8V3C"
+      ],
+      "workdir": ""
+    },
+    {
+      "cwe_map": null,
+      "filter_evidence": [
+        "file_suffix:src/fastmcp/utilities/openapi/director.py",
+        "file_suffix:src/fastmcp/utilities/openapi/director.py",
+        "file_suffix:src/fastmcp/utilities/openapi/director.py",
+        "file_suffix:src/fastmcp/utilities/openapi/director.py",
+        "file_suffix:src/fastmcp/utilities/openapi/director.py",
+        "file_suffix:src/fastmcp/utilities/openapi/director.py"
+      ],
+      "hash": "efffb85dd06bad47cba8e01b50d41a6c5edf54cacd73a51b2efa06e32d60d2aa",
+      "label": "vulnerable",
+      "pair_id": "GHSA-VV7Q-7JX5-F767",
+      "project_time_group": "fastmcp:c861862aeded",
+      "repo_url": "https://github.com/PrefectHQ/fastmcp",
+      "sample_id": "entry-00391",
+      "source": "vulngym",
+      "vuln_ids": [
+        "CVE-2026-32871",
+        "GHSA-VV7Q-7JX5-F767"
+      ],
+      "workdir": ""
+    },
+    {
+      "cwe_map": null,
+      "filter_evidence": [
+        "file_suffix:src/fastmcp/server/providers/openapi/components.py",
+        "file_suffix:src/fastmcp/server/providers/openapi/components.py",
+        "file_suffix:src/fastmcp/server/providers/openapi/components.py",
+        "file_suffix:src/fastmcp/server/providers/openapi/components.py",
+        "file_suffix:src/fastmcp/server/providers/openapi/components.py"
+      ],
+      "hash": "ba21d2db05feedcdb3f8150dc9dd089cb821f1a5fac542b305fc88f3563765c2",
+      "label": "vulnerable",
+      "pair_id": "GHSA-VV7Q-7JX5-F767",
+      "project_time_group": "fastmcp:c861862aeded",
+      "repo_url": "https://github.com/PrefectHQ/fastmcp",
+      "sample_id": "entry-00392",
+      "source": "vulngym",
+      "vuln_ids": [
+        "CVE-2026-32871",
+        "GHSA-VV7Q-7JX5-F767"
+      ],
+      "workdir": ""
+    },
+    {
+      "cwe_map": null,
+      "filter_evidence": [
+        "file_suffix:src/fastmcp/utilities/openapi/director.py",
+        "file_suffix:src/fastmcp/server/providers/openapi/components.py",
+        "file_suffix:src/fastmcp/utilities/openapi/director.py",
+        "file_suffix:src/fastmcp/utilities/openapi/director.py",
+        "file_suffix:src/fastmcp/utilities/openapi/director.py",
+        "file_suffix:src/fastmcp/server/providers/openapi/components.py"
+      ],
+      "hash": "dabc4eb0c1554318ed1b251157e2c4fa153b224054f7f01f1a188fabdc744e71",
+      "label": "vulnerable",
+      "pair_id": "GHSA-VV7Q-7JX5-F767",
+      "project_time_group": "fastmcp:c861862aeded",
+      "repo_url": "https://github.com/PrefectHQ/fastmcp",
+      "sample_id": "entry-00394",
+      "source": "vulngym",
+      "vuln_ids": [
+        "CVE-2026-32871",
+        "GHSA-VV7Q-7JX5-F767"
+      ],
+      "workdir": ""
+    },
+    {
+      "cwe_map": null,
+      "filter_evidence": [
+        "file_suffix:src/fastmcp/server/providers/openapi/components.py",
+        "file_suffix:src/fastmcp/server/providers/openapi/components.py",
+        "file_suffix:src/fastmcp/server/providers/openapi/components.py",
+        "file_suffix:src/fastmcp/server/providers/openapi/components.py",
+        "file_suffix:src/fastmcp/server/providers/openapi/components.py",
+        "file_suffix:src/fastmcp/server/providers/openapi/components.py"
+      ],
+      "hash": "634bb1753f4a80136a89de7df11edd6515cbfa5811d71ed94b3baf2fb78f1737",
+      "label": "vulnerable",
+      "pair_id": "GHSA-VV7Q-7JX5-F767",
+      "project_time_group": "fastmcp:c861862aeded",
+      "repo_url": "https://github.com/PrefectHQ/fastmcp",
+      "sample_id": "entry-00395",
+      "source": "vulngym",
+      "vuln_ids": [
+        "CVE-2026-32871",
+        "GHSA-VV7Q-7JX5-F767"
+      ],
+      "workdir": ""
+    },
+    {
+      "cwe_map": null,
+      "filter_evidence": [
+        "file_suffix:backend/open_webui/routers/tools.py",
+        "file_suffix:backend/open_webui/routers/tools.py",
+        "file_suffix:backend/open_webui/routers/tools.py",
+        "file_suffix:backend/open_webui/utils/auth.py",
+        "file_suffix:backend/open_webui/routers/tools.py",
+        "file_suffix:backend/open_webui/routers/tools.py"
+      ],
+      "hash": "08bf9f7995a17e0b20cfc1be1c3b1961e063aae2b9104a3052e7170fdf59e2ed",
+      "label": "vulnerable",
+      "pair_id": "GHSA-7429-HXCV-268M",
+      "project_time_group": "open-webui:e4e69a10ec08",
+      "repo_url": "https://github.com/open-webui/open-webui",
+      "sample_id": "entry-00401",
+      "source": "vulngym",
+      "vuln_ids": [
+        "CVE-2026-34222",
+        "GHSA-7429-HXCV-268M"
+      ],
+      "workdir": ""
+    },
+    {
+      "cwe_map": null,
+      "filter_evidence": [
+        "file_suffix:mlflow/server/job_api.py",
+        "file_suffix:mlflow/server/auth/__init__.py",
+        "file_suffix:mlflow/server/fastapi_app.py",
+        "file_suffix:mlflow/server/auth/__init__.py",
+        "file_suffix:mlflow/server/auth/__init__.py",
+        "file_suffix:mlflow/server/job_api.py",
+        "file_suffix:mlflow/server/jobs/utils.py",
+        "file_suffix:mlflow/server/jobs/__init__.py"
+      ],
+      "hash": "7d6422d604bd0dbed442f579013142c79752e6faa6e0e8a2dc4634884f82df0e",
+      "label": "vulnerable",
+      "pair_id": "GHSA-7QHF-V65M-G5F3",
+      "project_time_group": "mlflow:083eac9cd0be",
+      "repo_url": "https://github.com/mlflow/mlflow",
+      "sample_id": "entry-00413",
+      "source": "vulngym",
+      "vuln_ids": [
+        "CVE-2026-0545",
+        "GHSA-7QHF-V65M-G5F3"
+      ],
+      "workdir": ""
+    },
+    {
+      "cwe_map": null,
+      "filter_evidence": [
+        "file_suffix:mlflow/server/job_api.py",
+        "file_suffix:mlflow/server/auth/__init__.py",
+        "file_suffix:mlflow/server/job_api.py",
+        "file_suffix:mlflow/server/auth/__init__.py",
+        "file_suffix:mlflow/server/auth/__init__.py"
+      ],
+      "hash": "45a1e6d31584e1d947d13260778f10a8b1425310a5c75b94e32b2364fba167ad",
+      "label": "vulnerable",
+      "pair_id": "GHSA-7QHF-V65M-G5F3",
+      "project_time_group": "mlflow:083eac9cd0be",
+      "repo_url": "https://github.com/mlflow/mlflow",
+      "sample_id": "entry-00414",
+      "source": "vulngym",
+      "vuln_ids": [
+        "CVE-2026-0545",
+        "GHSA-7QHF-V65M-G5F3"
+      ],
+      "workdir": ""
+    },
+    {
+      "cwe_map": null,
+      "filter_evidence": [
+        "file_suffix:mlflow/server/job_api.py",
+        "file_suffix:mlflow/server/auth/__init__.py",
+        "file_suffix:mlflow/server/auth/__init__.py",
+        "file_suffix:mlflow/server/job_api.py",
+        "file_suffix:mlflow/server/jobs/__init__.py"
+      ],
+      "hash": "a2b67fe995231f00d2aa0474c6eb1c64a5ce180be4e86e1f80abc3a51bc62be6",
+      "label": "vulnerable",
+      "pair_id": "GHSA-7QHF-V65M-G5F3",
+      "project_time_group": "mlflow:083eac9cd0be",
+      "repo_url": "https://github.com/mlflow/mlflow",
+      "sample_id": "entry-00415",
+      "source": "vulngym",
+      "vuln_ids": [
+        "CVE-2026-0545",
+        "GHSA-7QHF-V65M-G5F3"
+      ],
+      "workdir": ""
+    },
+    {
+      "cwe_map": null,
+      "filter_evidence": [
+        "file_suffix:mlflow/server/job_api.py",
+        "file_suffix:mlflow/server/auth/__init__.py",
+        "file_suffix:mlflow/server/auth/__init__.py",
+        "file_suffix:mlflow/server/job_api.py",
+        "file_suffix:mlflow/server/job_api.py"
+      ],
+      "hash": "be19f95b5a09ca0d3a46d0c5b268b186429e750be8dcc6cbfc0117e9e4e4f5b2",
+      "label": "vulnerable",
+      "pair_id": "GHSA-7QHF-V65M-G5F3",
+      "project_time_group": "mlflow:083eac9cd0be",
+      "repo_url": "https://github.com/mlflow/mlflow",
+      "sample_id": "entry-00416",
+      "source": "vulngym",
+      "vuln_ids": [
+        "CVE-2026-0545",
+        "GHSA-7QHF-V65M-G5F3"
+      ],
+      "workdir": ""
+    },
+    {
+      "cwe_map": null,
+      "filter_evidence": [
+        "file_suffix:litellm/proxy/auth/user_api_key_auth.py",
+        "file_suffix:litellm/proxy/auth/handle_jwt.py",
+        "file_suffix:litellm/proxy/auth/user_api_key_auth.py",
+        "file_suffix:litellm/proxy/auth/user_api_key_auth.py",
+        "file_suffix:litellm/proxy/auth/handle_jwt.py",
+        "file_suffix:litellm/proxy/auth/handle_jwt.py"
+      ],
+      "hash": "6efe4e491f58759efd265db8a6eb435e64d6a007fabcccabdeef4e2cfbf6401d",
+      "label": "vulnerable",
+      "pair_id": "GHSA-JJHC-V7C2-5HH6",
+      "project_time_group": "litellm:24f847b84c94",
+      "repo_url": "https://github.com/BerriAI/litellm",
+      "sample_id": "entry-00419",
+      "source": "vulngym",
+      "vuln_ids": [
+        "CVE-2026-35030",
+        "GHSA-JJHC-V7C2-5HH6"
+      ],
+      "workdir": ""
+    },
+    {
+      "cwe_map": null,
+      "filter_evidence": [
+        "file_suffix:src/google/adk/cli/adk_web_server.py",
+        "file_suffix:src/google/adk/cli/utils/agent_loader.py",
+        "file_suffix:src/google/adk/cli/adk_web_server.py",
+        "file_suffix:src/google/adk/cli/adk_web_server.py",
+        "file_suffix:src/google/adk/cli/utils/agent_loader.py",
+        "file_suffix:src/google/adk/cli/utils/agent_loader.py",
+        "file_suffix:src/google/adk/cli/utils/agent_loader.py",
+        "file_suffix:src/google/adk/cli/utils/agent_loader.py"
+      ],
+      "hash": "9621ce61291714cc8becca787120da6548dd5989187ae582bbc9928ddde1b8c4",
+      "label": "vulnerable",
+      "pair_id": "GHSA-RG7C-G689-FR3X",
+      "project_time_group": "google/adk-python:d1121317ef4e",
+      "repo_url": "https://github.com/google/adk-python",
+      "sample_id": "entry-00430",
+      "source": "vulngym",
+      "vuln_ids": [
+        "CVE-2026-4810",
+        "GHSA-RG7C-G689-FR3X"
+      ],
+      "workdir": ""
+    },
+    {
+      "cwe_map": null,
+      "filter_evidence": [
+        "file_suffix:src/google/adk/cli/adk_web_server.py",
+        "file_suffix:src/google/adk/cli/utils/agent_loader.py",
+        "file_suffix:src/google/adk/cli/adk_web_server.py",
+        "file_suffix:src/google/adk/cli/adk_web_server.py",
+        "file_suffix:src/google/adk/cli/utils/agent_loader.py"
+      ],
+      "hash": "6da5244e0a76c642d52710415f023f0245368f0d56b401967dfd218e8abc0110",
+      "label": "vulnerable",
+      "pair_id": "GHSA-RG7C-G689-FR3X",
+      "project_time_group": "google/adk-python:d1121317ef4e",
+      "repo_url": "https://github.com/google/adk-python",
+      "sample_id": "entry-00431",
+      "source": "vulngym",
+      "vuln_ids": [
+        "CVE-2026-4810",
+        "GHSA-RG7C-G689-FR3X"
+      ],
+      "workdir": ""
+    },
+    {
+      "cwe_map": null,
+      "filter_evidence": [
+        "file_suffix:src/google/adk/cli/adk_web_server.py",
+        "file_suffix:src/google/adk/cli/utils/agent_loader.py",
+        "file_suffix:src/google/adk/cli/adk_web_server.py",
+        "file_suffix:src/google/adk/cli/adk_web_server.py",
+        "file_suffix:src/google/adk/cli/utils/agent_loader.py"
+      ],
+      "hash": "4b435eb0ed979f9937c67b5dd3f4b003e12b010492988f10ac6d3c28be78c1cd",
+      "label": "vulnerable",
+      "pair_id": "GHSA-RG7C-G689-FR3X",
+      "project_time_group": "google/adk-python:d1121317ef4e",
+      "repo_url": "https://github.com/google/adk-python",
+      "sample_id": "entry-00432",
+      "source": "vulngym",
+      "vuln_ids": [
+        "CVE-2026-4810",
+        "GHSA-RG7C-G689-FR3X"
+      ],
+      "workdir": ""
+    },
+    {
+      "cwe_map": null,
+      "filter_evidence": [
+        "file_suffix:src/google/adk/cli/adk_web_server.py",
+        "file_suffix:src/google/adk/cli/utils/agent_loader.py",
+        "file_suffix:src/google/adk/cli/adk_web_server.py",
+        "file_suffix:src/google/adk/cli/adk_web_server.py",
+        "file_suffix:src/google/adk/cli/utils/agent_loader.py"
+      ],
+      "hash": "1c7ade48602bf94b87f957e6b35696aeb0ae21f2f9fa9e26cb1f77c4b934377e",
+      "label": "vulnerable",
+      "pair_id": "GHSA-RG7C-G689-FR3X",
+      "project_time_group": "google/adk-python:d1121317ef4e",
+      "repo_url": "https://github.com/google/adk-python",
+      "sample_id": "entry-00433",
+      "source": "vulngym",
+      "vuln_ids": [
+        "CVE-2026-4810",
+        "GHSA-RG7C-G689-FR3X"
+      ],
+      "workdir": ""
+    },
+    {
+      "cwe_map": null,
+      "filter_evidence": [
+        "file_suffix:src/google/adk/cli/fast_api.py",
+        "file_suffix:src/google/adk/agents/config_agent_utils.py",
+        "file_suffix:src/google/adk/cli/fast_api.py",
+        "file_suffix:src/google/adk/cli/utils/agent_loader.py",
+        "file_suffix:src/google/adk/agents/config_agent_utils.py",
+        "file_suffix:src/google/adk/agents/config_agent_utils.py",
+        "file_suffix:src/google/adk/agents/config_agent_utils.py",
+        "file_suffix:src/google/adk/agents/config_agent_utils.py"
+      ],
+      "hash": "99117ca3c66864db3db6bfe6adb08dd53222fe5ace8f8c6d34e5b693c3cf3e15",
+      "label": "vulnerable",
+      "pair_id": "GHSA-RG7C-G689-FR3X",
+      "project_time_group": "google/adk-python:d1121317ef4e",
+      "repo_url": "https://github.com/google/adk-python",
+      "sample_id": "entry-00434",
+      "source": "vulngym",
+      "vuln_ids": [
+        "CVE-2026-4810",
+        "GHSA-RG7C-G689-FR3X"
+      ],
+      "workdir": ""
+    },
+    {
+      "cwe_map": null,
+      "filter_evidence": [
+        "file_suffix:src/google/adk/cli/fast_api.py",
+        "file_suffix:src/google/adk/cli/fast_api.py",
+        "file_suffix:src/google/adk/cli/fast_api.py",
+        "file_suffix:src/google/adk/cli/fast_api.py",
+        "file_suffix:src/google/adk/cli/fast_api.py",
+        "file_suffix:src/google/adk/cli/fast_api.py"
+      ],
+      "hash": "ef59691fc91b353a54ae4b7b2e6892ed3504fe03bf5b22df6c0fe357704f5749",
+      "label": "vulnerable",
+      "pair_id": "GHSA-RG7C-G689-FR3X",
+      "project_time_group": "google/adk-python:d1121317ef4e",
+      "repo_url": "https://github.com/google/adk-python",
+      "sample_id": "entry-00435",
+      "source": "vulngym",
+      "vuln_ids": [
+        "CVE-2026-4810",
+        "GHSA-RG7C-G689-FR3X"
+      ],
+      "workdir": ""
+    },
+    {
+      "cwe_map": null,
+      "filter_evidence": [
+        "file_suffix:onnx/external_data_helper.py",
+        "file_suffix:onnx/external_data_helper.py",
+        "file_suffix:onnx/external_data_helper.py",
+        "file_suffix:onnx/external_data_helper.py",
+        "file_suffix:onnx/external_data_helper.py"
+      ],
+      "hash": "bc75777214136e20626c27a5a4bebf3d4fd75699cffc4f4f4e64ac9485d09e3a",
+      "label": "vulnerable",
+      "pair_id": "GHSA-Q56X-G2FJ-4RJ6",
+      "project_time_group": "onnx:bca0315ff3e5",
+      "repo_url": "https://github.com/onnx/onnx",
+      "sample_id": "entry-00462",
+      "source": "vulngym",
+      "vuln_ids": [
+        "GHSA-Q56X-G2FJ-4RJ6"
+      ],
+      "workdir": ""
+    },
+    {
+      "cwe_map": null,
+      "filter_evidence": [
+        "file_suffix:onnx/external_data_helper.py",
+        "file_suffix:onnx/external_data_helper.py",
+        "file_suffix:onnx/external_data_helper.py",
+        "file_suffix:onnx/external_data_helper.py",
+        "file_suffix:onnx/external_data_helper.py"
+      ],
+      "hash": "86d36cff0ea1787e27c6bd7574096a4b2d9d802dce810f4f98ddee119aead3a9",
+      "label": "vulnerable",
+      "pair_id": "GHSA-Q56X-G2FJ-4RJ6",
+      "project_time_group": "onnx:bca0315ff3e5",
+      "repo_url": "https://github.com/onnx/onnx",
+      "sample_id": "entry-00463",
+      "source": "vulngym",
+      "vuln_ids": [
+        "GHSA-Q56X-G2FJ-4RJ6"
+      ],
+      "workdir": ""
+    },
+    {
+      "cwe_map": null,
+      "filter_evidence": [
+        "file_suffix:airflow-core/src/airflow/example_dags/example_xcom.py",
+        "file_suffix:airflow-core/src/airflow/example_dags/example_xcom.py",
+        "file_suffix:airflow-core/src/airflow/example_dags/example_xcom.py",
+        "file_suffix:airflow-core/src/airflow/example_dags/example_xcom.py",
+        "file_suffix:airflow-core/src/airflow/example_dags/example_xcom.py"
+      ],
+      "hash": "9e4574645fae0d126961bcf8d4cf7ac3a4778b008c277ee1a0876dd6e1ca6fe7",
+      "label": "vulnerable",
+      "pair_id": "GHSA-Q2HG-643C-GW8H",
+      "project_time_group": "Apache Airflow:df4cb30b116c",
+      "repo_url": "https://github.com/apache/airflow",
+      "sample_id": "entry-00464",
+      "source": "vulngym",
+      "vuln_ids": [],
+      "workdir": ""
+    }
+  ],
+  "excluded_non_python": 333,
+  "filter_rules": [
+    "R1 file_suffix_python: an entry is Python-ecosystem when any code file (entry_point.file, critical_operation.file, trace[].file) ends with a Python suffix (.py, .pyi; case-insensitive)",
+    "R2 project_hint_python: fallback lowercase substring match of the project field and repo_url against the fixed hint list (adk-python, airflow, autogpt, fastmcp, langchain-core, langflow, litellm, mlflow, nltk, onnx)",
+    "R3 evidence_recording: every retained entry records the matched rule(s) in filter_evidence; non-matching entries are counted in excluded_non_python",
+    "R4 identity: sample_id = entry_id; duplicate entry_ids keep the first occurrence in input order and are counted in duplicate_entry_ids",
+    "R5 label: VulnGym rows are verified vulnerable findings; the label is 'vulnerable' and is never inferred from vulnerability titles",
+    "R6 cwe_policy: no CWE guessing; cwe_map stays null when the source row carries no CWE and unmapped rows are counted in unmapped_cwe_count",
+    "R7 pairing: pair_id = report_id (one advisory, many trace paths)",
+    "R8 determinism: retained entries are sorted by sample_id so the manifest is independent of input row order"
+  ],
+  "invalid_entries": 0,
+  "source_release": "VulnGym v0.1.4 (submodule cd69f7e, data/entries.jsonl)",
+  "unmapped_cwe_count": 75
+}

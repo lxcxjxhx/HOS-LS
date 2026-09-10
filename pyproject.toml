@@ -264,7 +264,7 @@ module = [
     "src.cli.commands.nvd_commands",
     "src.cli.commands.scan_cmd",
 ]
-disable_error_code = ["attr-defined", "misc"]
+disable_error_code = ["attr-defined", "misc", "has-type"]
 
 [[tool.mypy.overrides]] # reason: 主入口的动态命令装配与子解释器属性
 module = ["src.cli.main"]

@@ -118,6 +118,10 @@ def cli(ctx: click.Context, config: Optional[str], verbose: bool, quiet: bool, d
 from src.cli.commands.scan_cmd import scan as _scan_command  # noqa: E402
 cli.add_command(_scan_command)
 
+# `ecatsl` 命令组同样必须在子命令解析前注册（同 scan 的加载顺序约定）。
+from src.cli.commands.ecatsl_cmd import ecatsl as _ecatsl_command  # noqa: E402
+cli.add_command(_ecatsl_command)
+
 
 # ---------------------------------------------------------------------------
 # 内联命令 (config, panel, serial, chat, index, rules, init)

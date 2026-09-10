@@ -45,31 +45,37 @@
     - `src/ecatsl/`、`tests/` 目录 flake8 0 容忍 blocking；其余目录 informational + 计数输出的配置写入 ci.yml 并注明原因。
     - _Requirements: 1.5, 2.4_
 
-- [ ] 3. 主题 C-1：ECATSL CLI 接入
-  - [ ] 3.1 实现 `src/cli/commands/ecatsl_cmd.py` 命令组
+- [x] 3. 主题 C-1：ECATSL CLI 接入
+  - [x] 3.1 实现 `src/cli/commands/ecatsl_cmd.py` 命令组
+    _Execution (2026-09-08): `src/cli/commands/ecatsl_cmd.py` (1224 行) 实现 `ecatsl analyze|dataset|evaluate|report` 四子命令: (a) 每个 option 值经 `ECATSLConfig` 校验 (`extra="forbid"` 语义保留), 非法值在写入任何仓库状态前 exit 2 (Req 3.2); (b) exit code 语义 0 (完成, 任意 finding 数)/1 (artifact 持久化失败)/2 (用法或配置错误); (c) 确认边界文本写入命令帮助 — 不暴露任何将 catalog/RAG/LLM/discovery 输出升级为 confirmation 的选项, Path_Evidence 门禁不变 (Req 3.4); (d) `analyze` 接线 `ECATSLService` 既有全链路并持久化 append-only SQLite 工件, `--json` 结构化摘要与人类可读表格两种输出, 单文件 discovery/adapter 失败由 service 隔离为 AuditFailureRecord, CLI 计数并验证其持久化、保持运行 (Req 3.5); (e) `dataset` 经 `build_release` 从 JSONL 样本源构建不可变 release (零网络); `evaluate` 从 release manifest + 显式 per-sample classifications 构建 verified EvaluationReport; `report` 产 Cost_Report 与配对基线比较; (f) 时钟注入参数 (生产默认真实 UTC), 批量运行幂等重放 (Req 3.1)。lint 收敛: 修复 2 处 flake8 空白行 finding (E303/E302) 后该文件 0 项。
     - `ecatsl analyze|dataset|evaluate|report` 四个子命令；`--config` 经 `ECATSLConfig` 校验，非法值 exit 2；确认边界文本写入帮助；不暴露任何绕过 `Path_Evidence` 门禁的选项。
     - exit code 语义 0/1/2；`analyze` 支持 `--json` 结构化摘要与人类可读表格；单文件失败隔离为终端记录。
     - 时钟经参数注入（生产默认真实时钟），保证批量运行幂等重放。
     - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5_
-  - [ ] 3.2 在 `src/cli/main.py` 注册命令组并补 CLI 单元测试
+  - [x] 3.2 在 `src/cli/main.py` 注册命令组并补 CLI 单元测试
+    _Execution (2026-09-08): (a) `src/cli/main.py` 按既有 `scan` 同款装配方式注册 — `from src.cli.commands.ecatsl_cmd import ecatsl ... # noqa: E402; cli.add_command(...)` 紧随 scan 之后, 保持子命令解析前注册的加载顺序约定; (b) `tests/unit/ecatsl/test_ecatsl_cli.py` (343 行) 覆盖: 命令组注册断言、四子命令 help 文本 (含 exit code 与确认边界语义)、配置门禁拒绝矩阵 (parametrize 非法值 → exit 2 零写入 → 错误消息含违规字段)、非法时钟 (非 ISO8601) 在任何工作前拒绝、`dataset`/`evaluate`/`report`/`analyze` 的 `--json` 结构与人类可读表格模式、配对基线无证据不 claim、零 finding 结构化摘要、失败隔离; (c) 验证: flake8 (`ecatsl_cmd.py + main.py + 两个测试文件`, max-line-length=100) 0 项; `mypy src/cli/commands/ecatsl_cmd.py` Success: no issues in 1 source file; CLI 测试子集 junitxml tests=21 / failures=0 / errors=0 / skipped=0。注: `mypy src/ecatsl` blocking 口径保持 exit 0; 对 `scan_cmd.py` 跟随导入推断失败 (`has-type`, 历史装配顺序遗留) 在 pyproject 既有 override 补 `has-type` 并注记原因 — `src/cli` 属 informational 口径不阻塞。
     - 注册保持 `scan` 现有加载顺序约定；新增 `tests/unit/ecatsl/test_ecatsl_cli.py` 覆盖：配置门禁拒绝矩阵、exit code、`--json` 摘要结构、失败隔离。
     - 新代码 flake8/mypy 干净（纳入 blocking 目录）。
     - _Requirements: 3.1, 3.2, 3.5, 3.6_
-  - [ ] 3.3 写 Property P2（CLI 配置门禁封闭性）
+  - [x] 3.3 写 Property P2（CLI 配置门禁封闭性）
+    _Execution (2026-09-08): `tests/unit/ecatsl/properties/test_property_p2_cli_gate.py` (163 行) 标注 `Feature: ecatsl-operationalization-and-bench-integration, Property P2`, `test_property_p2_cli_config_gate_closure` max_examples=200 (>=100 达标) — 对随机非法配置 payload 断言: exit 2、零仓库写入 (临时目录无残留)、错误消息命名违规字段。随 CLI 子集回归运行 (junitxml tests=21 / failures=0 / errors=0 / skipped=0, 含本 property 200 例)。
     - `tests/unit/ecatsl/properties/test_property_p2_cli_gate.py`：>=100 例非法配置，断言 exit 2、零仓库写入、错误消息含违规字段。
     - 标签 `Feature: ecatsl-operationalization-and-bench-integration, Property P2`。
     - _Requirements: 3.2, 3.4_
 
-- [ ] 4. 主题 C-2：实战评估数据集
-  - [ ] 4.1 实现 `src/ecatsl/eval_dataset.py` 构建器
+- [x] 4. 主题 C-2：实战评估数据集
+  - [x] 4.1 实现 `src/ecatsl/eval_dataset.py` 构建器
+    _Execution (2026-09-08): (a) `build_manifest()` 八条筛选规则 (R1-R8) 全部写入 `FILTER_RULES` 并持久化进每个 manifest (Req 4.1 审计) — R1 文件后缀判定 (.py/.pyi 大小写不敏感, 覆盖 entry_point.file/critical_operation.file/trace[].file) 优先、R2 固定 hint 列表 (adk-python/airflow/autogpt/langchain-core/langflow/litellm/mlflow/nltk/onnx/fastmcp) 小写子串回退 (fileSuffix 证据优先)、R3 每条入选样本的 filter_evidence 与排除计数入 manifest、R4 duplicate entry_id 保留首次出现并计数、R5 label 固定 'vulnerable' (VulnGym 行均为 verified findings, 不从标题推断)、R6 零 CWE 猜测 (cwe_map 保持 null 且 unmapped_cwe_count 如实计数)、R7 pair_id=report_id、R8 输出按 sample_id 排序与输入行序无关; (b) 每次 manifest 落盘为 content-addressed 行结构: sample 行 hash = sha256(canonical json payload, sort_keys/separators 排除 hash 自身), 单一 `_entry_payload` hashing authority 供 build_manifest 与 emit_release 共享使哈希闭环无自引用 (Req 4.3); (c) `emit_release()` 复用 `dataset_release.build_release()` 全语义 (逐行 canonical payload 对 recorded hash 复验/FAILED 精确排除/防泄漏 project-time-group 划分), Provenance.source_identifier 用 manifest 自身 sha256 做路径无关身份保持跨路径重放一致; (d) 时钟注入 (clock 参数, 生产默认真实 UTC), 固定时钟重放逐字节一致; (e) 行内对 Req 4.4 的 MINIMUM_PAIRED_SAMPLES=60 判定与 `insufficient_samples` 如实记录 (never inflate)。数据面硬约束: entries.jsonl 无 cwe 字段 → 全部走 unmapped 如实计数路线 (实测 75/75 unmapped)。
     - `build_manifest()` 确定性筛选规则（`repo_url`/`trace`/`project` 判定 Python 生态）并将规则写入 manifest；保留 CVE/GHSA 原值；CWE 未映射如实计数。
     - `emit_release()` 复用 `build_release()` 全语义（哈希校验/规范化/防泄漏划分）；注入时钟保证逐字节幂等重放。
     - _Requirements: 4.1, 4.2, 4.3, 4.5_
-  - [ ] 4.2 产出 `bench/datasets/ecatsl_eval/` manifest 并确认样本量
+  - [x] 4.2 产出 `bench/datasets/ecatsl_eval/` manifest 并确认样本量
+    _Execution (2026-09-08): (a) 只读扫描 `bench/datasets/VulnGym/data/entries.jsonl` (408 行, VulnGym v0.1.4 / submodule cd69f7e163e08485ab5496115ae03439cda6e27e), 用 eval_dataset 自身 `_python_ecosystem_evidence` 规则预统计: 75 条 Python 生态入选 (R1 文件后缀证据为主) / 333 条排除 / 0 重复 / 30 个 distinct report_id (pair); (b) 生成 `bench/datasets/ecatsl_eval/manifest.json`: 75 entries >= 60 (Options 4.4 满足, 无需 SecureVibeBench/A.S.E 补充), unmapped_cwe_count=75 如实计数 (源数据无 cwe 字段, 与 Notes 一致), built_at 固定为注入时钟 2026-09-08T00:00:00+00:00, source_release 记录 VulnGym v0.1.4 + 子模块 SHA, 落盘用 write_bytes 强制 LF (Windows 下 write_text 换行转 CRLF 曾导致与重放字节不一致, 已修); (c) 验证: 固定注入时钟下 build_manifest 二次重放与落盘文件逐字节一致 (byte-identical replay: True), EvalManifest.from_path round-trip 一致; `emit_release()` 复用 build_release 全语义输出 retained_count=75 >= 60 且 insufficient_samples 不出现, unmapped_cwe_count=75 注入 quality report; 10 样本阴性对照 (系统临时目录) 正确输出 insufficient_samples=true / sample_minimum=60 — 不足 60 如实记录不凑数的语义双向验证; (d) 子模块只读验证: `git status --porcelain` 无 VulnGym 条目, `git submodule status` 仍为 cd69f7e (v0.1.4), `git diff --quiet --submodule=log` 通过, 全程未写入子模块目录; (e) lint: `flake8 src/ecatsl/eval_dataset.py ... --max-line-length=100` 0 项; `mypy src/ecatsl` exit 0; 主题级回归 `pytest tests/unit/ecatsl tests/integration/ecatsl` junitxml 权威计数 tests=326 / failures=0 / errors=0 / skipped=0 (含 P1 property 100 例级 hypothesis 三组测试)。
     - 从 VulnGym 筛选 Python 子集；不足 60 配对样本时以 SecureVibeBench/A.S.E 补充并记 `source`；仍不足时 `insufficient_samples` 如实记录（不凑数）。
     - 子模块 `bench/datasets/VulnGym` 保持只读；`git status` 验证子模块未改动。
     - _Requirements: 4.1, 4.2, 4.4, 4.5_
-  - [ ] 4.3 写 Property P1（数据集构建确定性）
+  - [x] 4.3 写 Property P1（数据集构建确定性）
+    _Execution (2026-09-08): `tests/unit/ecatsl/properties/test_property_p1_dataset_determinism.py` (183 行) 含 4 个 hypothesis property 测试, 均标注 `Feature: ecatsl-operationalization-and-bench-integration, Property P1`: (1) `test_p1_row_order_and_duplicates_are_order_independent` max_examples=100 — 行序扰动/重复注入后断言两次 build_manifest 的 entries 行序与内容一致 (R8); (2) `test_p1_corrupt_hash_rows_are_excluded_precisely` max_examples=100 — 坏哈希行注入断言 emit_release 排除原因精确为 integrity_failed:<id> 且其余行保留; (3) `test_p1_insufficient_samples_recorded_truthfully` max_examples=100, n∈[1,59] — 不足 60 时每次断言 insufficient_samples=true 且附带真实 retained_count 与 sample_minimum=60, 不凑数; (4) `test_p1_sufficient_dataset_has_no_insufficient_flag` — 达标数据集断言无 insufficient_samples 标记。随主题级回归运行: tests=326 / failures=0 / errors=0 / skipped=0 (junitxml), flake8 0 项。
     - `tests/unit/ecatsl/properties/test_property_p1_dataset_determinism.py`：>=100 例行序/重复/坏哈希扰动，断言输出行序无关、排除原因精确、`insufficient_samples` 语义正确。
     - 标签 `Feature: ecatsl-operationalization-and-bench-integration, Property P1`。
     - _Requirements: 4.1, 4.2, 4.3, 4.4_
