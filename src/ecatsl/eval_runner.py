@@ -37,6 +37,11 @@ from src.ecatsl.service import AnalysisRequest, AnalysisResult
 #: Version string stamped on every artifact produced by this runner.
 RUNNER_VERSION = "1"
 
+#: Replay stability note: a fixed injected clock plus a fixed
+#: ``latency_seconds`` make all emitted report artifacts byte-identical
+#: across replays (Req 5.5); the real measured latency is returned in
+#: ``RunArtifacts.extra`` and never baked into the artifacts themselves.
+
 #: Transformation history entry recorded in the run provenance.
 TRANSFORMATION_HISTORY = ("eval_runner/v1: service-analyze + report-backfill",)
 
@@ -64,12 +69,15 @@ def _run_provenance(manifest: EvalManifest, now: datetime) -> Provenance:
     ``source_identifier`` is the recorded upstream release string (includes
     the VulnGym version and submodule SHA), so replays from a different
     checkout path stay consistent (Req 4.3 semantics carried into 5.5).
+    A blank ``source_release`` (e.g. a synthetic drill manifest) falls back
+    to the derived content identity so provenance stays fully qualified.
     """
+    identity = manifest.source_release or f"sha256:{manifest.built_at.isoformat()}"
     return Provenance(
         origin="ecatsl_eval_runner",
         retrieved_at=now,
-        source_identifier=manifest.source_release,
-        source_revision=manifest.source_release,
+        source_identifier=identity,
+        source_revision=manifest.source_release or None,
         content_identity=f"sha256:{manifest.built_at.isoformat()}",
         transformation_history=TRANSFORMATION_HISTORY,
     )
@@ -256,6 +264,34 @@ def _counts_for(outcomes: Tuple[SampleOutcome, ...]) -> Dict[str, int]:
     return counts
 
 
+def evidence_limitations_for(
+    outcomes: Tuple[SampleOutcome, ...],
+) -> Tuple[str, ...]:
+    """Run-fact-derived ``evidence_limitations`` (Req 5.3, 8.4-8.6).
+
+    Stated from what actually happened -- never invented, never empty when
+    a real evidence gap exists. Isolated samples are disclosed as not
+    analyzed; a run with zero analyzed samples discloses that no completed
+    experiment exists, so every metric is a zero-inclusive count and not
+    a comparison result.
+    """
+    limitations: list = []
+    isolated = [o.sample_id for o in outcomes if o.audit_failures and not o.findings_total]
+    analyzed = len(outcomes) - len(isolated)
+    if isolated:
+        limitations.append(
+            f"no analysis performed for {len(isolated)} sample(s) with a blank "
+            "workdir (no local repository): isolated per Req 3.5, "
+            "classification UNCONFIRMED, one tooling failure each"
+        )
+    if analyzed == 0:
+        limitations.append(
+            "zero samples analyzed -> zero completed experiments; all "
+            "metrics are zero-inclusive counts, not comparison results"
+        )
+    return tuple(limitations)
+
+
 def _write_json(path: Path, artifact: Any) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(artifact.model_dump_json(indent=2), encoding="utf-8", newline="\n")
@@ -287,6 +323,19 @@ def run_evaluation(
     classification backfill still covers every manifest sample, with
     un-analyzed samples counted as not-predicted (UNCONFIRMED) by
     ``build_evaluation_report``.
+
+    A manifest sample with a blank ``workdir`` has no repository to
+    analyze; it follows the shipped failure-isolation semantics (Req 3.5
+    carried into 5.1): the analyze chain is skipped, the sample counts as
+    one per-sample tooling failure (``tooling_failures:<sample_id>``) and
+    its classification is UNCONFIRMED -- no Path_Evidence can exist, so
+    CONFIRMED is never reachable. Isolated sample ids are recorded in
+    ``RunArtifacts.extra["isolated_samples"]`` for audit.
+
+    ``evidence_limitations`` are derived from run facts via
+    ``evidence_limitations_for`` (Req 5.3): isolated samples and the
+    zero-analyzed edge are disclosed in the report itself, keeping the
+    missing-evidence marking complete on real data (Req 8.4-8.6).
     """
     run_clock: Clock = clock or _real_clock
     now = _require_aware(run_clock)
@@ -300,8 +349,25 @@ def run_evaluation(
     provenance = _run_provenance(eval_manifest, now)
 
     outcomes: list[SampleOutcome] = []
+    isolated: list[str] = []
     started = time.perf_counter()
     for entry in eval_manifest.entries[:limit] if limit else eval_manifest.entries:
+        if not entry.workdir.strip():
+            # Failure isolation (Req 3.5 semantics): nothing to analyze, so
+            # the analyze chain is skipped entirely. UNCONFIRMED is the only
+            # honest status (no Path_Evidence); the skip is audited as one
+            # per-sample tooling failure, never silently dropped.
+            isolated.append(entry.sample_id)
+            outcomes.append(
+                SampleOutcome(
+                    sample_id=entry.sample_id,
+                    status=FindingStatus.UNCONFIRMED,
+                    audit_failures=1,
+                    findings_total=0,
+                    confirmed_findings=0,
+                )
+            )
+            continue
         service, repository = factory(entry.workdir)
         try:
             result = service.analyze(
@@ -347,6 +413,7 @@ def run_evaluation(
         provenance=provenance,
         telemetry=telemetry,
         counts=_counts_for(tuple(outcomes)),
+        evidence_limitations=evidence_limitations_for(tuple(outcomes)),
     )
     cost_report = build_cost_report(
         evaluation_report,
@@ -366,5 +433,8 @@ def run_evaluation(
         manifest=benchmark_manifest,
         outcomes=tuple(outcomes),
         output_dir=str(resolved_dir),
-        extra={"measured_latency_seconds": measured_latency},
+        extra={
+            "measured_latency_seconds": measured_latency,
+            "isolated_samples": tuple(isolated),
+        },
     )

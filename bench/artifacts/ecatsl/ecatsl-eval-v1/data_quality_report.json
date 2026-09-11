@@ -1,0 +1,642 @@
+{
+  "artifact_id": "sha256:8ee4e8d99dd2860ccfb0333bdbcb542ce85bd1d4f997ac0beead3b8e1c1e8de8",
+  "version": "1",
+  "created_at": "2026-09-10T00:00:00Z",
+  "predecessor_id": null,
+  "provenance": {
+    "origin": "ecatsl-eval-manifest",
+    "retrieved_at": "2026-09-10T00:00:00Z",
+    "source_identifier": "sha256:8736baef4a6cb37eec1a991f49cfb8b377305bc833b1cf683e12f79518298d14",
+    "source_revision": "VulnGym v0.1.4 (submodule cd69f7e, data/entries.jsonl)",
+    "content_identity": "8736baef4a6cb37eec1a991f49cfb8b377305bc833b1cf683e12f79518298d14",
+    "transformation_history": [
+      "build_manifest:python_ecosystem_filter"
+    ]
+  },
+  "content_hash": "8ee4e8d99dd2860ccfb0333bdbcb542ce85bd1d4f997ac0beead3b8e1c1e8de8",
+  "completeness": [
+    {
+      "name": "record_count",
+      "value": "75"
+    },
+    {
+      "name": "retained_count",
+      "value": "75"
+    },
+    {
+      "name": "canonical_count",
+      "value": "75"
+    },
+    {
+      "name": "unmapped_cwe_count",
+      "value": "75"
+    }
+  ],
+  "validity": [
+    {
+      "name": "valid:entry-00057",
+      "value": "fields_ok"
+    },
+    {
+      "name": "valid:entry-00062",
+      "value": "fields_ok"
+    },
+    {
+      "name": "valid:entry-00066",
+      "value": "fields_ok"
+    },
+    {
+      "name": "valid:entry-00067",
+      "value": "fields_ok"
+    },
+    {
+      "name": "valid:entry-00068",
+      "value": "fields_ok"
+    },
+    {
+      "name": "valid:entry-00071",
+      "value": "fields_ok"
+    },
+    {
+      "name": "valid:entry-00072",
+      "value": "fields_ok"
+    },
+    {
+      "name": "valid:entry-00073",
+      "value": "fields_ok"
+    },
+    {
+      "name": "valid:entry-00097",
+      "value": "fields_ok"
+    },
+    {
+      "name": "valid:entry-00098",
+      "value": "fields_ok"
+    },
+    {
+      "name": "valid:entry-00101",
+      "value": "fields_ok"
+    },
+    {
+      "name": "valid:entry-00102",
+      "value": "fields_ok"
+    },
+    {
+      "name": "valid:entry-00150",
+      "value": "fields_ok"
+    },
+    {
+      "name": "valid:entry-00151",
+      "value": "fields_ok"
+    },
+    {
+      "name": "valid:entry-00152",
+      "value": "fields_ok"
+    },
+    {
+      "name": "valid:entry-00153",
+      "value": "fields_ok"
+    },
+    {
+      "name": "valid:entry-00154",
+      "value": "fields_ok"
+    },
+    {
+      "name": "valid:entry-00155",
+      "value": "fields_ok"
+    },
+    {
+      "name": "valid:entry-00156",
+      "value": "fields_ok"
+    },
+    {
+      "name": "valid:entry-00157",
+      "value": "fields_ok"
+    },
+    {
+      "name": "valid:entry-00171",
+      "value": "fields_ok"
+    },
+    {
+      "name": "valid:entry-00176",
+      "value": "fields_ok"
+    },
+    {
+      "name": "valid:entry-00182",
+      "value": "fields_ok"
+    },
+    {
+      "name": "valid:entry-00310",
+      "value": "fields_ok"
+    },
+    {
+      "name": "valid:entry-00311",
+      "value": "fields_ok"
+    },
+    {
+      "name": "valid:entry-00313",
+      "value": "fields_ok"
+    },
+    {
+      "name": "valid:entry-00314",
+      "value": "fields_ok"
+    },
+    {
+      "name": "valid:entry-00315",
+      "value": "fields_ok"
+    },
+    {
+      "name": "valid:entry-00316",
+      "value": "fields_ok"
+    },
+    {
+      "name": "valid:entry-00317",
+      "value": "fields_ok"
+    },
+    {
+      "name": "valid:entry-00319",
+      "value": "fields_ok"
+    },
+    {
+      "name": "valid:entry-00320",
+      "value": "fields_ok"
+    },
+    {
+      "name": "valid:entry-00321",
+      "value": "fields_ok"
+    },
+    {
+      "name": "valid:entry-00324",
+      "value": "fields_ok"
+    },
+    {
+      "name": "valid:entry-00325",
+      "value": "fields_ok"
+    },
+    {
+      "name": "valid:entry-00326",
+      "value": "fields_ok"
+    },
+    {
+      "name": "valid:entry-00335",
+      "value": "fields_ok"
+    },
+    {
+      "name": "valid:entry-00336",
+      "value": "fields_ok"
+    },
+    {
+      "name": "valid:entry-00337",
+      "value": "fields_ok"
+    },
+    {
+      "name": "valid:entry-00338",
+      "value": "fields_ok"
+    },
+    {
+      "name": "valid:entry-00339",
+      "value": "fields_ok"
+    },
+    {
+      "name": "valid:entry-00340",
+      "value": "fields_ok"
+    },
+    {
+      "name": "valid:entry-00341",
+      "value": "fields_ok"
+    },
+    {
+      "name": "valid:entry-00342",
+      "value": "fields_ok"
+    },
+    {
+      "name": "valid:entry-00343",
+      "value": "fields_ok"
+    },
+    {
+      "name": "valid:entry-00344",
+      "value": "fields_ok"
+    },
+    {
+      "name": "valid:entry-00345",
+      "value": "fields_ok"
+    },
+    {
+      "name": "valid:entry-00346",
+      "value": "fields_ok"
+    },
+    {
+      "name": "valid:entry-00347",
+      "value": "fields_ok"
+    },
+    {
+      "name": "valid:entry-00348",
+      "value": "fields_ok"
+    },
+    {
+      "name": "valid:entry-00372",
+      "value": "fields_ok"
+    },
+    {
+      "name": "valid:entry-00373",
+      "value": "fields_ok"
+    },
+    {
+      "name": "valid:entry-00374",
+      "value": "fields_ok"
+    },
+    {
+      "name": "valid:entry-00376",
+      "value": "fields_ok"
+    },
+    {
+      "name": "valid:entry-00389",
+      "value": "fields_ok"
+    },
+    {
+      "name": "valid:entry-00390",
+      "value": "fields_ok"
+    },
+    {
+      "name": "valid:entry-00391",
+      "value": "fields_ok"
+    },
+    {
+      "name": "valid:entry-00392",
+      "value": "fields_ok"
+    },
+    {
+      "name": "valid:entry-00394",
+      "value": "fields_ok"
+    },
+    {
+      "name": "valid:entry-00395",
+      "value": "fields_ok"
+    },
+    {
+      "name": "valid:entry-00401",
+      "value": "fields_ok"
+    },
+    {
+      "name": "valid:entry-00413",
+      "value": "fields_ok"
+    },
+    {
+      "name": "valid:entry-00414",
+      "value": "fields_ok"
+    },
+    {
+      "name": "valid:entry-00415",
+      "value": "fields_ok"
+    },
+    {
+      "name": "valid:entry-00416",
+      "value": "fields_ok"
+    },
+    {
+      "name": "valid:entry-00419",
+      "value": "fields_ok"
+    },
+    {
+      "name": "valid:entry-00430",
+      "value": "fields_ok"
+    },
+    {
+      "name": "valid:entry-00431",
+      "value": "fields_ok"
+    },
+    {
+      "name": "valid:entry-00432",
+      "value": "fields_ok"
+    },
+    {
+      "name": "valid:entry-00433",
+      "value": "fields_ok"
+    },
+    {
+      "name": "valid:entry-00434",
+      "value": "fields_ok"
+    },
+    {
+      "name": "valid:entry-00435",
+      "value": "fields_ok"
+    },
+    {
+      "name": "valid:entry-00462",
+      "value": "fields_ok"
+    },
+    {
+      "name": "valid:entry-00463",
+      "value": "fields_ok"
+    },
+    {
+      "name": "valid:entry-00464",
+      "value": "fields_ok"
+    }
+  ],
+  "integrity_results": [
+    {
+      "name": "integrity:entry-00057",
+      "value": "VERIFIED"
+    },
+    {
+      "name": "integrity:entry-00062",
+      "value": "VERIFIED"
+    },
+    {
+      "name": "integrity:entry-00066",
+      "value": "VERIFIED"
+    },
+    {
+      "name": "integrity:entry-00067",
+      "value": "VERIFIED"
+    },
+    {
+      "name": "integrity:entry-00068",
+      "value": "VERIFIED"
+    },
+    {
+      "name": "integrity:entry-00071",
+      "value": "VERIFIED"
+    },
+    {
+      "name": "integrity:entry-00072",
+      "value": "VERIFIED"
+    },
+    {
+      "name": "integrity:entry-00073",
+      "value": "VERIFIED"
+    },
+    {
+      "name": "integrity:entry-00097",
+      "value": "VERIFIED"
+    },
+    {
+      "name": "integrity:entry-00098",
+      "value": "VERIFIED"
+    },
+    {
+      "name": "integrity:entry-00101",
+      "value": "VERIFIED"
+    },
+    {
+      "name": "integrity:entry-00102",
+      "value": "VERIFIED"
+    },
+    {
+      "name": "integrity:entry-00150",
+      "value": "VERIFIED"
+    },
+    {
+      "name": "integrity:entry-00151",
+      "value": "VERIFIED"
+    },
+    {
+      "name": "integrity:entry-00152",
+      "value": "VERIFIED"
+    },
+    {
+      "name": "integrity:entry-00153",
+      "value": "VERIFIED"
+    },
+    {
+      "name": "integrity:entry-00154",
+      "value": "VERIFIED"
+    },
+    {
+      "name": "integrity:entry-00155",
+      "value": "VERIFIED"
+    },
+    {
+      "name": "integrity:entry-00156",
+      "value": "VERIFIED"
+    },
+    {
+      "name": "integrity:entry-00157",
+      "value": "VERIFIED"
+    },
+    {
+      "name": "integrity:entry-00171",
+      "value": "VERIFIED"
+    },
+    {
+      "name": "integrity:entry-00176",
+      "value": "VERIFIED"
+    },
+    {
+      "name": "integrity:entry-00182",
+      "value": "VERIFIED"
+    },
+    {
+      "name": "integrity:entry-00310",
+      "value": "VERIFIED"
+    },
+    {
+      "name": "integrity:entry-00311",
+      "value": "VERIFIED"
+    },
+    {
+      "name": "integrity:entry-00313",
+      "value": "VERIFIED"
+    },
+    {
+      "name": "integrity:entry-00314",
+      "value": "VERIFIED"
+    },
+    {
+      "name": "integrity:entry-00315",
+      "value": "VERIFIED"
+    },
+    {
+      "name": "integrity:entry-00316",
+      "value": "VERIFIED"
+    },
+    {
+      "name": "integrity:entry-00317",
+      "value": "VERIFIED"
+    },
+    {
+      "name": "integrity:entry-00319",
+      "value": "VERIFIED"
+    },
+    {
+      "name": "integrity:entry-00320",
+      "value": "VERIFIED"
+    },
+    {
+      "name": "integrity:entry-00321",
+      "value": "VERIFIED"
+    },
+    {
+      "name": "integrity:entry-00324",
+      "value": "VERIFIED"
+    },
+    {
+      "name": "integrity:entry-00325",
+      "value": "VERIFIED"
+    },
+    {
+      "name": "integrity:entry-00326",
+      "value": "VERIFIED"
+    },
+    {
+      "name": "integrity:entry-00335",
+      "value": "VERIFIED"
+    },
+    {
+      "name": "integrity:entry-00336",
+      "value": "VERIFIED"
+    },
+    {
+      "name": "integrity:entry-00337",
+      "value": "VERIFIED"
+    },
+    {
+      "name": "integrity:entry-00338",
+      "value": "VERIFIED"
+    },
+    {
+      "name": "integrity:entry-00339",
+      "value": "VERIFIED"
+    },
+    {
+      "name": "integrity:entry-00340",
+      "value": "VERIFIED"
+    },
+    {
+      "name": "integrity:entry-00341",
+      "value": "VERIFIED"
+    },
+    {
+      "name": "integrity:entry-00342",
+      "value": "VERIFIED"
+    },
+    {
+      "name": "integrity:entry-00343",
+      "value": "VERIFIED"
+    },
+    {
+      "name": "integrity:entry-00344",
+      "value": "VERIFIED"
+    },
+    {
+      "name": "integrity:entry-00345",
+      "value": "VERIFIED"
+    },
+    {
+      "name": "integrity:entry-00346",
+      "value": "VERIFIED"
+    },
+    {
+      "name": "integrity:entry-00347",
+      "value": "VERIFIED"
+    },
+    {
+      "name": "integrity:entry-00348",
+      "value": "VERIFIED"
+    },
+    {
+      "name": "integrity:entry-00372",
+      "value": "VERIFIED"
+    },
+    {
+      "name": "integrity:entry-00373",
+      "value": "VERIFIED"
+    },
+    {
+      "name": "integrity:entry-00374",
+      "value": "VERIFIED"
+    },
+    {
+      "name": "integrity:entry-00376",
+      "value": "VERIFIED"
+    },
+    {
+      "name": "integrity:entry-00389",
+      "value": "VERIFIED"
+    },
+    {
+      "name": "integrity:entry-00390",
+      "value": "VERIFIED"
+    },
+    {
+      "name": "integrity:entry-00391",
+      "value": "VERIFIED"
+    },
+    {
+      "name": "integrity:entry-00392",
+      "value": "VERIFIED"
+    },
+    {
+      "name": "integrity:entry-00394",
+      "value": "VERIFIED"
+    },
+    {
+      "name": "integrity:entry-00395",
+      "value": "VERIFIED"
+    },
+    {
+      "name": "integrity:entry-00401",
+      "value": "VERIFIED"
+    },
+    {
+      "name": "integrity:entry-00413",
+      "value": "VERIFIED"
+    },
+    {
+      "name": "integrity:entry-00414",
+      "value": "VERIFIED"
+    },
+    {
+      "name": "integrity:entry-00415",
+      "value": "VERIFIED"
+    },
+    {
+      "name": "integrity:entry-00416",
+      "value": "VERIFIED"
+    },
+    {
+      "name": "integrity:entry-00419",
+      "value": "VERIFIED"
+    },
+    {
+      "name": "integrity:entry-00430",
+      "value": "VERIFIED"
+    },
+    {
+      "name": "integrity:entry-00431",
+      "value": "VERIFIED"
+    },
+    {
+      "name": "integrity:entry-00432",
+      "value": "VERIFIED"
+    },
+    {
+      "name": "integrity:entry-00433",
+      "value": "VERIFIED"
+    },
+    {
+      "name": "integrity:entry-00434",
+      "value": "VERIFIED"
+    },
+    {
+      "name": "integrity:entry-00435",
+      "value": "VERIFIED"
+    },
+    {
+      "name": "integrity:entry-00462",
+      "value": "VERIFIED"
+    },
+    {
+      "name": "integrity:entry-00463",
+      "value": "VERIFIED"
+    },
+    {
+      "name": "integrity:entry-00464",
+      "value": "VERIFIED"
+    }
+  ],
+  "duplicate_count": 0,
+  "excluded_count": 0,
+  "exclusion_reasons": []
+}

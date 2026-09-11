@@ -1,0 +1,347 @@
+{
+  "artifact_id": "sha256:2104c79d11b4139ff8aff5dc0a142664ed8bfc746034f656557c69762ca6a3ee",
+  "version": "1",
+  "created_at": "2026-09-10T00:00:00Z",
+  "predecessor_id": null,
+  "provenance": {
+    "origin": "ecatsl_eval_runner",
+    "retrieved_at": "2026-09-10T00:00:00Z",
+    "source_identifier": "VulnGym v0.1.4 (submodule cd69f7e, data/entries.jsonl)",
+    "source_revision": "VulnGym v0.1.4 (submodule cd69f7e, data/entries.jsonl)",
+    "content_identity": "sha256:2026-09-08T00:00:00+00:00",
+    "transformation_history": [
+      "eval_runner/v1: service-analyze + report-backfill"
+    ]
+  },
+  "content_hash": "2104c79d11b4139ff8aff5dc0a142664ed8bfc746034f656557c69762ca6a3ee",
+  "evaluation_report_id": "sha256:c33ea4e28fc717ec4e3f06b86060ffe49077735199d11352b9ee0832fa5ff90d",
+  "benchmark_manifest_id": "sha256:4c8bf659db5399be95fa4be1d899a354f76fce4c6dc445d5e5c919d06a56e8a3",
+  "benchmark_manifest_version": "1",
+  "data_quality_report_version": "1",
+  "reuse_inventory_version": "0",
+  "strata": [
+    {
+      "definition": [
+        "project=AutoGPT"
+      ],
+      "sample_count": 2,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "analysis_latency_seconds": 0.0,
+      "audit_cost": 0.0,
+      "llm_tokens": 0,
+      "llm_cost": 0.0,
+      "tooling_failures": 2,
+      "llm_failures": 0,
+      "rejected_candidates": 0,
+      "complexity": {
+        "configured_adapters": 0,
+        "pipeline_stages": 0,
+        "external_service_dependencies": 0,
+        "manual_execution_steps": 0
+      },
+      "missing_cost_data": false
+    },
+    {
+      "definition": [
+        "project=NeMo"
+      ],
+      "sample_count": 22,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "analysis_latency_seconds": 0.0,
+      "audit_cost": 0.0,
+      "llm_tokens": 0,
+      "llm_cost": 0.0,
+      "tooling_failures": 22,
+      "llm_failures": 0,
+      "rejected_candidates": 0,
+      "complexity": {
+        "configured_adapters": 0,
+        "pipeline_stages": 0,
+        "external_service_dependencies": 0,
+        "manual_execution_steps": 0
+      },
+      "missing_cost_data": false
+    },
+    {
+      "definition": [
+        "project=adk-python"
+      ],
+      "sample_count": 6,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "analysis_latency_seconds": 0.0,
+      "audit_cost": 0.0,
+      "llm_tokens": 0,
+      "llm_cost": 0.0,
+      "tooling_failures": 6,
+      "llm_failures": 0,
+      "rejected_candidates": 0,
+      "complexity": {
+        "configured_adapters": 0,
+        "pipeline_stages": 0,
+        "external_service_dependencies": 0,
+        "manual_execution_steps": 0
+      },
+      "missing_cost_data": false
+    },
+    {
+      "definition": [
+        "project=airflow"
+      ],
+      "sample_count": 5,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "analysis_latency_seconds": 0.0,
+      "audit_cost": 0.0,
+      "llm_tokens": 0,
+      "llm_cost": 0.0,
+      "tooling_failures": 5,
+      "llm_failures": 0,
+      "rejected_candidates": 0,
+      "complexity": {
+        "configured_adapters": 0,
+        "pipeline_stages": 0,
+        "external_service_dependencies": 0,
+        "manual_execution_steps": 0
+      },
+      "missing_cost_data": false
+    },
+    {
+      "definition": [
+        "project=fastmcp"
+      ],
+      "sample_count": 6,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "analysis_latency_seconds": 0.0,
+      "audit_cost": 0.0,
+      "llm_tokens": 0,
+      "llm_cost": 0.0,
+      "tooling_failures": 6,
+      "llm_failures": 0,
+      "rejected_candidates": 0,
+      "complexity": {
+        "configured_adapters": 0,
+        "pipeline_stages": 0,
+        "external_service_dependencies": 0,
+        "manual_execution_steps": 0
+      },
+      "missing_cost_data": false
+    },
+    {
+      "definition": [
+        "project=langchain"
+      ],
+      "sample_count": 3,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "analysis_latency_seconds": 0.0,
+      "audit_cost": 0.0,
+      "llm_tokens": 0,
+      "llm_cost": 0.0,
+      "tooling_failures": 3,
+      "llm_failures": 0,
+      "rejected_candidates": 0,
+      "complexity": {
+        "configured_adapters": 0,
+        "pipeline_stages": 0,
+        "external_service_dependencies": 0,
+        "manual_execution_steps": 0
+      },
+      "missing_cost_data": false
+    },
+    {
+      "definition": [
+        "project=langflow"
+      ],
+      "sample_count": 12,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "analysis_latency_seconds": 0.0,
+      "audit_cost": 0.0,
+      "llm_tokens": 0,
+      "llm_cost": 0.0,
+      "tooling_failures": 12,
+      "llm_failures": 0,
+      "rejected_candidates": 0,
+      "complexity": {
+        "configured_adapters": 0,
+        "pipeline_stages": 0,
+        "external_service_dependencies": 0,
+        "manual_execution_steps": 0
+      },
+      "missing_cost_data": false
+    },
+    {
+      "definition": [
+        "project=litellm"
+      ],
+      "sample_count": 1,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "analysis_latency_seconds": 0.0,
+      "audit_cost": 0.0,
+      "llm_tokens": 0,
+      "llm_cost": 0.0,
+      "tooling_failures": 1,
+      "llm_failures": 0,
+      "rejected_candidates": 0,
+      "complexity": {
+        "configured_adapters": 0,
+        "pipeline_stages": 0,
+        "external_service_dependencies": 0,
+        "manual_execution_steps": 0
+      },
+      "missing_cost_data": false
+    },
+    {
+      "definition": [
+        "project=mlflow"
+      ],
+      "sample_count": 9,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "analysis_latency_seconds": 0.0,
+      "audit_cost": 0.0,
+      "llm_tokens": 0,
+      "llm_cost": 0.0,
+      "tooling_failures": 9,
+      "llm_failures": 0,
+      "rejected_candidates": 0,
+      "complexity": {
+        "configured_adapters": 0,
+        "pipeline_stages": 0,
+        "external_service_dependencies": 0,
+        "manual_execution_steps": 0
+      },
+      "missing_cost_data": false
+    },
+    {
+      "definition": [
+        "project=n8n"
+      ],
+      "sample_count": 2,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "analysis_latency_seconds": 0.0,
+      "audit_cost": 0.0,
+      "llm_tokens": 0,
+      "llm_cost": 0.0,
+      "tooling_failures": 2,
+      "llm_failures": 0,
+      "rejected_candidates": 0,
+      "complexity": {
+        "configured_adapters": 0,
+        "pipeline_stages": 0,
+        "external_service_dependencies": 0,
+        "manual_execution_steps": 0
+      },
+      "missing_cost_data": false
+    },
+    {
+      "definition": [
+        "project=nltk"
+      ],
+      "sample_count": 1,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "analysis_latency_seconds": 0.0,
+      "audit_cost": 0.0,
+      "llm_tokens": 0,
+      "llm_cost": 0.0,
+      "tooling_failures": 1,
+      "llm_failures": 0,
+      "rejected_candidates": 0,
+      "complexity": {
+        "configured_adapters": 0,
+        "pipeline_stages": 0,
+        "external_service_dependencies": 0,
+        "manual_execution_steps": 0
+      },
+      "missing_cost_data": false
+    },
+    {
+      "definition": [
+        "project=onnx"
+      ],
+      "sample_count": 2,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "analysis_latency_seconds": 0.0,
+      "audit_cost": 0.0,
+      "llm_tokens": 0,
+      "llm_cost": 0.0,
+      "tooling_failures": 2,
+      "llm_failures": 0,
+      "rejected_candidates": 0,
+      "complexity": {
+        "configured_adapters": 0,
+        "pipeline_stages": 0,
+        "external_service_dependencies": 0,
+        "manual_execution_steps": 0
+      },
+      "missing_cost_data": false
+    },
+    {
+      "definition": [
+        "project=open-webui"
+      ],
+      "sample_count": 4,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "analysis_latency_seconds": 0.0,
+      "audit_cost": 0.0,
+      "llm_tokens": 0,
+      "llm_cost": 0.0,
+      "tooling_failures": 4,
+      "llm_failures": 0,
+      "rejected_candidates": 0,
+      "complexity": {
+        "configured_adapters": 0,
+        "pipeline_stages": 0,
+        "external_service_dependencies": 0,
+        "manual_execution_steps": 0
+      },
+      "missing_cost_data": false
+    },
+    {
+      "definition": [
+        "sample_class=vulnerable"
+      ],
+      "sample_count": 75,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "analysis_latency_seconds": 0.0,
+      "audit_cost": 0.0,
+      "llm_tokens": 0,
+      "llm_cost": 0.0,
+      "tooling_failures": 75,
+      "llm_failures": 0,
+      "rejected_candidates": 0,
+      "complexity": {
+        "configured_adapters": 0,
+        "pipeline_stages": 0,
+        "external_service_dependencies": 0,
+        "manual_execution_steps": 0
+      },
+      "missing_cost_data": false
+    }
+  ],
+  "missing_cost_data": false
+}
