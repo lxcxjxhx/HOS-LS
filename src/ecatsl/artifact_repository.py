@@ -689,13 +689,6 @@ class ArtifactRepository:
             """,
             (artifact.artifact_id,),
         ).fetchone()
-        values = (
-            discriminator,
-            artifact.content_hash,
-            payload,
-            artifact.created_at.isoformat(),
-            artifact.predecessor_id,
-        )
         if existing is not None:
             existing_type = str(existing[0])
             resolved = self._resolve_model(existing_type)
@@ -1902,9 +1895,13 @@ class ArtifactRepository:
                         "duplicate pipeline stage must reference a matching "
                         "canonical stage"
                     )
-                failure = self._load_in_transaction(
-                    stage.consolidation_failure_artifact_id, AuditFailureRecord
-                )
+                failure_id = stage.consolidation_failure_artifact_id
+                if failure_id is None:
+                    raise ImmutableArtifactError(
+                        "duplicate pipeline stage requires a consolidation "
+                        "audit record"
+                    )
+                failure = self._load_in_transaction(failure_id, AuditFailureRecord)
                 if (
                     failure.operation != "pipeline_stage_consolidation"
                     or failure.related_artifact_id != stage.duplicate_of_artifact_id
@@ -2258,4 +2255,4 @@ class ArtifactRepository:
             raise ArtifactRepositoryError(
                 f"idempotent result is {type(artifact).__name__}, expected {expected.__name__}"
             )
-        return artifact  # type: ignore[return-value]
+        return artifact

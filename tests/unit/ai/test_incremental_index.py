@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from src.ai.pure_ai.incremental_index import FileIndexEntry, IncrementalIndexManager
+from src.ai.pure_ai.incremental_index import IncrementalIndexManager
 
 
 class TestIncrementalIndexManager:

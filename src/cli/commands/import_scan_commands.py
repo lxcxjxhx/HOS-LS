@@ -3,14 +3,11 @@
 导入外部扫描结果和回放日志的命令。
 """
 
-from pathlib import Path
-from typing import Any, Optional
 
 import click
-from rich.console import Console
 
-from src.cli.main import cli, console
-from src.core.config import Config, ConfigManager
+from src.cli.main import cli
+from src.core.config import ConfigManager
 
 
 @cli.command()
@@ -23,7 +20,7 @@ from src.core.config import Config, ConfigManager
 @click.option("--show-progress", is_flag=True, default=False, help="显示扫描进度")
 def import_scan(cache_file, output_file, report_format, show_progress):
     """导入外部扫描缓存文件并生成报告"""
-    config = ConfigManager.load()
+    ConfigManager.load()
     from src.reporting.generator import generate_report_from_cache
 
     generate_report_from_cache(

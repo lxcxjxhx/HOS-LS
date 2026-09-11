@@ -846,11 +846,41 @@ class ECATSLService:
         return tuple(limitations)
 
 
+class _SqliteTemplateProvider:
+    """Callable template provider with an explicit ``close`` resource hook.
+
+    A protocol-style class keeps the provider statically typed (mypy-clean
+    without ignores) while still exposing ``close`` so callers that own the
+    SQLite catalog connection can release it deterministically.
+    """
+
+    def __init__(self, repository: Any, allowed: Tuple[str, ...]) -> None:
+        self._repository = repository
+        self._allowed = frozenset(allowed)
+
+    def __call__(
+        self, requested_cwe_ids: Tuple[str, ...]
+    ) -> Tuple[TaintTemplate, ...]:
+        now = datetime.now(timezone.utc)
+        templates: list[TaintTemplate] = []
+        for cwe_id in requested_cwe_ids:
+            if cwe_id not in self._allowed:
+                continue
+            result = self._repository.retrieve(cwe_id)
+            for ranked in result.ranked:
+                templates.append(_template_artifact(ranked, now))
+        return tuple(templates)
+
+    def close(self) -> None:
+        """Release the underlying catalog connection."""
+        self._repository.close()
+
+
 def build_sqlite_template_provider(
     db_path: str,
     *,
     scope_cwe_ids: Tuple[str, ...],
-) -> Callable[[Tuple[str, ...]], Tuple[TaintTemplate, ...]]:
+) -> _SqliteTemplateProvider:
     """Wire the local SQLite catalog into the service template provider port.
 
     The provider reuses :class:`src.nvd.nvd_query_adapter.TaintTemplateRepository`
@@ -864,20 +894,7 @@ def build_sqlite_template_provider(
     from src.nvd.nvd_query_adapter import TaintTemplateRepository
 
     repository = TaintTemplateRepository(db_path, scope_cwe_ids=scope_cwe_ids)
-    allowed = tuple(scope_cwe_ids)
-
-    def provider(requested_cwe_ids: Tuple[str, ...]) -> Tuple[TaintTemplate, ...]:
-        now = datetime.now(timezone.utc)
-        templates: list[TaintTemplate] = []
-        for cwe_id in requested_cwe_ids:
-            if cwe_id not in allowed:
-                continue
-            result = repository.retrieve(cwe_id)
-            for ranked in result.ranked:
-                templates.append(_template_artifact(ranked, now))
-        return tuple(templates)
-
-    return provider
+    return _SqliteTemplateProvider(repository, allowed=scope_cwe_ids)
 
 
 def _template_artifact(ranked: Any, now: datetime) -> TaintTemplate:

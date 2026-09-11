@@ -3,14 +3,11 @@
 NVD 漏洞数据库的更新和查询命令。
 """
 
-from pathlib import Path
-from typing import Any, Optional
 
 import click
-from rich.console import Console
 
 from src.cli.main import cli, console
-from src.core.config import Config, ConfigManager
+from src.core.config import ConfigManager
 
 
 @cli.group()

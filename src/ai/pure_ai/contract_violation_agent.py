@@ -10,12 +10,11 @@
 
 import ast
 import logging
-import os
 import re
 from collections import defaultdict
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, List
 
 logger = logging.getLogger(__name__)
 
@@ -158,7 +157,6 @@ class ContractViolationAgent:
             契约违背列表
         """
         violations: List[ContractViolation] = []
-        all_contracts: Dict[str, List[SecurityContract]] = defaultdict(list)
 
         # 1. 加载所有文件的安全契约
         for file_path, content in repo_files.items():
@@ -225,10 +223,10 @@ class ContractViolationAgent:
                         if "Security" in exc_name or "Auth" in exc_name or "Permission" in exc_name or "Access" in exc_name:
                             # 检查 handler body 是否只是 pass/log
                             body_has_action = any(
-                                not (isinstance(stmt, ast.Pass) or
-                                     (isinstance(stmt, ast.Expr) and
-                                      isinstance(stmt.value, ast.Call) and
-                                      "log" in str(stmt.value.func.id if isinstance(stmt.value.func, ast.Name) else "").lower()))
+                                not (isinstance(stmt, ast.Pass)
+                                     or (isinstance(stmt, ast.Expr)
+                                         and isinstance(stmt.value, ast.Call)
+                                         and "log" in str(stmt.value.func.id if isinstance(stmt.value.func, ast.Name) else "").lower()))
                                 for stmt in handler.body
                             )
                             if not body_has_action:

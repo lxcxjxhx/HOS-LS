@@ -336,6 +336,9 @@ class Pipeline:
     ) -> Tuple[str, Tuple[str, ...], Optional[str], float]:
         started = _monotonic()
         try:
+            if definition.run is None:
+                # run-free stage 不会走到 _execute(run 为 None 时在 run() 已短路)。
+                return "FAILED", (), "stage has no run callable", _monotonic() - started
             if definition.timeout_seconds is not None:
                 pool = ThreadPoolExecutor(max_workers=1)
                 future = pool.submit(definition.run, accumulated)

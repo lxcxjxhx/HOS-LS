@@ -5,24 +5,17 @@ HOS-LS 的命令行入口。
 
 import asyncio
 import os
-import sys
 import warnings
-from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime
 from pathlib import Path
-from queue import Queue
-from typing import Any, Optional
+from typing import Optional
 
 import click
-from pydantic import BaseModel
 from rich.console import Console
-from rich.live import Live
 from rich.panel import Panel
 from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn
-from rich.table import Table
 
 from src import __version__
-from src.core.config import Config, ConfigManager
+from src.core.config import ConfigManager
 
 warnings.filterwarnings("ignore", message="Failed to find CUDA.")
 warnings.filterwarnings(
@@ -82,7 +75,7 @@ def show_agent_status() -> None:
 
 def show_risk_bar(percentage: float) -> None:
     """显示风险条
-    
+
     Args:
         percentage: 风险百分比 (0-100)
     """
@@ -124,6 +117,10 @@ def cli(ctx: click.Context, config: Optional[str], verbose: bool, quiet: bool, d
 # `hos-ls scan ...` 于参数解析阶段被误判为未知命令。
 from src.cli.commands.scan_cmd import scan as _scan_command  # noqa: E402
 cli.add_command(_scan_command)
+
+# `ecatsl` 命令组同样必须在子命令解析前注册（同 scan 的加载顺序约定）。
+from src.cli.commands.ecatsl_cmd import ecatsl as _ecatsl_command  # noqa: E402
+cli.add_command(_ecatsl_command)
 
 
 # ---------------------------------------------------------------------------

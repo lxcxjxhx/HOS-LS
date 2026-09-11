@@ -11,7 +11,6 @@ Validates: Requirements 5.1-5.4
 """
 
 from datetime import datetime, timezone
-from typing import Sequence, Tuple
 
 import pytest
 

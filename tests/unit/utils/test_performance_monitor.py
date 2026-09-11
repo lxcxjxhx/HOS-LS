@@ -5,7 +5,6 @@ import time
 import pytest
 
 from src.utils.performance_monitor import (
-    PerformanceMonitor,
     get_performance_monitor,
     measure_performance,
 )

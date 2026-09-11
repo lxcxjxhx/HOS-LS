@@ -3,7 +3,7 @@
 维护已知文件注册表，防止 AI 幻觉引用不存在的文件。
 """
 
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 from src.utils.logger import get_logger
 
@@ -82,4 +82,3 @@ class KnownFileRegistry:
         return "\n".join(
             [f"- {path} ({self._line_counts[path]} lines)" for path in self._files.keys()]
         )
-

@@ -4,13 +4,9 @@
 从 PureAIAnalyzer 中提取的工具方法集合。
 """
 
-import asyncio
-import json
-import os
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, List, Optional, Set
 
-from src.ai.models import VulnerabilityFinding
 from src.utils.logger import get_logger
 
 logger = get_logger(__name__)

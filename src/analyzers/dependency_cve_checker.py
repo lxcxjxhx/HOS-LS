@@ -3,14 +3,12 @@
 提供 Mock 和 NVD 集成的 CVE 查询功能。
 """
 
-import json
-import re
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional
 
 from src.utils.logger import get_logger
 
-from src.analyzers.dependency_models import DependencyInfo, SupplyChainWarning, VersionRange, VulnerabilityInfo
+from src.analyzers.dependency_models import DependencyInfo, VersionRange, VulnerabilityInfo
 
 logger = get_logger(__name__)
 
@@ -328,4 +326,3 @@ class NVDIntegratedCVEChecker(CVECheckerInterface):
     def is_available(self) -> bool:
         """检查 NVD 数据库是否可用"""
         return self._available
-

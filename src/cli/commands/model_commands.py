@@ -3,14 +3,11 @@
 AI 模型下载和管理命令。
 """
 
-from pathlib import Path
-from typing import Any, Optional
 
 import click
-from rich.console import Console
 
-from src.cli.main import cli, console
-from src.core.config import Config, ConfigManager
+from src.cli.main import cli
+from src.core.config import ConfigManager
 
 
 @cli.group()

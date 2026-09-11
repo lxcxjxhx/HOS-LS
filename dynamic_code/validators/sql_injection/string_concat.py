@@ -5,7 +5,7 @@
 """
 
 import re
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Tuple
 
 from src.analyzers.verification.interfaces import (
     ValidationResult,

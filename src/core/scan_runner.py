@@ -3,9 +3,6 @@
 从 SecurityScanner 中提取的 scan 主方法。
 """
 
-import asyncio
-from pathlib import Path
-from typing import Any, Dict, List, Optional
 
 from rich.console import Console
 
@@ -17,7 +14,7 @@ console = Console()
 
 async def scan(scanner, target):
     """执行安全扫描（委托给 SecurityScanner.scan）
-    
+
     Args:
         scanner: SecurityScanner 实例
         target: 扫描目标

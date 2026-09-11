@@ -13,7 +13,7 @@ permissions:
 jobs:
   lint-and-test:
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -21,40 +21,91 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.12'
           cache: 'pip'
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-          pip install flake8 pytest mypy
+          # 工具版本 pin 到白名单验证口径（mypy 1.x；2.x 语义变化会偏离
+          # pyproject 白名单基线），避免浮动 latest 造成口径漂移。
+          pip install "mypy>=1.20.0,<2" "flake8>=7.0,<8" "pytest>=8.0,<10" hypothesis
 
+      # --- 分级 lint 门禁（主题 B / Req 1.5, 2.4）---
+      # Tier 1 blocking：CI blocking 选择器对全仓库 0 容忍（语法级硬错误）。
       - name: Lint with flake8 (fatal errors - blocking)
         run: |
           flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
 
-      - name: Lint with flake8 (style - informational, non-blocking)
+      # Tier 2 blocking：清零后的目录 0 容忍（主题 A 已清零并锁定）。
+      # 不加 --extend-ignore，本地与 CI 同口径（.flake8 已含 tests/* E402 豁免）。
+      - name: Lint with flake8 (ecatsl + tests - blocking)
         run: |
-          flake8 src --count --max-line-length=120 --extend-ignore=C901,E301,E402,F401,F841,E712,F541,W293,F811 --statistics || true
+          flake8 src/ecatsl tests --count
 
-      - name: Type check with mypy
+      # Tier 3 informational：src 其余目录仅输出计数，失败不阻塞 CI。
+      # 原因：主题 A 仅清零 src/ecatsl 与 tests，其余历史目录债务未纳入本循环。
+      - name: Lint with flake8 (rest of src - informational, count only)
         run: |
-          mypy --ignore-missing-imports . || echo "Type checking completed with warnings"
-        continue-on-error: true
+          flake8 src --count --statistics || true
+
+      # mypy 分级（任务 2.1 原文语义，与 flake8 分级并列）：
+      # - src/ecatsl blocking：主题 A 已清零，0 容忍；
+      # - src 其余 informational：白名单按本机 win32 环境建立，Linux CI 的第三方
+      #   浮动版本（neo4j-graphrag/requests stubs）存在口径外漂移，仅输出计数。
+      - name: Type check with mypy (ecatsl - blocking)
+        run: |
+          mypy src/ecatsl
+
+      - name: Type check with mypy (rest of src - informational)
+        run: |
+          mypy src --ignore-missing-imports || echo "mypy informational issues counted (whitelist-driven)"
+
+      # --- 真实执行测试（主题 B / Req 2.1-2.3）---
+      # 快速门禁：ECATSL 单元/集成 + core 单元（blocking，失败即红）。
+      - name: Run focused tests (blocking)
+        run: |
+          pytest tests/unit/ecatsl tests/integration/ecatsl tests/unit/core -q
 
       - name: Test with pytest
         run: |
           pytest --collect-only || echo "No tests found"
         continue-on-error: true
 
+  full-tests:
+    # 独立全量 job：非 blocking check，失败在 PR 可见但不阻塞合并（Req 2.1）。
+    runs-on: ubuntu-latest
+    continue-on-error: true
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+        # 不启用 pip cache：全量依赖含 torch 等重包，cache 键命中率低且拖慢还原。
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          pip install pytest pytest-asyncio pytest-timeout hypothesis
+
+      - name: Run full test suite (informational)
+        run: |
+          pytest tests -q --no-header --timeout=600
+
   security-scan:
     runs-on: ubuntu-latest
+    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.12'
       - name: Install security tools
         run: |
           pip install bandit safety

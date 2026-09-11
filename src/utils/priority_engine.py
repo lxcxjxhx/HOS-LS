@@ -3,28 +3,23 @@
 对扫描文件进行优先级评分和排序，优化扫描策略。
 """
 
-from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 from src.utils.logger import get_logger
 
 from src.utils.priority_models import (
     AssetValueCalculator,
-    AssetValueLevel,
     ExploitabilityCalculator,
-    ExploitabilityLevel,
     FilePriority,
     PriorityConfig,
     PriorityLevel,
     PriorityResult,
     PriorityStrategy,
     ReachabilityCalculator,
-    ReachabilityLevel,
 )
 from src.utils.file_discovery import FileInfo, FileType, Language
 
 logger = get_logger(__name__)
-
 
 
 class FilePriorityEngine:

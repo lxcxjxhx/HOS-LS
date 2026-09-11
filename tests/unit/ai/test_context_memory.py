@@ -4,7 +4,7 @@ import time
 
 import pytest
 
-from src.ai.pure_ai.context_memory import ContextMemoryManager, ConversationTurn, Entity
+from src.ai.pure_ai.context_memory import ContextMemoryManager, Entity
 
 
 class TestContextMemoryManager:

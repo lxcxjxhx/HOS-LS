@@ -11,7 +11,6 @@ import pytest
 
 from src.ecatsl.artifact_repository import (
     ArtifactRepository,
-    AuditFailureRecord,
     ClassificationPersistenceResult,
 )
 from src.ecatsl.confirmation import FindingConfirmationService

@@ -8,7 +8,7 @@ from typing import Any, Dict, List, Optional, Tuple
 from rich.console import Console
 
 from src.ai.models import AIRequest
-from src.ai.prompt_engine import PromptEngine, get_prompt_engine
+from src.ai.prompt_engine import get_prompt_engine
 from src.ai.pure_ai.context_builder import ContextBuilder
 from src.ai.pure_ai.line_number_mapper import LineNumberMapper
 from src.ai.pure_ai.schema_validator import SchemaValidator
@@ -21,27 +21,9 @@ except ImportError:
         return None
 
 
-from src.ai.pure_ai.schema import SignalState
-
-from src.ai.pure_ai.signals import (
-    track_risk_signals,
-    track_verification_signals,
-    match_unverified_signals,
-    check_semantic_consistency,
-    fill_missing_signals_via_refinement,
-    get_signal_summary,
-)
-from src.ai.pure_ai.validation import (
-    validate_final_findings,
-    check_agent3_agent6_consistency,
-    validate_result_consistency,
-    verify_location_exists,
-)
-
 from src.utils.logger import get_logger
 
-logger = get_logger(__name__)
-from src.ai.pure_ai.pipeline_constants import (SemanticConsistencyError,
+from src.ai.pure_ai.pipeline_constants import (
     CONFIDENCE_THRESHOLDS,
     HIGH_SEVERITY_RISK_TYPES,
     REJECTED_PLACEHOLDERS,
@@ -52,16 +34,16 @@ from src.ai.pure_ai.pipeline_constants import (SemanticConsistencyError,
 )
 from src.ai.pure_ai.known_file_registry import KnownFileRegistry
 from src.ai.pure_ai.evidence_chain import EvidenceChain
-from src.ai.pure_ai.pipeline_llm import (generate_with_retry as _generate_with_retry_impl, parse_json_response as _parse_json_response_impl)
-
-console = Console()
-
-
 
 from src.ai.pure_ai.agent_0 import run_agent_0 as _run_agent_0_impl
 from src.ai.pure_ai.agent_1 import run_agent_1 as _run_agent_1_impl
 from src.ai.pure_ai.agent_2 import run_agent_2 as _run_agent_2_impl
 from src.ai.pure_ai.agent_3 import run_agent_3 as _run_agent_3_impl
+
+logger = get_logger(__name__)
+console = Console()
+
+
 class MultiAgentPipeline:
     """多Agent流水线系统
 
@@ -1341,36 +1323,30 @@ class MultiAgentPipeline:
             from src.ai.pure_ai.agent_4 import _synthesize_attack_chains as _impl
             return _impl(self, vulnerability_verification, file_path)
 
-
         async def _run_agent_4(self, file_path, vulnerability_verification, detected_language="Unknown", context=None):
             """运行Agent 4（委托给 agent_4.run_agent_4）"""
             from src.ai.pure_ai.agent_4 import run_agent_4 as _impl
             return await _impl(self, file_path, vulnerability_verification, detected_language, context)
-
 
         def _deterministic_adversarial_check(self, attack_chain_analysis):
             """确定性对抗验证（委托给 agent_5）"""
             from src.ai.pure_ai.agent_5 import _deterministic_adversarial_check as _impl
             return _impl(self, attack_chain_analysis)
 
-
         async def _run_agent_5(self, file_path, attack_chain_analysis, file_content, detected_language="Unknown"):
             """运行Agent 5（委托给 agent_5.run_agent_5）"""
             from src.ai.pure_ai.agent_5 import run_agent_5 as _impl
             return await _impl(self, file_path, attack_chain_analysis, file_content, detected_language)
-
 
         def _deterministic_final_decision(self, vulnerability_verification, context, adversarial_validation):
             """确定性最终裁决（委托给 agent_6）"""
             from src.ai.pure_ai.agent_6 import _deterministic_final_decision as _impl
             return _impl(self, vulnerability_verification, context, adversarial_validation)
 
-
         async def _run_agent_6(self, file_path, context, adversarial_validation, vulnerability_verification, detected_language="Unknown"):
             """运行Agent 6（委托给 agent_6.run_agent_6）"""
             from src.ai.pure_ai.agent_6 import run_agent_6 as _impl
             return await _impl(self, file_path, context, adversarial_validation, vulnerability_verification, detected_language)
-
 
     async def _generate_with_retry(
         self, prompt: str, agent_name: str = "unknown", temperature: float = 0.0

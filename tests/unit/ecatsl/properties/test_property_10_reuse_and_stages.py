@@ -36,7 +36,6 @@ from src.ecatsl.artifact_repository import (
 from src.ecatsl.models import (
     Provenance,
     ReuseCandidate,
-    ReuseInventory,
     ReuseInventoryEntry,
     task_1_1_reuse_inventory,
 )

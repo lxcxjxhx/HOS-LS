@@ -3,17 +3,15 @@
 定义依赖分析使用的枚举、常量和数据类。
 """
 
-import json
 import re
-from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from enum import Enum
-from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
 
 from src.utils.logger import get_logger
 
 logger = get_logger(__name__)
+
 
 class Ecosystem(Enum):
     """依赖生态系统"""

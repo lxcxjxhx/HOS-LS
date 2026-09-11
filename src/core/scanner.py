@@ -36,7 +36,7 @@ try:
     from src.ai.token_tracker import get_token_tracker
 except ImportError:
 
-    def get_token_tracker(*args, **kwargs):  # type: ignore[misc]
+    def get_token_tracker(*args, **kwargs):
         return None
 
 
@@ -46,7 +46,7 @@ try:
     SCAN_CACHE_AVAILABLE = True
 except ImportError:
     SCAN_CACHE_AVAILABLE = False
-    ScanSession = None  # type: ignore[misc,assignment]
+    ScanSession = None  # type: ignore[assignment]
 
 console = Console()
 
@@ -620,7 +620,7 @@ class SecurityScanner:
                         f"[dim][DEBUG] NVD回退补充了 {len(supplemented) - len(current_results)} 个结果[/dim]"
                     )
 
-            return supplemented  # type: ignore[no-any-return]
+            return supplemented
 
         return current_results
 

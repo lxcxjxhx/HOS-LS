@@ -14,7 +14,7 @@ Validates: Requirements 4.1-4.3, 4.5, 4.8, 11.12
 """
 
 from datetime import datetime, timezone
-from typing import Optional, Tuple
+from typing import Tuple
 
 import pytest
 

@@ -17,8 +17,6 @@ from src.utils.custom_priority_parser import (
     CustomPriorityParser,
     DataFlowRules,
     PriorityLevel,
-    PriorityRules,
-    PriorityWeights,
     RelatedFileRules,
 )
 

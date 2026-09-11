@@ -1,0 +1,692 @@
+{
+  "artifact_id": "sha256:c33ea4e28fc717ec4e3f06b86060ffe49077735199d11352b9ee0832fa5ff90d",
+  "version": "1",
+  "created_at": "2026-09-10T00:00:00Z",
+  "predecessor_id": null,
+  "provenance": {
+    "origin": "ecatsl_eval_runner",
+    "retrieved_at": "2026-09-10T00:00:00Z",
+    "source_identifier": "VulnGym v0.1.4 (submodule cd69f7e, data/entries.jsonl)",
+    "source_revision": "VulnGym v0.1.4 (submodule cd69f7e, data/entries.jsonl)",
+    "content_identity": "sha256:2026-09-08T00:00:00+00:00",
+    "transformation_history": [
+      "eval_runner/v1: service-analyze + report-backfill"
+    ]
+  },
+  "content_hash": "c33ea4e28fc717ec4e3f06b86060ffe49077735199d11352b9ee0832fa5ff90d",
+  "benchmark_manifest_id": "sha256:4c8bf659db5399be95fa4be1d899a354f76fce4c6dc445d5e5c919d06a56e8a3",
+  "data_quality_report_id": "sha256:8ee4e8d99dd2860ccfb0333bdbcb542ce85bd1d4f997ac0beead3b8e1c1e8de8",
+  "verified_metrics": [
+    {
+      "name": "precision",
+      "value": "0.0"
+    },
+    {
+      "name": "recall",
+      "value": "0.0"
+    },
+    {
+      "name": "f1",
+      "value": "0.0"
+    },
+    {
+      "name": "tp",
+      "value": "0"
+    },
+    {
+      "name": "fp",
+      "value": "0"
+    },
+    {
+      "name": "fn",
+      "value": "75"
+    },
+    {
+      "name": "tn",
+      "value": "0"
+    },
+    {
+      "name": "sample_count",
+      "value": "75"
+    },
+    {
+      "name": "confirmed",
+      "value": "0"
+    },
+    {
+      "name": "stratum:project=AutoGPT",
+      "value": "samples=2"
+    },
+    {
+      "name": "stratum:project=NeMo",
+      "value": "samples=22"
+    },
+    {
+      "name": "stratum:project=adk-python",
+      "value": "samples=6"
+    },
+    {
+      "name": "stratum:project=airflow",
+      "value": "samples=5"
+    },
+    {
+      "name": "stratum:project=fastmcp",
+      "value": "samples=6"
+    },
+    {
+      "name": "stratum:project=langchain",
+      "value": "samples=3"
+    },
+    {
+      "name": "stratum:project=langflow",
+      "value": "samples=12"
+    },
+    {
+      "name": "stratum:project=litellm",
+      "value": "samples=1"
+    },
+    {
+      "name": "stratum:project=mlflow",
+      "value": "samples=9"
+    },
+    {
+      "name": "stratum:project=n8n",
+      "value": "samples=2"
+    },
+    {
+      "name": "stratum:project=nltk",
+      "value": "samples=1"
+    },
+    {
+      "name": "stratum:project=onnx",
+      "value": "samples=2"
+    },
+    {
+      "name": "stratum:project=open-webui",
+      "value": "samples=4"
+    },
+    {
+      "name": "stratum:sample_class=vulnerable",
+      "value": "samples=75"
+    }
+  ],
+  "telemetry": {
+    "latency_seconds": 0.0,
+    "llm_tokens": 0,
+    "llm_monetary_cost": 0.0,
+    "complexity": {
+      "configured_adapters": 2,
+      "pipeline_stages": 1,
+      "external_service_dependencies": 0,
+      "manual_execution_steps": 0
+    },
+    "audit_monetary_cost": 0.0,
+    "audit_failures": 75,
+    "tooling_failures": 75,
+    "llm_failures": 0,
+    "rejected_candidates": 0
+  },
+  "reuse_inventory_version": "0",
+  "strata": [
+    {
+      "definition": [
+        "project=AutoGPT"
+      ],
+      "sample_count": 2,
+      "sample_ids": [
+        "entry-00097",
+        "entry-00098"
+      ],
+      "matrix": {
+        "tp": 0,
+        "fp": 0,
+        "fn": 2,
+        "tn": 0
+      },
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "counters": {
+        "tooling_failures": 2,
+        "llm_failures": 0,
+        "rejected_candidates": 0
+      },
+      "telemetry": null
+    },
+    {
+      "definition": [
+        "project=NeMo"
+      ],
+      "sample_count": 22,
+      "sample_ids": [
+        "entry-00150",
+        "entry-00151",
+        "entry-00152",
+        "entry-00153",
+        "entry-00154",
+        "entry-00155",
+        "entry-00156",
+        "entry-00157",
+        "entry-00335",
+        "entry-00336",
+        "entry-00337",
+        "entry-00338",
+        "entry-00339",
+        "entry-00340",
+        "entry-00341",
+        "entry-00342",
+        "entry-00343",
+        "entry-00344",
+        "entry-00345",
+        "entry-00346",
+        "entry-00347",
+        "entry-00348"
+      ],
+      "matrix": {
+        "tp": 0,
+        "fp": 0,
+        "fn": 22,
+        "tn": 0
+      },
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "counters": {
+        "tooling_failures": 22,
+        "llm_failures": 0,
+        "rejected_candidates": 0
+      },
+      "telemetry": null
+    },
+    {
+      "definition": [
+        "project=adk-python"
+      ],
+      "sample_count": 6,
+      "sample_ids": [
+        "entry-00430",
+        "entry-00431",
+        "entry-00432",
+        "entry-00433",
+        "entry-00434",
+        "entry-00435"
+      ],
+      "matrix": {
+        "tp": 0,
+        "fp": 0,
+        "fn": 6,
+        "tn": 0
+      },
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "counters": {
+        "tooling_failures": 6,
+        "llm_failures": 0,
+        "rejected_candidates": 0
+      },
+      "telemetry": null
+    },
+    {
+      "definition": [
+        "project=airflow"
+      ],
+      "sample_count": 5,
+      "sample_ids": [
+        "entry-00313",
+        "entry-00314",
+        "entry-00315",
+        "entry-00316",
+        "entry-00464"
+      ],
+      "matrix": {
+        "tp": 0,
+        "fp": 0,
+        "fn": 5,
+        "tn": 0
+      },
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "counters": {
+        "tooling_failures": 5,
+        "llm_failures": 0,
+        "rejected_candidates": 0
+      },
+      "telemetry": null
+    },
+    {
+      "definition": [
+        "project=fastmcp"
+      ],
+      "sample_count": 6,
+      "sample_ids": [
+        "entry-00310",
+        "entry-00311",
+        "entry-00391",
+        "entry-00392",
+        "entry-00394",
+        "entry-00395"
+      ],
+      "matrix": {
+        "tp": 0,
+        "fp": 0,
+        "fn": 6,
+        "tn": 0
+      },
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "counters": {
+        "tooling_failures": 6,
+        "llm_failures": 0,
+        "rejected_candidates": 0
+      },
+      "telemetry": null
+    },
+    {
+      "definition": [
+        "project=langchain"
+      ],
+      "sample_count": 3,
+      "sample_ids": [
+        "entry-00066",
+        "entry-00067",
+        "entry-00068"
+      ],
+      "matrix": {
+        "tp": 0,
+        "fp": 0,
+        "fn": 3,
+        "tn": 0
+      },
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "counters": {
+        "tooling_failures": 3,
+        "llm_failures": 0,
+        "rejected_candidates": 0
+      },
+      "telemetry": null
+    },
+    {
+      "definition": [
+        "project=langflow"
+      ],
+      "sample_count": 12,
+      "sample_ids": [
+        "entry-00071",
+        "entry-00072",
+        "entry-00073",
+        "entry-00317",
+        "entry-00320",
+        "entry-00321",
+        "entry-00324",
+        "entry-00325",
+        "entry-00326",
+        "entry-00372",
+        "entry-00373",
+        "entry-00374"
+      ],
+      "matrix": {
+        "tp": 0,
+        "fp": 0,
+        "fn": 12,
+        "tn": 0
+      },
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "counters": {
+        "tooling_failures": 12,
+        "llm_failures": 0,
+        "rejected_candidates": 0
+      },
+      "telemetry": null
+    },
+    {
+      "definition": [
+        "project=litellm"
+      ],
+      "sample_count": 1,
+      "sample_ids": [
+        "entry-00419"
+      ],
+      "matrix": {
+        "tp": 0,
+        "fp": 0,
+        "fn": 1,
+        "tn": 0
+      },
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "counters": {
+        "tooling_failures": 1,
+        "llm_failures": 0,
+        "rejected_candidates": 0
+      },
+      "telemetry": null
+    },
+    {
+      "definition": [
+        "project=mlflow"
+      ],
+      "sample_count": 9,
+      "sample_ids": [
+        "entry-00101",
+        "entry-00102",
+        "entry-00171",
+        "entry-00389",
+        "entry-00390",
+        "entry-00413",
+        "entry-00414",
+        "entry-00415",
+        "entry-00416"
+      ],
+      "matrix": {
+        "tp": 0,
+        "fp": 0,
+        "fn": 9,
+        "tn": 0
+      },
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "counters": {
+        "tooling_failures": 9,
+        "llm_failures": 0,
+        "rejected_candidates": 0
+      },
+      "telemetry": null
+    },
+    {
+      "definition": [
+        "project=n8n"
+      ],
+      "sample_count": 2,
+      "sample_ids": [
+        "entry-00176",
+        "entry-00182"
+      ],
+      "matrix": {
+        "tp": 0,
+        "fp": 0,
+        "fn": 2,
+        "tn": 0
+      },
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "counters": {
+        "tooling_failures": 2,
+        "llm_failures": 0,
+        "rejected_candidates": 0
+      },
+      "telemetry": null
+    },
+    {
+      "definition": [
+        "project=nltk"
+      ],
+      "sample_count": 1,
+      "sample_ids": [
+        "entry-00319"
+      ],
+      "matrix": {
+        "tp": 0,
+        "fp": 0,
+        "fn": 1,
+        "tn": 0
+      },
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "counters": {
+        "tooling_failures": 1,
+        "llm_failures": 0,
+        "rejected_candidates": 0
+      },
+      "telemetry": null
+    },
+    {
+      "definition": [
+        "project=onnx"
+      ],
+      "sample_count": 2,
+      "sample_ids": [
+        "entry-00462",
+        "entry-00463"
+      ],
+      "matrix": {
+        "tp": 0,
+        "fp": 0,
+        "fn": 2,
+        "tn": 0
+      },
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "counters": {
+        "tooling_failures": 2,
+        "llm_failures": 0,
+        "rejected_candidates": 0
+      },
+      "telemetry": null
+    },
+    {
+      "definition": [
+        "project=open-webui"
+      ],
+      "sample_count": 4,
+      "sample_ids": [
+        "entry-00057",
+        "entry-00062",
+        "entry-00376",
+        "entry-00401"
+      ],
+      "matrix": {
+        "tp": 0,
+        "fp": 0,
+        "fn": 4,
+        "tn": 0
+      },
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "counters": {
+        "tooling_failures": 4,
+        "llm_failures": 0,
+        "rejected_candidates": 0
+      },
+      "telemetry": null
+    },
+    {
+      "definition": [
+        "sample_class=vulnerable"
+      ],
+      "sample_count": 75,
+      "sample_ids": [
+        "entry-00057",
+        "entry-00062",
+        "entry-00066",
+        "entry-00067",
+        "entry-00068",
+        "entry-00071",
+        "entry-00072",
+        "entry-00073",
+        "entry-00097",
+        "entry-00098",
+        "entry-00101",
+        "entry-00102",
+        "entry-00150",
+        "entry-00151",
+        "entry-00152",
+        "entry-00153",
+        "entry-00154",
+        "entry-00155",
+        "entry-00156",
+        "entry-00157",
+        "entry-00171",
+        "entry-00176",
+        "entry-00182",
+        "entry-00310",
+        "entry-00311",
+        "entry-00313",
+        "entry-00314",
+        "entry-00315",
+        "entry-00316",
+        "entry-00317",
+        "entry-00319",
+        "entry-00320",
+        "entry-00321",
+        "entry-00324",
+        "entry-00325",
+        "entry-00326",
+        "entry-00335",
+        "entry-00336",
+        "entry-00337",
+        "entry-00338",
+        "entry-00339",
+        "entry-00340",
+        "entry-00341",
+        "entry-00342",
+        "entry-00343",
+        "entry-00344",
+        "entry-00345",
+        "entry-00346",
+        "entry-00347",
+        "entry-00348",
+        "entry-00372",
+        "entry-00373",
+        "entry-00374",
+        "entry-00376",
+        "entry-00389",
+        "entry-00390",
+        "entry-00391",
+        "entry-00392",
+        "entry-00394",
+        "entry-00395",
+        "entry-00401",
+        "entry-00413",
+        "entry-00414",
+        "entry-00415",
+        "entry-00416",
+        "entry-00419",
+        "entry-00430",
+        "entry-00431",
+        "entry-00432",
+        "entry-00433",
+        "entry-00434",
+        "entry-00435",
+        "entry-00462",
+        "entry-00463",
+        "entry-00464"
+      ],
+      "matrix": {
+        "tp": 0,
+        "fp": 0,
+        "fn": 75,
+        "tn": 0
+      },
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "counters": {
+        "tooling_failures": 75,
+        "llm_failures": 0,
+        "rejected_candidates": 0
+      },
+      "telemetry": null
+    }
+  ],
+  "benchmark_manifest_version": "1",
+  "data_quality_report_version": "1",
+  "evaluated_sample_hashes": [
+    "669366ed55ff95a9f5b3cc6dc2be102b61bea88658aef581ef3c7d74c99a5f44",
+    "302603a15ac64224b7884980c6d5efa060fbbc023aac4e9bc76d55cae88bfd1c",
+    "30bd00385b23ad1061d31b89186ad53fbad66bffc227cb0707af2a0276269fd0",
+    "dfeb80e8d5efb514216c36919a0b98e0f4d3d25f677170c28fd101ee57cc07de",
+    "7402e9446028dbb15c1dc3f7b30e2a636f6eaa0e61a63b958376d7516fb18048",
+    "4fad3627a9442b44e1b29e43d4079cbd9ce7543123fa42b23ecfef6a1c5a1aa9",
+    "4a917cf3f00b32404bc88a034343c40b097a2fec491a17977f611f203e02f417",
+    "7fdbd68b5ba35fb6e1d7c0763489f7f1bde98e3704516fe0337ffedc2b92b7e1",
+    "bc87a9dc6c2ef7a7ec257d0fecbd6fc43a1130a8a5acdb1bea82951cb3085f2e",
+    "78369acace931cf3e881ba38fa066cfe58529cd3d694f5a7c1e89453206b9e77",
+    "9da7663213b8f453f2531ef40fc435f7f9e64d6fdb776ed39e3e20235aca4766",
+    "00ea7ab1a6565408ac6291b47750aed0695f7e7e5a880d7a50e88b84eb06a684",
+    "e36cd2fcca3c40e725edd5e08ffbfc8fcdd2bc57a3156b314679686ef0df3d19",
+    "c99d4099b56f5f550a5a8dcf827d3d302e6b1d011fb82042819aa40112f25b8b",
+    "c6fef113c18636c0275665bbbaf13cddc93ace1a32b9b0ba20a86a6162d7734f",
+    "0ccbdd062f0394353557cec3e2814025b418c3ade2d9845f439ea944dcda33d6",
+    "44b049f84af944a3841260552c44a0512b045940ecc88f66747836725a3829e1",
+    "a4cbd3d15bdf77060a8956c8d6881fa316ea8dab3a5ccbf7cf8876d0206ca451",
+    "75e0edf7e67bfa7341344e7b036d45aade988a28bb9c94c09fb064cbe70c1907",
+    "c1d705fde1791e5946f434e4f080f70215088bcd88729a23fe53f6596a5923e2",
+    "e1a55d4e7e45cbf7643e0fbe9b8e025c3f48a506b4c58986630bb3d524f972fe",
+    "775af174f466056d762703763b78c9bb2f1d288118a2caa92b9c47cfa9155a16",
+    "2e89634f98cb9b2781ce80a2f7ce56022944a4ae3bef8398c855f14a691775da",
+    "fea706a30e259dc355183bac2dd5defcc54ec3b67e6dd9be018d78a59a284fbe",
+    "ad1623053905432cd27866d9086c63f5796cd752db2f0276dbecabd148813a5e",
+    "0e67d3049d41b7a4edddb494ba67ed05b6e441bf3ac857e6b727fbc87089e05e",
+    "03a3b1a17c115b227be9a68b1f5fe6017c8a082f3ae0f314ca3c914550f4ea62",
+    "de1008534019158a55ee2a700d82659a3f689d2f47aad4928ce6de7cd5e9bff5",
+    "bb329a0edd1ab88024d3e855df44d18c19dc68aa48e5325dd564d8b35ff2d0b2",
+    "12004c241ff4d8fcfdb5372ae9b0fd23bab7a49e8b41b95df1bb550f5f9e52c9",
+    "feef528a84967de512032a6987e0114c54bd9971e47fbc874dbf6d9b36020bae",
+    "2896c0f2a2ff1b4cb18c8cc2cdbd6425e855741a93fc3cd5ca712a7b567999fc",
+    "48db752383b42f54eb9e523dab2b634883cde3316ad051e417707655d9082ef1",
+    "3bcc9ee059802ac5d5e17540af1ce20d811d7081746bbf9b94b864ce3c7928d6",
+    "422b72746aef8ffd6fc30c8354cebbe07418fc46a7d1094fbc04fa55411cc15d",
+    "9d6cabce511089f5f97e1eb6d3923b706604e2f395533014a1b3540effbc4994",
+    "ec81c4b46f7bc361247e27acee47e950a84e2d7627e1c9e04f94e39ba1d524cd",
+    "73a5f270c9ddf6551203e289ebec992da7a8f0494f2049a8f9a7dc7fdf881023",
+    "0290b73bb8c717cdd69f0762a90e95e2b6dd57bf0cb2657b81c5e4c5b4bed9b1",
+    "405ff87045b6672b3024b27a9241ce0111bec9ecaf0b31e4407905061e8e4e7e",
+    "0df98debbfe7ae832557f5be239c8e22025e2c9235fc5c99dd2a6f49a9bdec1e",
+    "97dd2552aed84979cfe913f788a667a3815cac3c37fe20157f09fd7f6710f1b9",
+    "f5bc47a888bb5af126f564b374ac260e0ae3e81fffa5c3a20eb0f3bbfef5c1e1",
+    "78edf897957fe83d82fd13f56384f29ca96685e7e90f3b95613846d9c8edd438",
+    "f0c80b6db8949fa253b69c64b7b46a61d4df62b664b25ee37833062a0f3b2ea9",
+    "eb6da6fa70546902243843acbdda76b496a172258494b9684fde577cd850277b",
+    "0cf90d0b57a31ee7e447aa86e733b25c382f90491ee7f9f90575ebaa9ba581eb",
+    "9c953d84d68f01630964223e3cf75e456dccd02bb012037c972eccf32743cea5",
+    "b174ec8413d26cd5da45bcb921b15d01c11f7b02fe43d230b39c14f618379940",
+    "99171cd328eca546e3ec71b4c627d4f5606cf14674f5603812db6d0fb1e0a6df",
+    "f6f5262ccc5a585e50952243b13ee99db112e206b4a7dce408c36d9f1ba7bd73",
+    "092eb54f566f8d8af01da95284ab859158ff4b9dfa1fc6f3b98275d6410a6cc7",
+    "af76a85560ad7c567a0028a37f2fa732925c2700cf536545b57aee3e04d9d45f",
+    "fe4ede5eaec6aad555859f575d1f5133568f021580102b545ade37f701020286",
+    "59603125e25822605c0d0872b5df510857bab6ee20c01d35c97dc07f95efceee",
+    "75131d875b1b733b3c10058d72e99b7ba5097d345ca6809a2c14f18bcb797c0a",
+    "efffb85dd06bad47cba8e01b50d41a6c5edf54cacd73a51b2efa06e32d60d2aa",
+    "ba21d2db05feedcdb3f8150dc9dd089cb821f1a5fac542b305fc88f3563765c2",
+    "dabc4eb0c1554318ed1b251157e2c4fa153b224054f7f01f1a188fabdc744e71",
+    "634bb1753f4a80136a89de7df11edd6515cbfa5811d71ed94b3baf2fb78f1737",
+    "08bf9f7995a17e0b20cfc1be1c3b1961e063aae2b9104a3052e7170fdf59e2ed",
+    "7d6422d604bd0dbed442f579013142c79752e6faa6e0e8a2dc4634884f82df0e",
+    "45a1e6d31584e1d947d13260778f10a8b1425310a5c75b94e32b2364fba167ad",
+    "a2b67fe995231f00d2aa0474c6eb1c64a5ce180be4e86e1f80abc3a51bc62be6",
+    "be19f95b5a09ca0d3a46d0c5b268b186429e750be8dcc6cbfc0117e9e4e4f5b2",
+    "6efe4e491f58759efd265db8a6eb435e64d6a007fabcccabdeef4e2cfbf6401d",
+    "9621ce61291714cc8becca787120da6548dd5989187ae582bbc9928ddde1b8c4",
+    "6da5244e0a76c642d52710415f023f0245368f0d56b401967dfd218e8abc0110",
+    "4b435eb0ed979f9937c67b5dd3f4b003e12b010492988f10ac6d3c28be78c1cd",
+    "1c7ade48602bf94b87f957e6b35696aeb0ae21f2f9fa9e26cb1f77c4b934377e",
+    "99117ca3c66864db3db6bfe6adb08dd53222fe5ace8f8c6d34e5b693c3cf3e15",
+    "ef59691fc91b353a54ae4b7b2e6892ed3504fe03bf5b22df6c0fe357704f5749",
+    "bc75777214136e20626c27a5a4bebf3d4fd75699cffc4f4f4e64ac9485d09e3a",
+    "86d36cff0ea1787e27c6bd7574096a4b2d9d802dce810f4f98ddee119aead3a9",
+    "9e4574645fae0d126961bcf8d4cf7ac3a4778b008c277ee1a0876dd6e1ca6fe7"
+  ],
+  "comparison_baseline": {
+    "name": "comparison_baseline",
+    "value": "unassisted:default:v1"
+  },
+  "environment": null,
+  "evidence_limitations": [
+    "no analysis performed for 75 sample(s) with a blank workdir (no local repository): isolated per Req 3.5, classification UNCONFIRMED, one tooling failure each",
+    "zero samples analyzed -> zero completed experiments; all metrics are zero-inclusive counts, not comparison results"
+  ]
+}

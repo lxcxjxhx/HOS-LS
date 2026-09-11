@@ -6,11 +6,10 @@ from collections import Counter
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
-from src.analyzers.tiered_types import TierDecision, TieredAnalysisResult, TierResult
+from src.analyzers.tiered_types import TierDecision, TierResult
 from src.utils.logger import get_logger
 
 logger = get_logger(__name__)
-
 
 
 class AIAssistedAnalyzer:

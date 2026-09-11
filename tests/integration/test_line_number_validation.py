@@ -1,6 +1,5 @@
 """行号验证集成测试"""
 
-import os
 from pathlib import Path
 
 import pytest

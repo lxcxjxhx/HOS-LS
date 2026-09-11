@@ -63,7 +63,11 @@ All Vulnerabilities/
 
 # Local benchmark run artifacts (see bench/benchmark.py outputs)
 hosls-eval/
-bench/artifacts/
+bench/artifacts/*
+# ECATSL real-evaluation artifacts ARE versioned (task 5.2: first real
+# Evaluation_Report/Cost_Report/Data_Quality_Report committed for audit);
+# content-addressed and replay-identical, so they are not regenerable noise.
+!bench/artifacts/ecatsl/
 bench-tmp/
 
 # RULEDROID 自动生成的 semgrep 规则（scripts/gen_semgrep_rules.py 可再生成）
@@ -92,3 +96,9 @@ bench/experiments/ai_patches/
 
 # Temp scripts
 _summary.py
+
+# Reasonix runtime telemetry (per-session task events/snapshots, not source)
+.reasonix/
+
+# Hypothesis local test database (regenerated on every pytest run)
+.hypothesis/

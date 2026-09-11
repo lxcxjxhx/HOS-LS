@@ -5,20 +5,16 @@
 
 import hashlib
 import json
-import os
 import re
 from datetime import datetime
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
-import yaml
 
-from src.ai.pure_ai.line_number_mapper import LineNumberMapper
 from src.ai.pure_ai.schema import (
     ADVERSARIAL_SCHEMA,
     FINAL_DECISION_SCHEMA,
     RISK_ENUMERATION_SCHEMA,
     VULNERABILITY_SCHEMA,
-    LineMatchStatus,
     SignalState,
 )
 from src.utils.logger import get_logger
@@ -1438,5 +1434,3 @@ def retry_with_validation(max_retries: int = 3):
         return wrapper
 
     return decorator
-
-

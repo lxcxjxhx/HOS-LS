@@ -5,6 +5,9 @@ click>=8.1.0
 rich>=13.0.0
 tqdm>=4.66.0
 pyyaml>=6.0.1
+# TOML 解析回退（Python 3.10 兼容路径；3.11+ 用内置 tomllib）。带内联类型，
+# 缺失会让 mypy 将 tomli.loads 判为 Any 而报 no-any-return。
+tomli>=2.0.0
 python-dotenv>=1.0.0
 
 # AI/LLM dependencies
@@ -42,11 +45,18 @@ httpx>=0.25.0
 aiohttp>=3.9.0
 aiofiles>=23.2.0
 
+# Remote scan protocols (src/integration/remote_scan/protocol/*)
+paramiko>=3.0.0
+pyserial>=3.5
+
 # Database
 aiosqlite>=0.19.0
 diskcache>=5.6.0
 neo4j>=5.15.0
-neo4j-graphrag>=1.0.0
+# <1.3：GraphRAG 构造器签名在 1.13+ 破坏性变更（neo4j_uri/username/password/
+# embeddings -> prompt_provider 等），src/db/neo4j_connection.py 按 1.2.x API
+# 编写；浮动 latest 会让 fresh install 拿到 1.19 而运行时/mypy 双双失败。
+neo4j-graphrag>=1.0.0,<1.3
 
 # Data processing
 numpy>=1.24.0
