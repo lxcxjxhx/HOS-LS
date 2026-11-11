@@ -14,6 +14,36 @@ from typing import Any, Dict, List, Optional, Set, Tuple
 
 from src.utils.logger import get_logger
 
+# Common package names per ecosystem, used as the baseline for typosquat detection.
+# An incomplete table can only cause a missed warning, never a false one: a name that
+# is not listed here is simply never treated as "the real package".
+_WELL_KNOWN_PACKAGES: Dict[str, List[str]] = {
+    "PyPI": [
+        "requests", "urllib3", "numpy", "pandas", "scipy", "flask", "django",
+        "pytest", "setuptools", "pip", "wheel", "six", "pyyaml", "click",
+        "jinja2", "boto3", "sqlalchemy", "pydantic", "httpx", "aiohttp",
+        "cryptography", "pillow", "beautifulsoup4", "lxml", "celery", "redis",
+    ],
+    "npm": [
+        "react", "react-dom", "express", "lodash", "axios", "webpack",
+        "typescript", "eslint", "jest", "vue", "next", "chalk", "commander",
+        "dotenv", "moment", "uuid", "zod", "vite", "esbuild", "prettier",
+    ],
+    "Maven": [
+        "org.springframework:spring-core", "org.springframework:spring-web",
+        "com.google.guava:guava", "org.slf4j:slf4j-api", "junit:junit",
+        "org.apache.commons:commons-lang3", "com.fasterxml.jackson.core:jackson-databind",
+    ],
+}
+
+# Packages their ecosystem has deprecated or told users to stop depending on.
+# A hit here is reported as a supply-chain warning regardless of version.
+_DEPRECATED_PACKAGES: Dict[str, Set[str]] = {
+    "PyPI": {"distribute", "pycrypto", "nose", "sklearn", "mock", "imp"},
+    "npm": {"request", "tslint", "node-sass", "nomnom"},
+    "Maven": set(),
+}
+
 from src.analyzers.dependency_models import (
     DependencyInfo,
     DependencyReport,

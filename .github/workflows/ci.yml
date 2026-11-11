@@ -32,7 +32,9 @@ jobs:
 
       - name: Lint with flake8 (fatal errors - blocking)
         run: |
-          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+          # tests/fixtures/vulnerable_code holds deliberately broken samples; linting them
+          # reports the fixture, not the project.
+          flake8 . --exclude=tests/fixtures --count --select=E9,F63,F7,F82 --show-source --statistics
 
       - name: Lint with flake8 (style - informational, non-blocking)
         run: |
