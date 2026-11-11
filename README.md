@@ -13,6 +13,7 @@
 <img src="https://img.shields.io/badge/Type-Hybrid%20SAST%2BLLM-purple?style=for-the-badge" />
 <img src="https://img.shields.io/badge/Language-Python%203.8%2B-green?style=for-the-badge" />
 <img src="https://img.shields.io/badge/Platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey?style=for-the-badge" />
+<a href="https://github.com/lxcxjxhx/HOS-LS/actions/workflows/ci.yml"><img src="https://github.com/lxcxjxhx/HOS-LS/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
 <a href="https://www.gnu.org/licenses/agpl-3.0"><img src="https://img.shields.io/badge/License-AGPLv3-blue.svg?style=for-the-badge" /></a>
 
 </div>
