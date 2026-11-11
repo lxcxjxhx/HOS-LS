@@ -1,0 +1,52 @@
+name: Feature request
+description: 提出一个具体的能力缺口
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: gap
+    attributes:
+      label: 缺什么
+      description: 现在扫不出 / 做不到什么？给出你实际卡住的那一步。
+      placeholder: 想知道某个 finding 是哪条规则命中的，但报告里只有描述没有规则名。
+    validations:
+      required: true
+
+  - type: textarea
+    id: workaround
+    attributes:
+      label: 现在怎么绕
+      description: 有没有临时办法？绕不过去的话说明为什么。
+    validations:
+      required: false
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: 属于哪块
+      options:
+        - 规则（检测能力 / 规则表）
+        - LLM 分析（提示词 / 多智能体编排）
+        - 报告格式与输出
+        - CLI / 配置
+        - 性能
+        - 其他
+    validations:
+      required: true
+
+  - type: textarea
+    id: shape
+    attributes:
+      label: 你希望它长什么样
+      description: 命令行参数、报告字段、配置项。不确定就写「不知道，但需要能 X」。
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: 提交前确认
+      options:
+        - label: 我搜过现有 issue，没有重复
+          required: true
+        - label: 这不是规则表的既定取舍（见 CONTRIBUTING 的「不在范围内」）
+          required: true
