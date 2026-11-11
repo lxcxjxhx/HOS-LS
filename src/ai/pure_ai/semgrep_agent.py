@@ -13,6 +13,7 @@ SemgrepAgent 专注于 Semgrep 语义规则的单工具深度应用 + 规则自�
 import json
 import logging
 import os
+import shutil
 import subprocess
 import sys
 from dataclasses import dataclass, field

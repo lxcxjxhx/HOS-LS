@@ -4,6 +4,8 @@ import re
 import time
 from collections import Counter
 from pathlib import Path
+
+from src.analyzers.ai_assisted_analyzer import AIAssistedAnalyzer
 from typing import Any, Dict, List, Optional, Tuple
 
 from src.analyzers.tiered_types import TierDecision, TieredAnalysisResult, TierResult

@@ -3,6 +3,7 @@
 数据源预加载和管理的命令。
 """
 
+import asyncio
 from pathlib import Path
 from typing import Any, Optional
 
