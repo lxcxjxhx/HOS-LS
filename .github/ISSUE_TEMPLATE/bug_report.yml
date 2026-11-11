@@ -1,0 +1,74 @@
+name: Bug report
+description: 扫描结果不对（漏报、误报、崩溃），或 CLI 行为不符预期
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **安全问题不要走这里** —— 扫描器自身可被绕过、报告可伪造、LLM key 泄漏，
+        请按 [SECURITY.md](../blob/main/SECURITY.md) 走私报告。
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: 发生了什么
+      description: |
+        如果是**漏报**：贴那段代码，说明为什么它是漏洞（CWE 编号最好）。
+        如果是**误报**：贴命中的代码，说明为什么它安全。
+        如果是崩溃：贴完整 traceback。
+    validations:
+      required: true
+
+  - type: dropdown
+    id: engine
+    attributes:
+      label: 哪个环节出的问题
+      options:
+        - 静态规则（rule）
+        - LLM 分析（ai / pure_ai）
+        - 库匹配（library）
+        - 网络检索（web）
+        - CLI / 报告输出
+        - 不知道
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: 最小复现
+      description: |
+        命令 + 被扫描的代码片段（能贴成一个文件最好）。
+        `--debug` 的输出能大幅缩短排查时间。
+      placeholder: |
+        ```bash
+        python -m src.cli.main scan ./demo --debug
+        ```
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: 版本
+      description: `python -m src.cli.main --version` 或 `git rev-parse --short HEAD`
+    validations:
+      required: true
+
+  - type: input
+    id: platform
+    attributes:
+      label: 平台
+      placeholder: Windows 11 / Python 3.11.9
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: 提交前确认
+      options:
+        - label: 我搜过现有 issue，没有重复
+          required: true
+        - label: 这不是安全问题（安全问题走 SECURITY.md）
+          required: true
